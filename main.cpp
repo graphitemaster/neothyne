@@ -6,5 +6,8 @@ int main(int argc, char **argv) {
     argv++;
     kdTree tree;
     tree.load(*argv);
-    tree.serialize();
+    u::vector<unsigned char> data = tree.serialize();
+    FILE *fp = fopen("out.kd", "w");
+    fwrite(&*data.begin(), data.size(), 1, fp);
+    fclose(fp);
 }

@@ -1,8 +1,8 @@
 #ifndef UTIL_HDR
 #define UTIL_HDR
 #include <vector>
-#include <string>
 #include <algorithm>
+#include <string>
 
 #include <stdint.h>
 #include <stdio.h>

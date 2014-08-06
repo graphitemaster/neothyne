@@ -6,7 +6,7 @@
 struct kdTree;
 
 struct kdEnt {
-    uint32_t id;
+    //uint32_t id;
     m::vec3 origin;
     m::quat rotation;
 };
@@ -58,6 +58,7 @@ struct kdTree {
 
     static constexpr float kMaxTraceDistance = 99999.999f;
     static constexpr float kEpsilon = 0.01f; // Plane offset for point classification
+    static const size_t kMaxTrianglesPerLeaf = 5;
 
     bool load(const u::string &file);
     polyPlane testTriangle(size_t index, const m::plane &plane) const;
@@ -92,6 +93,7 @@ struct kdBinHeader {
     };
     uint32_t magic;
     uint32_t version;
+    uint8_t padding;
 };
 
 struct kdBinEntry {
@@ -105,7 +107,7 @@ struct kdBinPlane {
 };
 
 struct kdBinTexture {
-    char name[256];
+    char name[64];
 };
 
 struct kdBinNode {
@@ -123,10 +125,11 @@ struct kdBinTriangle {
 struct kdBinVertex {
     m::vec3 vertex;
     m::vec3 normal;
-    m::vec3 tangent;
     float tu;
     float tv;
+    m::vec3 tangent;
     float w; // bitangent = w * (normal x tangent)
+    float padding[2];
 };
 
 struct kdBinEnt {
@@ -135,7 +138,7 @@ struct kdBinEnt {
         rotation(0.0f, 0.0f, 0.0f, 1.0f)
     { }
 
-    uint32_t id;
+    //uint32_t id;
     m::vec3 origin;
     m::quat rotation;
 };

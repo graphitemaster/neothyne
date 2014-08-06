@@ -58,7 +58,7 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth) 
 
     splitPlane = plane[best];
 
-    if (frontList[best]->size() == 0 || backList[best]->size() == 0) {
+    if (frontList[best]->size() == 0 || backList[best]->size() == 0 || triangleCount <= kdTree::kMaxTrianglesPerLeaf) {
         triangles.insert(triangles.begin(), tris.begin(), tris.end());
         front = nullptr;
         back = nullptr;
@@ -111,8 +111,9 @@ m::plane kdNode::findSplittingPlane(const kdTree *tree, const u::vector<int> &tr
     // robust against vertex outliers.
     u::sort(coords.begin(), coords.end());
     const float split = coords[coords.size() / 2]; // median like
-    const m::vec3 point = m::vec3::getAxis(axis);
-    return m::plane(point * split, point);
+    const m::vec3 point = m::vec3::getAxis(axis) * split;
+    const m::vec3 normal = m::vec3::getAxis(axis);
+    return m::plane(point, normal);
 }
 
 void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
@@ -134,6 +135,11 @@ void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
     m::vec3 mid = (max - min) * 0.5f;
     sphereOrigin = min + mid;
     sphereRadius = mid.abs();
+
+    if (sphereRadius > kdTree::kMaxTraceDistance) {
+        fprintf(stderr, "level geometry too large");
+        exit(0);
+    }
 }
 
 ///! kdTree
@@ -177,6 +183,8 @@ polyPlane kdTree::testTriangle(size_t index, const m::plane &plane) const {
             case kPolyPlaneBack:
                 front = kPolyPlaneSplit;
                 break;
+            default:
+                break;
         }
     }
     return (polyPlane)(front | back);
@@ -195,6 +203,8 @@ bool kdTree::load(const u::string &file) {
         float x0, y0, z0, x1, y1, z1, w;
         int v0, v1, v2, t0, t1, t2, i;
         int s0, s1, s2;
+        char texture[256];
+        u::string texturePath;
         if (u::sscanf(line, "v %f %f %f", &x0, &y0, &z0) == 3) {
             vertices.push_back(m::vec3(x0, y0, z0));
         } else if (u::sscanf(line, "vt %f %f", &x0, &y0) == 2) {
@@ -203,7 +213,7 @@ bool kdTree::load(const u::string &file) {
                         &i, &x0, &y0, &z0, &x1, &y1, &z1, &w) == 8)
         {
             kdEnt ent;
-            ent.id = i;
+            //ent.id = i;
             ent.origin = m::vec3(x0, y0, z0);
             ent.rotation = m::quat(x1, y1, z1, w);
             entities.push_back(ent);
@@ -213,6 +223,7 @@ bool kdTree::load(const u::string &file) {
                         &v0, &t0, &s0, &v1, &t1, &s1, &v2, &t2, &s2) == 9)
         {
             kdTriangle triangle;
+            triangle.texturePath = texturePath;
             triangle.vertices[0] = v0 - 1;
             triangle.vertices[1] = v1 - 1;
             triangle.vertices[2] = v2 - 1;
@@ -221,8 +232,10 @@ bool kdTree::load(const u::string &file) {
             triangle.texCoords[2] = t2 - 1;
             triangle.generatePlane(this);
             triangles.push_back(triangle);
+        } else if (u::sscanf(line, "tex %255s", texture) == 1) {
+            texturePath = texture;
+            textureCount++;
         }
-
     }
     fclose(fp);
     fprintf(stderr, "Building tree from %zu vertices in %zu triangles\n",
@@ -286,7 +299,6 @@ static void kdBinCalculateTangent(const u::vector<kdBinTriangle> &triangles, con
 
 static void kdBinCreateTangents(u::vector<kdBinVertex> &vertices, const u::vector<kdBinTriangle> &triangles) {
     // Computing Tangent Space Basis Vectors for an Arbitrary Mesh (Lengyel’s Method)
-    // http://www.amazon.com/exec/obidos/redirect?tag=terathon-20&path=tg/detail/-/1435458869
     // Section 7.8 (or in Section 6.8 of the second edition).
     const size_t vertexCount = vertices.size();
     const size_t triangleCount = triangles.size();
@@ -349,7 +361,7 @@ static int32_t kdBinInsertLeaf(const kdTree &tree, const kdNode *leaf, u::vector
     kdBinLeaf binLeaf;
     binLeaf.triangles.insert(binLeaf.triangles.begin(), leaf->triangles.begin(), leaf->triangles.end());
     leafs.push_back(binLeaf);
-    return -leafs.size();
+    return -(int32_t)leafs.size();
 }
 
 static int32_t kdBinGetNodes(const kdTree &tree, const kdNode *node, u::vector<kdBinPlane> &planes,
@@ -459,15 +471,15 @@ u::vector<unsigned char> kdTree::serialize(void) {
     // Get entities
     for (auto &it : entities) {
         kdBinEnt ent;
-        ent.id       = it.id;
+        //ent.id       = it.id;
         ent.origin   = it.origin;
         ent.rotation = it.rotation;
         compiledEntities.push_back(ent);
     }
 
-    fprintf(stderr, "       nodes:   %zu\n", nodeCount);
-    fprintf(stderr, "       leafs:   %zu\n", leafCount);
-    fprintf(stderr, "       largest: %zu\n", depth);
+    fprintf(stderr, "       nodes: %zu\n", nodeCount);
+    fprintf(stderr, "       leafs: %zu\n", leafCount);
+    fprintf(stderr, "       depth: %zu\n", depth);
 
     fprintf(stderr, "   Calculating tangents ...\n");
     kdBinCreateTangents(compiledVertices, compiledTriangles);
@@ -514,6 +526,7 @@ u::vector<unsigned char> kdTree::serialize(void) {
     entryLeafs.length = compiledLeafs.size();
 
     u::vector<unsigned char> store;
+    kdSerialize(store, &header);
     kdSerialize(store, &entryPlanes);
     kdSerialize(store, &entryTextures);
     kdSerialize(store, &entryNodes);

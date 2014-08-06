@@ -52,7 +52,7 @@ namespace m {
         }
 
         void normalize(void) {
-            const float length = 1.0f / absSquared();;
+            const float length = 1.0f / abs();
             x *= length;
             y *= length;
             z *= length;
@@ -94,9 +94,9 @@ namespace m {
         }
 
         bool equals(const vec3 &cmp, const float epsilon) const {
-            return fabsf(x - cmp.x) < epsilon
-                && fabsf(y - cmp.y) < epsilon
-                && fabsf(z - cmp.z) < epsilon;
+            return (fabsf(x - cmp.x) < epsilon)
+                && (fabsf(y - cmp.y) < epsilon)
+                && (fabsf(z - cmp.z) < epsilon);
         }
 
         vec3 &operator +=(const vec3 &vec) {
@@ -179,20 +179,20 @@ namespace m {
 
     // dot product
     inline float operator*(const vec3 &a, const vec3 &b) {
-        return a.x * b.x + a.y * b.y + a.x * b.z;
+        return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
     // equality operators
     inline bool operator==(const vec3 &a, const vec3 &b) {
-        return fabsf(a.x - b.x) < kEpsilon
-            && fabsf(a.y - b.y) < kEpsilon
-            && fabsf(a.z - b.z) < kEpsilon;
+        return (fabsf(a.x - b.x) < kEpsilon)
+            && (fabsf(a.y - b.y) < kEpsilon)
+            && (fabsf(a.z - b.z) < kEpsilon);
     }
 
     inline bool operator!=(const vec3 &a, const vec3 &b) {
-        return fabsf(a.x - b.x) > kEpsilon
-            || fabsf(a.y - b.y) > kEpsilon
-            || fabsf(a.z - b.z) > kEpsilon;
+        return (fabsf(a.x - b.x) > kEpsilon)
+            || (fabsf(a.y - b.y) > kEpsilon)
+            || (fabsf(a.z - b.z) > kEpsilon);
     }
 
     ///! plane
@@ -233,7 +233,7 @@ namespace m {
         void setupPlane(const vec3 &a, const vec3 &b) {
             n = b;
             n.normalize();
-            d = -b * a;
+            d = -n * a;
         }
 
         void setupPlane(const vec3 &a, float b) {
@@ -354,13 +354,14 @@ namespace m {
         }
 
         quat inverse(void) const {
-            quat q = *this;
+            quat q;
+            q = *this;
             q.invert();
             return q;
         }
 
         void normalize(void) {
-            const float square = x * x + y * y + z * z;
+            const float square = x * x + y * y + z * z + w * w;
             // Only normalize if the length isn't already one and we're not a zero.
             if (fabsf(square) > kEpsilon && fabsf(square - 1.0f) > kEpsilon) {
                 const float inv = 1.0f / sqrtf(square);
