@@ -31,10 +31,10 @@ namespace m {
             z(0.0f)
         { }
 
-        vec3(float x, float y, float z) :
-            x(x),
-            y(y),
-            z(z)
+        vec3(float nx, float ny, float nz) :
+            x(nx),
+            y(ny),
+            z(nz)
         { }
 
         vec3(float a) :
@@ -49,11 +49,11 @@ namespace m {
 
 
         float abs(void) const {
-            return sqrtf(absSquared());
+            return sqrtf(x * x + y * y + z * z);
         }
 
         void normalize(void) {
-            const float length = 1.0f / sqrtf(absSquared());
+            const float length = 1.0f / abs();
             x *= length;
             y *= length;
             z *= length;
@@ -100,6 +100,7 @@ namespace m {
             x *= value;
             y *= value;
             z *= value;
+            return *this;
         }
 
         vec3 &operator /=(float value) {
@@ -123,11 +124,9 @@ namespace m {
         }
 
         static inline const vec3 getAxis(axis a) {
-            switch (a) {
-                case kAxisX: return xAxis;
-                case kAxisY: return yAxis;
-                case kAxisZ: return zAxis;
-            }
+            if (a == kAxisX) return xAxis;
+            else if (a == kAxisY) return yAxis;
+            return zAxis;
         }
 
         static const vec3 xAxis;
@@ -194,12 +193,12 @@ namespace m {
             d(0.0f)
         { }
 
-        plane(vec3 a, vec3 b, vec3 c) {
-            setupPlane(a, b, c);
+        plane(vec3 p1, vec3 p2, vec3 p3) {
+            setupPlane(p1, p2, p3);
         }
 
-        plane(vec3 a, vec3 b) {
-            setupPlane(a, b);
+        plane(vec3 pp, vec3 nn) {
+            setupPlane(pp, nn);
         }
 
         plane(float a, float b, float c, float d) {
@@ -217,10 +216,10 @@ namespace m {
             d = -n * p1;
         }
 
-        void setupPlane(const vec3 &p, vec3 nn) {
+        void setupPlane(const vec3 &pp, vec3 nn) {
             n = nn;
             n.normalize();
-            d = -n * p;
+            d = -n * pp;
         }
 
         void setupPlane(vec3 nn, float dd) {
@@ -255,7 +254,7 @@ namespace m {
             return p * n + d;
         }
 
-        pointPlane classify(const vec3 &p, float epsilon) const {
+        pointPlane classify(const vec3 &p, float epsilon = kEpsilon) const {
             const float distance = getDistanceFromPlane(p);
             if (distance > epsilon)
                 return kPointPlaneFront;
@@ -295,6 +294,7 @@ namespace m {
             w(w)
         { }
 
+#if 0
         quat(const vec3 &axis, float angle) {
             rotationAxis(axis, angle);
         }
@@ -377,6 +377,7 @@ namespace m {
         }
 
         static void slerp(quat *dest, const quat &q1, const quat &q2, float t);
+#endif
         static const quat identity;
     };
 }

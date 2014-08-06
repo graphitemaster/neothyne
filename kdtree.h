@@ -36,12 +36,20 @@ struct kdNode {
     kdNode(kdTree *tree, const u::vector<int> &triangles, size_t recursionDepth);
     ~kdNode();
 
+    // Calculate bounding sphere for node
     void calculateSphere(const kdTree *tree, const u::vector<int> &triangles);
-    bool isLeaf(void) const;
-    m::plane findSplittingPlane(const kdTree *tree, const u::vector<int> &triangles, m::axis axis) const;
-    void split(const kdTree *tree, const u::vector<int> &triangles, m::axis axis,
-        u::vector<int> &front, u::vector<int> &back, u::vector<int> &splitlist, m::plane &splitplane);
 
+    // Is the node a leaf?
+    bool isLeaf(void) const;
+
+    // Find the best plane to split on
+    m::plane findSplittingPlane(const kdTree *tree, const u::vector<int> &triangles, m::axis axis) const;
+
+    // Split triangles along `axis' axis.
+    void split(const kdTree *tree, const u::vector<int> &triangles, m::axis axis,
+        u::vector<int> &front, u::vector<int> &back, u::vector<int> &splitlist, m::plane &splitplane) const;
+
+    // Flatten tree repreentation into a disk-writable medium.
     u::vector<unsigned char> serialize(void);
 
     kdNode        *front;
@@ -49,7 +57,7 @@ struct kdNode {
     m::plane       splitPlane;   // Not set for leafs
     m::vec3        sphereOrigin;
     float          sphereRadius;
-    u::vector<int> triangles;
+    u::vector<int> triangles;    // Only filled for leaf node
 };
 
 struct kdTree {
