@@ -233,7 +233,7 @@ bool kdTree::load(const u::string &file) {
                         &i, &x0, &y0, &z0, &x1, &y1, &z1, &w) == 8)
         {
             kdEnt ent;
-            //ent.id = i;
+            ent.id = i;
             ent.origin = m::vec3(x0, y0, z0);
             ent.rotation = m::quat(x1, y1, z1, w);
             entities.push_back(ent);
@@ -419,31 +419,28 @@ static int32_t kdBinGetNodes(const kdTree &tree, const kdNode *node, u::vector<k
 
     return nodeIndex;
 }
-
 template <typename T>
-static void kdSerialize(u::vector<unsigned char> &store, const T *const data) {
+static void kdSerialize(u::vector<unsigned char> &buffer, const T *data, size_t size) {
     const unsigned char *const beg = (const unsigned char *const)data;
-    const unsigned char *const end = (const unsigned char *const)data + sizeof(T);
-    store.insert(store.end(), beg, end);
+    const unsigned char *const end = ((const unsigned char *const)data) + size;
+    buffer.insert(buffer.end(), beg, end);
 }
 
-template <typename T>
-static void kdSerializeLump(u::vector<unsigned char> &store, const u::vector<T> &lump) {
-    for (auto &it : lump)
-        kdSerialize(store, &it);
-}
-
-// We specalize for kdBinLeaf because it's treated as a FAM.
-template<>
-void kdSerializeLump<kdBinLeaf>(u::vector<unsigned char> &store, const u::vector<kdBinLeaf> &leafs) {
+static void kdSerializeLeafs(u::vector<unsigned char> &buffer, const u::vector<kdBinLeaf> &leafs) {
     for (auto &it : leafs) {
         uint32_t triangleCount = it.triangles.size();
-        kdSerialize(store, &triangleCount);
+        kdSerialize(buffer, &triangleCount, sizeof(uint32_t));
         for (size_t i = 0; i < triangleCount; i++) {
             uint32_t triangleIndex = it.triangles[i];
-            kdSerialize(store, &triangleIndex);
+            kdSerialize(buffer, &triangleIndex, sizeof(uint32_t));
         }
     }
+}
+
+template <typename T>
+static void kdSerializeLump(u::vector<unsigned char> &buffer, const u::vector<T> &lump) {
+    for (auto &it : lump)
+        kdSerialize(buffer, &it, sizeof(T));
 }
 
 u::vector<unsigned char> kdTree::serialize(void) {
@@ -497,7 +494,7 @@ u::vector<unsigned char> kdTree::serialize(void) {
     // Get entities
     for (auto &it : entities) {
         kdBinEnt ent;
-        //ent.id       = it.id;
+        ent.id       = it.id;
         ent.origin   = it.origin;
         ent.rotation = it.rotation;
         compiledEntities.push_back(ent);
@@ -532,7 +529,7 @@ u::vector<unsigned char> kdTree::serialize(void) {
     kdBinEntry entryLeafs;
     kdBinHeader header;
 
-    entryPlanes.offset = sizeof(kdBinHeader) + 7*sizeof(kdBinEntry);
+    entryPlanes.offset = (sizeof(kdBinHeader) + 7*sizeof(kdBinEntry));
     entryPlanes.length = compiledPlanes.size() * sizeof(kdBinPlane);
     entryTextures.offset = entryPlanes.length + entryPlanes.offset;
     entryTextures.length = compiledTextures.size() * sizeof(kdBinTexture);
@@ -542,20 +539,21 @@ u::vector<unsigned char> kdTree::serialize(void) {
     entryTriangles.length = compiledTriangles.size() * sizeof(kdBinTriangle);
     entryVertices.offset = entryTriangles.length + entryTriangles.offset;
     entryVertices.length = compiledVertices.size() * sizeof(kdBinVertex);
-    entryEntities.offset = entryVertices.length + entryVertices.length;
+    entryEntities.offset = entryVertices.length + entryVertices.offset;
     entryEntities.length = compiledEntities.size() * sizeof(kdBinEnt);
-    entryLeafs.offset = entryEntities.length + entryEntities.length;
+    entryLeafs.offset = entryEntities.length + entryEntities.offset;
     entryLeafs.length = compiledLeafs.size();
 
     u::vector<unsigned char> store;
-    kdSerialize(store, &header);
-    kdSerialize(store, &entryPlanes);
-    kdSerialize(store, &entryTextures);
-    kdSerialize(store, &entryNodes);
-    kdSerialize(store, &entryTriangles);
-    kdSerialize(store, &entryVertices);
-    kdSerialize(store, &entryEntities);
-    kdSerialize(store, &entryLeafs);
+    kdSerialize(store, &header, sizeof(kdBinHeader));
+
+    kdSerialize(store, &entryPlanes, sizeof(kdBinEntry));
+    kdSerialize(store, &entryTextures, sizeof(kdBinEntry));
+    kdSerialize(store, &entryNodes, sizeof(kdBinEntry));
+    kdSerialize(store, &entryTriangles, sizeof(kdBinEntry));
+    kdSerialize(store, &entryVertices, sizeof(kdBinEntry));
+    kdSerialize(store, &entryEntities, sizeof(kdBinEntry));
+    kdSerialize(store, &entryLeafs, sizeof(kdBinEntry));
 
     kdSerializeLump(store, compiledPlanes);
     kdSerializeLump(store, compiledTextures);
@@ -563,10 +561,10 @@ u::vector<unsigned char> kdTree::serialize(void) {
     kdSerializeLump(store, compiledTriangles);
     kdSerializeLump(store, compiledVertices);
     kdSerializeLump(store, compiledEntities);
-    kdSerializeLump(store, compiledLeafs);
+    kdSerializeLeafs(store, compiledLeafs);
 
     const uint32_t end = kdBinHeader::kMagic;
-    kdSerialize(store, &end);
+    kdSerialize(store, &end, sizeof(uint32_t));
 
     fprintf(stderr, "Complete (%zu bytes)\n", store.size());
     return store;

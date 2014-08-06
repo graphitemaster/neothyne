@@ -6,7 +6,7 @@
 struct kdTree;
 
 struct kdEnt {
-    //uint32_t id;
+    uint32_t id;
     m::vec3 origin;
     m::quat rotation;
 };
@@ -90,10 +90,12 @@ private:
 };
 
 // Serialized version for storing on disk
+#pragma pack(push, 1)
 struct kdBinHeader {
     kdBinHeader() :
         magic(kMagic),
-        version(kVersion)
+        version(kVersion),
+        padding(0)
     { }
 
     enum : uint32_t {
@@ -143,14 +145,16 @@ struct kdBinVertex {
 
 struct kdBinEnt {
     kdBinEnt() :
+        id(0),
         origin(0.0f, 0.0f, 0.0f),
         rotation(0.0f, 0.0f, 0.0f, 1.0f)
     { }
 
-    //uint32_t id;
+    uint32_t id;
     m::vec3 origin;
     m::quat rotation;
 };
+#pragma pack(pop)
 
 struct kdBinLeaf {
     // we treat this as a flexible array member
