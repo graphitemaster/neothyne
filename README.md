@@ -5,9 +5,9 @@ The world format for Neothyne is represented as a subset of the OBJ model format
 ### Vertex
 A vertex beigns with 'v' followed by three single-precision floating-point values
 separated by spaces. Example
-`
+```
 v [x] [y] [z]
-`
+```
 
 ### Texture Coordinate
 A texture coordinate begins with 'vt' followed by two single-precision floating-
@@ -39,7 +39,7 @@ ent [id] [origin:x] [origin:y] [origin:z] [rot:x] [rot:y] [rot:z] [rot:w]
 ### Texture
 A texture begins with 'tex' followed by the relative path to a texture file.
 ```
-tex [textur_path/file.ext]
+tex [texturePath/file.ext]
 ```
 When set, a texture will be used for all faces specified after it.
 

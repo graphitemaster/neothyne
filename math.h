@@ -43,16 +43,17 @@ namespace m {
             z(a)
         { }
 
-        float abs(void) const {
-            return sqrtf(absSquared());
-        }
-
         float absSquared(void) const {
             return x * x + y * y + z * z;
         }
 
+
+        float abs(void) const {
+            return sqrtf(absSquared());
+        }
+
         void normalize(void) {
-            const float length = 1.0f / abs();
+            const float length = 1.0f / sqrtf(absSquared());
             x *= length;
             y *= length;
             z *= length;
@@ -65,24 +66,6 @@ namespace m {
 
         bool isNormalized(void) const {
             return fabsf(abs() - 1.0f) < kEpsilon;
-        }
-
-        void setLength(float length) {
-            const float scale = length / abs();
-            x *= scale;
-            y *= scale;
-            z *= scale;
-        }
-
-        void maxLength(float length) {
-            const float current = abs();
-            if (current <= length)
-                return;
-
-            const float scale = length / current;
-            x *= scale;
-            y *= scale;
-            z *= scale;
         }
 
         bool isNull() const {
@@ -165,6 +148,10 @@ namespace m {
         return vec3(a.x * value, a.y * value, a.z * value);
     }
 
+    inline vec3 operator*(float value, const vec3 &a) {
+        return vec3(a.x * value, a.y * value, a.z * value);
+    }
+
     inline vec3 operator/(const vec3 &a, float value) {
         const float inv = 1.0f / value;
         return vec3(a.x * inv, a.y * inv, a.z * inv);
@@ -172,9 +159,9 @@ namespace m {
 
     // cross product
     inline vec3 operator^(const vec3 &a, const vec3 &b) {
-        return vec3(a.y * b.z - a.z * b.y,
-                    a.z * b.x - a.x * b.z,
-                    a.x * b.y - a.y * b.x);
+        return vec3((a.y * b.z - a.z * b.y),
+                    (a.z * b.x - a.x * b.z),
+                    (a.x * b.y - a.y * b.x));
     }
 
     // dot product
@@ -184,9 +171,9 @@ namespace m {
 
     // equality operators
     inline bool operator==(const vec3 &a, const vec3 &b) {
-        return (fabsf(a.x - b.x) < kEpsilon)
-            && (fabsf(a.y - b.y) < kEpsilon)
-            && (fabsf(a.z - b.z) < kEpsilon);
+        return (fabs(a.x - b.x) < kEpsilon)
+            && (fabs(a.y - b.y) < kEpsilon)
+            && (fabs(a.z - b.z) < kEpsilon);
     }
 
     inline bool operator!=(const vec3 &a, const vec3 &b) {
@@ -207,11 +194,11 @@ namespace m {
             d(0.0f)
         { }
 
-        plane(const vec3 &a, const vec3 &b, const vec3 &c) {
+        plane(vec3 a, vec3 b, vec3 c) {
             setupPlane(a, b, c);
         }
 
-        plane(const vec3 &a, const vec3 &b) {
+        plane(vec3 a, vec3 b) {
             setupPlane(a, b);
         }
 
@@ -219,26 +206,26 @@ namespace m {
             setupPlane(a, b, c, d);
         }
 
-        plane(const vec3 &a, float b) :
-            n(a),
-            d(b)
+        plane(const vec3 &nn, float dd) :
+            n(nn),
+            d(dd)
         { }
 
-        void setupPlane(const vec3 &a, const vec3 &b, const vec3 &c) {
-            n = (b - a) ^ (c - a);
+        void setupPlane(const vec3 &p1, const vec3 &p2, const vec3 &p3) {
+            n = (p2 - p1) ^ (p3 - p1);
             n.normalize();
-            d = -n * a;
+            d = -n * p1;
         }
 
-        void setupPlane(const vec3 &a, const vec3 &b) {
-            n = b;
+        void setupPlane(const vec3 &p, vec3 nn) {
+            n = nn;
             n.normalize();
-            d = -n * a;
+            d = -n * p;
         }
 
-        void setupPlane(const vec3 &a, float b) {
-            n = a;
-            d = b;
+        void setupPlane(vec3 nn, float dd) {
+            n = nn;
+            d = dd;
         }
 
         void setupPlane(float a, float b, float c, float d) {
@@ -283,7 +270,7 @@ namespace m {
                 return true;
 
             const float t = -(n * a + d) / q;
-            return t > -kEpsilon && t < 1.0f + kEpsilon;
+            return (t > -kEpsilon && t < 1.0f + kEpsilon);
         }
 
         vec3 n;

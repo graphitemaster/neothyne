@@ -19,10 +19,10 @@ private:
     friend struct kdTree;
     friend struct kdNode;
 
-    u::string texturePath;
     int vertices[3];
     int texCoords[3];
     m::plane plane;
+    u::string texturePath;
 };
 
 enum polyPlane : size_t {
@@ -58,7 +58,8 @@ struct kdTree {
 
     static constexpr float kMaxTraceDistance = 99999.999f;
     static constexpr float kEpsilon = 0.01f; // Plane offset for point classification
-    static const size_t kMaxTrianglesPerLeaf = 5;
+    static constexpr size_t kMaxTrianglesPerLeaf = 5;
+    static constexpr size_t kMaxRecursionDepth = 35;
 
     bool load(const u::string &file);
     polyPlane testTriangle(size_t index, const m::plane &plane) const;

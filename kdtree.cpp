@@ -24,6 +24,9 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth) 
 
     if (recursionDepth > tree->depth)
         tree->depth = recursionDepth;
+    if (recursionDepth > kdTree::kMaxRecursionDepth) {
+        // TODO:
+    }
 
     tree->nodeCount++;
     calculateSphere(tree, tris);
@@ -103,16 +106,20 @@ m::plane kdNode::findSplittingPlane(const kdTree *tree, const u::vector<int> &tr
     u::vector<float> coords(triangleCount * 3); // 3 vertices for a triangle
 
     size_t k = 0;
-    for (size_t i = 0; i < triangleCount; i++)
-        for (size_t j = 0; j < 3; j++)
-            coords[k++] = tree->vertices[tree->triangles[tris[i]].vertices[j]][axis];
+    for (size_t i = 0; i < triangleCount; i++) {
+        for (size_t j = 0; j < 3; j++) {
+            const int index = tree->triangles[tris[i]].vertices[j];
+            const m::vec3 &vec = tree->vertices[index];
+            coords[k++] = vec[axis];
+        }
+    }
 
     // sort coordinates for a L1 median estimation, this keeps us rather
     // robust against vertex outliers.
     u::sort(coords.begin(), coords.end());
     const float split = coords[coords.size() / 2]; // median like
-    const m::vec3 point = m::vec3::getAxis(axis) * split;
-    const m::vec3 normal = m::vec3::getAxis(axis);
+    const m::vec3 point(m::vec3::getAxis(axis) * split);
+    const m::vec3 normal(m::vec3::getAxis(axis));
     return m::plane(point, normal);
 }
 
@@ -123,13 +130,13 @@ void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
     for (size_t i = 0; i < triangleCount; i++) {
         int index = tris[i];
         for (size_t j = 0; j < 3; j++) {
-            const m::vec3 &v = tree->vertices[tree->triangles[index].vertices[j]];
-            if (v.x < min.x) min.x = v.x;
-            if (v.y < min.y) min.y = v.y;
-            if (v.z < min.z) min.z = v.z;
-            if (v.x > max.x) max.x = v.x;
-            if (v.y > max.y) max.y = v.y;
-            if (v.z > max.z) max.z = v.z;
+            const m::vec3 *v = &tree->vertices[tree->triangles[index].vertices[j]];
+            if (v->x < min.x) min.x = v->x;
+            if (v->y < min.y) min.y = v->y;
+            if (v->z < min.z) min.z = v->z;
+            if (v->x > max.x) max.x = v->x;
+            if (v->y > max.y) max.y = v->y;
+            if (v->z > max.z) max.z = v->z;
         }
     }
     m::vec3 mid = (max - min) * 0.5f;
@@ -138,7 +145,7 @@ void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
 
     if (sphereRadius > kdTree::kMaxTraceDistance) {
         fprintf(stderr, "level geometry too large");
-        exit(0);
+        //assert(0);
     }
 }
 
@@ -361,7 +368,7 @@ static int32_t kdBinInsertLeaf(const kdTree &tree, const kdNode *leaf, u::vector
     kdBinLeaf binLeaf;
     binLeaf.triangles.insert(binLeaf.triangles.begin(), leaf->triangles.begin(), leaf->triangles.end());
     leafs.push_back(binLeaf);
-    return -(int32_t)leafs.size();
+    return -(int32_t)leafs.size(); // leaf indices are stored with negative index
 }
 
 static int32_t kdBinGetNodes(const kdTree &tree, const kdNode *node, u::vector<kdBinPlane> &planes,
@@ -380,18 +387,18 @@ static int32_t kdBinGetNodes(const kdTree &tree, const kdNode *node, u::vector<k
         }
     }
     planes.push_back(binPlane);
-
-    const size_t index = nodes.size();
+    const size_t planeIndex = planes.size() - 1;
+    const size_t nodeIndex = nodes.size();
     kdBinNode binNode;
-    binNode.plane = planes.size() - 1;
+    binNode.plane = planeIndex;
     binNode.sphereRadius = node->sphereRadius;
     binNode.sphereOrigin = node->sphereOrigin;
     nodes.push_back(binNode);
 
-    nodes[index].children[0] = kdBinGetNodes(tree, node->front, planes, nodes, leafs);
-    nodes[index].children[1] = kdBinGetNodes(tree, node->back, planes, nodes, leafs);
+    nodes[nodeIndex].children[0] = kdBinGetNodes(tree, node->front, planes, nodes, leafs);
+    nodes[nodeIndex].children[1] = kdBinGetNodes(tree, node->back, planes, nodes, leafs);
 
-    return index;
+    return nodeIndex;
 }
 
 template <typename T>
@@ -477,7 +484,7 @@ u::vector<unsigned char> kdTree::serialize(void) {
         compiledEntities.push_back(ent);
     }
 
-    fprintf(stderr, "       nodes: %zu\n", nodeCount);
+    fprintf(stderr, "       nodes: %zu\n", nodeCount - leafCount);
     fprintf(stderr, "       leafs: %zu\n", leafCount);
     fprintf(stderr, "       depth: %zu\n", depth);
 
