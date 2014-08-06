@@ -24,9 +24,8 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth) 
 
     if (recursionDepth > tree->depth)
         tree->depth = recursionDepth;
-    if (recursionDepth > kdTree::kMaxRecursionDepth) {
-        // TODO:
-    }
+    if (recursionDepth > kdTree::kMaxRecursionDepth)
+        return;
 
     tree->nodeCount++;
     calculateSphere(tree, tris);
@@ -155,8 +154,7 @@ void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
     sphereRadius = mid.abs();
 
     if (sphereRadius > kdTree::kMaxTraceDistance) {
-        fprintf(stderr, "level geometry too large");
-        //assert(0);
+        // TODO: level geometry too large
     }
 }
 
@@ -216,7 +214,6 @@ bool kdTree::load(const u::string &file) {
     if (!fp)
         return false;
 
-    fprintf(stderr, "Reading geometry ...\n");
     u::string line;
     while (u::getline(line, fp) != EOF) {
         float x0, y0, z0, x1, y1, z1, w;
@@ -258,22 +255,14 @@ bool kdTree::load(const u::string &file) {
         }
     }
     fclose(fp);
-    fprintf(stderr, "Building tree from %zu vertices in %zu triangles\n",
-        vertices.size(), triangles.size());
 
     nodeCount = 0;
     leafCount = 0;
-
     u::vector<int> indices;
     indices.reserve(triangles.size());
     for (size_t i = 0; i < triangles.size(); i++)
         indices.push_back(i);
     root = new kdNode(this, indices, 0);
-
-    fprintf(stderr, "       nodes: %zu\n", nodeCount - leafCount);
-    fprintf(stderr, "       leafs: %zu\n", leafCount);
-    fprintf(stderr, "       depth: %zu\n", depth);
-
     return true;
 }
 
@@ -460,7 +449,6 @@ u::vector<unsigned char> kdTree::serialize(void) {
     compiledVertices.reserve(triangles.size() * 3);
     compiledLeafs.reserve(leafCount);
 
-    fprintf(stderr, "   Optimizing geometry ...\n");
     for (size_t i = 0; i < triangles.size(); i++) {
         kdBinTriangle triangle;
         triangle.texture = kdBinAddTexture(compiledTextures, triangles[i].texturePath);
@@ -485,22 +473,17 @@ u::vector<unsigned char> kdTree::serialize(void) {
         compiledTriangles.push_back(triangle);
     }
 
-    fprintf(stderr, "       triangles: %zu\n", compiledTriangles.size());
-    fprintf(stderr, "       vertices:  %zu\n", compiledVertices.size());
-
-    fprintf(stderr, "   Constructing tree ...\n");
     kdBinGetNodes(*this, root, compiledPlanes, compiledNodes, compiledLeafs);
 
     // Get entities
     for (auto &it : entities) {
         kdBinEnt ent;
-        ent.id       = it.id;
-        ent.origin   = it.origin;
+        ent.id = it.id;
+        ent.origin = it.origin;
         ent.rotation = it.rotation;
         compiledEntities.push_back(ent);
     }
 
-    fprintf(stderr, "   Calculating tangents ...\n");
     kdBinCreateTangents(compiledVertices, compiledTriangles);
 
     if (compiledNodes.size() == 0) {
@@ -519,7 +502,11 @@ u::vector<unsigned char> kdTree::serialize(void) {
         compiledPlanes.push_back(emptyPlane);
     }
 
-    fprintf(stderr, "Serializing ...\n");
+    if (compiledEntities.size() == 0) {
+        kdBinEnt emptyEnt;
+        compiledEntities.push_back(emptyEnt);
+    }
+
     kdBinEntry entryPlanes;
     kdBinEntry entryTextures;
     kdBinEntry entryNodes;
@@ -553,6 +540,7 @@ u::vector<unsigned char> kdTree::serialize(void) {
     kdSerialize(store, &entryTriangles, sizeof(kdBinEntry));
     kdSerialize(store, &entryVertices, sizeof(kdBinEntry));
     kdSerialize(store, &entryEntities, sizeof(kdBinEntry));
+
     kdSerialize(store, &entryLeafs, sizeof(kdBinEntry));
 
     kdSerializeLump(store, compiledPlanes);
@@ -565,7 +553,5 @@ u::vector<unsigned char> kdTree::serialize(void) {
 
     const uint32_t end = kdBinHeader::kMagic;
     kdSerialize(store, &end, sizeof(uint32_t));
-
-    fprintf(stderr, "Complete (%zu bytes)\n", store.size());
     return store;
 }
