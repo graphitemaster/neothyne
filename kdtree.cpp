@@ -187,26 +187,26 @@ void kdTree::unload(void) {
 }
 
 polyPlane kdTree::testTriangle(size_t index, const m::plane &plane) const {
-    polyPlane front = kPolyPlaneFront;
-    polyPlane back = kPolyPlaneBack;
-    const int indexTo[3] = {
+    int frontBits = kPolyPlaneFront;
+    int backBits = kPolyPlaneBack;
+    const int indexTo[3] = { // index to vertices for triangle
         triangles[index].vertices[0],
         triangles[index].vertices[1],
         triangles[index].vertices[2]
     };
     for (size_t i = 0; i < 3; i++) {
         switch (plane.classify(vertices[indexTo[i]], kEpsilon)) {
-            case kPolyPlaneFront:
-                back = kPolyPlaneSplit;
+            case m::kPointPlaneFront:
+                backBits = kPolyPlaneSplit;
                 break;
-            case kPolyPlaneBack:
-                front = kPolyPlaneSplit;
+            case m::kPointPlaneBack:
+                frontBits = kPolyPlaneSplit;
                 break;
             default:
                 break;
         }
     }
-    return (polyPlane)(front | back);
+    return (polyPlane)(frontBits | backBits);
 }
 
 bool kdTree::load(const u::string &file) {
@@ -493,10 +493,6 @@ u::vector<unsigned char> kdTree::serialize(void) {
 
     fprintf(stderr, "   Constructing tree ...\n");
     kdBinGetNodes(*this, root, compiledPlanes, compiledNodes, compiledLeafs);
-
-    fprintf(stderr, "       nodes: %zu\n", nodeCount - leafCount);
-    fprintf(stderr, "       leafs: %zu\n", leafCount);
-    fprintf(stderr, "       depth: %zu\n", depth);
 
     // Get entities
     for (auto &it : entities) {

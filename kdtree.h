@@ -49,7 +49,7 @@ struct kdNode {
     void split(const kdTree *tree, const u::vector<int> &triangles, m::axis axis,
         u::vector<int> &front, u::vector<int> &back, u::vector<int> &splitlist, m::plane &splitplane) const;
 
-    // Flatten tree repreentation into a disk-writable medium.
+    // Flatten tree representation into a disk-writable medium.
     u::vector<unsigned char> serialize(void);
 
     kdNode        *front;
