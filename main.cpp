@@ -11,23 +11,23 @@ static SDL_Window *gScreen       = nullptr;
 struct camera {
     static constexpr float kStepScale = 0.9f;
 
-    void fromKeyboard(unsigned char key) {
+    void fromKeyboard(SDL_Keycode key) {
         m::vec3 left;
         m::vec3 right;
         switch (key) {
-            case 'w':
+            case SDLK_w:
                 m_position += (m_target * kStepScale);
                 break;
-            case 's':
+            case SDLK_s:
                 m_position -= (m_target * kStepScale);
                 break;
-            case 'a':
+            case SDLK_a:
                 left = m_target.cross(m_up);
                 left.normalize();
                 left *= kStepScale;
                 m_position += left;
                 break;
-            case 'd':
+            case SDLK_d:
                 right = m_up.cross(m_target);
                 right.normalize();
                 right *= kStepScale;
@@ -174,7 +174,7 @@ int main(void) {
                 case SDL_KEYDOWN:
                     if (e.key.keysym.sym == SDLK_ESCAPE)
                         return 0;
-                    gCamera.fromKeyboard(e.key.keysym.scancode);
+                    gCamera.fromKeyboard(e.key.keysym.sym);
                     break;
 
                 case SDL_MOUSEMOTION:
