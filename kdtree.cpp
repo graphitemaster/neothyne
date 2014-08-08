@@ -249,6 +249,14 @@ bool kdTree::load(const u::string &file) {
             triangle.texCoords[2] = t2 - 1;
             triangle.generatePlane(this);
             triangles.push_back(triangle);
+        } else if (u::sscanf(line, "f %i %i %i", &v0, &v1, &v2) == 3) {
+            kdTriangle triangle;
+            triangle.texturePath = texturePath;
+            triangle.vertices[0] = v0 - 1;
+            triangle.vertices[1] = v1 - 1;
+            triangle.vertices[2] = v2 - 1;
+            triangle.generatePlane(this);
+            triangles.push_back(triangle);
         } else if (u::sscanf(line, "tex %255s", texture) == 1) {
             texturePath = texture;
             textureCount++;
@@ -455,8 +463,10 @@ u::vector<unsigned char> kdTree::serialize(void) {
         for (size_t j = 0; j < 3; j++) {
             kdBinVertex vertex;
             vertex.vertex = vertices[triangles[i].vertices[j]];
-            vertex.tu = texCoords[triangles[i].texCoords[j]].x;
-            vertex.tv = texCoords[triangles[i].texCoords[j]].y;
+            if (!texCoords.empty()) {
+                vertex.tu = texCoords[triangles[i].texCoords[j]].x;
+                vertex.tv = texCoords[triangles[i].texCoords[j]].y;
+            }
             // If we can reuse vertices for several faces, then do so
             int k = 0;
             for (k = compiledVertices.size() - 1; k >= 0; k--) {
