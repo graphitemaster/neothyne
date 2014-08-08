@@ -38,6 +38,15 @@ private:
     m::mat4 m_transform;
 };
 
+struct texture {
+    texture();
+    ~texture();
+    void load(const u::string &file);
+    void bind(GLuint unit);
+private:
+    GLuint m_textureHandle;
+};
+
 struct renderer {
     renderer(void);
     ~renderer(void);
@@ -49,6 +58,10 @@ private:
     // called once to get function pointer for GL
     void once(void);
 
+    // uniforms
+    GLuint m_modelViewProjection;
+    GLuint m_sampler;
+
     union {
         struct {
             GLuint m_vbo;
@@ -59,8 +72,9 @@ private:
 
     GLuint m_program;
     GLuint m_vao;
-    GLuint m_modelViewProjection;
+
     size_t m_drawElements;
+    texture m_texture;
 };
 
 #endif

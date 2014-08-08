@@ -46,14 +46,23 @@ static SDL_Window *initSDL(void) {
 
 static void initGL(void) {
     glClearColor(0.48f, 0.58f, 0.72f, 0.0f);
+
+    // back face culling
     glFrontFace(GL_CW);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
+
+    // depth buffer + depth test
     glClearDepth(1.0f);
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+
+    // shade model
     glShadeModel(GL_SMOOTH);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // nice perspective correction hint
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 }
 

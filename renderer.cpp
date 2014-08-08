@@ -1,5 +1,6 @@
 #include <string.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 #include "renderer.h"
 
@@ -24,7 +25,9 @@ static PFNGLBINDVERTEXARRAYPROC          glBindVertexArray          = nullptr;
 static PFNGLDELETEPROGRAMPROC            glDeleteProgram            = nullptr;
 static PFNGLDELETEBUFFERSPROC            glDeleteBuffers            = nullptr;
 static PFNGLDELETEVERTEXARRAYSPROC       glDeleteVertexArrays       = nullptr;
+static PFNGLUNIFORM1IPROC                glUniform1i                = nullptr;
 
+///! rendererPipeline
 rendererPipeline::rendererPipeline(void) :
     m_scale(1.0f, 1.0f, 1.0f)
 {
@@ -69,6 +72,7 @@ const m::mat4 *rendererPipeline::getTransform(void) {
     return &m_transform;
 }
 
+///! renderer
 static const char *gVertexShader = R"(
     #version 330
 
@@ -101,8 +105,10 @@ static const char *gFragmentShader = R"(
 
     out vec4 fragColor;
 
+    uniform sampler2D gSampler;
+
     void main() {
-        fragColor = vec4(normal0, 1.0f);
+        fragColor = texture2D(gSampler, texCoord0.st);
     }
 )";
 
@@ -128,6 +134,7 @@ renderer::renderer(void) {
     glUseProgram(m_program);
 
     m_modelViewProjection = glGetUniformLocation(m_program, "gModelViewProjection");
+    m_sampler = glGetUniformLocation(m_program, "gSampler");
 }
 
 renderer::~renderer(void) {
@@ -151,6 +158,7 @@ void renderer::draw(const GLfloat *transform) {
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    m_texture.bind(GL_TEXTURE0);
     glDrawElements(GL_TRIANGLES, m_drawElements, GL_UNSIGNED_INT, 0);
 
     glDisableVertexAttribArray(0);
@@ -185,6 +193,7 @@ void renderer::once(void) {
     *(void **)&glDeleteProgram            = SDL_GL_GetProcAddress("glDeleteProgram");
     *(void **)&glDeleteBuffers            = SDL_GL_GetProcAddress("glDeleteBuffers");
     *(void **)&glDeleteVertexArrays       = SDL_GL_GetProcAddress("glDeleteVertexArrays");
+    *(void **)&glUniform1i                = SDL_GL_GetProcAddress("glUniform1i");
 
     glGenVertexArrays(1, &m_vao);
     glBindVertexArray(m_vao);
@@ -213,4 +222,37 @@ void renderer::load(const kdMap &map) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW);
 
     m_drawElements = indices.size();
+
+    glUniform1i(m_sampler, 0);
+    m_texture.load("notex.jpg");
+}
+
+///! texture
+texture::texture(void) :
+    m_textureHandle(0) { }
+
+texture::~texture(void) {
+    if (m_textureHandle)
+        glDeleteTextures(1, &m_textureHandle);
+}
+
+void texture::load(const u::string &file) {
+    SDL_Surface *surface = IMG_Load(file.c_str());
+    if (!surface)
+        return;
+
+    glGenTextures(1, &m_textureHandle);
+    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    SDL_FreeSurface(surface);
+}
+
+void texture::bind(GLuint unit) {
+    glActiveTexture(unit);
+    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
 }
