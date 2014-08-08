@@ -74,7 +74,7 @@ struct kdTree {
     void unload(void);
     u::vector<unsigned char> serialize(void);
 
-//private:
+private:
     friend struct kdNode;
     friend struct kdTriangle;
 

@@ -21,9 +21,9 @@ void kdMap::unload(void) {
 }
 
 template <typename T>
-static size_t mapUnserialize(T *dest, const u::vector<unsigned char> &data, size_t offset = 0) {
+static size_t mapUnserialize(T *dest, const u::vector<unsigned char> &data, size_t offset = 0, size_t count = 1) {
     const unsigned char *const beg = &*data.begin() + offset;
-    memcpy(dest, beg, sizeof(T));
+    memcpy(dest, beg, sizeof(T) * count);
     return offset + sizeof(T);
 }
 
@@ -78,11 +78,11 @@ bool kdMap::load(const u::vector<unsigned char> &data) {
         planes[i].n = m::vec3::getAxis((m::axis)plane.type);
     }
 
-    mapUnserialize(&*textures.begin(), data, textureEntry.offset);
-    mapUnserialize(&*nodes.begin(), data, nodeEntry.offset);
-    mapUnserialize(&*triangles.begin(), data, triangleEntry.offset);
-    mapUnserialize(&*vertices.begin(), data, vertexEntry.offset);
-    mapUnserialize(&*entities.begin(), data, entEntry.offset);
+    mapUnserialize(&*textures.begin(), data, textureEntry.offset, textures.size());
+    mapUnserialize(&*nodes.begin(), data, nodeEntry.offset, nodes.size());
+    mapUnserialize(&*triangles.begin(), data, triangleEntry.offset, triangles.size());
+    mapUnserialize(&*vertices.begin(), data, vertexEntry.offset, vertices.size());
+    mapUnserialize(&*entities.begin(), data, entEntry.offset, entities.size());
 
     // triangle indices of the leafs
     seek = leafEntry.offset;
@@ -90,10 +90,10 @@ bool kdMap::load(const u::vector<unsigned char> &data) {
     uint32_t triangleIndex;
     for (size_t i = 0; i < leafEntry.length; i++) {
         seek = mapUnserialize(&triangleCount, data, seek);
-        leafs[i].triangles.resize(triangleCount);
+        leafs[i].triangles.reserve(triangleCount);
         for (size_t j = 0; j < triangleCount; j++) {
             seek = mapUnserialize(&triangleIndex, data, seek);
-            leafs[i].triangles[j] = triangleIndex;
+            leafs[i].triangles.push_back(triangleIndex);
         }
     }
 

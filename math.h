@@ -13,6 +13,9 @@ namespace m {
     const float kDegToRad  = kPi / 180.0f;
     const float kRadToDeg  = 180.0f / kPi;
 
+    inline float toRadian(float x) { return x * kDegToRad; }
+    inline float toDegree(float x) { return x * kRadToDeg; }
+
     enum axis {
         kAxisX,
         kAxisY,
@@ -43,10 +46,11 @@ namespace m {
             z(a)
         { }
 
+        void rotate(float angle, const vec3 &axe);
+
         float absSquared(void) const {
             return x * x + y * y + z * z;
         }
-
 
         float abs(void) const {
             return sqrtf(x * x + y * y + z * z);
@@ -80,6 +84,10 @@ namespace m {
             return (fabsf(x - cmp.x) < epsilon)
                 && (fabsf(y - cmp.y) < epsilon)
                 && (fabsf(z - cmp.z) < epsilon);
+        }
+
+        vec3 cross(const vec3 &v) const {
+            return vec3(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
         }
 
         vec3 &operator +=(const vec3 &vec) {
@@ -276,109 +284,121 @@ namespace m {
         float d;
     };
 
-    ///! quaternion
+    ///! quat
     struct quat {
-        float x;
-        float y;
-        float z;
-        float w;
-
-        quat() {
-            *this = identity;
-        }
+        float x, y, z, w;
+        quat() :
+            x(0.0f),
+            y(0.0f),
+            z(0.0f),
+            w(1.0f) { }
 
         quat(float x, float y, float z, float w) :
             x(x),
             y(y),
             z(z),
-            w(w)
-        { }
+            w(w) { }
 
-#if 0
-        quat(const vec3 &axis, float angle) {
-            rotationAxis(axis, angle);
+        quat conjugate() {
+            return quat(-x, -y, -z, w);
+        }
+    };
+
+    inline quat operator*(const quat &l, const quat &r) {
+        const float w = (l.w * r.w) - (l.x * r.x) - (l.y * r.y) - (l.z * r.z);
+        const float x = (l.x * r.w) + (l.w * r.x) + (l.y * r.z) - (l.z * r.y);
+        const float y = (l.y * r.w) + (l.w * r.y) + (l.z * r.x) - (l.x * r.z);
+        const float z = (l.z * r.w) + (l.w * r.z) + (l.x * r.y) - (l.y * r.x);
+        return quat(x, y, z, w);
+    }
+
+    inline quat operator*(const quat &q, const vec3 &v) {
+        const float w = - (q.x * v.x) - (q.y * v.y) - (q.z * v.z);
+        const float x =   (q.w * v.x) + (q.y * v.z) - (q.z * v.y);
+        const float y =   (q.w * v.y) + (q.z * v.x) - (q.x * v.z);
+        const float z =   (q.w * v.z) + (q.x * v.y) - (q.y * v.x);
+        return quat(x, y, z, w);
+    }
+
+    ///!mat4
+    struct mat4 {
+        float m[4][4];
+        mat4() { }
+
+        void loadIdentity(void) {
+            m[0][0] = 1.0f; m[0][1] = 0.0f; m[0][2] = 0.0f; m[0][3] = 0.0f;
+            m[1][0] = 0.0f; m[1][1] = 1.0f; m[1][2] = 0.0f; m[1][3] = 0.0f;
+            m[2][0] = 0.0f; m[2][1] = 0.0f; m[2][2] = 1.0f; m[2][3] = 0.0f;
+            m[3][0] = 0.0f; m[3][1] = 0.0f; m[3][2] = 0.0f; m[3][3] = 1.0f;
         }
 
-        quat(const quat &q1, const quat &q2, float t) {
-            slerp(this, q1, q2, t);
+        mat4 operator*(const mat4 &t) const {
+            mat4 r;
+            for (size_t i = 0; i < 4; i++)
+                for (size_t j = 0; j < 4; j++)
+                    r.m[i][j] = m[i][0] * t.m[0][j] + m[i][1] * t.m[1][j] + m[i][2] * t.m[2][j] + m[i][3] * t.m[3][j];
+            return r;
         }
 
-        void direction(vec3 *dir, vec3 *up, vec3 *side) const {
-            if (side) {
-                side->x = 1.0f - 2.0f * (y * y + z * z);
-                side->y = 2.0f * (x * y + w * z);
-                side->z = 2.0f * (x * z + w * y);
-            }
-
-            if (up) {
-                up->x = 2.0f * (x * y - w * z);
-                up->y = 1.0f - 2.0f * (x * x + z * z);
-                up->z = 2.0f * (y * z + w * x);
-            }
-
-            if (dir) {
-                dir->x = 2.0f * (x * z + w * y);
-                dir->y = 2.0f * (y * z - w * x);
-                dir->z = 1.0f - 2.0f * (x * x + y * y);
-            }
+        void setScaleTrans(float scaleX, float scaleY, float scaleZ) {
+            m[0][0] = scaleX; m[0][1] = 0.0f;   m[0][2] = 0.0f;   m[0][3] = 0.0f;
+            m[1][0] = 0.0f;   m[1][1] = scaleY; m[1][2] = 0.0f;   m[1][3] = 0.0f;
+            m[2][0] = 0.0f;   m[2][1] = 0.0f;   m[2][2] = scaleZ; m[2][3] = 0.0f;
+            m[3][0] = 0.0f;   m[3][1] = 0.0f;   m[3][2] = 0.0f;   m[3][3] = 1.0f;
         }
 
-        void rotationAxis(vec3 v, float angle) {
-            const float s = sinf(angle / 2);
-            const float c = cosf(angle / 2);
+        void setRotateTrans(float rotateX, float rotateY, float rotateZ) {
+            mat4 rx, ry, rz;
 
-            v.normalize();
-            x = s * v.x;
-            y = s * v.y;
-            z = s * v.z;
-            w = c;
+            const float x = toRadian(rotateX);
+            const float y = toRadian(rotateY);
+            const float z = toRadian(rotateZ);
+
+            rx.m[0][0] = 1.0f;    rx.m[0][1] = 0.0f;     rx.m[0][2] = 0.0f;     rx.m[0][3] = 0.0f;
+            rx.m[1][0] = 0.0f;    rx.m[1][1] = cosf(x);  rx.m[1][2] = -sinf(x); rx.m[1][3] = 0.0f;
+            rx.m[2][0] = 0.0f;    rx.m[2][1] = sinf(x);  rx.m[2][2] = cosf(x);  rx.m[2][3] = 0.0f;
+            rx.m[3][0] = 0.0f;    rx.m[3][1] = 0.0f;     rx.m[3][2] = 0.0f;     rx.m[3][3] = 1.0f;
+            ry.m[0][0] = cosf(y); ry.m[0][1] = 0.0f;     ry.m[0][2] = -sinf(y); ry.m[0][3] = 0.0f;
+            ry.m[1][0] = 0.0f;    ry.m[1][1] = 1.0f;     ry.m[1][2] = 0.0f;     ry.m[1][3] = 0.0f;
+            ry.m[2][0] = sinf(y); ry.m[2][1] = 0.0f;     ry.m[2][2] = cosf(y);  ry.m[2][3] = 0.0f;
+            ry.m[3][0] = 0.0f;    ry.m[3][1] = 0.0f;     ry.m[3][2] = 0.0f;     ry.m[3][3] = 1.0f;
+            rz.m[0][0] = cosf(z); rz.m[0][1] = -sinf(z); rz.m[0][2] = 0.0f;     rz.m[0][3] = 0.0f;
+            rz.m[1][0] = sinf(z); rz.m[1][1] = cosf(z);  rz.m[1][2] = 0.0f;     rz.m[1][3] = 0.0f;
+            rz.m[2][0] = 0.0f;    rz.m[2][1] = 0.0f;     rz.m[2][2] = 1.0f;     rz.m[2][3] = 0.0f;
+            rz.m[3][0] = 0.0f;    rz.m[3][1] = 0.0f;     rz.m[3][2] = 0.0f;     rz.m[3][3] = 1.0f;
+
+            *this = rz * ry * rx;
         }
 
-        void invert(void) {
-            x = -x;
-            y = -y;
-            z = -z;
+        void setTranslateTrans(float x, float y, float z) {
+            m[0][0] = 1.0f; m[0][1] = 0.0f; m[0][2] = 0.0f; m[0][3] = x;
+            m[1][0] = 0.0f; m[1][1] = 1.0f; m[1][2] = 0.0f; m[1][3] = y;
+            m[2][0] = 0.0f; m[2][1] = 0.0f; m[2][2] = 1.0f; m[2][3] = z;
+            m[3][0] = 0.0f; m[3][1] = 0.0f; m[3][2] = 0.0f; m[3][3] = 1.0f;
         }
 
-        quat inverse(void) const {
-            quat q;
-            q = *this;
-            q.invert();
-            return q;
+        void setCameraTrans(const vec3 &target, const vec3 &up) {
+            vec3 N = target;
+            N.normalize();
+            vec3 U = up;
+            U.normalize();
+            U = U.cross(N);
+            vec3 V = N.cross(U);
+            m[0][0] = U.x;  m[0][1] = U.y;  m[0][2] = U.z;  m[0][3] = 0.0f;
+            m[1][0] = V.x;  m[1][1] = V.y;  m[1][2] = V.z;  m[1][3] = 0.0f;
+            m[2][0] = N.x;  m[2][1] = N.y;  m[2][2] = N.z;  m[2][3] = 0.0f;
+            m[3][0] = 0.0f; m[3][1] = 0.0f; m[3][2] = 0.0f; m[3][3] = 1.0f;
         }
 
-        void normalize(void) {
-            const float square = x * x + y * y + z * z + w * w;
-            // Only normalize if the length isn't already one and we're not a zero.
-            if (fabsf(square) > kEpsilon && fabsf(square - 1.0f) > kEpsilon) {
-                const float inv = 1.0f / sqrtf(square);
-                x *= inv;
-                y *= inv;
-                z *= inv;
-                w *= inv;
-            }
+        void setPersProjTrans(float fov, float width, float height, float near, float far) {
+            const float ar = width / height;
+            const float range = near - far;
+            const float halfFov = tanf(m::toRadian(fov / 2.0f));
+            m[0][0] = 1.0f/(halfFov * ar);  m[0][1] = 0.0f;         m[0][2] = 0.0f;               m[0][3] = 0.0;
+            m[1][0] = 0.0f;                 m[1][1] = 1.0f/halfFov; m[1][2] = 0.0f;               m[1][3] = 0.0;
+            m[2][0] = 0.0f;                 m[2][1] = 0.0f;         m[2][2] = (-near -far)/range; m[2][3] = 2.0f * far*near/range;
+            m[3][0] = 0.0f;                 m[3][1] = 0.0f;         m[3][2] = 1.0f;               m[3][3] = 0.0;
         }
-
-        quat normalized(void) const {
-            quat q(*this);
-            q.normalize();
-            return q;
-        }
-
-        bool isNormalized(void) const {
-            return fabsf(x * x + y * y + z * z + w * w - 1.0f) < kEpsilon;
-        }
-
-        // Given a normal quaternion the following function will calculate the
-        // value for W when only X, Y and Z are known.
-        void calculateW(void) {
-            const float t = 1.0f - x * x - y * y - z * z;
-            w = t < 0.0f ? 0.0f : -sqrtf(t);
-        }
-
-        static void slerp(quat *dest, const quat &q1, const quat &q2, float t);
-#endif
-        static const quat identity;
     };
 }
 #endif

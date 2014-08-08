@@ -13,7 +13,6 @@ struct kdMap {
 
     bool isLoaded(void) const;
 
-//private:
     u::vector<m::plane>      planes;
     u::vector<kdBinTexture>  textures;
     u::vector<kdBinNode>     nodes;
