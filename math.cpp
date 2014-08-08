@@ -72,6 +72,82 @@ namespace m {
         return true;
     }
 
+    ///! mat4
+    void mat4::loadIdentity(void) {
+        m[0][0] = 1.0f; m[0][1] = 0.0f; m[0][2] = 0.0f; m[0][3] = 0.0f;
+        m[1][0] = 0.0f; m[1][1] = 1.0f; m[1][2] = 0.0f; m[1][3] = 0.0f;
+        m[2][0] = 0.0f; m[2][1] = 0.0f; m[2][2] = 1.0f; m[2][3] = 0.0f;
+        m[3][0] = 0.0f; m[3][1] = 0.0f; m[3][2] = 0.0f; m[3][3] = 1.0f;
+    }
+
+    mat4 mat4::operator*(const mat4 &t) const {
+        mat4 r;
+        for (size_t i = 0; i < 4; i++)
+            for (size_t j = 0; j < 4; j++)
+                r.m[i][j] = m[i][0] * t.m[0][j] + m[i][1] * t.m[1][j] + m[i][2] * t.m[2][j] + m[i][3] * t.m[3][j];
+        return r;
+    }
+
+    void mat4::setScaleTrans(float scaleX, float scaleY, float scaleZ) {
+        m[0][0] = scaleX; m[0][1] = 0.0f;   m[0][2] = 0.0f;   m[0][3] = 0.0f;
+        m[1][0] = 0.0f;   m[1][1] = scaleY; m[1][2] = 0.0f;   m[1][3] = 0.0f;
+        m[2][0] = 0.0f;   m[2][1] = 0.0f;   m[2][2] = scaleZ; m[2][3] = 0.0f;
+        m[3][0] = 0.0f;   m[3][1] = 0.0f;   m[3][2] = 0.0f;   m[3][3] = 1.0f;
+    }
+
+    void mat4::setRotateTrans(float rotateX, float rotateY, float rotateZ) {
+        mat4 rx, ry, rz;
+
+        const float x = toRadian(rotateX);
+        const float y = toRadian(rotateY);
+        const float z = toRadian(rotateZ);
+
+        rx.m[0][0] = 1.0f;    rx.m[0][1] = 0.0f;     rx.m[0][2] = 0.0f;     rx.m[0][3] = 0.0f;
+        rx.m[1][0] = 0.0f;    rx.m[1][1] = cosf(x);  rx.m[1][2] = -sinf(x); rx.m[1][3] = 0.0f;
+        rx.m[2][0] = 0.0f;    rx.m[2][1] = sinf(x);  rx.m[2][2] = cosf(x);  rx.m[2][3] = 0.0f;
+        rx.m[3][0] = 0.0f;    rx.m[3][1] = 0.0f;     rx.m[3][2] = 0.0f;     rx.m[3][3] = 1.0f;
+        ry.m[0][0] = cosf(y); ry.m[0][1] = 0.0f;     ry.m[0][2] = -sinf(y); ry.m[0][3] = 0.0f;
+        ry.m[1][0] = 0.0f;    ry.m[1][1] = 1.0f;     ry.m[1][2] = 0.0f;     ry.m[1][3] = 0.0f;
+        ry.m[2][0] = sinf(y); ry.m[2][1] = 0.0f;     ry.m[2][2] = cosf(y);  ry.m[2][3] = 0.0f;
+        ry.m[3][0] = 0.0f;    ry.m[3][1] = 0.0f;     ry.m[3][2] = 0.0f;     ry.m[3][3] = 1.0f;
+        rz.m[0][0] = cosf(z); rz.m[0][1] = -sinf(z); rz.m[0][2] = 0.0f;     rz.m[0][3] = 0.0f;
+        rz.m[1][0] = sinf(z); rz.m[1][1] = cosf(z);  rz.m[1][2] = 0.0f;     rz.m[1][3] = 0.0f;
+        rz.m[2][0] = 0.0f;    rz.m[2][1] = 0.0f;     rz.m[2][2] = 1.0f;     rz.m[2][3] = 0.0f;
+        rz.m[3][0] = 0.0f;    rz.m[3][1] = 0.0f;     rz.m[3][2] = 0.0f;     rz.m[3][3] = 1.0f;
+
+        *this = rz * ry * rx;
+    }
+
+    void mat4::setTranslateTrans(float x, float y, float z) {
+        m[0][0] = 1.0f; m[0][1] = 0.0f; m[0][2] = 0.0f; m[0][3] = x;
+        m[1][0] = 0.0f; m[1][1] = 1.0f; m[1][2] = 0.0f; m[1][3] = y;
+        m[2][0] = 0.0f; m[2][1] = 0.0f; m[2][2] = 1.0f; m[2][3] = z;
+        m[3][0] = 0.0f; m[3][1] = 0.0f; m[3][2] = 0.0f; m[3][3] = 1.0f;
+    }
+
+    void mat4::setCameraTrans(const vec3 &target, const vec3 &up) {
+        vec3 N = target;
+        N.normalize();
+        vec3 U = up;
+        U.normalize();
+        U = U.cross(N);
+        vec3 V = N.cross(U);
+        m[0][0] = U.x;  m[0][1] = U.y;  m[0][2] = U.z;  m[0][3] = 0.0f;
+        m[1][0] = V.x;  m[1][1] = V.y;  m[1][2] = V.z;  m[1][3] = 0.0f;
+        m[2][0] = N.x;  m[2][1] = N.y;  m[2][2] = N.z;  m[2][3] = 0.0f;
+        m[3][0] = 0.0f; m[3][1] = 0.0f; m[3][2] = 0.0f; m[3][3] = 1.0f;
+    }
+
+    void mat4::setPersProjTrans(float fov, float width, float height, float near, float far) {
+        const float ar = width / height;
+        const float range = near - far;
+        const float halfFov = tanf(m::toRadian(fov / 2.0f));
+        m[0][0] = 1.0f/(halfFov * ar);  m[0][1] = 0.0f;         m[0][2] = 0.0f;               m[0][3] = 0.0;
+        m[1][0] = 0.0f;                 m[1][1] = 1.0f/halfFov; m[1][2] = 0.0f;               m[1][3] = 0.0;
+        m[2][0] = 0.0f;                 m[2][1] = 0.0f;         m[2][2] = (-near -far)/range; m[2][3] = 2.0f * far*near/range;
+        m[3][0] = 0.0f;                 m[3][1] = 0.0f;         m[3][2] = 1.0f;               m[3][3] = 0.0;
+    }
+
     ///! quat
     void quat::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
         if (side) {

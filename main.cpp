@@ -5,9 +5,8 @@
 #include "renderer.h"
 #include "client.h"
 
-static size_t      gScreenWidth  = 1024;
-static size_t      gScreenHeight = 768;
-static SDL_Window *gScreen       = nullptr;
+static constexpr size_t kScreenWidth = 1024;
+static constexpr size_t kScreenHeight = 768;
 
 u::map<int, int> &getKeyState(int key = 0, bool keyDown = false, bool keyUp = false) {
     static u::map<int, int> gKeyMap;
@@ -20,7 +19,8 @@ void getMouseDelta(int *deltaX, int *deltaY) {
     SDL_GetRelativeMouseState(deltaX, deltaY);
 }
 
-int main(void) {
+static SDL_Window *initSDL(void) {
+    SDL_Window *window;
     SDL_Init(SDL_INIT_VIDEO);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -30,18 +30,21 @@ int main(void) {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    gScreen = SDL_CreateWindow("Neothyne",
+    window = SDL_CreateWindow("Neothyne",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        gScreenWidth,
-        gScreenHeight,
+        kScreenWidth,
+        kScreenHeight,
         SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL
     );
 
-    SDL_GL_CreateContext(gScreen);
+    SDL_GL_CreateContext(window);
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
-    // prepare GL
+    return window;
+}
+
+static void initGL(void) {
     glClearColor(0.48f, 0.58f, 0.72f, 0.0f);
     glFrontFace(GL_CW);
     glClearDepth(1.0f);
@@ -52,18 +55,23 @@ int main(void) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+}
 
-    kdTree gTree; // model
-    renderer gRenderer; // view
-    client gClient; // controller
-    kdMap gMap; // model
+int main(void) {
+    SDL_Window *gScreen;
+    gScreen = initSDL();
+    initGL();
+
+    kdTree gTree;
+    renderer gRenderer;
+    client gClient;
+    kdMap gMap;
 
     printf("Loading OBJ into KD-tree (this may take awhile)\n");
     gTree.load("test.obj");
     gMap.load(gTree.serialize());
     gRenderer.load(gMap);
 
-    // go go go!
     while (true) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -76,7 +84,7 @@ int main(void) {
         rendererPipeline pipeline;
         pipeline.position(0.0f, 0.0f, 3.0f);
         pipeline.setCamera(gClient.getPosition(), target, up);
-        pipeline.setPerspectiveProjection(90.0f, gScreenWidth, gScreenHeight, 1.0f, 1200.0f);
+        pipeline.setPerspectiveProjection(90.0f, kScreenWidth, kScreenHeight, 1.0f, 1200.0f);
 
         gRenderer.draw((const GLfloat*)pipeline.getTransform());
 

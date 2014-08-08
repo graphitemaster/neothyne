@@ -24,12 +24,11 @@ void client::move(const u::vector<clientCommands> &commands, const kdMap &map) {
     m::vec3 side;
     m::vec3 newDirection(0.0f, 0.0f, 0.0f);
     m::vec3 jump(0.0f, 0.0f, 0.0f);
-    m::vec3 up;
     m::quat rotation;
 
     velocity = m_velocity;
     rotation = m_rotation;
-    rotation.getOrient(&direction, &up, &side);
+    rotation.getOrient(&direction, nullptr, &side);
 
     m::vec3 upCamera;
     for (auto &it : commands) {
@@ -90,7 +89,6 @@ void client::inputMouseMove(void) {
     else if (m_mouseLat < -89) m_mouseLat = 89;
 
     m_mouseLon -= (float)deltaX * kSensitivity * invert;
-    //m_mouseLon = m::angleMod(m_mouseLon);
 
     m::quat qlat(m::vec3::xAxis, m_mouseLat * m::kDegToRad);
     m::quat qlon(m::vec3::yAxis, m_mouseLon * m::kDegToRad);
