@@ -21,6 +21,9 @@ static PFNGLBUFFERDATAPROC               glBufferData               = nullptr;
 static PFNGLVALIDATEPROGRAMPROC          glValidateProgram          = nullptr;
 static PFNGLGENVERTEXARRAYSPROC          glGenVertexArrays          = nullptr;
 static PFNGLBINDVERTEXARRAYPROC          glBindVertexArray          = nullptr;
+static PFNGLDELETEPROGRAMPROC            glDeleteProgram            = nullptr;
+static PFNGLDELETEBUFFERSPROC            glDeleteBuffers            = nullptr;
+static PFNGLDELETEVERTEXARRAYSPROC       glDeleteVertexArrays       = nullptr;
 
 rendererPipeline::rendererPipeline(void) :
     m_scale(1.0f, 1.0f, 1.0f)
@@ -114,7 +117,7 @@ static void shaderCompile(GLuint program, const char *text, GLenum type) {
     glAttachShader(program, obj);
 }
 
-renderer::renderer() {
+renderer::renderer(void) {
     once();
 
     m_program = glCreateProgram();
@@ -125,6 +128,12 @@ renderer::renderer() {
     glUseProgram(m_program);
 
     m_modelViewProjection = glGetUniformLocation(m_program, "gModelViewProjection");
+}
+
+renderer::~renderer(void) {
+    glDeleteProgram(m_program);
+    glDeleteBuffers(2, m_buffers);
+    glDeleteVertexArrays(1, &m_vao);
 }
 
 void renderer::draw(const GLfloat *transform) {
@@ -173,6 +182,9 @@ void renderer::once(void) {
     *(void **)&glValidateProgram          = SDL_GL_GetProcAddress("glValidateProgram");
     *(void **)&glGenVertexArrays          = SDL_GL_GetProcAddress("glGenVertexArrays");
     *(void **)&glBindVertexArray          = SDL_GL_GetProcAddress("glBindVertexArray");
+    *(void **)&glDeleteProgram            = SDL_GL_GetProcAddress("glDeleteProgram");
+    *(void **)&glDeleteBuffers            = SDL_GL_GetProcAddress("glDeleteBuffers");
+    *(void **)&glDeleteVertexArrays       = SDL_GL_GetProcAddress("glDeleteVertexArrays");
 
     glGenVertexArrays(1, &m_vao);
     glBindVertexArray(m_vao);
@@ -193,11 +205,10 @@ void renderer::load(const kdMap &map) {
         indices.push_back(i3);
     }
 
-    glGenBuffers(1, &m_vbo);
+    glGenBuffers(2, m_buffers);
+
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glBufferData(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW);
-
-    glGenBuffers(1, &m_ibo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW);
 

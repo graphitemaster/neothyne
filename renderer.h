@@ -40,6 +40,7 @@ private:
 
 struct renderer {
     renderer(void);
+    ~renderer(void);
 
     void draw(const GLfloat *transform);
     void load(const kdMap &map);
@@ -48,9 +49,15 @@ private:
     // called once to get function pointer for GL
     void once(void);
 
+    union {
+        struct {
+            GLuint m_vbo;
+            GLuint m_ibo;
+        };
+        GLuint m_buffers[2];
+    };
+
     GLuint m_program;
-    GLuint m_vbo;
-    GLuint m_ibo;
     GLuint m_vao;
     GLuint m_modelViewProjection;
     size_t m_drawElements;
