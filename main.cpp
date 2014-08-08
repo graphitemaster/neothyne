@@ -107,6 +107,8 @@ int main(void) {
                 case SDL_KEYDOWN:
                     if (e.key.keysym.sym == SDLK_ESCAPE)
                         return 0;
+                    if (e.key.keysym.sym == SDLK_F8)
+                        gRenderer.screenShot("screenshot.bmp");
                     getKeyState(e.key.keysym.sym, true);
                     break;
                 case SDL_KEYUP:

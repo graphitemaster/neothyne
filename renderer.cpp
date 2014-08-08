@@ -4,6 +4,9 @@
 
 #include "renderer.h"
 
+static constexpr size_t kScreenWidth = 1024;
+static constexpr size_t kScreenHeight = 768;
+
 static PFNGLCREATESHADERPROC             glCreateShader             = nullptr;
 static PFNGLSHADERSOURCEPROC             glShaderSource             = nullptr;
 static PFNGLCOMPILESHADERPROC            glCompileShader            = nullptr;
@@ -225,6 +228,33 @@ void renderer::load(const kdMap &map) {
 
     glUniform1i(m_sampler, 0);
     m_texture.load("notex.jpg");
+}
+
+void renderer::screenShot(const u::string &file) {
+    static constexpr size_t kChannels = 3;
+    SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, kScreenWidth, kScreenHeight,
+        8*kChannels, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+
+    unsigned char *pixels = new unsigned char[kChannels * kScreenWidth * kScreenHeight];
+    switch (kChannels) {
+        case 3:
+            glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+            break;
+        case 4:
+            glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+            break;
+    }
+
+    SDL_LockSurface(temp);
+    for (size_t i = 0 ; i < kScreenHeight; i++)
+       memcpy(((unsigned char *)temp->pixels) + temp->pitch * i,
+            pixels + kChannels * kScreenWidth * (kScreenHeight-i - 1), kScreenWidth * kChannels);
+    SDL_UnlockSurface(temp);
+
+    delete[] pixels;
+
+    SDL_SaveBMP(temp, file.c_str());
+    SDL_FreeSurface(temp);
 }
 
 ///! texture

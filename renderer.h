@@ -54,6 +54,8 @@ struct renderer {
     void draw(const GLfloat *transform);
     void load(const kdMap &map);
 
+    void screenShot(const u::string &file);
+
 private:
     // called once to get function pointer for GL
     void once(void);
