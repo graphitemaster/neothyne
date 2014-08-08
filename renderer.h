@@ -1,9 +1,10 @@
 #ifndef RENDERER_HDR
 #define RENDERER_HDR
-
 #include <SDL2/SDL_opengl.h>
+
 #include "math.h"
 #include "util.h"
+#include "kdmap.h"
 
 struct rendererPipeline {
     rendererPipeline(void);
@@ -41,7 +42,7 @@ struct renderer {
     renderer(void);
 
     void draw(const GLfloat *transform);
-    void load(const u::vector<unsigned char> &mapData);
+    void load(const kdMap &map);
 
 private:
     // called once to get function pointer for GL

@@ -7,6 +7,7 @@
 static size_t      gScreenWidth  = 1024;
 static size_t      gScreenHeight = 768;
 static SDL_Window *gScreen       = nullptr;
+kdMap gMap; // model
 
 struct camera {
     static constexpr float kStepScale = 0.9f;
@@ -33,6 +34,41 @@ struct camera {
                 right *= kStepScale;
                 m_position += right;
                 break;
+        }
+        if (!gMap.isLoaded())
+            return;
+
+        kdSphereTrace trace;
+        trace.radius = 5.0f;
+        trace.start = m_position;
+        trace.dir = 1.0f;
+        gMap.traceSphere(&trace);
+
+        float check = trace.fraction;
+        if (check > 1.0f) check = 1.0f;
+        if (check < 0.0f) check = 0.0f;
+
+        if (check != 1.0f) {
+            switch (key) {
+                case SDLK_w:
+                    m_position -= (m_target * kStepScale);
+                    break;
+                case SDLK_s:
+                    m_position += (m_target * kStepScale);
+                    break;
+                case SDLK_d:
+                    left = m_target.cross(m_up);
+                    left.normalize();
+                    left *= kStepScale;
+                    m_position += left;
+                    break;
+                case SDLK_a:
+                    right = m_up.cross(m_target);
+                    right.normalize();
+                    right *= kStepScale;
+                    m_position += right;
+                    break;
+            }
         }
     }
 
@@ -79,7 +115,7 @@ struct camera {
         SDL_WarpMouseInWindow(gScreen, m_mouseX, m_mouseY);
     }
 
-private:
+//private:
     void update(void) {
         const m::vec3 vaxis(0.0f, 1.0f, 0.0f);
 
@@ -150,7 +186,8 @@ int main(void) {
 
     printf("Loading OBJ into KD-tree (this may take awhile)\n");
     gTree.load("test.obj");
-    gRenderer.load(gTree.serialize());
+    gMap.load(gTree.serialize());
+    gRenderer.load(gMap);
 
     // go go go!
     while (true) {

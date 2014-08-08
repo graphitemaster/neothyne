@@ -137,6 +137,12 @@ namespace m {
             return zAxis;
         }
 
+        static bool rayCylinderIntersect(const vec3 &start, const vec3 &direction,
+            const vec3 &edgeStart, const vec3 &edgeEnd, float radius, float *fraction);
+
+        static bool raySphereIntersect(const vec3 &start, const vec3 &direction,
+            const vec3 &sphere, float radius, float *fraction);
+
         static const vec3 xAxis;
         static const vec3 yAxis;
         static const vec3 zAxis;

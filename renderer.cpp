@@ -1,9 +1,7 @@
 #include <string.h>
-
 #include <SDL2/SDL.h>
 
 #include "renderer.h"
-#include "kdmap.h"
 
 static PFNGLCREATESHADERPROC             glCreateShader             = nullptr;
 static PFNGLSHADERSOURCEPROC             glShaderSource             = nullptr;
@@ -182,10 +180,7 @@ void renderer::once(void) {
     onlyOnce = true;
 }
 
-void renderer::load(const u::vector<unsigned char> &data) {
-    kdMap map;
-    map.load(data);
-
+void renderer::load(const kdMap &map) {
     // construct all indices, in the future we'll create texture batches for
     // the triangles which share the same textures
     u::vector<uint32_t> indices;
