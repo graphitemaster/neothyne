@@ -71,4 +71,34 @@ namespace m {
         *fraction = u1 < u2 ? u1 : u2;
         return true;
     }
+
+    ///! quat
+    void quat::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
+        if (side) {
+            side->x = 1.0f - 2.0f * (y * y + z * z);
+            side->y = 2.0f * (x * y + w * z);
+            side->z = 2.0f * (x * z - w * y);
+        }
+        if (up) {
+            up->x = 2.0f * (x * y - w * z);
+            up->y = 1.0f - 2.0f * (x * x + z * z);
+            up->z = 2.0f * (y * z + w * x);
+        }
+        if (direction) {
+            direction->x = 2.0f * (x * z + w * y);
+            direction->y = 2.0f * (y * z - w * x);
+            direction->z = 1.0f - 2.0f * (x * x + y * y);
+        }
+    }
+
+    void quat::rotationAxis(vec3 vec, float angle) {
+        const float s = sinf(angle / 2.0f);
+        const float c = cosf(angle / 2.0f);
+
+        vec.normalize();
+        x = s * vec.x;
+        y = s * vec.y;
+        z = s * vec.z;
+        w = c;
+    }
 }

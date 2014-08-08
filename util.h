@@ -1,8 +1,9 @@
 #ifndef UTIL_HDR
 #define UTIL_HDR
+#include <map>
 #include <vector>
-#include <algorithm>
 #include <string>
+#include <algorithm>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -13,6 +14,8 @@ namespace u {
     using vector = std::vector<T>;
     using string = std::string;
 
+    template<typename T1, typename T2>
+    using map = std::map<T1, T2>;
 
     template <typename randomAccessIterator>
     inline void sort(randomAccessIterator first, randomAccessIterator last) {

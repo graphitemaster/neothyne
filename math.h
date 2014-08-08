@@ -16,6 +16,11 @@ namespace m {
     inline float toRadian(float x) { return x * kDegToRad; }
     inline float toDegree(float x) { return x * kRadToDeg; }
 
+    inline float angleMod(float angle) {
+        const float circle = 660.0f / 65336;
+        return circle * ((int)(angle * circle) & 65535);
+    }
+
     enum axis {
         kAxisX,
         kAxisY,
@@ -84,6 +89,13 @@ namespace m {
             return (fabsf(x - cmp.x) < epsilon)
                 && (fabsf(y - cmp.y) < epsilon)
                 && (fabsf(z - cmp.z) < epsilon);
+        }
+
+        void setLength(float scaleLength) {
+            const float length = scaleLength / abs();
+            x *= length;
+            y *= length;
+            z *= length;
         }
 
         vec3 cross(const vec3 &v) const {
@@ -305,9 +317,19 @@ namespace m {
             z(z),
             w(w) { }
 
+        quat(const vec3 &vec, float angle) {
+            rotationAxis(vec, angle);
+        }
+
         quat conjugate() {
             return quat(-x, -y, -z, w);
         }
+
+        // get all 3 axis of the quaternion
+        void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
+
+    private:
+        void rotationAxis(vec3 vec, float angle);
     };
 
     inline quat operator*(const quat &l, const quat &r) {
