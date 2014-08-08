@@ -21,6 +21,8 @@ static PFNGLGENBUFFERSPROC               glGenBuffers               = nullptr;
 static PFNGLVERTEXATTRIBPOINTERPROC      glVertexAttribPointer      = nullptr;
 static PFNGLBUFFERDATAPROC               glBufferData               = nullptr;
 static PFNGLVALIDATEPROGRAMPROC          glValidateProgram          = nullptr;
+static PFNGLGENVERTEXARRAYSPROC          glGenVertexArrays          = nullptr;
+static PFNGLBINDVERTEXARRAYPROC          glBindVertexArray          = nullptr;
 
 rendererPipeline::rendererPipeline(void) :
     m_scale(1.0f, 1.0f, 1.0f)
@@ -108,7 +110,7 @@ static void shaderCompile(GLuint program, const char *text, GLenum type) {
     const GLchar* p[1];
     p[0] = text;
     GLint lengths[1];
-    lengths[0]= strlen(text);
+    lengths[0] = strlen(text);
     glShaderSource(obj, 1, p, lengths);
     glCompileShader(obj);
     glAttachShader(program, obj);
@@ -171,6 +173,11 @@ void renderer::once(void) {
     *(void **)&glVertexAttribPointer      = SDL_GL_GetProcAddress("glVertexAttribPointer");
     *(void **)&glBufferData               = SDL_GL_GetProcAddress("glBufferData");
     *(void **)&glValidateProgram          = SDL_GL_GetProcAddress("glValidateProgram");
+    *(void **)&glGenVertexArrays          = SDL_GL_GetProcAddress("glGenVertexArrays");
+    *(void **)&glBindVertexArray          = SDL_GL_GetProcAddress("glBindVertexArray");
+
+    glGenVertexArrays(1, &m_vao);
+    glBindVertexArray(m_vao);
 
     onlyOnce = true;
 }

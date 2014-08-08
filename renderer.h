@@ -50,6 +50,7 @@ private:
     GLuint m_program;
     GLuint m_vbo;
     GLuint m_ibo;
+    GLuint m_vao;
     GLuint m_modelViewProjection;
     size_t m_drawElements;
 };
