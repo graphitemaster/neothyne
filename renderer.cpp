@@ -35,6 +35,7 @@ static PFNGLGENERATEMIPMAPPROC           glGenerateMipmap           = nullptr;
 static PFNGLDELETESHADERPROC             glDeleteShader             = nullptr;
 static PFNGLGETSHADERIVPROC              glGetShaderiv              = nullptr;
 static PFNGLGETPROGRAMIVPROC             glGetProgramiv             = nullptr;
+static PFNGLGETSHADERINFOLOGPROC         glGetShaderInfoLog         = nullptr;
 
 static void checkError(const char *statement, const char *name, size_t line) {
     GLenum err = glGetError();
@@ -106,6 +107,10 @@ const m::mat4 &rendererPipeline::getWVPTransform(void) {
     return m_WVPTransform;
 }
 
+const m::vec3 &rendererPipeline::getPosition(void) {
+    return m_camera.position;
+}
+
 ///! renderer
 renderer::renderer(void) {
     once();
@@ -130,6 +135,9 @@ void renderer::draw(rendererPipeline &p) {
     m_method.setWVP(wvp);
     m_method.setWorld(worldTransform);
     m_method.setLight(m_light);
+    m_method.setEyeWorldPos(p.getPosition());
+    m_method.setMatSpecIntensity(1.0f);
+    m_method.setMatSpecPower(32.0f);
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
@@ -186,6 +194,7 @@ void renderer::once(void) {
     *(void **)&glDeleteShader             = SDL_GL_GetProcAddress("glDeleteShader");
     *(void **)&glGetShaderiv              = SDL_GL_GetProcAddress("glGetShaderiv");
     *(void **)&glGetProgramiv             = SDL_GL_GetProcAddress("glGetProgramiv");
+    *(void **)&glGetShaderInfoLog         = SDL_GL_GetProcAddress("glGetShaderInfoLog");
 
     GL_CHECK(glGenVertexArrays(1, &m_vao));
     GL_CHECK(glBindVertexArray(m_vao));
@@ -313,8 +322,12 @@ bool method::addShader(GLenum shaderType, const char *shaderText) {
 
     GLint success = 0;
     glGetShaderiv(shaderObject, GL_COMPILE_STATUS, &success);
-    if (!success)
+    if (!success) {
+        GLchar log[1024];
+        glGetShaderInfoLog(shaderObject, 1024, nullptr, log);
+        fprintf(stderr, "%s\n", log);
         return false;
+    }
 
     glAttachShader(m_program, shaderObject);
     return true;
@@ -362,11 +375,13 @@ static const char *gVertexShader = R"(
     out vec3 normal0;
     out vec2 texCoord0;
     out vec3 tangent0;
+    out vec3 worldPos0;
 
     void main() {
         gl_Position = gWVP * vec4(position, 1.0f);
 
         normal0 = (gWorld * vec4(normal, 0.0f)).xyz;
+        worldPos0 = (gWorld * vec4(position, 1.0f)).xyz;
         texCoord0 = texCoord;
         tangent0 = tangent;
     }
@@ -378,6 +393,7 @@ static const char *gFragmentShader = R"(
     in vec3 normal0;
     in vec2 texCoord0;
     in vec3 tangent0;
+    in vec3 worldPos0;
 
     struct light {
         vec3 color;
@@ -390,22 +406,33 @@ static const char *gFragmentShader = R"(
 
     uniform light gLight;
     uniform sampler2D gSampler;
+    uniform vec3 gEyeWorldPos;
+    uniform float gMatSpecIntensity;
+    uniform float gMatSpecPower;
 
     void main() {
-#if 1
         vec4 ambientColor = vec4(gLight.color, 1.0f) * gLight.ambient;
-        float diffuseFactor = dot(normalize(normal0), -gLight.direction);
-        vec4 diffuseColor;
-        if (diffuseFactor > 0.0f)
-            diffuseColor = vec4(gLight.color, 1.0f) * gLight.diffuse * diffuseFactor;
-        else
-            diffuseColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        vec3 lightDirection = -gLight.direction;
+        vec3 normal = normalize(normal0);
 
-        fragColor = texture2D(gSampler, texCoord0.xy) * (ambientColor + diffuseColor);
+        float diffuseFactor = dot(normal, lightDirection);
+
+        vec4 diffuseColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        vec4 specularColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+
+        if (diffuseFactor > 0.0f) {
+            diffuseColor = vec4(gLight.color, 1.0f) * gLight.diffuse * diffuseFactor;
+
+            vec3 vertexToEye = normalize(gEyeWorldPos - worldPos0);
+            vec3 lightReflect = normalize(reflect(gLight.direction, normal));
+            float specularFactor = dot(vertexToEye, lightReflect);
+            specularFactor = pow(specularFactor, gMatSpecPower);
+            if (specularFactor > 0.0f)
+                specularColor = vec4(gLight.color, 1.0f) * gMatSpecIntensity * specularFactor;
+        }
+
+        fragColor = texture2D(gSampler, texCoord0.xy) * (ambientColor + diffuseColor + specularColor);
         fragColor.a = 1.0f;
-#else
-        fragColor = vec4(normal0, 1.0f);
-#endif
     }
 )";
 
@@ -429,6 +456,9 @@ bool lightMethod::init(void) {
     GL_CHECK(m_light.direction = getUniformLocation("gLight.direction"));
     GL_CHECK(m_light.ambient = getUniformLocation("gLight.ambient"));
     GL_CHECK(m_light.diffuse = getUniformLocation("gLight.diffuse"));
+    GL_CHECK(m_eyeWorldPosLocation = getUniformLocation("gEyeWorldPos"));
+    GL_CHECK(m_matSpecIntensityLocation = getUniformLocation("gMatSpecIntensity"));
+    GL_CHECK(m_matSpecPowerLocation = getUniformLocation("gMatSpecPower"));
 
     return true;
 }
@@ -453,4 +483,16 @@ void lightMethod::setLight(const light &l) {
     GL_CHECK(glUniform3f(m_light.direction, direction.x, direction.y, direction.z));
     GL_CHECK(glUniform1f(m_light.ambient, l.ambient));
     GL_CHECK(glUniform1f(m_light.diffuse, l.diffuse));
+}
+
+void lightMethod::setEyeWorldPos(const m::vec3 &eyeWorldPos) {
+    glUniform3f(m_eyeWorldPosLocation, eyeWorldPos.x, eyeWorldPos.y, eyeWorldPos.z);
+}
+
+void lightMethod::setMatSpecIntensity(float intensity) {
+    glUniform1f(m_matSpecIntensityLocation, intensity);
+}
+
+void lightMethod::setMatSpecPower(float power) {
+    glUniform1f(m_matSpecPowerLocation, power);
 }

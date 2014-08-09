@@ -16,8 +16,10 @@ struct rendererPipeline {
     void setCamera(const m::vec3 &position, const m::vec3 &target, const m::vec3 &up);
     const m::mat4 &getWorldTransform(void);
     const m::mat4 &getWVPTransform(void);
+    const m::vec3 &getPosition(void);
 
 private:
+
     m::vec3 m_scale;
     m::vec3 m_position;
     m::vec3 m_rotate;
@@ -80,6 +82,9 @@ struct lightMethod : method {
     void setWorld(const m::mat4 &wvp);
     void setTextureUnit(GLuint unit);
     void setLight(const light &l);
+    void setEyeWorldPos(const m::vec3 &eyeWorldPos);
+    void setMatSpecIntensity(float intensity);
+    void setMatSpecPower(float power);
 
 private:
     friend struct renderer;
@@ -87,6 +92,9 @@ private:
     GLuint m_WVPLocation;
     GLuint m_worldInverse;
     GLuint m_sampler;
+    GLuint m_eyeWorldPosLocation;
+    GLuint m_matSpecIntensityLocation;
+    GLuint m_matSpecPowerLocation;
 
     struct {
         GLuint color;
