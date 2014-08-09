@@ -44,6 +44,12 @@ void client::move(const u::vector<clientCommands> &commands, const kdMap &map) {
             case kCommandRight:
                 newDirection += side;
                 break;
+            case kCommandUp:
+                m_origin.y += 0.5f;
+                break;
+            case kCommandDown:
+                m_origin.y -= 0.5f;
+                break;
             case kCommandJump:
                 jump = m::vec3(0.0f, 1.0f, 0.0f);
                 break;
@@ -103,6 +109,8 @@ void client::inputGetCommands(u::vector<clientCommands> &commands) {
     if (keyState[SDLK_a])     commands.push_back(kCommandLeft);
     if (keyState[SDLK_d])     commands.push_back(kCommandRight);
     if (keyState[SDLK_SPACE]) commands.push_back(kCommandJump);
+    if (keyState[SDLK_q])     commands.push_back(kCommandUp);
+    if (keyState[SDLK_e])     commands.push_back(kCommandDown);
 }
 
 void client::setRotation(const m::quat &rotation) {

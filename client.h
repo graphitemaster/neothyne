@@ -9,7 +9,9 @@ enum clientCommands {
     kCommandBackward,
     kCommandLeft,
     kCommandRight,
-    kCommandJump
+    kCommandJump,
+    kCommandUp,
+    kCommandDown
 };
 
 struct client {
