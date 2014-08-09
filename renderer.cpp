@@ -171,10 +171,10 @@ static void shaderCompile(GLuint program, const char *text, GLenum type) {
 
 renderer::renderer(void) :
     m_light(
-        m::vec3(0.5f, 0.5f, 0.5f),  // full bright
-        0.20f,
-        0.75f,
-        m::vec3(1.0f, 1.0f, 0.0f)   // direction
+        m::vec3(0.3f, 0.3f, 0.3f),
+        0.1f,
+        0.70f,
+        m::vec3(0.0f, 0.0f, 0.0f)   // direction
     )
 {
     once();

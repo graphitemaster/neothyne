@@ -270,6 +270,7 @@ bool kdTree::load(const u::string &file) {
     indices.reserve(triangles.size());
     for (size_t i = 0; i < triangles.size(); i++)
         indices.push_back(i);
+
     root = new kdNode(this, indices, 0);
     return true;
 }
