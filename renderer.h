@@ -49,27 +49,51 @@ private:
     GLuint m_textureHandle;
 };
 
+struct method {
+    method();
+    ~method();
+
+    void enable(void);
+    virtual bool init(void);
+
+protected:
+    bool addShader(GLenum shaderType, const char *shaderText);
+    bool finalize(void);
+
+    GLint getUniformLocation(const char *name);
+private:
+    GLuint m_program;
+    u::list<GLuint> m_shaders;
+};
+
 struct light {
-    light(const m::vec3 &color, float ambientIntensity, float diffuseIntensity, const m::vec3 &direction);
+    m::vec3 color;
+    m::vec3 direction;
+    float ambient;
+    float diffuse;
+};
 
-    void init(GLuint colorLocation, GLuint ambientIntensityLocation,
-        GLuint diffuseIntensityLocation, GLuint directionLocation);
+struct lightMethod : method {
+    virtual bool init(void);
 
-    void activate(void);
+    void setWVP(const m::mat4 &wvp);
+    void setWorld(const m::mat4 &wvp);
+    void setTextureUnit(GLuint unit);
+    void setLight(const light &l);
 
 private:
     friend struct renderer;
-    // uniforms
-    GLuint m_colorLocation;
-    GLuint m_ambientIntensityLocation;
-    GLuint m_diffuseIntensityLocation;
-    GLuint m_directionLocation;
 
-    // properties
-    m::vec3 m_color;
-    float m_ambientIntensity;
-    float m_diffuseIntensity;
-    m::vec3 m_direction;
+    GLuint m_WVPLocation;
+    GLuint m_worldInverse;
+    GLuint m_sampler;
+
+    struct {
+        GLuint color;
+        GLuint direction;
+        GLuint ambient;
+        GLuint diffuse;
+    } m_light;
 };
 
 struct renderer {
@@ -82,15 +106,8 @@ struct renderer {
     void screenShot(const u::string &file);
 
 private:
-    // called once to get function pointer for GL
+    // called once to get function pointers for GL
     void once(void);
-
-    // uniforms
-    GLuint m_modelViewProjection;
-    GLuint m_sampler;
-    GLuint m_directionalLightColor;
-    GLuint m_directionalLightIntensity;
-    GLuint m_worldTransform;
 
     union {
         struct {
@@ -100,12 +117,10 @@ private:
         GLuint m_buffers[2];
     };
 
-    GLuint m_program;
     GLuint m_vao;
-
-    light m_light;
-
     size_t m_drawElements;
+    lightMethod m_method; // the rendering method
+    light m_light;
     texture m_texture;
 };
 

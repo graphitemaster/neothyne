@@ -3,7 +3,7 @@
 #include "client.h"
 
 client::client() :
-    m_origin(0.0f, 120.0f, 0.0f), // 5.0 to put us above the ground plane
+    m_origin(00.0f, 120.0f, 0.0f),
     m_velocity(0.0f, 0.0f, 0.0f),
     m_isOnGround(false) { }
 

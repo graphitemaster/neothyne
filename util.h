@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <list>
 #include <algorithm>
 
 #include <stdint.h>
@@ -16,6 +17,9 @@ namespace u {
 
     template<typename T1, typename T2>
     using map = std::map<T1, T2>;
+
+    template <typename T>
+    using list = std::list<T>;
 
     template <typename randomAccessIterator>
     inline void sort(randomAccessIterator first, randomAccessIterator last) {

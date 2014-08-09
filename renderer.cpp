@@ -32,6 +32,9 @@ static PFNGLUNIFORM1IPROC                glUniform1i                = nullptr;
 static PFNGLUNIFORM1FPROC                glUniform1f                = nullptr;
 static PFNGLUNIFORM3FPROC                glUniform3f                = nullptr;
 static PFNGLGENERATEMIPMAPPROC           glGenerateMipmap           = nullptr;
+static PFNGLDELETESHADERPROC             glDeleteShader             = nullptr;
+static PFNGLGETSHADERIVPROC              glGetShaderiv              = nullptr;
+static PFNGLGETPROGRAMIVPROC             glGetProgramiv             = nullptr;
 
 static void checkError(const char *statement, const char *name, size_t line) {
     GLenum err = glGetError();
@@ -104,113 +107,29 @@ const m::mat4 &rendererPipeline::getWVPTransform(void) {
 }
 
 ///! renderer
-static const char *gVertexShader = R"(
-    #version 330
-
-    layout (location = 0) in vec3 position;
-    layout (location = 1) in vec3 normal;
-    layout (location = 2) in vec2 texCoord;
-    layout (location = 3) in vec3 tangent;
-
-    uniform mat4 gModelViewProjection;
-    uniform mat4 gWorld;
-
-    out vec3 normal0;
-    out vec2 texCoord0;
-    out vec3 tangent0;
-
-    void main() {
-        gl_Position = gModelViewProjection * vec4(position, 1.0f);
-
-        normal0 = normalize((gWorld * vec4(normal, 0.0f)).xyz);
-        texCoord0 = texCoord;
-        tangent0 = tangent;
-    }
-)";
-
-static const char *gFragmentShader = R"(
-    #version 330
-
-    in vec3 normal0;
-    in vec2 texCoord0;
-    in vec3 tangent0;
-
-    struct directionalLight {
-        vec3 color;
-        float ambientIntensity;
-        float diffuseIntensity;
-        vec3 direction;
-    };
-
-    smooth out vec4 fragColor;
-
-    uniform directionalLight gDirectionalLight;
-    uniform sampler2D gSampler;
-
-    void main() {
-        vec4 ambientColor = vec4(gDirectionalLight.color, 1.0f) * gDirectionalLight.ambientIntensity;
-        float diffuseFactor = dot(normalize(normal0), -gDirectionalLight.direction);
-        vec4 diffuseColor = diffuseFactor > 0.0f
-            ? vec4(gDirectionalLight.color, 1.0f) * gDirectionalLight.diffuseIntensity + diffuseFactor
-            : vec4(0.0f, 0.0f, 0.0f, 0.0f);
-
-        fragColor = texture2D(gSampler, texCoord0.xy) * (ambientColor + diffuseColor);
-        fragColor.a = 1.0f;
-    }
-)";
-
-static void shaderCompile(GLuint program, const char *text, GLenum type) {
-    GLuint obj = glCreateShader(type);
-    const GLchar* p[1];
-    p[0] = text;
-    GLint lengths[1];
-    lengths[0] = strlen(text);
-    GL_CHECK(glShaderSource(obj, 1, p, lengths));
-    GL_CHECK(glCompileShader(obj));
-    GL_CHECK(glAttachShader(program, obj));
-}
-
-renderer::renderer(void) :
-    m_light(
-        m::vec3(0.5f, 0.5f, 0.5f),  // full bright
-        0.45f,
-        0.75f,
-        m::vec3(-1.0f, 0.0f, 0.0f)   // direction
-    )
-{
+renderer::renderer(void) {
     once();
 
-    m_program = glCreateProgram();
-    shaderCompile(m_program, gVertexShader, GL_VERTEX_SHADER);
-    shaderCompile(m_program, gFragmentShader, GL_FRAGMENT_SHADER);
-    GL_CHECK(glLinkProgram(m_program));
-    GL_CHECK(glValidateProgram(m_program));
-    GL_CHECK(glUseProgram(m_program));
+    m_light.color = m::vec3(0.8f, 0.8f, 0.8f);
+    m_light.direction = m::vec3(-1.0f, 1.0f, 0.0f);
+    m_light.ambient = 0.45f;
+    m_light.diffuse = 0.75f;
 
-    GL_CHECK(m_modelViewProjection = glGetUniformLocation(m_program, "gModelViewProjection"));
-    GL_CHECK(m_worldTransform = glGetUniformLocation(m_program, "gWorld"));
-    GL_CHECK(m_sampler = glGetUniformLocation(m_program, "gSampler"));
-
-    GL_CHECK(m_light.init(
-        glGetUniformLocation(m_program, "gDirectionalLight.color"),
-        glGetUniformLocation(m_program, "gDirectionalLight.ambientIntensity"),
-        glGetUniformLocation(m_program, "gDirectionalLight.diffuseIntensity"),
-        glGetUniformLocation(m_program, "gDirectionalLight.direction")
-    ));
+    m_method.init();
 }
 
 renderer::~renderer(void) {
-    glDeleteProgram(m_program);
     glDeleteBuffers(2, m_buffers);
     glDeleteVertexArrays(1, &m_vao);
 }
 
 void renderer::draw(rendererPipeline &p) {
     const m::mat4 wvp = p.getWVPTransform();
-    const m::mat4 worldTransform = p.getWorldTransform();
+    const m::mat4 &worldTransform = p.getWorldTransform();
 
-    glUniformMatrix4fv(m_modelViewProjection, 1, GL_TRUE, (const GLfloat *)wvp.m);
-    glUniformMatrix4fv(m_worldTransform, 1, GL_TRUE, (const GLfloat *)worldTransform.m);
+    m_method.setWVP(wvp);
+    m_method.setWorld(worldTransform);
+    m_method.setLight(m_light);
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
@@ -222,9 +141,10 @@ void renderer::draw(rendererPipeline &p) {
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
-
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+
     m_texture.bind(GL_TEXTURE0);
+
     glDrawElements(GL_TRIANGLES, m_drawElements, GL_UNSIGNED_INT, 0);
 
     glDisableVertexAttribArray(0);
@@ -263,6 +183,9 @@ void renderer::once(void) {
     *(void **)&glUniform1f                = SDL_GL_GetProcAddress("glUniform1f");
     *(void **)&glUniform3f                = SDL_GL_GetProcAddress("glUniform3f");
     *(void **)&glGenerateMipmap           = SDL_GL_GetProcAddress("glGenerateMipmap");
+    *(void **)&glDeleteShader             = SDL_GL_GetProcAddress("glDeleteShader");
+    *(void **)&glGetShaderiv              = SDL_GL_GetProcAddress("glGetShaderiv");
+    *(void **)&glGetProgramiv             = SDL_GL_GetProcAddress("glGetProgramiv");
 
     GL_CHECK(glGenVertexArrays(1, &m_vao));
     GL_CHECK(glBindVertexArray(m_vao));
@@ -290,14 +213,11 @@ void renderer::load(const kdMap &map) {
     GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo));
     GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW));
 
-    m_drawElements = indices.size();
-
-    GL_CHECK(glUniform1i(m_sampler, 0));
-
+    m_method.enable();
+    m_method.setTextureUnit(0);
     m_texture.load("notex.jpg");
 
-    // lighting
-    m_light.activate();
+    m_drawElements = indices.size();
 }
 
 void renderer::screenShot(const u::string &file) {
@@ -325,32 +245,6 @@ void renderer::screenShot(const u::string &file) {
 
     SDL_SaveBMP(temp, file.c_str());
     SDL_FreeSurface(temp);
-}
-
-///! light
-light::light(const m::vec3 &color, float ambientIntensity, float diffuseIntensity, const m::vec3 &direction) :
-    m_color(color),
-    m_ambientIntensity(ambientIntensity),
-    m_diffuseIntensity(diffuseIntensity),
-    m_direction(direction)
-{
-
-}
-
-void light::activate(void) {
-    glUniform3f(m_colorLocation, m_color.x, m_color.y, m_color.z);
-    glUniform1f(m_ambientIntensityLocation, m_ambientIntensity);
-    m::vec3 direction = m_direction.normalized();
-    glUniform3f(m_directionLocation, direction.x, direction.y, direction.z);
-    glUniform1f(m_diffuseIntensity, m_diffuseIntensity);
-}
-
-void light::init(GLuint colorLocation, GLuint ambientIntensityLocation,
-    GLuint diffuseIntensityLocation, GLuint directionLocation) {
-    m_colorLocation = colorLocation;
-    m_ambientIntensityLocation = ambientIntensityLocation;
-    m_diffuseIntensityLocation = diffuseIntensityLocation;
-    m_directionLocation = directionLocation;
 }
 
 ///! texture
@@ -384,4 +278,179 @@ void texture::load(const u::string &file) {
 void texture::bind(GLuint unit) {
     glActiveTexture(unit);
     glBindTexture(GL_TEXTURE_2D, m_textureHandle);
+}
+
+///! method
+method::method(void) :
+    m_program(0) { }
+
+method::~method(void) {
+    for (auto &it : m_shaders)
+        glDeleteShader(it);
+
+    if (m_program)
+        glDeleteProgram(m_program);
+}
+
+bool method::init(void) {
+    m_program = glCreateProgram();
+    if (!m_program)
+        return false;
+    return true;
+}
+
+bool method::addShader(GLenum shaderType, const char *shaderText) {
+    GLuint shaderObject = glCreateShader(shaderType);
+    if (!shaderObject)
+        return false;
+
+    m_shaders.push_back(shaderObject);
+
+    const GLchar *p[1] = { shaderText };
+    const GLint lengths[1] = { (GLint)strlen(shaderText) };
+    glShaderSource(shaderObject, 1, p, lengths);
+    glCompileShader(shaderObject);
+
+    GLint success = 0;
+    glGetShaderiv(shaderObject, GL_COMPILE_STATUS, &success);
+    if (!success)
+        return false;
+
+    glAttachShader(m_program, shaderObject);
+    return true;
+}
+
+void method::enable(void) {
+    glUseProgram(m_program);
+}
+
+GLint method::getUniformLocation(const char *name) {
+    return glGetUniformLocation(m_program, name);
+}
+
+bool method::finalize(void) {
+    GLint success = 0;
+    glLinkProgram(m_program);
+    glGetProgramiv(m_program, GL_LINK_STATUS, &success);
+    if (!success)
+        return false;
+
+    glValidateProgram(m_program);
+    glGetProgramiv(m_program, GL_VALIDATE_STATUS, &success);
+    if (!success)
+        return false;
+
+    for (auto &it : m_shaders)
+        glDeleteShader(it);
+
+    m_shaders.clear();
+    return true;
+}
+
+///! core renderer
+static const char *gVertexShader = R"(
+    #version 330
+
+    layout (location = 0) in vec3 position;
+    layout (location = 1) in vec3 normal;
+    layout (location = 2) in vec2 texCoord;
+    layout (location = 3) in vec3 tangent;
+
+    uniform mat4 gWVP;
+    uniform mat4 gWorld;
+
+    out vec3 normal0;
+    out vec2 texCoord0;
+    out vec3 tangent0;
+
+    void main() {
+        gl_Position = gWVP * vec4(position, 1.0f);
+
+        normal0 = (gWorld * vec4(normal, 0.0f)).xyz;
+        texCoord0 = texCoord;
+        tangent0 = tangent;
+    }
+)";
+
+static const char *gFragmentShader = R"(
+    #version 330
+
+    in vec3 normal0;
+    in vec2 texCoord0;
+    in vec3 tangent0;
+
+    struct light {
+        vec3 color;
+        vec3 direction;
+        float ambient;
+        float diffuse;
+    };
+
+    smooth out vec4 fragColor;
+
+    uniform light gLight;
+    uniform sampler2D gSampler;
+
+    void main() {
+#if 1
+        vec4 ambientColor = vec4(gLight.color, 1.0f) * gLight.ambient;
+        float diffuseFactor = dot(normalize(normal0), -gLight.direction);
+        vec4 diffuseColor;
+        if (diffuseFactor > 0.0f)
+            diffuseColor = vec4(gLight.color, 1.0f) * gLight.diffuse * diffuseFactor;
+        else
+            diffuseColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+
+        fragColor = texture2D(gSampler, texCoord0.xy) * (ambientColor + diffuseColor);
+        fragColor.a = 1.0f;
+#else
+        fragColor = vec4(normal0, 1.0f);
+#endif
+    }
+)";
+
+bool lightMethod::init(void) {
+    if (!method::init())
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, gVertexShader))
+        return false;
+
+    if (!addShader(GL_FRAGMENT_SHADER, gFragmentShader))
+        return false;
+
+    if (!finalize())
+        return false;
+
+    GL_CHECK(m_WVPLocation = getUniformLocation("gWVP"));
+    GL_CHECK(m_worldInverse = getUniformLocation("gWorld"));
+    GL_CHECK(m_sampler = getUniformLocation("gSampler"));
+    GL_CHECK(m_light.color = getUniformLocation("gLight.color"));
+    GL_CHECK(m_light.direction = getUniformLocation("gLight.direction"));
+    GL_CHECK(m_light.ambient = getUniformLocation("gLight.ambient"));
+    GL_CHECK(m_light.diffuse = getUniformLocation("gLight.diffuse"));
+
+    return true;
+}
+
+void lightMethod::setWVP(const m::mat4 &wvp) {
+    glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+}
+
+void lightMethod::setWorld(const m::mat4 &worldInverse) {
+    glUniformMatrix4fv(m_worldInverse, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
+}
+
+void lightMethod::setTextureUnit(GLuint unit) {
+    glUniform1i(m_sampler, unit);
+}
+
+void lightMethod::setLight(const light &l) {
+    m::vec3 direction = l.direction;
+    direction.normalize();
+
+    GL_CHECK(glUniform3f(m_light.color, l.color.x, l.color.y, l.color.z));
+    GL_CHECK(glUniform3f(m_light.direction, direction.x, direction.y, direction.z));
+    GL_CHECK(glUniform1f(m_light.ambient, l.ambient));
+    GL_CHECK(glUniform1f(m_light.diffuse, l.diffuse));
 }
