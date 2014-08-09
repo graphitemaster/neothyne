@@ -83,6 +83,7 @@ struct lightMethod : method {
     void setWVP(const m::mat4 &wvp);
     void setWorld(const m::mat4 &wvp);
     void setTextureUnit(GLuint unit);
+    void setNormalUnit(GLuint unit);
     void setLight(const light &l);
     void setEyeWorldPos(const m::vec3 &eyeWorldPos);
     void setMatSpecIntensity(float intensity);
@@ -94,6 +95,7 @@ private:
     GLuint m_WVPLocation;
     GLuint m_worldInverse;
     GLuint m_sampler;
+    GLuint m_normalMap;
     GLuint m_eyeWorldPosLocation;
     GLuint m_matSpecIntensityLocation;
     GLuint m_matSpecPowerLocation;
@@ -111,6 +113,7 @@ struct renderTextueBatch {
     size_t count;
     size_t index;
     texture tex;
+    texture bump;
 };
 
 struct renderer {

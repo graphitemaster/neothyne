@@ -153,6 +153,7 @@ void renderer::draw(rendererPipeline &p) {
 
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
         m_textureBatches[i].tex.bind(GL_TEXTURE0);
+        m_textureBatches[i].bump.bind(GL_TEXTURE1);
         glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
     }
@@ -221,8 +222,12 @@ void renderer::load(const kdMap &map) {
     }
 
     // load textures
-    for (size_t i = 0; i < m_textureBatches.size(); i++)
+    for (size_t i = 0; i < m_textureBatches.size(); i++) {
         m_textureBatches[i].tex.load(map.textures[m_textureBatches[i].index].name);
+        //m_textureBatches[i].bump.load("bump_" + u::string(map.textures[m_textureBatches[i].index].name));
+        //m_textureBatches[i].tex.bind(GL_TEXTURE0);
+        GL_CHECK(m_textureBatches[i].bump.load("nobump.jpg"));
+    }
 
     GL_CHECK(glGenBuffers(2, m_buffers));
 
@@ -232,7 +237,8 @@ void renderer::load(const kdMap &map) {
     GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW));
 
     m_method.enable();
-    m_method.setTextureUnit(0);
+    GL_CHECK(m_method.setTextureUnit(0));
+    GL_CHECK(m_method.setNormalUnit(1));
 
     m_drawElements = indices.size();
 }
@@ -399,10 +405,10 @@ static const char *gLightMethodVertexShader = R"(
     void main() {
         gl_Position = gWVP * vec4(position, 1.0f);
 
+        texCoord0 = texCoord;
         normal0 = (gWorld * vec4(normal, 0.0f)).xyz;
         worldPos0 = (gWorld * vec4(position, 1.0f)).xyz;
-        texCoord0 = texCoord;
-        tangent0 = tangent;
+        tangent0 = (gWorld * vec4(tangent, 0.0f)).xyz;
     }
 )";
 
@@ -425,14 +431,29 @@ static const char *gLightMethodFragmentShader = R"(
 
     uniform light gLight;
     uniform sampler2D gSampler;
+    uniform sampler2D gNormalMap;
     uniform vec3 gEyeWorldPos;
     uniform float gMatSpecIntensity;
     uniform float gMatSpecPower;
 
+    vec3 calcBump(void) {
+        vec3 normal = normalize(normal0);
+        vec3 tangent = normalize(tangent0);
+        tangent = normalize(tangent - dot(tangent, normal) * normal);
+        vec3 bitangent = cross(tangent, normal);
+        vec3 bumpMapNormal = texture(gNormalMap, texCoord0).xyz;
+        bumpMapNormal = 2.0f * bumpMapNormal - vec3(1.0f, 1.0f, 1.0f);
+        vec3 newNormal;
+        mat3 tbn = mat3(tangent, bitangent, normal);
+        newNormal = tbn * bumpMapNormal;
+        newNormal = normalize(newNormal);
+        return newNormal;
+    }
+
     void main() {
         vec4 ambientColor = vec4(gLight.color, 1.0f) * gLight.ambient;
         vec3 lightDirection = -gLight.direction;
-        vec3 normal = normalize(normal0);
+        vec3 normal = calcBump();
 
         float diffuseFactor = dot(normal, lightDirection);
 
@@ -471,6 +492,7 @@ bool lightMethod::init(void) {
     GL_CHECK(m_WVPLocation = getUniformLocation("gWVP"));
     GL_CHECK(m_worldInverse = getUniformLocation("gWorld"));
     GL_CHECK(m_sampler = getUniformLocation("gSampler"));
+    GL_CHECK(m_normalMap = getUniformLocation("gNormalMap"));
     GL_CHECK(m_light.color = getUniformLocation("gLight.color"));
     GL_CHECK(m_light.direction = getUniformLocation("gLight.direction"));
     GL_CHECK(m_light.ambient = getUniformLocation("gLight.ambient"));
@@ -492,6 +514,10 @@ void lightMethod::setWorld(const m::mat4 &worldInverse) {
 
 void lightMethod::setTextureUnit(GLuint unit) {
     glUniform1i(m_sampler, unit);
+}
+
+void lightMethod::setNormalUnit(GLuint unit) {
+    glUniform1i(m_normalMap, unit);
 }
 
 void lightMethod::setLight(const light &l) {
