@@ -65,26 +65,45 @@ protected:
     bool finalize(void);
 
     GLint getUniformLocation(const char *name);
+    GLint getUniformLocation(const u::string &name);
+
 private:
     GLuint m_program;
     u::list<GLuint> m_shaders;
 };
 
-struct light {
+struct baseLight {
     m::vec3 color;
-    m::vec3 direction;
     float ambient;
     float diffuse;
 };
 
+struct directionalLight : baseLight {
+    m::vec3 direction;
+};
+
+struct pointLight : baseLight {
+    m::vec3 position;
+    struct {
+        float constant;
+        float linear;
+        float exp;
+    } attenuation;
+};
+
 struct lightMethod : method {
+    lightMethod();
+
     virtual bool init(void);
+
+    static constexpr size_t kMaxPointLights = 20;
 
     void setWVP(const m::mat4 &wvp);
     void setWorld(const m::mat4 &wvp);
     void setTextureUnit(GLuint unit);
     void setNormalUnit(GLuint unit);
-    void setLight(const light &l);
+    void setDirectionalLight(const directionalLight &light);
+    void setPointLights(const u::vector<pointLight> &pointLights);
     void setEyeWorldPos(const m::vec3 &eyeWorldPos);
     void setMatSpecIntensity(float intensity);
     void setMatSpecPower(float power);
@@ -92,6 +111,7 @@ struct lightMethod : method {
 private:
     friend struct renderer;
 
+    // uniforms
     GLuint m_WVPLocation;
     GLuint m_worldInverse;
     GLuint m_sampler;
@@ -105,7 +125,21 @@ private:
         GLuint direction;
         GLuint ambient;
         GLuint diffuse;
-    } m_light;
+    } m_directionalLight;
+
+    struct {
+        GLuint color;
+        GLuint position;
+        GLuint ambient;
+        GLuint diffuse;
+        struct {
+            GLuint constant;
+            GLuint linear;
+            GLuint exp;
+        } attenuation;
+    } m_pointLights[kMaxPointLights];
+
+    GLuint m_numPointLights;
 };
 
 struct renderTextueBatch {
@@ -140,7 +174,8 @@ private:
     GLuint m_vao;
     size_t m_drawElements;
     lightMethod m_method; // the rendering method
-    light m_light;
+    directionalLight m_directionalLight;
+    u::vector<pointLight> m_pointLights;
     u::vector<renderTextueBatch> m_textureBatches;
 };
 

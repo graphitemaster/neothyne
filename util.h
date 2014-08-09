@@ -46,5 +46,16 @@ namespace u {
         va_end(va);
         return value;
     }
+
+    inline u::string format(const char *fmt, ...) {
+        va_list va;
+        va_start(va, fmt);
+        char *data = nullptr;
+        vasprintf(&data, fmt, va);
+        va_end(va);
+        u::string ret = data;
+        free(data);
+        return ret;
+    }
 }
 #endif

@@ -115,12 +115,15 @@ const m::vec3 &rendererPipeline::getPosition(void) {
 renderer::renderer(void) {
     once();
 
-    m_light.color = m::vec3(0.8f, 0.8f, 0.8f);
-    m_light.direction = m::vec3(-1.0f, 1.0f, 0.0f);
-    m_light.ambient = 0.45f;
-    m_light.diffuse = 0.75f;
+    m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
+    m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
+    m_directionalLight.ambient = 0.45f;
+    m_directionalLight.diffuse = 0.75f;
 
-    m_method.init();
+    if (!m_method.init()) {
+        fprintf(stderr, "failed to initialize rendering method\n");
+        abort();
+    }
 }
 
 renderer::~renderer(void) {
@@ -132,9 +135,25 @@ void renderer::draw(rendererPipeline &p) {
     const m::mat4 wvp = p.getWVPTransform();
     const m::mat4 &worldTransform = p.getWorldTransform();
 
+    m_pointLights.clear();
+    pointLight pl;
+    pl.diffuse = 0.75f;
+    pl.ambient = 0.0f;
+    pl.color = m::vec3(1.0f, 0.0f, 0.0f);
+    pl.position = p.getPosition();
+    pl.attenuation.linear = 0.1f;
+
+    m_pointLights.push_back(pl);
+
+    // directional light
+    m_method.setDirectionalLight(m_directionalLight);
+
+    // point lights
+    m_method.setPointLights(m_pointLights);
+
     m_method.setWVP(wvp);
     m_method.setWorld(worldTransform);
-    m_method.setLight(m_light);
+
     m_method.setEyeWorldPos(p.getPosition());
     m_method.setMatSpecIntensity(1.0f);
     m_method.setMatSpecPower(32.0f);
@@ -333,17 +352,35 @@ bool method::init(void) {
     return true;
 }
 
-bool method::addShader(GLenum shaderType, const char *shaderText) {
-    GLuint shaderObject = glCreateShader(shaderType);
-    if (!shaderObject)
+bool method::addShader(GLenum shaderType, const char *shaderFile) {
+    FILE *fp = fopen(shaderFile, "r");
+    if (!fp)
         return false;
+
+    fseek(fp, 0, SEEK_END);
+    size_t length = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *shaderText = new char[length + 1];
+    fread(shaderText, length, 1, fp);
+    shaderText[length] = '\0';
+    printf(">> %s\n", shaderText);
+
+    fclose(fp);
+
+    GLuint shaderObject = glCreateShader(shaderType);
+    if (!shaderObject) {
+        delete [] shaderText;
+        return false;
+    }
 
     m_shaders.push_back(shaderObject);
 
     const GLchar *p[1] = { shaderText };
-    const GLint lengths[1] = { (GLint)strlen(shaderText) };
+    const GLint lengths[1] = { (GLint)length };
     glShaderSource(shaderObject, 1, p, lengths);
     glCompileShader(shaderObject);
+    delete [] shaderText;
 
     GLint success = 0;
     glGetShaderiv(shaderObject, GL_COMPILE_STATUS, &success);
@@ -366,6 +403,10 @@ GLint method::getUniformLocation(const char *name) {
     return glGetUniformLocation(m_program, name);
 }
 
+GLint method::getUniformLocation(const u::string &name) {
+    return glGetUniformLocation(m_program, name.c_str());
+}
+
 bool method::finalize(void) {
     GLint success = 0;
     glLinkProgram(m_program);
@@ -386,104 +427,19 @@ bool method::finalize(void) {
 }
 
 ///! lightMethod
-static const char *gLightMethodVertexShader = R"(
-    #version 330
+lightMethod::lightMethod(void)
+{
 
-    layout (location = 0) in vec3 position;
-    layout (location = 1) in vec3 normal;
-    layout (location = 2) in vec2 texCoord;
-    layout (location = 3) in vec3 tangent;
-
-    uniform mat4 gWVP;
-    uniform mat4 gWorld;
-
-    out vec3 normal0;
-    out vec2 texCoord0;
-    out vec3 tangent0;
-    out vec3 worldPos0;
-
-    void main() {
-        gl_Position = gWVP * vec4(position, 1.0f);
-
-        texCoord0 = texCoord;
-        normal0 = (gWorld * vec4(normal, 0.0f)).xyz;
-        worldPos0 = (gWorld * vec4(position, 1.0f)).xyz;
-        tangent0 = (gWorld * vec4(tangent, 0.0f)).xyz;
-    }
-)";
-
-static const char *gLightMethodFragmentShader = R"(
-    #version 330
-
-    in vec3 normal0;
-    in vec2 texCoord0;
-    in vec3 tangent0;
-    in vec3 worldPos0;
-
-    struct light {
-        vec3 color;
-        vec3 direction;
-        float ambient;
-        float diffuse;
-    };
-
-    smooth out vec4 fragColor;
-
-    uniform light gLight;
-    uniform sampler2D gSampler;
-    uniform sampler2D gNormalMap;
-    uniform vec3 gEyeWorldPos;
-    uniform float gMatSpecIntensity;
-    uniform float gMatSpecPower;
-
-    vec3 calcBump(void) {
-        vec3 normal = normalize(normal0);
-        vec3 tangent = normalize(tangent0);
-        tangent = normalize(tangent - dot(tangent, normal) * normal);
-        vec3 bitangent = cross(tangent, normal);
-        vec3 bumpMapNormal = texture(gNormalMap, texCoord0).xyz;
-        bumpMapNormal = 2.0f * bumpMapNormal - vec3(1.0f, 1.0f, 1.0f);
-        vec3 newNormal;
-        mat3 tbn = mat3(tangent, bitangent, normal);
-        newNormal = tbn * bumpMapNormal;
-        newNormal = normalize(newNormal);
-        return newNormal;
-    }
-
-    void main() {
-        vec4 ambientColor = vec4(gLight.color, 1.0f) * gLight.ambient;
-        vec3 lightDirection = -gLight.direction;
-        vec3 normal = calcBump();
-
-        float diffuseFactor = dot(normal, lightDirection);
-
-        vec4 diffuseColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        vec4 specularColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-
-        if (diffuseFactor > 0.0f) {
-            diffuseColor = vec4(gLight.color, 1.0f) * gLight.diffuse * diffuseFactor;
-
-            vec3 vertexToEye = normalize(gEyeWorldPos - worldPos0);
-            vec3 lightReflect = normalize(reflect(gLight.direction, normal));
-            float specularFactor = dot(vertexToEye, lightReflect);
-            specularFactor = pow(specularFactor, gMatSpecPower);
-            if (specularFactor > 0.0f)
-                specularColor = vec4(gLight.color, 1.0f) * gMatSpecIntensity * specularFactor;
-        }
-
-        fragColor = texture2D(gSampler, texCoord0.xy) * (ambientColor + diffuseColor + specularColor);
-        fragColor.a = 1.0f;
-    }
-)";
+}
 
 bool lightMethod::init(void) {
     if (!method::init())
         return false;
 
-    if (!addShader(GL_VERTEX_SHADER, gLightMethodVertexShader))
+    if (!addShader(GL_VERTEX_SHADER, "shaders/light.vs"))
         return false;
 
-    if (!addShader(GL_FRAGMENT_SHADER, gLightMethodFragmentShader))
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/light.fs"))
         return false;
 
     if (!finalize())
@@ -493,13 +449,36 @@ bool lightMethod::init(void) {
     GL_CHECK(m_worldInverse = getUniformLocation("gWorld"));
     GL_CHECK(m_sampler = getUniformLocation("gSampler"));
     GL_CHECK(m_normalMap = getUniformLocation("gNormalMap"));
-    GL_CHECK(m_light.color = getUniformLocation("gLight.color"));
-    GL_CHECK(m_light.direction = getUniformLocation("gLight.direction"));
-    GL_CHECK(m_light.ambient = getUniformLocation("gLight.ambient"));
-    GL_CHECK(m_light.diffuse = getUniformLocation("gLight.diffuse"));
+
     GL_CHECK(m_eyeWorldPosLocation = getUniformLocation("gEyeWorldPos"));
     GL_CHECK(m_matSpecIntensityLocation = getUniformLocation("gMatSpecIntensity"));
     GL_CHECK(m_matSpecPowerLocation = getUniformLocation("gMatSpecPower"));
+
+    // directional light
+    GL_CHECK(m_directionalLight.color = getUniformLocation("gDirectionalLight.base.color"));
+    GL_CHECK(m_directionalLight.ambient = getUniformLocation("gDirectionalLight.base.ambient"));
+    GL_CHECK(m_directionalLight.diffuse = getUniformLocation("gDirectionalLight.base.diffuse"));
+    GL_CHECK(m_directionalLight.direction = getUniformLocation("gDirectionalLight.direction"));
+
+    // point lights
+    GL_CHECK(m_numPointLights = getUniformLocation("gNumPointLights"));
+    for (size_t i = 0; i < kMaxPointLights; i++) {
+        u::string color = u::format("gPointLights[%zu].base.color", i);
+        u::string ambient = u::format("gPointLights[%zu].base.ambient", i);
+        u::string diffuse = u::format("gPointLights[%zu].base.diffuse", i);
+        u::string constant = u::format("gPointLights[%zu].attenuation.constant", i);
+        u::string linear = u::format("gPointLights[%zu].attenuation.linear", i);
+        u::string exp = u::format("gPointLights[%zu].attenuation.exp", i);
+        u::string position = u::format("gPointLights[%zu].position", i);
+
+        GL_CHECK(m_pointLights[i].color = getUniformLocation(color));
+        GL_CHECK(m_pointLights[i].ambient = getUniformLocation(ambient));
+        GL_CHECK(m_pointLights[i].diffuse = getUniformLocation(diffuse));
+        GL_CHECK(m_pointLights[i].attenuation.constant = getUniformLocation(constant));
+        GL_CHECK(m_pointLights[i].attenuation.linear = getUniformLocation(linear));
+        GL_CHECK(m_pointLights[i].attenuation.exp = getUniformLocation(exp));
+        GL_CHECK(m_pointLights[i].position = getUniformLocation(position));
+    }
 
     return true;
 }
@@ -520,14 +499,34 @@ void lightMethod::setNormalUnit(GLuint unit) {
     glUniform1i(m_normalMap, unit);
 }
 
-void lightMethod::setLight(const light &l) {
-    m::vec3 direction = l.direction;
+void lightMethod::setDirectionalLight(const directionalLight &light) {
+    m::vec3 direction = light.direction;
     direction.normalize();
 
-    GL_CHECK(glUniform3f(m_light.color, l.color.x, l.color.y, l.color.z));
-    GL_CHECK(glUniform3f(m_light.direction, direction.x, direction.y, direction.z));
-    GL_CHECK(glUniform1f(m_light.ambient, l.ambient));
-    GL_CHECK(glUniform1f(m_light.diffuse, l.diffuse));
+    GL_CHECK(glUniform3f(m_directionalLight.color, light.color.x, light.color.y, light.color.z));
+    GL_CHECK(glUniform3f(m_directionalLight.direction, direction.x, direction.y, direction.z));
+    GL_CHECK(glUniform1f(m_directionalLight.ambient, light.ambient));
+    GL_CHECK(glUniform1f(m_directionalLight.diffuse, light.diffuse));
+}
+
+void lightMethod::setPointLights(const u::vector<pointLight> &lights) {
+    if (lights.size() >= kMaxPointLights) {
+        fprintf(stderr, "too many lights");
+        abort();
+    }
+
+    GL_CHECK(glUniform1i(m_numPointLights, lights.size()));
+
+    for (size_t i = 0; i < lights.size(); i++) {
+        GL_CHECK(glUniform3f(m_pointLights[i].color, lights[i].color.x, lights[i].color.y, lights[i].color.z));
+        GL_CHECK(glUniform3f(m_pointLights[i].position, lights[i].position.x, lights[i].position.y, lights[i].position.z));
+        GL_CHECK(glUniform1f(m_pointLights[i].ambient, lights[i].ambient));
+        GL_CHECK(glUniform1f(m_pointLights[i].diffuse, lights[i].diffuse));
+
+        GL_CHECK(glUniform1f(m_pointLights[i].attenuation.constant, lights[i].attenuation.constant));
+        GL_CHECK(glUniform1f(m_pointLights[i].attenuation.linear, lights[i].attenuation.linear));
+        GL_CHECK(glUniform1f(m_pointLights[i].attenuation.exp, lights[i].attenuation.exp));
+    }
 }
 
 void lightMethod::setEyeWorldPos(const m::vec3 &eyeWorldPos) {

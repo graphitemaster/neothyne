@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-c -std=c++11 `sdl2-config --cflags` -Wall -Wextra -fomit-frame-pointer -fno-exceptions
+CFLAGS=-c -std=c++11 `sdl2-config --cflags` -Wall -Wextra -fomit-frame-pointer -fno-exceptions -g3
 LDFLAGS= `sdl2-config --libs` -lSDL2_image -lGL
 
 SOURCES=kdmap.cpp kdtree.cpp main.cpp math.cpp renderer.cpp client.cpp
