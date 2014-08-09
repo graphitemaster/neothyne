@@ -31,6 +31,7 @@ static PFNGLDELETEVERTEXARRAYSPROC       glDeleteVertexArrays       = nullptr;
 static PFNGLUNIFORM1IPROC                glUniform1i                = nullptr;
 static PFNGLUNIFORM1FPROC                glUniform1f                = nullptr;
 static PFNGLUNIFORM3FPROC                glUniform3f                = nullptr;
+static PFNGLGENERATEMIPMAPPROC           glGenerateMipmap           = nullptr;
 
 static void checkError(const char *statement, const char *name, size_t line) {
     GLenum err = glGetError();
@@ -121,7 +122,7 @@ static const char *gVertexShader = R"(
     void main() {
         gl_Position = gModelViewProjection * vec4(position, 1.0f);
 
-        normal0 = (gWorld * vec4(normal, 0.0f)).xyz;
+        normal0 = normalize((gWorld * vec4(normal, 0.0f)).xyz);
         texCoord0 = texCoord;
         tangent0 = tangent;
     }
@@ -171,10 +172,10 @@ static void shaderCompile(GLuint program, const char *text, GLenum type) {
 
 renderer::renderer(void) :
     m_light(
-        m::vec3(0.3f, 0.3f, 0.3f),
-        0.1f,
-        0.70f,
-        m::vec3(0.0f, 0.0f, 0.0f)   // direction
+        m::vec3(0.5f, 0.5f, 0.5f),  // full bright
+        0.45f,
+        0.75f,
+        m::vec3(-1.0f, 0.0f, 0.0f)   // direction
     )
 {
     once();
@@ -261,6 +262,7 @@ void renderer::once(void) {
     *(void **)&glUniform1i                = SDL_GL_GetProcAddress("glUniform1i");
     *(void **)&glUniform1f                = SDL_GL_GetProcAddress("glUniform1f");
     *(void **)&glUniform3f                = SDL_GL_GetProcAddress("glUniform3f");
+    *(void **)&glGenerateMipmap           = SDL_GL_GetProcAddress("glGenerateMipmap");
 
     GL_CHECK(glGenVertexArrays(1, &m_vao));
     GL_CHECK(glBindVertexArray(m_vao));
@@ -370,8 +372,11 @@ void texture::load(const u::string &file) {
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
     SDL_FreeSurface(surface);
 }
