@@ -30,6 +30,9 @@ static SDL_Window *initSDL(void) {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 6);
+
     window = SDL_CreateWindow("Neothyne",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
@@ -77,6 +80,9 @@ static void initGL(void) {
     GL_CHECK(glShadeModel(GL_SMOOTH));
     GL_CHECK(glEnable(GL_BLEND));
     GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
+    // multisample anti-aliasing
+    GL_CHECK(glEnable(GL_MULTISAMPLE));
 }
 
 int main(void) {
