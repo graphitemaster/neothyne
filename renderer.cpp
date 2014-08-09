@@ -174,7 +174,7 @@ renderer::renderer(void) :
         m::vec3(0.5f, 0.5f, 0.5f),  // full bright
         0.20f,
         0.75f,
-        m::vec3(1.0f, 0.0f, 0.0f)   // direction
+        m::vec3(1.0f, 1.0f, 0.0f)   // direction
     )
 {
     once();

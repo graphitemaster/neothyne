@@ -34,6 +34,15 @@ struct kdMap {
 
     static constexpr float kDistEpsilon = 0.02f; // 2cm epsilon for triangle collisions
     static constexpr float kMinFraction = 0.005f; // no less than 0.5% movement along a direction vector
+    // TODO: collision response
+    //static constexpr size_t kMaxClippingPlanes = 5; // maximum number of clipping planes to test
+    //static constexpr size_t kMaxBumps = 4; // Maximum collision bump iterations
+    //static constexpr float kFractionScale = 0.98f; // Collision response fractional scale
+    static constexpr float kOverClip = 1.01f; // percentage * 100 of overclip allowed in collision detection against planes
+    static constexpr float kStopEpsilon = 0.2f; // minimum velocity size for clipping
+
+    // clips the velocity for collision handling
+    static void clipVelocity(const m::vec3 &in, const m::vec3 &normal, m::vec3 &out, float overBounce);
 
 private:
     bool sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &spherePosition,

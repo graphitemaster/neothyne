@@ -34,7 +34,7 @@ namespace m {
             z(0.0f)
         { }
 
-        vec3(float nx, float ny, float nz) :
+        constexpr vec3(float nx, float ny, float nz) :
             x(nx),
             y(ny),
             z(nz)

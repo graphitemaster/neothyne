@@ -77,9 +77,6 @@ static void initGL(void) {
     GL_CHECK(glShadeModel(GL_SMOOTH));
     GL_CHECK(glEnable(GL_BLEND));
     GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-
-    // nice perspective correction hint
-    //GL_CHECK(glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST));
 }
 
 int main(void) {

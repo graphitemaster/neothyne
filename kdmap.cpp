@@ -279,3 +279,20 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
 
     *trace = (traceFront.fraction < traceBack.fraction) ? traceFront : traceBack;
 }
+
+void kdMap::clipVelocity(const m::vec3 &in, const m::vec3 &normal, m::vec3 &out, float overBounce) {
+    // determine how far along the plane we have to slde based on the incoming direction
+    // this is scaled by `overBounce'
+    float backOff = in * normal * overBounce;
+
+    // against all axis
+    for (size_t i = 0; i < 3; i++) {
+        float change = normal[i] * backOff;
+        out[i] = in[i] - change;
+
+        // if the velocity gets too small cancel it out to prevent noise in the
+        // response
+        if (fabsf(out[i]) < kStopEpsilon)
+            out[i] = 0.0f;
+    }
+}

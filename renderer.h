@@ -58,12 +58,14 @@ struct light {
     void activate(void);
 
 private:
+    friend struct renderer;
     // uniforms
     GLuint m_colorLocation;
     GLuint m_ambientIntensityLocation;
     GLuint m_diffuseIntensityLocation;
     GLuint m_directionLocation;
 
+    // properties
     m::vec3 m_color;
     float m_ambientIntensity;
     float m_diffuseIntensity;

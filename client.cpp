@@ -26,7 +26,6 @@ void client::move(const u::vector<clientCommands> &commands, const kdMap &map) {
     m::vec3 jump(0.0f, 0.0f, 0.0f);
     m::quat rotation;
 
-    velocity = m_velocity;
     rotation = m_rotation;
     rotation.getOrient(&direction, nullptr, &side);
 
@@ -67,6 +66,7 @@ void client::move(const u::vector<clientCommands> &commands, const kdMap &map) {
     trace.start = m_origin;
     trace.dir = m_velocity;
     map.traceSphere(&trace);
+    kdMap::clipVelocity(newDirection, trace.plane.n, m_velocity, kdMap::kOverClip);
     float fraction = trace.fraction;
     if (fraction > 1.0f) fraction = 1.0f;
     if (fraction < 0.0f) fraction = 0.0f;
