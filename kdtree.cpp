@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "kdtree.h"
 
 ///! triangle
@@ -215,12 +217,12 @@ bool kdTree::load(const u::string &file) {
         return false;
 
     u::string line;
+    u::string texturePath;
     while (u::getline(line, fp) != EOF) {
         float x0, y0, z0, x1, y1, z1, w;
         int v0, v1, v2, t0, t1, t2, i;
         int s0, s1, s2;
         char texture[256];
-        u::string texturePath;
         if (u::sscanf(line, "v %f %f %f", &x0, &y0, &z0) == 3) {
             vertices.push_back(m::vec3(x0, y0, z0));
         } else if (u::sscanf(line, "vt %f %f", &x0, &y0) == 2
@@ -257,7 +259,7 @@ bool kdTree::load(const u::string &file) {
             triangle.vertices[2] = v2 - 1;
             triangle.generatePlane(this);
             triangles.push_back(triangle);
-        } else if (u::sscanf(line, "tex %255s", texture) == 1) {
+        } else if (u::sscanf(line, "tex %s", texture) == 1) {
             texturePath = texture;
             textureCount++;
         }
@@ -282,9 +284,9 @@ static uint32_t kdBinAddTexture(u::vector<kdBinTexture> &textures, const u::stri
             return index;
         index++;
     }
-    // if it isn't found create it
     kdBinTexture texture;
-    snprintf(texture.name, sizeof(kdBinTexture::name), "%s", texturePath.c_str());
+    strcpy(texture.name, texturePath.c_str()); // this is not safe, the format will be changed
+    // to use a string table to allow for arbitrary names
     textures.push_back(texture);
     return textures.size() - 1;
 }

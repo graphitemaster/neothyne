@@ -46,8 +46,10 @@ struct texture {
     texture();
     ~texture();
     void load(const u::string &file);
-    void bind(GLuint unit);
+    void bind(GLenum unit);
+
 private:
+    bool m_loaded;
     GLuint m_textureHandle;
 };
 
@@ -104,6 +106,13 @@ private:
     } m_light;
 };
 
+struct renderTextueBatch {
+    size_t start;
+    size_t count;
+    size_t index;
+    texture tex;
+};
+
 struct renderer {
     renderer(void);
     ~renderer(void);
@@ -129,7 +138,7 @@ private:
     size_t m_drawElements;
     lightMethod m_method; // the rendering method
     light m_light;
-    texture m_texture;
+    u::vector<renderTextueBatch> m_textureBatches;
 };
 
 #endif

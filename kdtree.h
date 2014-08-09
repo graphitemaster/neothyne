@@ -118,7 +118,7 @@ struct kdBinPlane {
 };
 
 struct kdBinTexture {
-    char name[64];
+    char name[255];
 };
 
 struct kdBinNode {

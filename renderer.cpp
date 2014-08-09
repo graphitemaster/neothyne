@@ -151,9 +151,11 @@ void renderer::draw(rendererPipeline &p) {
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
 
-    m_texture.bind(GL_TEXTURE0);
-
-    glDrawElements(GL_TRIANGLES, m_drawElements, GL_UNSIGNED_INT, 0);
+    for (size_t i = 0; i < m_textureBatches.size(); i++) {
+        m_textureBatches[i].tex.bind(GL_TEXTURE0);
+        glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
+            (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
+    }
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -203,17 +205,24 @@ void renderer::once(void) {
 }
 
 void renderer::load(const kdMap &map) {
-    // construct all indices, in the future we'll create texture batches for
-    // the triangles which share the same textures
+    // make rendering batches for triangles which share the same texture
     u::vector<uint32_t> indices;
-    for (size_t j = 0; j < map.triangles.size(); j++) {
-        uint32_t i1 = map.triangles[j].v[0];
-        uint32_t i2 = map.triangles[j].v[1];
-        uint32_t i3 = map.triangles[j].v[2];
-        indices.push_back(i1);
-        indices.push_back(i2);
-        indices.push_back(i3);
+    for (size_t i = 0; i < map.textures.size(); i++) {
+        renderTextueBatch batch;
+        batch.start = indices.size();
+        batch.index = i;
+        for (size_t j = 0; j < map.triangles.size(); j++) {
+            if (map.triangles[j].texture == i)
+                for (size_t k = 0; k < 3; k++)
+                    indices.push_back(map.triangles[j].v[k]);
+        }
+        batch.count = indices.size() - batch.start;
+        m_textureBatches.push_back(batch);
     }
+
+    // load textures
+    for (size_t i = 0; i < m_textureBatches.size(); i++)
+        m_textureBatches[i].tex.load(map.textures[m_textureBatches[i].index].name);
 
     GL_CHECK(glGenBuffers(2, m_buffers));
 
@@ -224,7 +233,6 @@ void renderer::load(const kdMap &map) {
 
     m_method.enable();
     m_method.setTextureUnit(0);
-    m_texture.load("notex.jpg");
 
     m_drawElements = indices.size();
 }
@@ -258,7 +266,11 @@ void renderer::screenShot(const u::string &file) {
 
 ///! texture
 texture::texture(void) :
-    m_textureHandle(0) { }
+    m_loaded(false),
+    m_textureHandle(0)
+{
+    //
+}
 
 texture::~texture(void) {
     if (m_textureHandle)
@@ -266,9 +278,15 @@ texture::~texture(void) {
 }
 
 void texture::load(const u::string &file) {
-    SDL_Surface *surface = IMG_Load(file.c_str());
-    if (!surface)
+    // do not load multiple times
+    if (m_loaded)
         return;
+
+    SDL_Surface *surface = IMG_Load(file.c_str());
+    if (!surface) {
+        fprintf(stderr, "failed to load texture `%s'\n", file.c_str());
+        return;
+    }
 
     glGenTextures(1, &m_textureHandle);
     glBindTexture(GL_TEXTURE_2D, m_textureHandle);
@@ -282,9 +300,10 @@ void texture::load(const u::string &file) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
     SDL_FreeSurface(surface);
+    m_loaded = true;
 }
 
-void texture::bind(GLuint unit) {
+void texture::bind(GLenum unit) {
     glActiveTexture(unit);
     glBindTexture(GL_TEXTURE_2D, m_textureHandle);
 }
@@ -360,8 +379,8 @@ bool method::finalize(void) {
     return true;
 }
 
-///! core renderer
-static const char *gVertexShader = R"(
+///! lightMethod
+static const char *gLightMethodVertexShader = R"(
     #version 330
 
     layout (location = 0) in vec3 position;
@@ -387,7 +406,7 @@ static const char *gVertexShader = R"(
     }
 )";
 
-static const char *gFragmentShader = R"(
+static const char *gLightMethodFragmentShader = R"(
     #version 330
 
     in vec3 normal0;
@@ -440,10 +459,10 @@ bool lightMethod::init(void) {
     if (!method::init())
         return false;
 
-    if (!addShader(GL_VERTEX_SHADER, gVertexShader))
+    if (!addShader(GL_VERTEX_SHADER, gLightMethodVertexShader))
         return false;
 
-    if (!addShader(GL_FRAGMENT_SHADER, gFragmentShader))
+    if (!addShader(GL_FRAGMENT_SHADER, gLightMethodFragmentShader))
         return false;
 
     if (!finalize())
