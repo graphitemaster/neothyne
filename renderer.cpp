@@ -29,6 +29,23 @@ static PFNGLDELETEPROGRAMPROC            glDeleteProgram            = nullptr;
 static PFNGLDELETEBUFFERSPROC            glDeleteBuffers            = nullptr;
 static PFNGLDELETEVERTEXARRAYSPROC       glDeleteVertexArrays       = nullptr;
 static PFNGLUNIFORM1IPROC                glUniform1i                = nullptr;
+static PFNGLUNIFORM1FPROC                glUniform1f                = nullptr;
+static PFNGLUNIFORM3FPROC                glUniform3f                = nullptr;
+
+static void checkError(const char *statement, const char *name, size_t line) {
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        fprintf(stderr, "GL error %08x, at %s:%zu - for %s\n", err, name, line,
+            statement);
+        abort();
+    }
+}
+
+#define GL_CHECK(X) \
+    do { \
+        X; \
+        checkError(#X, __FILE__, __LINE__); \
+    } while (0)
 
 ///! rendererPipeline
 rendererPipeline::rendererPipeline(void) :
@@ -63,16 +80,26 @@ void rendererPipeline::setCamera(const m::vec3 &position, const m::vec3 &target,
     m_camera.up = up;
 }
 
-const m::mat4 *rendererPipeline::getTransform(void) {
-    m::mat4 scale, rotate, translate, cameraT, cameraR, perspective;
+const m::mat4 &rendererPipeline::getWorldTransform(void) {
+    m::mat4 scale, rotate, translate;
     scale.setScaleTrans(m_scale.x, m_scale.y, m_scale.z);
     rotate.setRotateTrans(m_rotate.x, m_rotate.y, m_rotate.z);
     translate.setTranslateTrans(m_position.x, m_position.y, m_position.z);
-    cameraT.setTranslateTrans(-m_camera.position.x, -m_camera.position.y, -m_camera.position.z);
-    cameraR.setCameraTrans(m_camera.target, m_camera.up);
-    perspective.setPersProjTrans(m_projection.fov, m_projection.width, m_projection.height, m_projection.near, m_projection.far);
-    m_transform = perspective * cameraR * cameraT * translate * rotate * scale;
-    return &m_transform;
+
+    m_worldTransform = translate * rotate * scale;
+    return m_worldTransform;
+}
+
+const m::mat4 &rendererPipeline::getWVPTransform(void) {
+    getWorldTransform();
+    m::mat4 translate, rotate, perspective;
+    translate.setTranslateTrans(-m_camera.position.x, -m_camera.position.y, -m_camera.position.z);
+    rotate.setCameraTrans(m_camera.target, m_camera.up);
+    perspective.setPersProjTrans(m_projection.fov, m_projection.width, m_projection.height,
+        m_projection.near, m_projection.far);
+
+    m_WVPTransform = perspective * rotate * translate * m_worldTransform;
+    return m_WVPTransform;
 }
 
 ///! renderer
@@ -85,6 +112,7 @@ static const char *gVertexShader = R"(
     layout (location = 3) in vec3 tangent;
 
     uniform mat4 gModelViewProjection;
+    uniform mat4 gWorld;
 
     out vec3 normal0;
     out vec2 texCoord0;
@@ -93,7 +121,7 @@ static const char *gVertexShader = R"(
     void main() {
         gl_Position = gModelViewProjection * vec4(position, 1.0f);
 
-        normal0 = normal;
+        normal0 = (gWorld * vec4(normal, 0.0f)).xyz;
         texCoord0 = texCoord;
         tangent0 = tangent;
     }
@@ -106,12 +134,27 @@ static const char *gFragmentShader = R"(
     in vec2 texCoord0;
     in vec3 tangent0;
 
+    struct directionalLight {
+        vec3 color;
+        float ambientIntensity;
+        float diffuseIntensity;
+        vec3 direction;
+    };
+
     out vec4 fragColor;
 
+    uniform directionalLight gDirectionalLight;
     uniform sampler2D gSampler;
 
     void main() {
-        fragColor = texture2D(gSampler, texCoord0.st);
+        vec4 ambientColor = vec4(gDirectionalLight.color, 1.0f) * gDirectionalLight.ambientIntensity;
+        float diffuseFactor = dot(normalize(normal0), -gDirectionalLight.direction);
+        vec4 diffuseColor = diffuseFactor > 0.0f
+            ? vec4(gDirectionalLight.color, 1.0f) * gDirectionalLight.diffuseIntensity + diffuseFactor
+            : vec4(0.0f, 0.0f, 0.0f, 0.0f);
+
+        fragColor = texture2D(gSampler, texCoord0.xy) * (ambientColor + diffuseColor);
+        fragColor.a = 1.0f;
     }
 )";
 
@@ -121,23 +164,38 @@ static void shaderCompile(GLuint program, const char *text, GLenum type) {
     p[0] = text;
     GLint lengths[1];
     lengths[0] = strlen(text);
-    glShaderSource(obj, 1, p, lengths);
-    glCompileShader(obj);
-    glAttachShader(program, obj);
+    GL_CHECK(glShaderSource(obj, 1, p, lengths));
+    GL_CHECK(glCompileShader(obj));
+    GL_CHECK(glAttachShader(program, obj));
 }
 
-renderer::renderer(void) {
+renderer::renderer(void) :
+    m_light(
+        m::vec3(1.0f, 1.0f, 1.0f),  // full bright
+        1.0f,
+        0.5f,
+        m::vec3(1.0f, 0.0f, 0.0f)   // direction
+    )
+{
     once();
 
     m_program = glCreateProgram();
     shaderCompile(m_program, gVertexShader, GL_VERTEX_SHADER);
     shaderCompile(m_program, gFragmentShader, GL_FRAGMENT_SHADER);
-    glLinkProgram(m_program);
-    glValidateProgram(m_program);
-    glUseProgram(m_program);
+    GL_CHECK(glLinkProgram(m_program));
+    GL_CHECK(glValidateProgram(m_program));
+    GL_CHECK(glUseProgram(m_program));
 
-    m_modelViewProjection = glGetUniformLocation(m_program, "gModelViewProjection");
-    m_sampler = glGetUniformLocation(m_program, "gSampler");
+    GL_CHECK(m_modelViewProjection = glGetUniformLocation(m_program, "gModelViewProjection"));
+    GL_CHECK(m_worldTransform = glGetUniformLocation(m_program, "gWorld"));
+    GL_CHECK(m_sampler = glGetUniformLocation(m_program, "gSampler"));
+
+    GL_CHECK(m_light.init(
+        glGetUniformLocation(m_program, "gDirectionalLight.color"),
+        glGetUniformLocation(m_program, "gDirectionalLight.ambientIntensity"),
+        glGetUniformLocation(m_program, "gDirectionalLight.diffuseIntensity"),
+        glGetUniformLocation(m_program, "gDirectionalLight.direction")
+    ));
 }
 
 renderer::~renderer(void) {
@@ -146,8 +204,12 @@ renderer::~renderer(void) {
     glDeleteVertexArrays(1, &m_vao);
 }
 
-void renderer::draw(const GLfloat *transform) {
-    glUniformMatrix4fv(m_modelViewProjection, 1, GL_TRUE, transform);
+void renderer::draw(rendererPipeline &p) {
+    const m::mat4 wvp = p.getWVPTransform();
+    const m::mat4 worldTransform = p.getWorldTransform();
+
+    glUniformMatrix4fv(m_modelViewProjection, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    glUniformMatrix4fv(m_worldTransform, 1, GL_TRUE, (const GLfloat *)worldTransform.m);
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
@@ -197,9 +259,11 @@ void renderer::once(void) {
     *(void **)&glDeleteBuffers            = SDL_GL_GetProcAddress("glDeleteBuffers");
     *(void **)&glDeleteVertexArrays       = SDL_GL_GetProcAddress("glDeleteVertexArrays");
     *(void **)&glUniform1i                = SDL_GL_GetProcAddress("glUniform1i");
+    *(void **)&glUniform1f                = SDL_GL_GetProcAddress("glUniform1f");
+    *(void **)&glUniform3f                = SDL_GL_GetProcAddress("glUniform3f");
 
-    glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
+    GL_CHECK(glGenVertexArrays(1, &m_vao));
+    GL_CHECK(glBindVertexArray(m_vao));
 
     onlyOnce = true;
 }
@@ -217,17 +281,21 @@ void renderer::load(const kdMap &map) {
         indices.push_back(i3);
     }
 
-    glGenBuffers(2, m_buffers);
+    GL_CHECK(glGenBuffers(2, m_buffers));
 
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW);
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_vbo));
+    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW));
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo));
+    GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW));
 
     m_drawElements = indices.size();
 
-    glUniform1i(m_sampler, 0);
+    GL_CHECK(glUniform1i(m_sampler, 0));
+
     m_texture.load("notex.jpg");
+
+    // lighting
+    m_light.activate();
 }
 
 void renderer::screenShot(const u::string &file) {
@@ -255,6 +323,32 @@ void renderer::screenShot(const u::string &file) {
 
     SDL_SaveBMP(temp, file.c_str());
     SDL_FreeSurface(temp);
+}
+
+///! light
+light::light(const m::vec3 &color, float ambientIntensity, float diffuseIntensity, const m::vec3 &direction) :
+    m_color(color),
+    m_ambientIntensity(ambientIntensity),
+    m_diffuseIntensity(diffuseIntensity),
+    m_direction(direction)
+{
+
+}
+
+void light::activate(void) {
+    glUniform3f(m_colorLocation, m_color.x, m_color.y, m_color.z);
+    glUniform1f(m_ambientIntensityLocation, m_ambientIntensity);
+    m::vec3 direction = m_direction.normalized();
+    glUniform3f(m_directionLocation, direction.x, direction.y, direction.z);
+    glUniform1f(m_diffuseIntensity, m_diffuseIntensity);
+}
+
+void light::init(GLuint colorLocation, GLuint ambientIntensityLocation,
+    GLuint diffuseIntensityLocation, GLuint directionLocation) {
+    m_colorLocation = colorLocation;
+    m_ambientIntensityLocation = ambientIntensityLocation;
+    m_diffuseIntensityLocation = diffuseIntensityLocation;
+    m_directionLocation = directionLocation;
 }
 
 ///! texture

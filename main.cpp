@@ -44,26 +44,42 @@ static SDL_Window *initSDL(void) {
     return window;
 }
 
+static void checkError(const char *statement, const char *name, size_t line) {
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        fprintf(stderr, "GL error %08x, at %s:%zu - for %s\n", err, name, line,
+            statement);
+        abort();
+    }
+}
+
+#define GL_CHECK(X) \
+    do { \
+        X; \
+        checkError(#X, __FILE__, __LINE__); \
+    } while (0)
+
+
 static void initGL(void) {
-    glClearColor(0.48f, 0.58f, 0.72f, 0.0f);
+    GL_CHECK(glClearColor(0.48f, 0.58f, 0.72f, 0.0f));
 
     // back face culling
-    glFrontFace(GL_CW);
-    glCullFace(GL_BACK);
-    glEnable(GL_CULL_FACE);
+    GL_CHECK(glFrontFace(GL_CW));
+    GL_CHECK(glCullFace(GL_BACK));
+    GL_CHECK(glEnable(GL_CULL_FACE));
 
     // depth buffer + depth test
-    glClearDepth(1.0f);
-    glDepthFunc(GL_LEQUAL);
-    glEnable(GL_DEPTH_TEST);
+    GL_CHECK(glClearDepth(1.0f));
+    GL_CHECK(glDepthFunc(GL_LEQUAL));
+    GL_CHECK(glEnable(GL_DEPTH_TEST));
 
     // shade model
-    glShadeModel(GL_SMOOTH);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    GL_CHECK(glShadeModel(GL_SMOOTH));
+    GL_CHECK(glEnable(GL_BLEND));
+    GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
     // nice perspective correction hint
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    //GL_CHECK(glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST));
 }
 
 int main(void) {
@@ -95,7 +111,7 @@ int main(void) {
         pipeline.setCamera(gClient.getPosition(), target, up);
         pipeline.setPerspectiveProjection(90.0f, kScreenWidth, kScreenHeight, 1.0f, 1200.0f);
 
-        gRenderer.draw((const GLfloat*)pipeline.getTransform());
+        gRenderer.draw(pipeline);
 
         SDL_GL_SwapWindow(gScreen);
 

@@ -14,7 +14,8 @@ struct rendererPipeline {
     void rotate(float rotateX, float rotateY, float rotateZ);
     void setPerspectiveProjection(float fov, float width, float height, float near, float far);
     void setCamera(const m::vec3 &position, const m::vec3 &target, const m::vec3 &up);
-    const m::mat4 *getTransform(void);
+    const m::mat4 &getWorldTransform(void);
+    const m::mat4 &getWVPTransform(void);
 
 private:
     m::vec3 m_scale;
@@ -35,7 +36,8 @@ private:
         m::vec3 up;
     } m_camera;
 
-    m::mat4 m_transform;
+    m::mat4 m_worldTransform;
+    m::mat4 m_WVPTransform;
 };
 
 struct texture {
@@ -47,11 +49,32 @@ private:
     GLuint m_textureHandle;
 };
 
+struct light {
+    light(const m::vec3 &color, float ambientIntensity, float diffuseIntensity, const m::vec3 &direction);
+
+    void init(GLuint colorLocation, GLuint ambientIntensityLocation,
+        GLuint diffuseIntensityLocation, GLuint directionLocation);
+
+    void activate(void);
+
+private:
+    // uniforms
+    GLuint m_colorLocation;
+    GLuint m_ambientIntensityLocation;
+    GLuint m_diffuseIntensityLocation;
+    GLuint m_directionLocation;
+
+    m::vec3 m_color;
+    float m_ambientIntensity;
+    float m_diffuseIntensity;
+    m::vec3 m_direction;
+};
+
 struct renderer {
     renderer(void);
     ~renderer(void);
 
-    void draw(const GLfloat *transform);
+    void draw(rendererPipeline &p);
     void load(const kdMap &map);
 
     void screenShot(const u::string &file);
@@ -63,6 +86,9 @@ private:
     // uniforms
     GLuint m_modelViewProjection;
     GLuint m_sampler;
+    GLuint m_directionalLightColor;
+    GLuint m_directionalLightIntensity;
+    GLuint m_worldTransform;
 
     union {
         struct {
@@ -74,6 +100,8 @@ private:
 
     GLuint m_program;
     GLuint m_vao;
+
+    light m_light;
 
     size_t m_drawElements;
     texture m_texture;
