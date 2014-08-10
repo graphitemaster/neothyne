@@ -64,7 +64,7 @@ static void checkError(const char *statement, const char *name, size_t line) {
 
 
 static void initGL(void) {
-    GL_CHECK(glClearColor(0.48f, 0.58f, 0.72f, 0.0f));
+    GL_CHECK(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
 
     // back face culling
     GL_CHECK(glFrontFace(GL_CW));
@@ -95,10 +95,24 @@ int main(void) {
     client gClient;
     kdMap gMap;
 
+    // clear the screen black
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    SDL_GL_SwapWindow(gScreen);
+
+    GL_CHECK(glClearColor(0.4f, 0.6f, 0.9f, 0.0f));
+
     printf("Loading OBJ into KD-tree (this may take awhile)\n");
     gTree.load("test.obj");
     gMap.load(gTree.serialize());
     gRenderer.load(gMap);
+
+    perspectiveProjection projection;
+    projection.fov = 90.0f;
+    projection.width = kScreenWidth;
+    projection.height = kScreenHeight;
+    projection.near = 1.0f;
+    projection.far = 1024.0f;
 
     while (true) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -110,9 +124,9 @@ int main(void) {
         gClient.getDirection(&target, &up, &side);
 
         rendererPipeline pipeline;
-        pipeline.position(0.0f, 0.0f, 3.0f);
+        pipeline.setWorldPosition(0.0f, 0.0f, 0.0f);
         pipeline.setCamera(gClient.getPosition(), target, up);
-        pipeline.setPerspectiveProjection(90.0f, kScreenWidth, kScreenHeight, 1.0f, 1200.0f);
+        pipeline.setPerspectiveProjection(projection);
 
         gRenderer.draw(pipeline);
 

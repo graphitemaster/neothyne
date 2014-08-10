@@ -7,6 +7,12 @@
 static constexpr size_t kScreenWidth = 1024;
 static constexpr size_t kScreenHeight = 768;
 
+// GL functions have an implicit `this' TLS passed through to them. This
+// inherently makes their context global. Thus, we cannot put the context of
+// it under a renderer. OpenGL functions themselfs stay global but their handles
+// must be obtained via SDL_GL_GetProcAddress.
+static bool gOnce = false;
+
 static PFNGLCREATESHADERPROC             glCreateShader             = nullptr;
 static PFNGLSHADERSOURCEPROC             glShaderSource             = nullptr;
 static PFNGLCOMPILESHADERPROC            glCompileShader            = nullptr;
@@ -54,29 +60,27 @@ static void checkError(const char *statement, const char *name, size_t line) {
 
 ///! rendererPipeline
 rendererPipeline::rendererPipeline(void) :
-    m_scale(1.0f, 1.0f, 1.0f)
+    m_scale(1.0f, 1.0f, 1.0f),
+    m_worldPosition(0.0f, 0.0f, 0.0f),
+    m_rotate(0.0f, 0.0f, 0.0f)
 {
     //
 }
 
-void rendererPipeline::scale(float scaleX, float scaleY, float scaleZ) {
+void rendererPipeline::setScale(float scaleX, float scaleY, float scaleZ) {
     m_scale = m::vec3(scaleX, scaleY, scaleZ);
 }
 
-void rendererPipeline::position(float x, float y, float z) {
-    m_position = m::vec3(x, y, z);
+void rendererPipeline::setWorldPosition(float x, float y, float z) {
+    m_worldPosition = m::vec3(x, y, z);
 }
 
-void rendererPipeline::rotate(float rotateX, float rotateY, float rotateZ) {
+void rendererPipeline::setRotate(float rotateX, float rotateY, float rotateZ) {
     m_rotate = m::vec3(rotateX, rotateY, rotateZ);
 }
 
-void rendererPipeline::setPerspectiveProjection(float fov, float width, float height, float near, float far) {
-    m_projection.fov = fov;
-    m_projection.width = width;
-    m_projection.height = height;
-    m_projection.near = near;
-    m_projection.far = far;
+void rendererPipeline::setPerspectiveProjection(const perspectiveProjection &projection) {
+    m_perspectiveProjection = projection;
 }
 
 void rendererPipeline::setCamera(const m::vec3 &position, const m::vec3 &target, const m::vec3 &up) {
@@ -89,7 +93,7 @@ const m::mat4 &rendererPipeline::getWorldTransform(void) {
     m::mat4 scale, rotate, translate;
     scale.setScaleTrans(m_scale.x, m_scale.y, m_scale.z);
     rotate.setRotateTrans(m_rotate.x, m_rotate.y, m_rotate.z);
-    translate.setTranslateTrans(m_position.x, m_position.y, m_position.z);
+    translate.setTranslateTrans(m_worldPosition.x, m_worldPosition.y, m_worldPosition.z);
 
     m_worldTransform = translate * rotate * scale;
     return m_worldTransform;
@@ -100,193 +104,31 @@ const m::mat4 &rendererPipeline::getWVPTransform(void) {
     m::mat4 translate, rotate, perspective;
     translate.setTranslateTrans(-m_camera.position.x, -m_camera.position.y, -m_camera.position.z);
     rotate.setCameraTrans(m_camera.target, m_camera.up);
-    perspective.setPersProjTrans(m_projection.fov, m_projection.width, m_projection.height,
-        m_projection.near, m_projection.far);
+    perspective.setPersProjTrans(
+        m_perspectiveProjection.fov,
+        m_perspectiveProjection.width,
+        m_perspectiveProjection.height,
+        m_perspectiveProjection.near,
+        m_perspectiveProjection.far);
 
     m_WVPTransform = perspective * rotate * translate * m_worldTransform;
     return m_WVPTransform;
 }
 
-const m::vec3 &rendererPipeline::getPosition(void) {
+const perspectiveProjection &rendererPipeline::getPerspectiveProjection(void) const {
+    return m_perspectiveProjection;
+}
+
+const m::vec3 &rendererPipeline::getPosition(void) const {
     return m_camera.position;
 }
 
-///! renderer
-renderer::renderer(void) {
-    once();
-
-    m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
-    m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
-    m_directionalLight.ambient = 0.45f;
-    m_directionalLight.diffuse = 0.75f;
-
-    if (!m_method.init()) {
-        fprintf(stderr, "failed to initialize rendering method\n");
-        abort();
-    }
+const m::vec3 &rendererPipeline::getTarget(void) const {
+    return m_camera.target;
 }
 
-renderer::~renderer(void) {
-    glDeleteBuffers(2, m_buffers);
-    glDeleteVertexArrays(1, &m_vao);
-}
-
-void renderer::draw(rendererPipeline &p) {
-    const m::mat4 wvp = p.getWVPTransform();
-    const m::mat4 &worldTransform = p.getWorldTransform();
-
-    m_pointLights.clear();
-    pointLight pl;
-    pl.diffuse = 0.75f;
-    pl.ambient = 0.0f;
-    pl.color = m::vec3(1.0f, 0.0f, 0.0f);
-    pl.position = p.getPosition();
-    pl.attenuation.linear = 0.1f;
-
-    m_pointLights.push_back(pl);
-
-    // directional light
-    m_method.setDirectionalLight(m_directionalLight);
-
-    // point lights
-    m_method.setPointLights(m_pointLights);
-
-    m_method.setWVP(wvp);
-    m_method.setWorld(worldTransform);
-
-    m_method.setEyeWorldPos(p.getPosition());
-    m_method.setMatSpecIntensity(1.0f);
-    m_method.setMatSpecPower(32.0f);
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-    glEnableVertexAttribArray(3);
-
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), 0);                 // vertex
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-
-    for (size_t i = 0; i < m_textureBatches.size(); i++) {
-        m_textureBatches[i].tex.bind(GL_TEXTURE0);
-        m_textureBatches[i].bump.bind(GL_TEXTURE1);
-        glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
-            (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
-    }
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
-    glDisableVertexAttribArray(3);
-}
-
-void renderer::once(void) {
-    static bool onlyOnce = false;
-    if (onlyOnce)
-        return;
-
-    *(void **)&glCreateShader             = SDL_GL_GetProcAddress("glCreateShader");
-    *(void **)&glShaderSource             = SDL_GL_GetProcAddress("glShaderSource");
-    *(void **)&glCompileShader            = SDL_GL_GetProcAddress("glCompileShader");
-    *(void **)&glAttachShader             = SDL_GL_GetProcAddress("glAttachShader");
-    *(void **)&glCreateProgram            = SDL_GL_GetProcAddress("glCreateProgram");
-    *(void **)&glLinkProgram              = SDL_GL_GetProcAddress("glLinkProgram");
-    *(void **)&glUseProgram               = SDL_GL_GetProcAddress("glUseProgram");
-    *(void **)&glGetUniformLocation       = SDL_GL_GetProcAddress("glGetUniformLocation");
-    *(void **)&glEnableVertexAttribArray  = SDL_GL_GetProcAddress("glEnableVertexAttribArray");
-    *(void **)&glDisableVertexAttribArray = SDL_GL_GetProcAddress("glDisableVertexAttribArray");
-    *(void **)&glUniformMatrix4fv         = SDL_GL_GetProcAddress("glUniformMatrix4fv");
-    *(void **)&glBindBuffer               = SDL_GL_GetProcAddress("glBindBuffer");
-    *(void **)&glGenBuffers               = SDL_GL_GetProcAddress("glGenBuffers");
-    *(void **)&glVertexAttribPointer      = SDL_GL_GetProcAddress("glVertexAttribPointer");
-    *(void **)&glBufferData               = SDL_GL_GetProcAddress("glBufferData");
-    *(void **)&glValidateProgram          = SDL_GL_GetProcAddress("glValidateProgram");
-    *(void **)&glGenVertexArrays          = SDL_GL_GetProcAddress("glGenVertexArrays");
-    *(void **)&glBindVertexArray          = SDL_GL_GetProcAddress("glBindVertexArray");
-    *(void **)&glDeleteProgram            = SDL_GL_GetProcAddress("glDeleteProgram");
-    *(void **)&glDeleteBuffers            = SDL_GL_GetProcAddress("glDeleteBuffers");
-    *(void **)&glDeleteVertexArrays       = SDL_GL_GetProcAddress("glDeleteVertexArrays");
-    *(void **)&glUniform1i                = SDL_GL_GetProcAddress("glUniform1i");
-    *(void **)&glUniform1f                = SDL_GL_GetProcAddress("glUniform1f");
-    *(void **)&glUniform3f                = SDL_GL_GetProcAddress("glUniform3f");
-    *(void **)&glGenerateMipmap           = SDL_GL_GetProcAddress("glGenerateMipmap");
-    *(void **)&glDeleteShader             = SDL_GL_GetProcAddress("glDeleteShader");
-    *(void **)&glGetShaderiv              = SDL_GL_GetProcAddress("glGetShaderiv");
-    *(void **)&glGetProgramiv             = SDL_GL_GetProcAddress("glGetProgramiv");
-    *(void **)&glGetShaderInfoLog         = SDL_GL_GetProcAddress("glGetShaderInfoLog");
-
-    GL_CHECK(glGenVertexArrays(1, &m_vao));
-    GL_CHECK(glBindVertexArray(m_vao));
-
-    onlyOnce = true;
-}
-
-void renderer::load(const kdMap &map) {
-    // make rendering batches for triangles which share the same texture
-    u::vector<uint32_t> indices;
-    for (size_t i = 0; i < map.textures.size(); i++) {
-        renderTextueBatch batch;
-        batch.start = indices.size();
-        batch.index = i;
-        for (size_t j = 0; j < map.triangles.size(); j++) {
-            if (map.triangles[j].texture == i)
-                for (size_t k = 0; k < 3; k++)
-                    indices.push_back(map.triangles[j].v[k]);
-        }
-        batch.count = indices.size() - batch.start;
-        m_textureBatches.push_back(batch);
-    }
-
-    // load textures
-    for (size_t i = 0; i < m_textureBatches.size(); i++) {
-        m_textureBatches[i].tex.load(map.textures[m_textureBatches[i].index].name);
-        //m_textureBatches[i].bump.load("bump_" + u::string(map.textures[m_textureBatches[i].index].name));
-        //m_textureBatches[i].tex.bind(GL_TEXTURE0);
-        GL_CHECK(m_textureBatches[i].bump.load("nobump.jpg"));
-    }
-
-    GL_CHECK(glGenBuffers(2, m_buffers));
-
-    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_vbo));
-    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW));
-    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo));
-    GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW));
-
-    m_method.enable();
-    GL_CHECK(m_method.setTextureUnit(0));
-    GL_CHECK(m_method.setNormalUnit(1));
-
-    m_drawElements = indices.size();
-}
-
-void renderer::screenShot(const u::string &file) {
-    static constexpr size_t kChannels = 3;
-    SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, kScreenWidth, kScreenHeight,
-        8*kChannels, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
-
-    unsigned char *pixels = new unsigned char[kChannels * kScreenWidth * kScreenHeight];
-    switch (kChannels) {
-        case 3:
-            glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-            break;
-        case 4:
-            glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-            break;
-    }
-
-    SDL_LockSurface(temp);
-    for (size_t i = 0 ; i < kScreenHeight; i++)
-       memcpy(((unsigned char *)temp->pixels) + temp->pitch * i,
-            pixels + kChannels * kScreenWidth * (kScreenHeight-i - 1), kScreenWidth * kChannels);
-    SDL_UnlockSurface(temp);
-
-    delete[] pixels;
-
-    SDL_SaveBMP(temp, file.c_str());
-    SDL_FreeSurface(temp);
+const m::vec3 &rendererPipeline::getUp(void) const {
+    return m_camera.up;
 }
 
 ///! texture
@@ -307,30 +149,85 @@ void texture::load(const u::string &file) {
     if (m_loaded)
         return;
 
+    fprintf(stderr, ">> loading `%s'\n", file.c_str());
     SDL_Surface *surface = IMG_Load(file.c_str());
-    if (!surface) {
-        fprintf(stderr, "failed to load texture `%s'\n", file.c_str());
+    if (!surface)
         return;
-    }
 
-    glGenTextures(1, &m_textureHandle);
-    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
+    GL_CHECK(glGenTextures(1, &m_textureHandle));
+    GL_CHECK(glBindTexture(GL_TEXTURE_2D, m_textureHandle));
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
+    GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels));
 
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    GL_CHECK(glGenerateMipmap(GL_TEXTURE_2D));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
 
     SDL_FreeSurface(surface);
     m_loaded = true;
 }
 
 void texture::bind(GLenum unit) {
-    glActiveTexture(unit);
-    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
+    GL_CHECK(glActiveTexture(unit));
+    GL_CHECK(glBindTexture(GL_TEXTURE_2D, m_textureHandle));
+}
+
+///! textureCubemap
+textureCubemap::textureCubemap() :
+    m_loaded(false),
+    m_textureHandle(0)
+{
+}
+
+textureCubemap::~textureCubemap(void) {
+    if (m_textureHandle)
+        glDeleteTextures(1, &m_textureHandle);
+}
+
+bool textureCubemap::load(const u::string files[6]) {
+    if (m_loaded)
+        return false;
+
+    static const GLenum types[6] = {
+        GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+        GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+        GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+        GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+        GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+        GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+    };
+
+    GL_CHECK(glGenTextures(1, &m_textureHandle));
+    GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle));
+
+    for (size_t i = 0; i < 6; i++) {
+        fprintf(stderr, ">> loading `%s'\n", files[i].c_str());
+        SDL_Surface *surface = IMG_Load(files[i].c_str());
+        if (!surface)
+            return false;
+
+        GL_CHECK(glTexImage2D(types[i], 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB,
+                GL_UNSIGNED_BYTE, surface->pixels));
+
+        GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+        GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+        GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+        GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+        GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE));
+
+        SDL_FreeSurface(surface);
+    }
+
+    m_loaded = true;
+
+    return true;
+}
+
+void textureCubemap::bind(GLenum unit) {
+    GL_CHECK(glActiveTexture(unit));
+    GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle));
 }
 
 ///! method
@@ -364,7 +261,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
     char *shaderText = new char[length + 1];
     fread(shaderText, length, 1, fp);
     shaderText[length] = '\0';
-    printf(">> %s\n", shaderText);
+    //printf(">> %s\n", shaderText);
 
     fclose(fp);
 
@@ -396,7 +293,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
 }
 
 void method::enable(void) {
-    glUseProgram(m_program);
+    GL_CHECK(glUseProgram(m_program));
 }
 
 GLint method::getUniformLocation(const char *name) {
@@ -445,23 +342,23 @@ bool lightMethod::init(void) {
     if (!finalize())
         return false;
 
-    GL_CHECK(m_WVPLocation = getUniformLocation("gWVP"));
-    GL_CHECK(m_worldInverse = getUniformLocation("gWorld"));
-    GL_CHECK(m_sampler = getUniformLocation("gSampler"));
-    GL_CHECK(m_normalMap = getUniformLocation("gNormalMap"));
+    m_WVPLocation = getUniformLocation("gWVP");
+    m_worldInverse = getUniformLocation("gWorld");
+    m_sampler = getUniformLocation("gSampler");
+    m_normalMap = getUniformLocation("gNormalMap");
 
-    GL_CHECK(m_eyeWorldPosLocation = getUniformLocation("gEyeWorldPos"));
-    GL_CHECK(m_matSpecIntensityLocation = getUniformLocation("gMatSpecIntensity"));
-    GL_CHECK(m_matSpecPowerLocation = getUniformLocation("gMatSpecPower"));
+    m_eyeWorldPosLocation = getUniformLocation("gEyeWorldPos");
+    m_matSpecIntensityLocation = getUniformLocation("gMatSpecIntensity");
+    m_matSpecPowerLocation = getUniformLocation("gMatSpecPower");
 
     // directional light
-    GL_CHECK(m_directionalLight.color = getUniformLocation("gDirectionalLight.base.color"));
-    GL_CHECK(m_directionalLight.ambient = getUniformLocation("gDirectionalLight.base.ambient"));
-    GL_CHECK(m_directionalLight.diffuse = getUniformLocation("gDirectionalLight.base.diffuse"));
-    GL_CHECK(m_directionalLight.direction = getUniformLocation("gDirectionalLight.direction"));
+    m_directionalLight.color = getUniformLocation("gDirectionalLight.base.color");
+    m_directionalLight.ambient = getUniformLocation("gDirectionalLight.base.ambient");
+    m_directionalLight.diffuse = getUniformLocation("gDirectionalLight.base.diffuse");
+    m_directionalLight.direction = getUniformLocation("gDirectionalLight.direction");
 
     // point lights
-    GL_CHECK(m_numPointLights = getUniformLocation("gNumPointLights"));
+    m_numPointLights = getUniformLocation("gNumPointLights");
     for (size_t i = 0; i < kMaxPointLights; i++) {
         u::string color = u::format("gPointLights[%zu].base.color", i);
         u::string ambient = u::format("gPointLights[%zu].base.ambient", i);
@@ -471,32 +368,32 @@ bool lightMethod::init(void) {
         u::string exp = u::format("gPointLights[%zu].attenuation.exp", i);
         u::string position = u::format("gPointLights[%zu].position", i);
 
-        GL_CHECK(m_pointLights[i].color = getUniformLocation(color));
-        GL_CHECK(m_pointLights[i].ambient = getUniformLocation(ambient));
-        GL_CHECK(m_pointLights[i].diffuse = getUniformLocation(diffuse));
-        GL_CHECK(m_pointLights[i].attenuation.constant = getUniformLocation(constant));
-        GL_CHECK(m_pointLights[i].attenuation.linear = getUniformLocation(linear));
-        GL_CHECK(m_pointLights[i].attenuation.exp = getUniformLocation(exp));
-        GL_CHECK(m_pointLights[i].position = getUniformLocation(position));
+        m_pointLights[i].color = getUniformLocation(color);
+        m_pointLights[i].ambient = getUniformLocation(ambient);
+        m_pointLights[i].diffuse = getUniformLocation(diffuse);
+        m_pointLights[i].attenuation.constant = getUniformLocation(constant);
+        m_pointLights[i].attenuation.linear = getUniformLocation(linear);
+        m_pointLights[i].attenuation.exp = getUniformLocation(exp);
+        m_pointLights[i].position = getUniformLocation(position);
     }
 
     return true;
 }
 
 void lightMethod::setWVP(const m::mat4 &wvp) {
-    glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    GL_CHECK(glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m));
 }
 
 void lightMethod::setWorld(const m::mat4 &worldInverse) {
-    glUniformMatrix4fv(m_worldInverse, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
+    GL_CHECK(glUniformMatrix4fv(m_worldInverse, 1, GL_TRUE, (const GLfloat *)worldInverse.m));
 }
 
-void lightMethod::setTextureUnit(GLuint unit) {
-    glUniform1i(m_sampler, unit);
+void lightMethod::setTextureUnit(int unit) {
+    GL_CHECK(glUniform1i(m_sampler, unit));
 }
 
-void lightMethod::setNormalUnit(GLuint unit) {
-    glUniform1i(m_normalMap, unit);
+void lightMethod::setNormalUnit(int unit) {
+    GL_CHECK(glUniform1i(m_normalMap, unit));
 }
 
 void lightMethod::setDirectionalLight(const directionalLight &light) {
@@ -530,13 +427,328 @@ void lightMethod::setPointLights(const u::vector<pointLight> &lights) {
 }
 
 void lightMethod::setEyeWorldPos(const m::vec3 &eyeWorldPos) {
-    glUniform3f(m_eyeWorldPosLocation, eyeWorldPos.x, eyeWorldPos.y, eyeWorldPos.z);
+    GL_CHECK(glUniform3f(m_eyeWorldPosLocation, eyeWorldPos.x, eyeWorldPos.y, eyeWorldPos.z));
 }
 
 void lightMethod::setMatSpecIntensity(float intensity) {
-    glUniform1f(m_matSpecIntensityLocation, intensity);
+    GL_CHECK(glUniform1f(m_matSpecIntensityLocation, intensity));
 }
 
 void lightMethod::setMatSpecPower(float power) {
-    glUniform1f(m_matSpecPowerLocation, power);
+    GL_CHECK(glUniform1f(m_matSpecPowerLocation, power));
+}
+
+///! skyboxMethod
+bool skyboxMethod::init(void) {
+    if (!method::init())
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/skybox.vs"))
+        return false;
+
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/skybox.fs"))
+        return false;
+
+    if (!finalize())
+        return false;
+
+    m_WVPLocation = getUniformLocation("gWVP");
+    m_cubeMapLocation = getUniformLocation("gCubemap");
+
+    return true;
+}
+
+void skyboxMethod::setWVP(const m::mat4 &wvp) {
+    GL_CHECK(glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m));
+}
+
+void skyboxMethod::setTextureUnit(int unit) {
+    GL_CHECK(glUniform1i(m_cubeMapLocation, unit));
+}
+
+///! skybox renderer
+skybox::~skybox(void) {
+    glDeleteBuffers(1, &m_vbo);
+}
+
+bool skybox::init(const u::string &skyboxName) {
+    const u::string files[] = {
+        skyboxName + "_rt.jpg",
+        skyboxName + "_lf.jpg",
+        skyboxName + "_up.jpg",
+        skyboxName + "_dn.jpg",
+        skyboxName + "_ft.jpg",
+        skyboxName + "_bk.jpg"
+    };
+
+    if (!m_cubemap.load(files)) {
+        fprintf(stderr, "couldn't create cubemap\n");
+        return false;
+    }
+
+    if (!m_method.init()) {
+        fprintf(stderr, "failed initializing skybox rendering method\n");
+        return false;
+    }
+
+    GLfloat vertices[] = {
+        -1.0, -1.0,  1.0,
+        1.0, -1.0,  1.0,
+        -1.0,  1.0,  1.0,
+        1.0,  1.0,  1.0,
+        -1.0, -1.0, -1.0,
+        1.0, -1.0, -1.0,
+        -1.0,  1.0, -1.0,
+        1.0,  1.0, -1.0,
+    };
+
+    GLushort indices[] = { 0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1 };
+
+    GL_CHECK(glGenBuffers(2, m_buffers));
+
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_vbo));
+    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW));
+
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo));
+    GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW));
+
+    return true;
+}
+
+void skybox::render(const rendererPipeline &pipeline) {
+    m_method.enable();
+    m_method.setTextureUnit(0);
+
+    // to restore later
+    GLint faceMode;
+    glGetIntegerv(GL_CULL_FACE_MODE, &faceMode);
+    GLint depthMode;
+    glGetIntegerv(GL_DEPTH_FUNC, &depthMode);
+
+    // get camera position, target and up vectors
+    const m::vec3 &position = pipeline.getPosition();
+    const m::vec3 &target = pipeline.getPosition();
+    const m::vec3 &up = pipeline.getUp();
+
+    // inherit the perspective projection as well
+    const perspectiveProjection projection = pipeline.getPerspectiveProjection();
+
+    rendererPipeline p;
+    p.setScale(50.0f, 50.0f, 50.0f);
+    p.setRotate(0.0f, 0.0f, 0.0f);
+    p.setWorldPosition(position.x, position.y, position.z);
+    p.setCamera(position, target, up);
+    p.setPerspectiveProjection(projection);
+
+    m_method.setWVP(p.getWVPTransform());
+
+    // render skybox cube
+
+    //glDisable(GL_DEPTH_TEST);
+
+    glCullFace(GL_FRONT);
+    glDepthFunc(GL_LEQUAL);
+    //glDepthMask(GL_FALSE);
+
+    m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
+    GL_CHECK(glEnableVertexAttribArray(0)); // positions
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_vbo));
+    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0));
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo));
+    GL_CHECK(glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_SHORT, (void *)0));
+    GL_CHECK(glDisableVertexAttribArray(0));
+
+    glEnable(GL_DEPTH_TEST);
+
+    glCullFace(faceMode);
+    //glDepthMask(GL_TRUE);
+    glDepthFunc(depthMode);
+
+    //glUseProgram(0);
+}
+
+///! core renderer
+renderer::renderer(void) {
+    once();
+
+    m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
+    m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
+    m_directionalLight.ambient = 0.45f;
+    m_directionalLight.diffuse = 0.75f;
+
+    if (!m_method.init()) {
+        fprintf(stderr, "failed to initialize rendering method\n");
+        abort();
+    }
+
+    if (!m_skybox.init("packages/skyboxes/clearsky052")) {
+        fprintf(stderr, "failed to load skybox\n");
+        abort();
+    }
+}
+
+renderer::~renderer(void) {
+    glDeleteBuffers(2, m_buffers);
+    glDeleteVertexArrays(1, &m_vao);
+}
+
+void renderer::draw(rendererPipeline &p) {
+    rendererPipeline copy = p;
+    const m::mat4 wvp = p.getWVPTransform();
+    const m::mat4 &worldTransform = p.getWorldTransform();
+
+    m_method.enable();
+    GL_CHECK(m_method.setTextureUnit(0));
+    GL_CHECK(m_method.setNormalUnit(1));
+
+    m_pointLights.clear();
+    pointLight pl;
+    pl.diffuse = 0.75f;
+    pl.ambient = 0.0f;
+    pl.color = m::vec3(1.0f, 0.0f, 0.0f);
+    pl.position = p.getPosition();
+    pl.attenuation.linear = 0.05f;
+    //pl.attenuation.exp = 0.5f;
+
+    m_pointLights.push_back(pl);
+
+    // directional light
+    m_method.setDirectionalLight(m_directionalLight);
+
+    // point lights
+    m_method.setPointLights(m_pointLights);
+
+    m_method.setWVP(wvp);
+    m_method.setWorld(worldTransform);
+
+    m_method.setEyeWorldPos(p.getPosition());
+    m_method.setMatSpecIntensity(1.0f);
+    m_method.setMatSpecPower(32.0f);
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(3);
+
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), 0);                 // vertex
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+
+    for (size_t i = 0; i < m_textureBatches.size(); i++) {
+        m_textureBatches[i].tex.bind(GL_TEXTURE0);
+        m_textureBatches[i].bump.bind(GL_TEXTURE1);
+        glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
+            (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
+    }
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
+    glDisableVertexAttribArray(3);
+
+    // render the skybox
+    m_skybox.render(copy);
+}
+
+void renderer::once(void) {
+    if (gOnce)
+        return;
+
+    *(void **)&glCreateShader             = SDL_GL_GetProcAddress("glCreateShader");
+    *(void **)&glShaderSource             = SDL_GL_GetProcAddress("glShaderSource");
+    *(void **)&glCompileShader            = SDL_GL_GetProcAddress("glCompileShader");
+    *(void **)&glAttachShader             = SDL_GL_GetProcAddress("glAttachShader");
+    *(void **)&glCreateProgram            = SDL_GL_GetProcAddress("glCreateProgram");
+    *(void **)&glLinkProgram              = SDL_GL_GetProcAddress("glLinkProgram");
+    *(void **)&glUseProgram               = SDL_GL_GetProcAddress("glUseProgram");
+    *(void **)&glGetUniformLocation       = SDL_GL_GetProcAddress("glGetUniformLocation");
+    *(void **)&glEnableVertexAttribArray  = SDL_GL_GetProcAddress("glEnableVertexAttribArray");
+    *(void **)&glDisableVertexAttribArray = SDL_GL_GetProcAddress("glDisableVertexAttribArray");
+    *(void **)&glUniformMatrix4fv         = SDL_GL_GetProcAddress("glUniformMatrix4fv");
+    *(void **)&glBindBuffer               = SDL_GL_GetProcAddress("glBindBuffer");
+    *(void **)&glGenBuffers               = SDL_GL_GetProcAddress("glGenBuffers");
+    *(void **)&glVertexAttribPointer      = SDL_GL_GetProcAddress("glVertexAttribPointer");
+    *(void **)&glBufferData               = SDL_GL_GetProcAddress("glBufferData");
+    *(void **)&glValidateProgram          = SDL_GL_GetProcAddress("glValidateProgram");
+    *(void **)&glGenVertexArrays          = SDL_GL_GetProcAddress("glGenVertexArrays");
+    *(void **)&glBindVertexArray          = SDL_GL_GetProcAddress("glBindVertexArray");
+    *(void **)&glDeleteProgram            = SDL_GL_GetProcAddress("glDeleteProgram");
+    *(void **)&glDeleteBuffers            = SDL_GL_GetProcAddress("glDeleteBuffers");
+    *(void **)&glDeleteVertexArrays       = SDL_GL_GetProcAddress("glDeleteVertexArrays");
+    *(void **)&glUniform1i                = SDL_GL_GetProcAddress("glUniform1i");
+    *(void **)&glUniform1f                = SDL_GL_GetProcAddress("glUniform1f");
+    *(void **)&glUniform3f                = SDL_GL_GetProcAddress("glUniform3f");
+    *(void **)&glGenerateMipmap           = SDL_GL_GetProcAddress("glGenerateMipmap");
+    *(void **)&glDeleteShader             = SDL_GL_GetProcAddress("glDeleteShader");
+    *(void **)&glGetShaderiv              = SDL_GL_GetProcAddress("glGetShaderiv");
+    *(void **)&glGetProgramiv             = SDL_GL_GetProcAddress("glGetProgramiv");
+    *(void **)&glGetShaderInfoLog         = SDL_GL_GetProcAddress("glGetShaderInfoLog");
+
+    // default VAO. We don't utilize it, we just need one for GL 3.3
+    GL_CHECK(glGenVertexArrays(1, &m_vao));
+    GL_CHECK(glBindVertexArray(m_vao));
+
+    gOnce = true;
+}
+
+void renderer::load(const kdMap &map) {
+    // make rendering batches for triangles which share the same texture
+    u::vector<uint32_t> indices;
+    for (size_t i = 0; i < map.textures.size(); i++) {
+        renderTextueBatch batch;
+        batch.start = indices.size();
+        batch.index = i;
+        for (size_t j = 0; j < map.triangles.size(); j++) {
+            if (map.triangles[j].texture == i)
+                for (size_t k = 0; k < 3; k++)
+                    indices.push_back(map.triangles[j].v[k]);
+        }
+        batch.count = indices.size() - batch.start;
+        m_textureBatches.push_back(batch);
+    }
+
+    // load textures
+    for (size_t i = 0; i < m_textureBatches.size(); i++) {
+        m_textureBatches[i].tex.load(map.textures[m_textureBatches[i].index].name);
+        //m_textureBatches[i].bump.load("bump_" + u::string(map.textures[m_textureBatches[i].index].name));
+        //m_textureBatches[i].tex.bind(GL_TEXTURE0);
+        GL_CHECK(m_textureBatches[i].bump.load("nobump.jpg"));
+    }
+
+    GL_CHECK(glGenBuffers(2, m_buffers));
+
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_vbo));
+    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW));
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo));
+    GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW));
+}
+
+void renderer::screenShot(const u::string &file) {
+    static constexpr size_t kChannels = 3;
+    SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, kScreenWidth, kScreenHeight,
+        8*kChannels, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+
+    unsigned char *pixels = new unsigned char[kChannels * kScreenWidth * kScreenHeight];
+    switch (kChannels) {
+        case 3:
+            glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+            break;
+        case 4:
+            glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+            break;
+    }
+
+    SDL_LockSurface(temp);
+    for (size_t i = 0 ; i < kScreenHeight; i++)
+       memcpy(((unsigned char *)temp->pixels) + temp->pitch * i,
+            pixels + kChannels * kScreenWidth * (kScreenHeight-i - 1), kScreenWidth * kChannels);
+    SDL_UnlockSurface(temp);
+
+    delete[] pixels;
+
+    SDL_SaveBMP(temp, file.c_str());
+    SDL_FreeSurface(temp);
 }
