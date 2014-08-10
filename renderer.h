@@ -110,6 +110,13 @@ struct directionalLight : baseLight {
 
 // a point light
 struct pointLight : baseLight {
+    pointLight()
+    {
+        attenuation.constant = 0.0f;
+        attenuation.linear = 0.0f;
+        attenuation.exp = 0.0f;
+    }
+
     m::vec3 position;
     struct {
         float constant;

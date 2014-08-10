@@ -1,4 +1,4 @@
-#version 330
+#version 330 core
 
 in vec3 texCoord0;
 
@@ -8,5 +8,4 @@ uniform samplerCube gCubemap;
 
 void main(void) {
     fragColor = texture(gCubemap, texCoord0);
-    //fragColor = texCoord0.xxyy; //texture(gCubemap, vec3(1.0, 0.0, 0.0));
 }

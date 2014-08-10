@@ -1,4 +1,4 @@
-#version 330
+#version 330 core
 
 in vec3 normal0;
 in vec2 texCoord0;
@@ -33,7 +33,6 @@ struct pointLight {
 // textures
 uniform sampler2D gSampler;     // diffuse
 uniform sampler2D gNormalMap;   // normal
-
 
 // specularity
 uniform vec3 gEyeWorldPos;

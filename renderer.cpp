@@ -190,33 +190,22 @@ bool textureCubemap::load(const u::string files[6]) {
     if (m_loaded)
         return false;
 
-    static const GLenum types[6] = {
-        GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-        GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-        GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-        GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-        GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-        GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
-    };
-
     GL_CHECK(glGenTextures(1, &m_textureHandle));
     GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle));
+
+    GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE));
 
     for (size_t i = 0; i < 6; i++) {
         fprintf(stderr, ">> loading `%s'\n", files[i].c_str());
         SDL_Surface *surface = IMG_Load(files[i].c_str());
         if (!surface)
             return false;
-
-        GL_CHECK(glTexImage2D(types[i], 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB,
-                GL_UNSIGNED_BYTE, surface->pixels));
-
-        GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
-        GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
-        GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-        GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-        GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE));
-
+        GL_CHECK(glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, surface->w, surface->h,
+            0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels));
         SDL_FreeSurface(surface);
     }
 
@@ -452,8 +441,8 @@ bool skyboxMethod::init(void) {
     if (!finalize())
         return false;
 
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_cubeMapLocation = getUniformLocation("gCubemap");
+    GL_CHECK(m_WVPLocation = getUniformLocation("gWVP"));
+    GL_CHECK(m_cubeMapLocation = getUniformLocation("gCubemap"));
 
     return true;
 }
@@ -473,12 +462,12 @@ skybox::~skybox(void) {
 
 bool skybox::init(const u::string &skyboxName) {
     const u::string files[] = {
-        skyboxName + "_rt.jpg",
-        skyboxName + "_lf.jpg",
+        skyboxName + "_ft.jpg",
+        skyboxName + "_bk.jpg",
         skyboxName + "_up.jpg",
         skyboxName + "_dn.jpg",
-        skyboxName + "_ft.jpg",
-        skyboxName + "_bk.jpg"
+        skyboxName + "_rt.jpg",
+        skyboxName + "_lf.jpg"
     };
 
     if (!m_cubemap.load(files)) {
@@ -517,7 +506,6 @@ bool skybox::init(const u::string &skyboxName) {
 
 void skybox::render(const rendererPipeline &pipeline) {
     m_method.enable();
-    m_method.setTextureUnit(0);
 
     // to restore later
     GLint faceMode;
@@ -527,14 +515,14 @@ void skybox::render(const rendererPipeline &pipeline) {
 
     // get camera position, target and up vectors
     const m::vec3 &position = pipeline.getPosition();
-    const m::vec3 &target = pipeline.getPosition();
+    const m::vec3 &target = pipeline.getTarget();
     const m::vec3 &up = pipeline.getUp();
 
     // inherit the perspective projection as well
     const perspectiveProjection projection = pipeline.getPerspectiveProjection();
 
     rendererPipeline p;
-    p.setScale(50.0f, 50.0f, 50.0f);
+    //p.setScale(1.0f, 1.0f, 1.0f);
     p.setRotate(0.0f, 0.0f, 0.0f);
     p.setWorldPosition(position.x, position.y, position.z);
     p.setCamera(position, target, up);
@@ -544,13 +532,13 @@ void skybox::render(const rendererPipeline &pipeline) {
 
     // render skybox cube
 
-    //glDisable(GL_DEPTH_TEST);
-
+    glDisable(GL_BLEND);
     glCullFace(GL_FRONT);
     glDepthFunc(GL_LEQUAL);
-    //glDepthMask(GL_FALSE);
 
     m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
+    m_method.setTextureUnit(0);
+
     GL_CHECK(glEnableVertexAttribArray(0)); // positions
     GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_vbo));
     GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0));
@@ -558,13 +546,11 @@ void skybox::render(const rendererPipeline &pipeline) {
     GL_CHECK(glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_SHORT, (void *)0));
     GL_CHECK(glDisableVertexAttribArray(0));
 
-    glEnable(GL_DEPTH_TEST);
-
     glCullFace(faceMode);
-    //glDepthMask(GL_TRUE);
     glDepthFunc(depthMode);
+    glEnable(GL_BLEND);
 
-    //glUseProgram(0);
+    glUseProgram(0);
 }
 
 ///! core renderer
@@ -581,7 +567,7 @@ renderer::renderer(void) {
         abort();
     }
 
-    if (!m_skybox.init("packages/skyboxes/clearsky052")) {
+    if (!m_skybox.init("packages/skyboxes/turbulent")) {
         fprintf(stderr, "failed to load skybox\n");
         abort();
     }
@@ -594,8 +580,11 @@ renderer::~renderer(void) {
 
 void renderer::draw(rendererPipeline &p) {
     rendererPipeline copy = p;
+    // render the skybox
+
     const m::mat4 wvp = p.getWVPTransform();
-    const m::mat4 &worldTransform = p.getWorldTransform();
+    const m::mat4 worldTransform = p.getWorldTransform();
+    const m::vec3 &pos = p.getPosition();
 
     m_method.enable();
     GL_CHECK(m_method.setTextureUnit(0));
@@ -604,24 +593,22 @@ void renderer::draw(rendererPipeline &p) {
     m_pointLights.clear();
     pointLight pl;
     pl.diffuse = 0.75f;
-    pl.ambient = 0.0f;
+    pl.ambient = 0.00f;
     pl.color = m::vec3(1.0f, 0.0f, 0.0f);
-    pl.position = p.getPosition();
-    pl.attenuation.linear = 0.05f;
-    //pl.attenuation.exp = 0.5f;
+    pl.position = pos;
+    pl.attenuation.linear = 0.1f;
 
     m_pointLights.push_back(pl);
 
     // directional light
     m_method.setDirectionalLight(m_directionalLight);
 
-    // point lights
     m_method.setPointLights(m_pointLights);
 
     m_method.setWVP(wvp);
     m_method.setWorld(worldTransform);
 
-    m_method.setEyeWorldPos(p.getPosition());
+    m_method.setEyeWorldPos(pos);
     m_method.setMatSpecIntensity(1.0f);
     m_method.setMatSpecPower(32.0f);
 
@@ -649,7 +636,6 @@ void renderer::draw(rendererPipeline &p) {
     glDisableVertexAttribArray(2);
     glDisableVertexAttribArray(3);
 
-    // render the skybox
     m_skybox.render(copy);
 }
 
