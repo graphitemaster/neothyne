@@ -1,11 +1,7 @@
-#version 330 core
-
 in vec3 normal0;
 in vec2 texCoord0;
 in vec3 tangent0;
 in vec3 worldPos0;
-
-const int kMaxPointLights = 20;
 
 struct baseLight {
     vec3 color;

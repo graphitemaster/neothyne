@@ -85,6 +85,8 @@ struct method {
 
 protected:
     bool addShader(GLenum shaderType, const char *shaderText);
+    void addVertexPrelude(const u::string &prelude);
+    void addFragmentPrelude(const u::string &prelude);
     bool finalize(void);
 
     GLint getUniformLocation(const char *name);
@@ -92,6 +94,8 @@ protected:
 
 private:
     GLuint m_program;
+    u::string m_vertexSource;
+    u::string m_fragmentSource;
     u::list<GLuint> m_shaders;
 };
 
@@ -138,7 +142,7 @@ struct lightMethod : method {
     void setTextureUnit(int unit);
     void setNormalUnit(int unit);
     void setDirectionalLight(const directionalLight &light);
-    void setPointLights(const u::vector<pointLight> &pointLights);
+    void setPointLights(u::vector<pointLight> &pointLights);
     void setEyeWorldPos(const m::vec3 &eyeWorldPos);
     void setMatSpecIntensity(float intensity);
     void setMatSpecPower(float power);
@@ -147,34 +151,34 @@ private:
     friend struct renderer;
 
     // uniforms
-    GLuint m_WVPLocation;
-    GLuint m_worldLocation;
-    GLuint m_samplerLocation;
-    GLuint m_normalMapLocation;
-    GLuint m_eyeWorldPosLocation;
-    GLuint m_matSpecIntensityLocation;
-    GLuint m_matSpecPowerLocation;
+    GLint m_WVPLocation;
+    GLint m_worldLocation;
+    GLint m_samplerLocation;
+    GLint m_normalMapLocation;
+    GLint m_eyeWorldPosLocation;
+    GLint m_matSpecIntensityLocation;
+    GLint m_matSpecPowerLocation;
 
     struct {
-        GLuint colorLocation;
-        GLuint directionLocation;
-        GLuint ambientLocation;
-        GLuint diffuseLocation;
+        GLint colorLocation;
+        GLint directionLocation;
+        GLint ambientLocation;
+        GLint diffuseLocation;
     } m_directionalLight;
 
     struct {
-        GLuint colorLocation;
-        GLuint positionLocation;
-        GLuint ambientLocation;
-        GLuint diffuseLocation;
+        GLint colorLocation;
+        GLint positionLocation;
+        GLint ambientLocation;
+        GLint diffuseLocation;
         struct {
-            GLuint constantLocation;
-            GLuint linearLocation;
-            GLuint expLocation;
+            GLint constantLocation;
+            GLint linearLocation;
+            GLint expLocation;
         } attenuation;
     } m_pointLights[kMaxPointLights];
 
-    GLuint m_numPointLightsLocation;
+    GLint m_numPointLightsLocation;
 };
 
 ///! skybox rendering method
@@ -186,8 +190,8 @@ struct skyboxMethod : method {
 
 private:
     // uniforms
-    GLuint m_WVPLocation;
-    GLuint m_cubeMapLocation;
+    GLint m_WVPLocation;
+    GLint m_cubeMapLocation;
 };
 
 /// skybox renderer

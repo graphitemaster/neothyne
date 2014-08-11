@@ -185,7 +185,6 @@ bool textureCubemap::load(const u::string files[6]) {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     for (size_t i = 0; i < 6; i++) {
-        fprintf(stderr, ">> loading `%s'\n", files[i].c_str());
         SDL_Surface *surface = IMG_Load(files[i].c_str());
         if (!surface)
             return false;
@@ -206,7 +205,12 @@ void textureCubemap::bind(GLenum unit) {
 
 ///! method
 method::method(void) :
-    m_program(0) { }
+    m_program(0),
+    m_vertexSource("#version 330 core\n"),
+    m_fragmentSource("#version 330 core\n")
+{
+
+}
 
 method::~method(void) {
     for (auto &it : m_shaders)
@@ -224,40 +228,55 @@ bool method::init(void) {
 }
 
 bool method::addShader(GLenum shaderType, const char *shaderFile) {
+    size_t preludeLength = 0;
+    u::string *shaderSource;
+    switch (shaderType) {
+        case GL_VERTEX_SHADER:
+            preludeLength = m_vertexSource.size();
+            shaderSource = &m_vertexSource;
+            break;
+        case GL_FRAGMENT_SHADER:
+            preludeLength = m_fragmentSource.size();
+            shaderSource = &m_fragmentSource;
+            break;
+    }
+
     FILE *fp = fopen(shaderFile, "r");
     if (!fp)
         return false;
 
     fseek(fp, 0, SEEK_END);
-    size_t length = ftell(fp);
+    size_t shaderLength = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    char *shaderText = new char[length + 1];
-    fread(shaderText, length, 1, fp);
-    shaderText[length] = '\0';
-
+    shaderSource->resize(preludeLength + shaderLength);
+    fread((&*shaderSource->begin()) + preludeLength, shaderLength, 1, fp);
     fclose(fp);
 
     GLuint shaderObject = glCreateShader(shaderType);
-    if (!shaderObject) {
-        delete [] shaderText;
+    if (!shaderObject)
         return false;
-    }
 
     m_shaders.push_back(shaderObject);
 
-    const GLchar *p[1] = { shaderText };
-    const GLint lengths[1] = { (GLint)length };
-    glShaderSource(shaderObject, 1, p, lengths);
-    glCompileShader(shaderObject);
-    delete [] shaderText;
+    const GLchar *shaderSources[1];
+    GLint shaderLengths[1];
 
-    GLint success = 0;
-    glGetShaderiv(shaderObject, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar log[1024];
-        glGetShaderInfoLog(shaderObject, 1024, nullptr, log);
-        fprintf(stderr, "%s\n", log);
+    shaderSources[0] = (GLchar *)&*shaderSource->begin();
+    shaderLengths[0] = (GLint)shaderSource->size();
+
+    glShaderSource(shaderObject, 1, shaderSources, shaderLengths);
+    glCompileShader(shaderObject);
+
+    GLint shaderCompileStatus = 0;
+    glGetShaderiv(shaderObject, GL_COMPILE_STATUS, &shaderCompileStatus);
+    if (shaderCompileStatus == 0) {
+        u::string infoLog;
+        GLint infoLogLength = 0;
+        glGetShaderiv(shaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
+        infoLog.resize(infoLogLength);
+        glGetShaderInfoLog(shaderObject, infoLogLength, nullptr, &*infoLog.begin());
+        printf("Shader error:\n%s\n", infoLog.c_str());
         return false;
     }
 
@@ -296,6 +315,16 @@ bool method::finalize(void) {
     return true;
 }
 
+void method::addVertexPrelude(const u::string &prelude) {
+    m_vertexSource += prelude;
+    m_vertexSource += "\n";
+}
+
+void method::addFragmentPrelude(const u::string &prelude) {
+    m_fragmentSource += prelude;
+    m_fragmentSource += "\n";
+}
+
 ///! lightMethod
 lightMethod::lightMethod(void)
 {
@@ -305,6 +334,8 @@ lightMethod::lightMethod(void)
 bool lightMethod::init(void) {
     if (!method::init())
         return false;
+
+    addFragmentPrelude(u::format("const int kMaxPointLights = %zu;", kMaxPointLights));
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/light.vs"))
         return false;
@@ -379,11 +410,10 @@ void lightMethod::setDirectionalLight(const directionalLight &light) {
     glUniform1f(m_directionalLight.diffuseLocation, light.diffuse);
 }
 
-void lightMethod::setPointLights(const u::vector<pointLight> &lights) {
-    if (lights.size() >= kMaxPointLights) {
-        fprintf(stderr, "too many lights");
-        abort();
-    }
+void lightMethod::setPointLights(u::vector<pointLight> &lights) {
+    // limit the number of maximum lights
+    if (lights.size() > kMaxPointLights)
+        lights.resize(kMaxPointLights);
 
     glUniform1i(m_numPointLightsLocation, lights.size());
 
@@ -392,7 +422,6 @@ void lightMethod::setPointLights(const u::vector<pointLight> &lights) {
         glUniform3f(m_pointLights[i].positionLocation, lights[i].position.x, lights[i].position.y, lights[i].position.z);
         glUniform1f(m_pointLights[i].ambientLocation, lights[i].ambient);
         glUniform1f(m_pointLights[i].diffuseLocation, lights[i].diffuse);
-
         glUniform1f(m_pointLights[i].attenuation.constantLocation, lights[i].attenuation.constant);
         glUniform1f(m_pointLights[i].attenuation.linearLocation, lights[i].attenuation.linear);
         glUniform1f(m_pointLights[i].attenuation.expLocation, lights[i].attenuation.exp);
