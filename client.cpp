@@ -47,10 +47,10 @@ void client::move(const u::vector<clientCommands> &commands, const kdMap &map) {
                 newDirection += side;
                 break;
             case kCommandUp:
-                m_origin.y += 0.5f;
+                m_origin.y += 1.0f;
                 break;
             case kCommandDown:
-                m_origin.y -= 0.5f;
+                m_origin.y -= 1.0f;
                 break;
             case kCommandJump:
                 jump = m::vec3(0.0f, 1.0f, 0.0f);
@@ -76,7 +76,7 @@ void client::move(const u::vector<clientCommands> &commands, const kdMap &map) {
     map.traceSphere(&trace);
     kdMap::clipVelocity(newDirection, trace.plane.n, m_velocity, kdMap::kOverClip);
     float fraction = m::clamp(trace.fraction, 0.0f, 1.0f);
-    if (fraction > 0.0f)
+    if (fraction >= 0.0f)
         m_origin += trace.dir * fraction;
 }
 

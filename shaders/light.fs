@@ -10,7 +10,7 @@ struct baseLight {
 };
 
 struct directionalLight {
-    struct baseLight base;
+    baseLight base;
     vec3 direction;
 };
 
@@ -21,7 +21,7 @@ struct lightAttenuation {
 };
 
 struct pointLight {
-    struct baseLight base;
+    baseLight base;
     vec3 position;
     lightAttenuation attenuation;
 };
@@ -41,7 +41,7 @@ uniform directionalLight gDirectionalLight;
 uniform pointLight gPointLights[kMaxPointLights];
 
 // output
-smooth out vec4 fragColor;
+out vec4 fragColor;
 
 vec4 calcLightGeneric(baseLight light, vec3 lightDirection, vec3 normal, float shadowFactor) {
     vec4 ambientColor = vec4(light.color, 1.0f) * light.ambient;
