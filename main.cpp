@@ -47,42 +47,26 @@ static SDL_Window *initSDL(void) {
     return window;
 }
 
-static void checkError(const char *statement, const char *name, size_t line) {
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) {
-        fprintf(stderr, "GL error %08x, at %s:%zu - for %s\n", err, name, line,
-            statement);
-        abort();
-    }
-}
-
-#define GL_CHECK(X) \
-    do { \
-        X; \
-        checkError(#X, __FILE__, __LINE__); \
-    } while (0)
-
-
 static void initGL(void) {
-    GL_CHECK(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
     // back face culling
-    GL_CHECK(glFrontFace(GL_CW));
-    GL_CHECK(glCullFace(GL_BACK));
-    GL_CHECK(glEnable(GL_CULL_FACE));
+    glFrontFace(GL_CW);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
 
     // depth buffer + depth test
-    GL_CHECK(glClearDepth(1.0f));
-    GL_CHECK(glDepthFunc(GL_LEQUAL));
-    GL_CHECK(glEnable(GL_DEPTH_TEST));
+    glClearDepth(1.0f);
+    glDepthFunc(GL_LEQUAL);
+    glEnable(GL_DEPTH_TEST);
 
     // shade model
-    GL_CHECK(glShadeModel(GL_SMOOTH));
-    GL_CHECK(glEnable(GL_BLEND));
-    GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // multisample anti-aliasing
-    GL_CHECK(glEnable(GL_MULTISAMPLE));
+    glEnable(GL_MULTISAMPLE);
 }
 
 int main(void) {
@@ -110,7 +94,7 @@ int main(void) {
 
     SDL_GL_SwapWindow(gScreen);
 
-    GL_CHECK(glClearColor(0.4f, 0.6f, 0.9f, 0.0f));
+    glClearColor(0.4f, 0.6f, 0.9f, 0.0f);
 
     FILE *fp = fopen("maps/garden.kdgz", "r");
     u::vector<unsigned char> mapData;

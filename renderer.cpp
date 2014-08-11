@@ -43,21 +43,6 @@ static PFNGLGETSHADERIVPROC              glGetShaderiv              = nullptr;
 static PFNGLGETPROGRAMIVPROC             glGetProgramiv             = nullptr;
 static PFNGLGETSHADERINFOLOGPROC         glGetShaderInfoLog         = nullptr;
 
-static void checkError(const char *statement, const char *name, size_t line) {
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) {
-        fprintf(stderr, "GL error %08x, at %s:%zu - for %s\n", err, name, line,
-            statement);
-        abort();
-    }
-}
-
-#define GL_CHECK(X) \
-    do { \
-        X; \
-        checkError(#X, __FILE__, __LINE__); \
-    } while (0)
-
 ///! rendererPipeline
 rendererPipeline::rendererPipeline(void) :
     m_scale(1.0f, 1.0f, 1.0f),
@@ -154,24 +139,24 @@ void texture::load(const u::string &file) {
     if (!surface)
         return;
 
-    GL_CHECK(glGenTextures(1, &m_textureHandle));
-    GL_CHECK(glBindTexture(GL_TEXTURE_2D, m_textureHandle));
+    glGenTextures(1, &m_textureHandle);
+    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
 
-    GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels));
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
 
-    GL_CHECK(glGenerateMipmap(GL_TEXTURE_2D));
-    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
-    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT));
-    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
     SDL_FreeSurface(surface);
     m_loaded = true;
 }
 
 void texture::bind(GLenum unit) {
-    GL_CHECK(glActiveTexture(unit));
-    GL_CHECK(glBindTexture(GL_TEXTURE_2D, m_textureHandle));
+    glActiveTexture(unit);
+    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
 }
 
 ///! textureCubemap
@@ -190,22 +175,22 @@ bool textureCubemap::load(const u::string files[6]) {
     if (m_loaded)
         return false;
 
-    GL_CHECK(glGenTextures(1, &m_textureHandle));
-    GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle));
+    glGenTextures(1, &m_textureHandle);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
 
-    GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-    GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-    GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-    GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-    GL_CHECK(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE));
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     for (size_t i = 0; i < 6; i++) {
         fprintf(stderr, ">> loading `%s'\n", files[i].c_str());
         SDL_Surface *surface = IMG_Load(files[i].c_str());
         if (!surface)
             return false;
-        GL_CHECK(glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, surface->w, surface->h,
-            0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels));
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, surface->w, surface->h,
+            0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
         SDL_FreeSurface(surface);
     }
 
@@ -215,8 +200,8 @@ bool textureCubemap::load(const u::string files[6]) {
 }
 
 void textureCubemap::bind(GLenum unit) {
-    GL_CHECK(glActiveTexture(unit));
-    GL_CHECK(glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle));
+    glActiveTexture(unit);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
 }
 
 ///! method
@@ -281,7 +266,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
 }
 
 void method::enable(void) {
-    GL_CHECK(glUseProgram(m_program));
+    glUseProgram(m_program);
 }
 
 GLint method::getUniformLocation(const char *name) {
@@ -331,22 +316,22 @@ bool lightMethod::init(void) {
         return false;
 
     m_WVPLocation = getUniformLocation("gWVP");
-    m_worldInverse = getUniformLocation("gWorld");
-    m_sampler = getUniformLocation("gSampler");
-    m_normalMap = getUniformLocation("gNormalMap");
+    m_worldLocation = getUniformLocation("gWorld");
+    m_samplerLocation = getUniformLocation("gSampler");
+    m_normalMapLocation = getUniformLocation("gNormalMap");
 
     m_eyeWorldPosLocation = getUniformLocation("gEyeWorldPos");
     m_matSpecIntensityLocation = getUniformLocation("gMatSpecIntensity");
     m_matSpecPowerLocation = getUniformLocation("gMatSpecPower");
 
     // directional light
-    m_directionalLight.color = getUniformLocation("gDirectionalLight.base.color");
-    m_directionalLight.ambient = getUniformLocation("gDirectionalLight.base.ambient");
-    m_directionalLight.diffuse = getUniformLocation("gDirectionalLight.base.diffuse");
-    m_directionalLight.direction = getUniformLocation("gDirectionalLight.direction");
+    m_directionalLight.colorLocation = getUniformLocation("gDirectionalLight.base.color");
+    m_directionalLight.ambientLocation = getUniformLocation("gDirectionalLight.base.ambient");
+    m_directionalLight.diffuseLocation = getUniformLocation("gDirectionalLight.base.diffuse");
+    m_directionalLight.directionLocation = getUniformLocation("gDirectionalLight.direction");
 
     // point lights
-    m_numPointLights = getUniformLocation("gNumPointLights");
+    m_numPointLightsLocation = getUniformLocation("gNumPointLights");
     for (size_t i = 0; i < kMaxPointLights; i++) {
         u::string color = u::format("gPointLights[%zu].base.color", i);
         u::string ambient = u::format("gPointLights[%zu].base.ambient", i);
@@ -356,42 +341,42 @@ bool lightMethod::init(void) {
         u::string exp = u::format("gPointLights[%zu].attenuation.exp", i);
         u::string position = u::format("gPointLights[%zu].position", i);
 
-        m_pointLights[i].color = getUniformLocation(color);
-        m_pointLights[i].ambient = getUniformLocation(ambient);
-        m_pointLights[i].diffuse = getUniformLocation(diffuse);
-        m_pointLights[i].attenuation.constant = getUniformLocation(constant);
-        m_pointLights[i].attenuation.linear = getUniformLocation(linear);
-        m_pointLights[i].attenuation.exp = getUniformLocation(exp);
-        m_pointLights[i].position = getUniformLocation(position);
+        m_pointLights[i].colorLocation = getUniformLocation(color);
+        m_pointLights[i].ambientLocation = getUniformLocation(ambient);
+        m_pointLights[i].diffuseLocation = getUniformLocation(diffuse);
+        m_pointLights[i].attenuation.constantLocation = getUniformLocation(constant);
+        m_pointLights[i].attenuation.linearLocation = getUniformLocation(linear);
+        m_pointLights[i].attenuation.expLocation = getUniformLocation(exp);
+        m_pointLights[i].positionLocation = getUniformLocation(position);
     }
 
     return true;
 }
 
 void lightMethod::setWVP(const m::mat4 &wvp) {
-    GL_CHECK(glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m));
+    glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
 }
 
 void lightMethod::setWorld(const m::mat4 &worldInverse) {
-    GL_CHECK(glUniformMatrix4fv(m_worldInverse, 1, GL_TRUE, (const GLfloat *)worldInverse.m));
+    glUniformMatrix4fv(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
 }
 
 void lightMethod::setTextureUnit(int unit) {
-    GL_CHECK(glUniform1i(m_sampler, unit));
+    glUniform1i(m_samplerLocation, unit);
 }
 
 void lightMethod::setNormalUnit(int unit) {
-    GL_CHECK(glUniform1i(m_normalMap, unit));
+    glUniform1i(m_normalMapLocation, unit);
 }
 
 void lightMethod::setDirectionalLight(const directionalLight &light) {
     m::vec3 direction = light.direction;
     direction.normalize();
 
-    GL_CHECK(glUniform3f(m_directionalLight.color, light.color.x, light.color.y, light.color.z));
-    GL_CHECK(glUniform3f(m_directionalLight.direction, direction.x, direction.y, direction.z));
-    GL_CHECK(glUniform1f(m_directionalLight.ambient, light.ambient));
-    GL_CHECK(glUniform1f(m_directionalLight.diffuse, light.diffuse));
+    glUniform3f(m_directionalLight.colorLocation, light.color.x, light.color.y, light.color.z);
+    glUniform3f(m_directionalLight.directionLocation, direction.x, direction.y, direction.z);
+    glUniform1f(m_directionalLight.ambientLocation, light.ambient);
+    glUniform1f(m_directionalLight.diffuseLocation, light.diffuse);
 }
 
 void lightMethod::setPointLights(const u::vector<pointLight> &lights) {
@@ -400,30 +385,30 @@ void lightMethod::setPointLights(const u::vector<pointLight> &lights) {
         abort();
     }
 
-    GL_CHECK(glUniform1i(m_numPointLights, lights.size()));
+    glUniform1i(m_numPointLightsLocation, lights.size());
 
     for (size_t i = 0; i < lights.size(); i++) {
-        GL_CHECK(glUniform3f(m_pointLights[i].color, lights[i].color.x, lights[i].color.y, lights[i].color.z));
-        GL_CHECK(glUniform3f(m_pointLights[i].position, lights[i].position.x, lights[i].position.y, lights[i].position.z));
-        GL_CHECK(glUniform1f(m_pointLights[i].ambient, lights[i].ambient));
-        GL_CHECK(glUniform1f(m_pointLights[i].diffuse, lights[i].diffuse));
+        glUniform3f(m_pointLights[i].colorLocation, lights[i].color.x, lights[i].color.y, lights[i].color.z);
+        glUniform3f(m_pointLights[i].positionLocation, lights[i].position.x, lights[i].position.y, lights[i].position.z);
+        glUniform1f(m_pointLights[i].ambientLocation, lights[i].ambient);
+        glUniform1f(m_pointLights[i].diffuseLocation, lights[i].diffuse);
 
-        GL_CHECK(glUniform1f(m_pointLights[i].attenuation.constant, lights[i].attenuation.constant));
-        GL_CHECK(glUniform1f(m_pointLights[i].attenuation.linear, lights[i].attenuation.linear));
-        GL_CHECK(glUniform1f(m_pointLights[i].attenuation.exp, lights[i].attenuation.exp));
+        glUniform1f(m_pointLights[i].attenuation.constantLocation, lights[i].attenuation.constant);
+        glUniform1f(m_pointLights[i].attenuation.linearLocation, lights[i].attenuation.linear);
+        glUniform1f(m_pointLights[i].attenuation.expLocation, lights[i].attenuation.exp);
     }
 }
 
 void lightMethod::setEyeWorldPos(const m::vec3 &eyeWorldPos) {
-    GL_CHECK(glUniform3f(m_eyeWorldPosLocation, eyeWorldPos.x, eyeWorldPos.y, eyeWorldPos.z));
+    glUniform3f(m_eyeWorldPosLocation, eyeWorldPos.x, eyeWorldPos.y, eyeWorldPos.z);
 }
 
 void lightMethod::setMatSpecIntensity(float intensity) {
-    GL_CHECK(glUniform1f(m_matSpecIntensityLocation, intensity));
+    glUniform1f(m_matSpecIntensityLocation, intensity);
 }
 
 void lightMethod::setMatSpecPower(float power) {
-    GL_CHECK(glUniform1f(m_matSpecPowerLocation, power));
+    glUniform1f(m_matSpecPowerLocation, power);
 }
 
 ///! skyboxMethod
@@ -440,18 +425,18 @@ bool skyboxMethod::init(void) {
     if (!finalize())
         return false;
 
-    GL_CHECK(m_WVPLocation = getUniformLocation("gWVP"));
-    GL_CHECK(m_cubeMapLocation = getUniformLocation("gCubemap"));
+    m_WVPLocation = getUniformLocation("gWVP");
+    m_cubeMapLocation = getUniformLocation("gCubemap");
 
     return true;
 }
 
 void skyboxMethod::setWVP(const m::mat4 &wvp) {
-    GL_CHECK(glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m));
+    glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
 }
 
 void skyboxMethod::setTextureUnit(int unit) {
-    GL_CHECK(glUniform1i(m_cubeMapLocation, unit));
+    glUniform1i(m_cubeMapLocation, unit);
 }
 
 ///! skybox renderer
@@ -492,13 +477,13 @@ bool skybox::init(const u::string &skyboxName) {
 
     GLushort indices[] = { 0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1 };
 
-    GL_CHECK(glGenBuffers(2, m_buffers));
+    glGenBuffers(2, m_buffers);
 
-    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_vbo));
-    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW));
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo));
-    GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     return true;
 }
@@ -537,12 +522,12 @@ void skybox::render(const rendererPipeline &pipeline) {
     m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
     m_method.setTextureUnit(0);
 
-    GL_CHECK(glEnableVertexAttribArray(0)); // positions
-    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_vbo));
-    GL_CHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0));
-    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo));
-    GL_CHECK(glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_SHORT, (void *)0));
-    GL_CHECK(glDisableVertexAttribArray(0));
+    glEnableVertexAttribArray(0); // positions
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_SHORT, (void *)0);
+    glDisableVertexAttribArray(0);
 
     glCullFace(faceMode);
     glDepthFunc(depthMode);
@@ -585,8 +570,8 @@ void renderer::draw(rendererPipeline &p) {
     const m::vec3 &pos = p.getPosition();
 
     m_method.enable();
-    GL_CHECK(m_method.setTextureUnit(0));
-    GL_CHECK(m_method.setNormalUnit(1));
+    m_method.setTextureUnit(0);
+    m_method.setNormalUnit(1);
 
     m_pointLights.clear();
     pointLight pl;
@@ -672,8 +657,8 @@ void renderer::once(void) {
     *(void **)&glGetShaderInfoLog         = SDL_GL_GetProcAddress("glGetShaderInfoLog");
 
     // default VAO. We don't utilize it, we just need one for GL 3.3
-    GL_CHECK(glGenVertexArrays(1, &m_vao));
-    GL_CHECK(glBindVertexArray(m_vao));
+    glGenVertexArrays(1, &m_vao);
+    glBindVertexArray(m_vao);
 
     gOnce = true;
 }
@@ -699,15 +684,15 @@ void renderer::load(const kdMap &map) {
         m_textureBatches[i].tex.load(map.textures[m_textureBatches[i].index].name);
         //m_textureBatches[i].bump.load("bump_" + u::string(map.textures[m_textureBatches[i].index].name));
         //m_textureBatches[i].tex.bind(GL_TEXTURE0);
-        GL_CHECK(m_textureBatches[i].bump.load("textures/nobump.jpg"));
+        m_textureBatches[i].bump.load("textures/nobump.jpg");
     }
 
-    GL_CHECK(glGenBuffers(2, m_buffers));
+    glGenBuffers(2, m_buffers);
 
-    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_vbo));
-    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW));
-    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo));
-    GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW));
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW);
 }
 
 void renderer::screenShot(const u::string &file) {

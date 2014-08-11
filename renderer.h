@@ -148,33 +148,33 @@ private:
 
     // uniforms
     GLuint m_WVPLocation;
-    GLuint m_worldInverse;
-    GLuint m_sampler;
-    GLuint m_normalMap;
+    GLuint m_worldLocation;
+    GLuint m_samplerLocation;
+    GLuint m_normalMapLocation;
     GLuint m_eyeWorldPosLocation;
     GLuint m_matSpecIntensityLocation;
     GLuint m_matSpecPowerLocation;
 
     struct {
-        GLuint color;
-        GLuint direction;
-        GLuint ambient;
-        GLuint diffuse;
+        GLuint colorLocation;
+        GLuint directionLocation;
+        GLuint ambientLocation;
+        GLuint diffuseLocation;
     } m_directionalLight;
 
     struct {
-        GLuint color;
-        GLuint position;
-        GLuint ambient;
-        GLuint diffuse;
+        GLuint colorLocation;
+        GLuint positionLocation;
+        GLuint ambientLocation;
+        GLuint diffuseLocation;
         struct {
-            GLuint constant;
-            GLuint linear;
-            GLuint exp;
+            GLuint constantLocation;
+            GLuint linearLocation;
+            GLuint expLocation;
         } attenuation;
     } m_pointLights[kMaxPointLights];
 
-    GLuint m_numPointLights;
+    GLuint m_numPointLightsLocation;
 };
 
 ///! skybox rendering method
