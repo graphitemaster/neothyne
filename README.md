@@ -1,83 +1,35 @@
-# World format
+# Neoythne
 
-The world format for Neothyne is represented as a subset of the OBJ model format.
+Neothyne is an attempt at getting back to the roots of good old twitch shooting
+akin to that of Quake World.
 
-### Vertex
-A vertex beigns with 'v' followed by three single-precision floating-point values
-separated by spaces. Example
-```
-v [x] [y] [z]
-```
+## Philosphy
 
-### Texture Coordinate
-A texture coordinate begins with 'vt' followed by two single-precision floating-
-point values separated by spaces. Example
-```
-vt [u] [v]
-```
+Neothyne is a game/engine with a focus on matching that of idTech3/Q3A in terms
+of visual fidelity. At it's core Neothyne is a relatively simple engine with a
+focus on providing a minimum set of features to make a twitch shooter.
 
-### Face
-A face begins with 'f' followed by three tuples separated by spaces.
-The tuple format begins with the vertex index as an integer followed by
-a forward-slash('/') following with a texture coordinate index. Example of
-the tuple format
-```
-[vertexIndex]/[texCoordIndex]
-```
-Example of a face
-```
-f [vertexIndex]/[texCoordIndex] [vertexIndex]/[texCoordIndex] [vertexIndex]/[texCoordIndex]
-```
+## Status
 
-### Entity
-An entity begins with 'ent' followed by a single integer followed by seven
-single-precison floating-point values separated by spaces. Example
-```
-ent [id] [origin:x] [origin:y] [origin:z] [rot:x] [rot:y] [rot:z] [rot:w]
-```
+As of late Neothyne is just a piece of tech which, while primitive in nature
+embodies the following
 
-### Texture
-A texture begins with 'tex' followed by the relative path to a texture file.
-```
-tex [texturePath/file.ext]
-```
-When set, a texture will be used for all faces specified after it.
+* Efficent KD-tree (which allows for)
+  * Efficent static and sweeping collision detection
+  * Efficent scene management
+* Forward renderer (which can do)
+  * Directional lighting (with ambient and diffuse terms)
+  * Specular lighting (with power and intensity terms)
+  * Point lighting (with ambient, diffuse, and attenuation (exp, linear, constant))
+  * Sky meshes (skybox, skydome, etc, any mesh will suffice).
+  * Normal mapping (dot3 bump mapping)
 
-### Notes
-There are no vertex normals or materials to be specified for worlds in Neothyne.
+## Goals
 
-A small example
+* Shadow mapping
+* Spot lighting
+* 3D Models
+* Networking (client/server model)
+* A game!
 
-```
-v 0.0 0.0 0.0
-v 0.0 0.0 1.0
-v 0.0 1.0 0.0
-v 0.0 1.0 1.0
-v 1.0 0.0 0.0
-v 1.0 0.0 1.0
-v 1.0 1.0 0.0
-v 1.0 1.0 1.0
 
-tex a.jpg
-f 1/1 2/2 3/3
-f 3/3 2/2 4/4
-tex b.jpg
-f 3/1 4/2 5/3
-f 5/3 4/2 6/4
-tex c.jpg
-f 5/4 6/3 7/2
-f 7/2 6/3 8/1
-tex d.jpg
-f 7/1 8/2 1/3
-f 1/3 8/2 2/4
-tex e.jpg
-f 2/1 8/2 4/3
-f 4/3 8/2 6/4
-tex f.jpg
-f 7/1 1/2 5/3
-f 5/3 1/2 3/4
-
-ent 0 0.5 0.5 0.5 0.0 0.0 0.0 0.0
-```
-
-The following defines a textured cube with an entity in the middle of it.

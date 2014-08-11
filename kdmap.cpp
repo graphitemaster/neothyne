@@ -32,7 +32,10 @@ bool kdMap::isLoaded(void) const {
     return nodes.size();
 }
 
-bool kdMap::load(const u::vector<unsigned char> &data) {
+bool kdMap::load(const u::vector<unsigned char> &compressedData) {
+    // decompress it
+    u::vector<unsigned char> data = u::decompress(compressedData);
+
     size_t seek;
     kdBinHeader header;
     seek = mapUnserialize(&header, data);

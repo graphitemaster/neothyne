@@ -95,6 +95,16 @@ int main(void) {
     client gClient;
     kdMap gMap;
 
+#if 0
+    gTree.load("map.obj");
+    u::vector<unsigned char> data = gTree.serialize();
+    u::vector<unsigned char> compress = u::compress(data);
+    FILE *efp = fopen("maps/garden.kdgz", "w");
+    fwrite(&*compress.begin(), compress.size(), 1, efp);
+    fclose(efp);
+    return 0;
+#endif
+
     // clear the screen black
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -102,9 +112,20 @@ int main(void) {
 
     GL_CHECK(glClearColor(0.4f, 0.6f, 0.9f, 0.0f));
 
-    printf("Loading OBJ into KD-tree (this may take awhile)\n");
-    gTree.load("test.obj");
-    gMap.load(gTree.serialize());
+    FILE *fp = fopen("maps/garden.kdgz", "r");
+    u::vector<unsigned char> mapData;
+    if (!fp) {
+        fprintf(stderr, "failed opening map\n");
+        return 0;
+    } else {
+        fseek(fp, 0, SEEK_END);
+        size_t length = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        mapData.resize(length);
+        fread(&*mapData.begin(), length, 1, fp);
+        fclose(fp);
+    }
+    gMap.load(mapData);
     gRenderer.load(gMap);
 
     perspectiveProjection projection;
@@ -112,7 +133,7 @@ int main(void) {
     projection.width = kScreenWidth;
     projection.height = kScreenHeight;
     projection.near = 1.0f;
-    projection.far = 1024.0f;
+    projection.far = 4096.0f;
 
     while (true) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

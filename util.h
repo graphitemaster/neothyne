@@ -57,5 +57,8 @@ namespace u {
         free(data);
         return ret;
     }
+
+    vector<unsigned char> compress(const vector<unsigned char> &data);
+    vector<unsigned char> decompress(const vector<unsigned char> &data);
 }
 #endif

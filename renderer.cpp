@@ -250,7 +250,6 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
     char *shaderText = new char[length + 1];
     fread(shaderText, length, 1, fp);
     shaderText[length] = '\0';
-    //printf(">> %s\n", shaderText);
 
     fclose(fp);
 
@@ -522,7 +521,6 @@ void skybox::render(const rendererPipeline &pipeline) {
     const perspectiveProjection projection = pipeline.getPerspectiveProjection();
 
     rendererPipeline p;
-    //p.setScale(1.0f, 1.0f, 1.0f);
     p.setRotate(0.0f, 0.0f, 0.0f);
     p.setWorldPosition(position.x, position.y, position.z);
     p.setCamera(position, target, up);
@@ -559,7 +557,7 @@ renderer::renderer(void) {
 
     m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
     m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
-    m_directionalLight.ambient = 0.45f;
+    m_directionalLight.ambient = 0.20f;
     m_directionalLight.diffuse = 0.75f;
 
     if (!m_method.init()) {
@@ -567,7 +565,7 @@ renderer::renderer(void) {
         abort();
     }
 
-    if (!m_skybox.init("packages/skyboxes/turbulent")) {
+    if (!m_skybox.init("textures/sky")) {
         fprintf(stderr, "failed to load skybox\n");
         abort();
     }
@@ -593,7 +591,7 @@ void renderer::draw(rendererPipeline &p) {
     m_pointLights.clear();
     pointLight pl;
     pl.diffuse = 0.75f;
-    pl.ambient = 0.00f;
+    pl.ambient = 0.45f;
     pl.color = m::vec3(1.0f, 0.0f, 0.0f);
     pl.position = pos;
     pl.attenuation.linear = 0.1f;
@@ -701,7 +699,7 @@ void renderer::load(const kdMap &map) {
         m_textureBatches[i].tex.load(map.textures[m_textureBatches[i].index].name);
         //m_textureBatches[i].bump.load("bump_" + u::string(map.textures[m_textureBatches[i].index].name));
         //m_textureBatches[i].tex.bind(GL_TEXTURE0);
-        GL_CHECK(m_textureBatches[i].bump.load("nobump.jpg"));
+        GL_CHECK(m_textureBatches[i].bump.load("textures/nobump.jpg"));
     }
 
     GL_CHECK(glGenBuffers(2, m_buffers));
