@@ -1,4 +1,5 @@
 #include <string.h>
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 
@@ -6,12 +7,6 @@
 
 static constexpr size_t kScreenWidth = 1024;
 static constexpr size_t kScreenHeight = 768;
-
-// GL functions have an implicit `this' TLS passed through to them. This
-// inherently makes their context global. Thus, we cannot put the context of
-// it under a renderer. OpenGL functions themselfs stay global but their handles
-// must be obtained via SDL_GL_GetProcAddress.
-static bool gOnce = false;
 
 static PFNGLCREATESHADERPROC             glCreateShader             = nullptr;
 static PFNGLSHADERSOURCEPROC             glShaderSource             = nullptr;
@@ -116,93 +111,6 @@ const m::vec3 &rendererPipeline::getUp(void) const {
     return m_camera.up;
 }
 
-///! texture
-texture::texture(void) :
-    m_loaded(false),
-    m_textureHandle(0)
-{
-    //
-}
-
-texture::~texture(void) {
-    if (m_textureHandle)
-        glDeleteTextures(1, &m_textureHandle);
-}
-
-void texture::load(const u::string &file) {
-    // do not load multiple times
-    if (m_loaded)
-        return;
-
-    fprintf(stderr, ">> loading `%s'\n", file.c_str());
-    SDL_Surface *surface = IMG_Load(file.c_str());
-    if (!surface)
-        return;
-
-    glGenTextures(1, &m_textureHandle);
-    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
-
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-    SDL_FreeSurface(surface);
-    m_loaded = true;
-}
-
-void texture::bind(GLenum unit) {
-    glActiveTexture(unit);
-    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
-}
-
-///! textureCubemap
-textureCubemap::textureCubemap() :
-    m_loaded(false),
-    m_textureHandle(0)
-{
-}
-
-textureCubemap::~textureCubemap(void) {
-    if (m_textureHandle)
-        glDeleteTextures(1, &m_textureHandle);
-}
-
-bool textureCubemap::load(const u::string files[6]) {
-    if (m_loaded)
-        return false;
-
-    glGenTextures(1, &m_textureHandle);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    for (size_t i = 0; i < 6; i++) {
-        SDL_Surface *surface = IMG_Load(files[i].c_str());
-        if (!surface)
-            return false;
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, surface->w, surface->h,
-            0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
-        SDL_FreeSurface(surface);
-    }
-
-    m_loaded = true;
-
-    return true;
-}
-
-void textureCubemap::bind(GLenum unit) {
-    glActiveTexture(unit);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
-}
-
 ///! method
 method::method(void) :
     m_program(0),
@@ -222,9 +130,7 @@ method::~method(void) {
 
 bool method::init(void) {
     m_program = glCreateProgram();
-    if (!m_program)
-        return false;
-    return true;
+    return !!m_program;
 }
 
 bool method::addShader(GLenum shaderType, const char *shaderFile) {
@@ -569,10 +475,8 @@ void skybox::render(const rendererPipeline &pipeline) {
     glUseProgram(0);
 }
 
-///! core renderer
-renderer::renderer(void) {
-    once();
-
+///! world renderer
+world::world(void) {
     m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
     m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
     m_directionalLight.ambient = 0.20f;
@@ -589,95 +493,12 @@ renderer::renderer(void) {
     }
 }
 
-renderer::~renderer(void) {
+world::~world(void) {
     glDeleteBuffers(2, m_buffers);
     glDeleteVertexArrays(1, &m_vao);
 }
 
-void renderer::draw(rendererPipeline &p) {
-    rendererPipeline copy = p;
-    // render the skybox
-
-    const m::mat4 wvp = p.getWVPTransform();
-    const m::mat4 worldTransform = p.getWorldTransform();
-    const m::vec3 &pos = p.getPosition();
-
-    m_method.enable();
-    m_method.setTextureUnit(0);
-    m_method.setNormalUnit(1);
-
-    m_pointLights.clear();
-    pointLight pl;
-    pl.diffuse = 0.75f;
-    pl.ambient = 0.45f;
-    pl.color = m::vec3(1.0f, 0.0f, 0.0f);
-    pl.position = pos;
-    pl.attenuation.linear = 0.1f;
-
-    m_pointLights.push_back(pl);
-
-    // directional light
-    m_method.setDirectionalLight(m_directionalLight);
-
-    m_method.setPointLights(m_pointLights);
-
-    m_method.setWVP(wvp);
-    m_method.setWorld(worldTransform);
-
-    m_method.setEyeWorldPos(pos);
-    m_method.setMatSpecIntensity(1.0f);
-    m_method.setMatSpecPower(32.0f);
-
-    glBindVertexArray(m_vao);
-    for (size_t i = 0; i < m_textureBatches.size(); i++) {
-        m_textureBatches[i].tex.bind(GL_TEXTURE0);
-        m_textureBatches[i].bump.bind(GL_TEXTURE1);
-        glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
-            (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
-    }
-    glBindVertexArray(0);
-
-    m_skybox.render(copy);
-}
-
-void renderer::once(void) {
-    if (gOnce)
-        return;
-
-    *(void **)&glCreateShader             = SDL_GL_GetProcAddress("glCreateShader");
-    *(void **)&glShaderSource             = SDL_GL_GetProcAddress("glShaderSource");
-    *(void **)&glCompileShader            = SDL_GL_GetProcAddress("glCompileShader");
-    *(void **)&glAttachShader             = SDL_GL_GetProcAddress("glAttachShader");
-    *(void **)&glCreateProgram            = SDL_GL_GetProcAddress("glCreateProgram");
-    *(void **)&glLinkProgram              = SDL_GL_GetProcAddress("glLinkProgram");
-    *(void **)&glUseProgram               = SDL_GL_GetProcAddress("glUseProgram");
-    *(void **)&glGetUniformLocation       = SDL_GL_GetProcAddress("glGetUniformLocation");
-    *(void **)&glEnableVertexAttribArray  = SDL_GL_GetProcAddress("glEnableVertexAttribArray");
-    *(void **)&glDisableVertexAttribArray = SDL_GL_GetProcAddress("glDisableVertexAttribArray");
-    *(void **)&glUniformMatrix4fv         = SDL_GL_GetProcAddress("glUniformMatrix4fv");
-    *(void **)&glBindBuffer               = SDL_GL_GetProcAddress("glBindBuffer");
-    *(void **)&glGenBuffers               = SDL_GL_GetProcAddress("glGenBuffers");
-    *(void **)&glVertexAttribPointer      = SDL_GL_GetProcAddress("glVertexAttribPointer");
-    *(void **)&glBufferData               = SDL_GL_GetProcAddress("glBufferData");
-    *(void **)&glValidateProgram          = SDL_GL_GetProcAddress("glValidateProgram");
-    *(void **)&glGenVertexArrays          = SDL_GL_GetProcAddress("glGenVertexArrays");
-    *(void **)&glBindVertexArray          = SDL_GL_GetProcAddress("glBindVertexArray");
-    *(void **)&glDeleteProgram            = SDL_GL_GetProcAddress("glDeleteProgram");
-    *(void **)&glDeleteBuffers            = SDL_GL_GetProcAddress("glDeleteBuffers");
-    *(void **)&glDeleteVertexArrays       = SDL_GL_GetProcAddress("glDeleteVertexArrays");
-    *(void **)&glUniform1i                = SDL_GL_GetProcAddress("glUniform1i");
-    *(void **)&glUniform1f                = SDL_GL_GetProcAddress("glUniform1f");
-    *(void **)&glUniform3f                = SDL_GL_GetProcAddress("glUniform3f");
-    *(void **)&glGenerateMipmap           = SDL_GL_GetProcAddress("glGenerateMipmap");
-    *(void **)&glDeleteShader             = SDL_GL_GetProcAddress("glDeleteShader");
-    *(void **)&glGetShaderiv              = SDL_GL_GetProcAddress("glGetShaderiv");
-    *(void **)&glGetProgramiv             = SDL_GL_GetProcAddress("glGetProgramiv");
-    *(void **)&glGetShaderInfoLog         = SDL_GL_GetProcAddress("glGetShaderInfoLog");
-
-    gOnce = true;
-}
-
-void renderer::load(const kdMap &map) {
+bool world::load(const kdMap &map) {
     // make rendering batches for triangles which share the same texture
     u::vector<uint32_t> indices;
     for (size_t i = 0; i < map.textures.size(); i++) {
@@ -721,9 +542,194 @@ void renderer::load(const kdMap &map) {
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW);
+
+    return true;
 }
 
-void renderer::screenShot(const u::string &file) {
+void world::draw(const rendererPipeline &pipeline) {
+    rendererPipeline worldPipeline = pipeline;
+    rendererPipeline skyPipeline = pipeline;
+
+    const m::mat4 wvp = worldPipeline.getWVPTransform();
+    const m::mat4 worldTransform = worldPipeline.getWorldTransform();
+    const m::vec3 &pos = worldPipeline.getPosition();
+
+    m_method.enable();
+    m_method.setTextureUnit(0);
+    m_method.setNormalUnit(1);
+
+    m_pointLights.clear();
+    pointLight pl;
+    pl.diffuse = 0.75f;
+    pl.ambient = 0.45f;
+    pl.color = m::vec3(1.0f, 0.0f, 0.0f);
+    pl.position = pos;
+    pl.attenuation.linear = 0.1f;
+
+    m_pointLights.push_back(pl);
+
+    // directional light
+    m_method.setDirectionalLight(m_directionalLight);
+
+    m_method.setPointLights(m_pointLights);
+
+    m_method.setWVP(wvp);
+    m_method.setWorld(worldTransform);
+
+    m_method.setEyeWorldPos(pos);
+    m_method.setMatSpecIntensity(1.0f);
+    m_method.setMatSpecPower(32.0f);
+
+    glBindVertexArray(m_vao);
+    for (size_t i = 0; i < m_textureBatches.size(); i++) {
+        m_textureBatches[i].tex.bind(GL_TEXTURE0);
+        m_textureBatches[i].bump.bind(GL_TEXTURE1);
+        glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
+            (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
+    }
+    glBindVertexArray(0);
+
+    m_skybox.render(skyPipeline);
+}
+
+// GL_TEXTURE_2D
+texture::texture(void) :
+    m_loaded(false),
+    m_textureHandle(0)
+{
+    //
+}
+
+texture::~texture(void) {
+    if (m_textureHandle)
+        glDeleteTextures(1, &m_textureHandle);
+}
+
+bool texture::load(const u::string &file) {
+    // do not load multiple times
+    if (m_loaded)
+        return true;
+
+    fprintf(stderr, ">> loading `%s'\n", file.c_str());
+    SDL_Surface *surface = IMG_Load(file.c_str());
+    if (!surface)
+        return false;
+
+    glGenTextures(1, &m_textureHandle);
+    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
+
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+    SDL_FreeSurface(surface);
+    return m_loaded = true;
+}
+
+void texture::bind(GLenum unit) {
+    glActiveTexture(unit);
+    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
+}
+
+///! textureCubemap
+textureCubemap::textureCubemap() :
+    m_loaded(false),
+    m_textureHandle(0)
+{
+}
+
+textureCubemap::~textureCubemap(void) {
+    if (m_textureHandle)
+        glDeleteTextures(1, &m_textureHandle);
+}
+
+bool textureCubemap::load(const u::string files[6]) {
+    if (m_loaded)
+        return false;
+
+    glGenTextures(1, &m_textureHandle);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    for (size_t i = 0; i < 6; i++) {
+        SDL_Surface *surface = IMG_Load(files[i].c_str());
+        if (!surface)
+            return false;
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, surface->w, surface->h,
+            0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
+        SDL_FreeSurface(surface);
+    }
+
+    return m_loaded = true;
+}
+
+void textureCubemap::bind(GLenum unit) {
+    glActiveTexture(unit);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
+}
+
+void initGL(void) {
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+    // back face culling
+    glFrontFace(GL_CW);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
+
+    // depth buffer + depth test
+    glClearDepth(1.0f);
+    glDepthFunc(GL_LEQUAL);
+    glEnable(GL_DEPTH_TEST);
+
+    // shade model
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // multisample anti-aliasing
+    glEnable(GL_MULTISAMPLE);
+
+    *(void **)&glCreateShader             = SDL_GL_GetProcAddress("glCreateShader");
+    *(void **)&glShaderSource             = SDL_GL_GetProcAddress("glShaderSource");
+    *(void **)&glCompileShader            = SDL_GL_GetProcAddress("glCompileShader");
+    *(void **)&glAttachShader             = SDL_GL_GetProcAddress("glAttachShader");
+    *(void **)&glCreateProgram            = SDL_GL_GetProcAddress("glCreateProgram");
+    *(void **)&glLinkProgram              = SDL_GL_GetProcAddress("glLinkProgram");
+    *(void **)&glUseProgram               = SDL_GL_GetProcAddress("glUseProgram");
+    *(void **)&glGetUniformLocation       = SDL_GL_GetProcAddress("glGetUniformLocation");
+    *(void **)&glEnableVertexAttribArray  = SDL_GL_GetProcAddress("glEnableVertexAttribArray");
+    *(void **)&glDisableVertexAttribArray = SDL_GL_GetProcAddress("glDisableVertexAttribArray");
+    *(void **)&glUniformMatrix4fv         = SDL_GL_GetProcAddress("glUniformMatrix4fv");
+    *(void **)&glBindBuffer               = SDL_GL_GetProcAddress("glBindBuffer");
+    *(void **)&glGenBuffers               = SDL_GL_GetProcAddress("glGenBuffers");
+    *(void **)&glVertexAttribPointer      = SDL_GL_GetProcAddress("glVertexAttribPointer");
+    *(void **)&glBufferData               = SDL_GL_GetProcAddress("glBufferData");
+    *(void **)&glValidateProgram          = SDL_GL_GetProcAddress("glValidateProgram");
+    *(void **)&glGenVertexArrays          = SDL_GL_GetProcAddress("glGenVertexArrays");
+    *(void **)&glBindVertexArray          = SDL_GL_GetProcAddress("glBindVertexArray");
+    *(void **)&glDeleteProgram            = SDL_GL_GetProcAddress("glDeleteProgram");
+    *(void **)&glDeleteBuffers            = SDL_GL_GetProcAddress("glDeleteBuffers");
+    *(void **)&glDeleteVertexArrays       = SDL_GL_GetProcAddress("glDeleteVertexArrays");
+    *(void **)&glUniform1i                = SDL_GL_GetProcAddress("glUniform1i");
+    *(void **)&glUniform1f                = SDL_GL_GetProcAddress("glUniform1f");
+    *(void **)&glUniform3f                = SDL_GL_GetProcAddress("glUniform3f");
+    *(void **)&glGenerateMipmap           = SDL_GL_GetProcAddress("glGenerateMipmap");
+    *(void **)&glDeleteShader             = SDL_GL_GetProcAddress("glDeleteShader");
+    *(void **)&glGetShaderiv              = SDL_GL_GetProcAddress("glGetShaderiv");
+    *(void **)&glGetProgramiv             = SDL_GL_GetProcAddress("glGetProgramiv");
+    *(void **)&glGetShaderInfoLog         = SDL_GL_GetProcAddress("glGetShaderInfoLog");
+}
+
+void screenShot(const u::string &file) {
     static constexpr size_t kChannels = 3;
     SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, kScreenWidth, kScreenHeight,
         8*kChannels, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);

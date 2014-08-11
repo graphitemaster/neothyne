@@ -47,55 +47,21 @@ static SDL_Window *initSDL(void) {
     return window;
 }
 
-static void initGL(void) {
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
-    // back face culling
-    glFrontFace(GL_CW);
-    glCullFace(GL_BACK);
-    glEnable(GL_CULL_FACE);
-
-    // depth buffer + depth test
-    glClearDepth(1.0f);
-    glDepthFunc(GL_LEQUAL);
-    glEnable(GL_DEPTH_TEST);
-
-    // shade model
-    glShadeModel(GL_SMOOTH);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // multisample anti-aliasing
-    glEnable(GL_MULTISAMPLE);
-}
-
 int main(void) {
     SDL_Window *gScreen;
     gScreen = initSDL();
     initGL();
 
-    kdTree gTree;
-    renderer gRenderer;
     client gClient;
     kdMap gMap;
-
-#if 0
-    gTree.load("map.obj");
-    u::vector<unsigned char> data = gTree.serialize();
-    u::vector<unsigned char> compress = u::compress(data);
-    FILE *efp = fopen("maps/garden.kdgz", "w");
-    fwrite(&*compress.begin(), compress.size(), 1, efp);
-    fclose(efp);
-    return 0;
-#endif
+    world gWorld;
 
     // clear the screen black
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     SDL_GL_SwapWindow(gScreen);
 
-    glClearColor(0.4f, 0.6f, 0.9f, 0.0f);
 
+    // open map
     FILE *fp = fopen("maps/garden.kdgz", "r");
     u::vector<unsigned char> mapData;
     if (!fp) {
@@ -110,8 +76,9 @@ int main(void) {
         fclose(fp);
     }
     gMap.load(mapData);
-    gRenderer.load(gMap);
+    gWorld.load(gMap);
 
+    // setup projection
     perspectiveProjection projection;
     projection.fov = 90.0f;
     projection.width = kScreenWidth;
@@ -119,6 +86,7 @@ int main(void) {
     projection.near = 1.0f;
     projection.far = 4096.0f;
 
+    // go
     while (true) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -133,7 +101,7 @@ int main(void) {
         pipeline.setCamera(gClient.getPosition(), target, up);
         pipeline.setPerspectiveProjection(projection);
 
-        gRenderer.draw(pipeline);
+        gWorld.draw(pipeline);
 
         SDL_GL_SwapWindow(gScreen);
 
@@ -146,7 +114,7 @@ int main(void) {
                     if (e.key.keysym.sym == SDLK_ESCAPE)
                         return 0;
                     if (e.key.keysym.sym == SDLK_F8)
-                        gRenderer.screenShot("screenshot.bmp");
+                        screenShot("screenshot.bmp");
                     getKeyState(e.key.keysym.sym, true);
                     break;
                 case SDL_KEYUP:

@@ -50,31 +50,6 @@ private:
     m::mat4 m_WVPTransform;
 };
 
-// 2d texture
-struct texture {
-    texture();
-    ~texture();
-    void load(const u::string &file);
-    void bind(GLenum unit);
-
-private:
-    bool m_loaded;
-    GLuint m_textureHandle;
-};
-
-// 3d texture
-struct textureCubemap {
-    textureCubemap();
-    ~textureCubemap();
-
-    bool load(const u::string files[6]);
-    void bind(GLenum unit);
-
-private:
-    bool m_loaded;
-    GLuint m_textureHandle;
-};
-
 // inherit when writing a rendering method
 struct method {
     method();
@@ -99,8 +74,32 @@ private:
     u::list<GLuint> m_shaders;
 };
 
-///! lights:
+///! textures
+struct texture {
+    texture();
+    ~texture();
 
+    bool load(const u::string &file);
+    void bind(GLenum unit);
+
+private:
+    bool m_loaded;
+    GLuint m_textureHandle;
+};
+
+struct textureCubemap {
+    textureCubemap();
+    ~textureCubemap();
+
+    bool load(const u::string files[6]);
+    void bind(GLenum unit);
+
+private:
+    bool m_loaded;
+    GLuint m_textureHandle;
+};
+
+///! lights
 struct baseLight {
     m::vec3 color;
     float ambient;
@@ -215,7 +214,7 @@ private:
     textureCubemap m_cubemap; // skybox cubemap
 };
 
-///! core renderer
+///! world renderer
 struct renderTextueBatch {
     size_t start;
     size_t count;
@@ -224,19 +223,14 @@ struct renderTextueBatch {
     texture bump;
 };
 
-struct renderer {
-    renderer(void);
-    ~renderer(void);
+struct world {
+    world();
+    ~world();
 
-    void draw(rendererPipeline &p);
-    void load(const kdMap &map);
-
-    void screenShot(const u::string &file);
+    bool load(const kdMap &map);
+    void draw(const rendererPipeline &p);
 
 private:
-    // called once to get function pointers for GL
-    void once(void);
-
     union {
         struct {
             GLuint m_vbo;
@@ -244,13 +238,16 @@ private:
         };
         GLuint m_buffers[2];
     };
-
     GLuint m_vao;
-    lightMethod m_method; // the rendering method
+
+    lightMethod m_method;
     skybox m_skybox;
     directionalLight m_directionalLight;
     u::vector<pointLight> m_pointLights;
     u::vector<renderTextueBatch> m_textureBatches;
 };
+
+void initGL(void);
+void screenShot(const u::string &file);
 
 #endif
