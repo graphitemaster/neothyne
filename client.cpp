@@ -90,7 +90,7 @@ void client::inputMouseMove(void) {
     getMouseDelta(&deltaX, &deltaY);
 
     m_mouseLat -= (float)deltaY * kSensitivity * invert;
-    m::clamp(m_mouseLat, -89.0f, 89.0f);
+    m_mouseLat = m::clamp(m_mouseLat, -89.0f, 89.0f);
 
     m_mouseLon -= (float)deltaX * kSensitivity * invert;
 
