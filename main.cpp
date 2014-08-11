@@ -55,11 +55,13 @@ int main(void) {
     client gClient;
     kdMap gMap;
     world gWorld;
+    splashScreen gSplash;
 
-    // clear the screen black
+    // render the splash screen
+    gSplash.init("textures/splash.jpg");
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    gSplash.render();
     SDL_GL_SwapWindow(gScreen);
-
 
     // open map
     FILE *fp = fopen("maps/garden.kdgz", "r");

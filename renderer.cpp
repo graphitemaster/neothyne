@@ -431,6 +431,33 @@ bool skybox::init(const u::string &skyboxName) {
     return true;
 }
 
+bool splashMethod::init(void) {
+    if (!method::init())
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/splash.vs"))
+        return false;
+
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/splash.fs"))
+        return false;
+
+    if (!finalize())
+        return false;
+
+    m_splashTextureLocation = getUniformLocation("gSplashTexture");
+    m_aspectRatioLocation = getUniformLocation("gAspectRatio");
+
+    return true;
+}
+
+void splashMethod::setAspectRatio(void) {
+    glUniform1f(m_aspectRatioLocation, (float)kScreenWidth / (float)kScreenHeight);
+}
+
+void splashMethod::setTextureUnit(int unit) {
+    glUniform1i(m_splashTextureLocation, unit);
+}
+
 void skybox::render(const rendererPipeline &pipeline) {
     m_method.enable();
 
@@ -475,6 +502,67 @@ void skybox::render(const rendererPipeline &pipeline) {
     glUseProgram(0);
 }
 
+///! splash screen renderer
+splashScreen::~splashScreen(void) {
+    glDeleteBuffers(2, m_buffers);
+    glDeleteVertexArrays(1, &m_vao);
+}
+
+bool splashScreen::init(const u::string &file) {
+    if (!m_texture.load(file)) {
+        fprintf(stderr, "failed to load texture `%s'\n", file.c_str());
+        return false;
+    }
+
+    if (!m_method.init()) {
+        fprintf(stderr, "failed to initialize splash screen rendering method\n");
+        return false;
+    }
+
+    glGenVertexArrays(1, &m_vao);
+    glBindVertexArray(m_vao);
+
+    glGenBuffers(2, m_buffers);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+
+    GLfloat vertices[] = {
+         1.0f, 1.0f, 0.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, 0.0f, 0.0f, -1.0f,
+         1.0f,-1.0f, 0.0f, 1.0f,  0.0f,
+        -1.0f,-1.0f, 0.0f, 0.0f,  0.0f,
+    };
+
+    GLushort indices[] = { 0, 1, 2, 2, 1, 3 };
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)0); // position
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)12); // uvs
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    return true;
+}
+
+void splashScreen::render(void) {
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+
+    m_method.enable();
+    m_method.setTextureUnit(0);
+    m_method.setAspectRatio();
+
+    m_texture.bind(GL_TEXTURE0);
+
+    glBindVertexArray(m_vao);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+}
+
 ///! world renderer
 world::world(void) {
     m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
@@ -516,10 +604,11 @@ bool world::load(const kdMap &map) {
 
     // load textures
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
-        m_textureBatches[i].tex.load(map.textures[m_textureBatches[i].index].name);
-        //m_textureBatches[i].bump.load("bump_" + u::string(map.textures[m_textureBatches[i].index].name));
-        //m_textureBatches[i].tex.bind(GL_TEXTURE0);
-        m_textureBatches[i].bump.load("textures/nobump.jpg");
+        const char *name = map.textures[m_textureBatches[i].index].name;
+        const char *find = strrchr(name, '.');
+        m_textureBatches[i].tex.load(name);
+        if (!m_textureBatches[i].bump.load(u::string(name, find - name) + "_bump" + find))
+            m_textureBatches[i].bump.load("textures/nobump.jpg");
     }
 
     // gen vao

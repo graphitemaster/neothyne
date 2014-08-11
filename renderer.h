@@ -193,6 +193,39 @@ private:
     GLint m_cubeMapLocation;
 };
 
+/// splash screen rendering method
+struct splashMethod : method {
+    virtual bool init(void);
+
+    void setTextureUnit(int unit);
+    void setAspectRatio(void);
+
+private:
+    GLint m_splashTextureLocation;
+    GLint m_aspectRatioLocation;
+};
+
+/// splash screen renderer
+struct splashScreen {
+    ~splashScreen();
+
+    bool init(const u::string &splash);
+
+    void render(void);
+
+private:
+    union {
+        struct {
+            GLint m_vbo;
+            GLint m_ibo;
+        };
+        GLuint m_buffers[2];
+    };
+    GLuint m_vao;
+    texture m_texture;
+    splashMethod m_method;
+};
+
 /// skybox renderer
 struct skybox {
     ~skybox();
