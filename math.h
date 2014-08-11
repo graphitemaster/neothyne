@@ -16,6 +16,11 @@ namespace m {
     inline float toRadian(float x) { return x * kDegToRad; }
     inline float toDegree(float x) { return x * kRadToDeg; }
 
+    template <typename T>
+    inline T clamp(const T& current, const T &min, const T &max) {
+        return (current > max) ? max : ((current < min) ? min : current);
+    }
+
     enum axis {
         kAxisX,
         kAxisY,

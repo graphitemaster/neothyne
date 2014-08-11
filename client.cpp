@@ -3,6 +3,8 @@
 #include "client.h"
 
 client::client() :
+    m_mouseLat(0.0f),
+    m_mouseLon(0.0f),
     m_origin(0.0f, 150.0f, 0.0f),
     m_velocity(0.0f, 0.0f, 0.0f),
     m_isOnGround(false) { }
@@ -73,9 +75,7 @@ void client::move(const u::vector<clientCommands> &commands, const kdMap &map) {
     trace.dir = m_velocity;
     map.traceSphere(&trace);
     kdMap::clipVelocity(newDirection, trace.plane.n, m_velocity, kdMap::kOverClip);
-    float fraction = trace.fraction;
-    if (fraction > 1.0f) fraction = 1.0f;
-    if (fraction < 0.0f) fraction = 0.0f;
+    float fraction = m::clamp(trace.fraction, 0.0f, 1.0f);
     if (fraction > 0.0f)
         m_origin += trace.dir * fraction;
 }
@@ -90,9 +90,7 @@ void client::inputMouseMove(void) {
     getMouseDelta(&deltaX, &deltaY);
 
     m_mouseLat -= (float)deltaY * kSensitivity * invert;
-    // clamp to 90 degrees
-    if (m_mouseLat > 89) m_mouseLat = 89;
-    else if (m_mouseLat < -89) m_mouseLat = 89;
+    m::clamp(m_mouseLat, -89.0f, 89.0f);
 
     m_mouseLon -= (float)deltaX * kSensitivity * invert;
 
