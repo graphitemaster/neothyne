@@ -206,6 +206,7 @@ private:
         };
         GLuint m_buffers[2];
     };
+    GLuint m_vao;
     skyboxMethod m_method; // rendering method
     textureCubemap m_cubemap; // skybox cubemap
 };

@@ -441,7 +441,8 @@ void skyboxMethod::setTextureUnit(int unit) {
 
 ///! skybox renderer
 skybox::~skybox(void) {
-    glDeleteBuffers(1, &m_vbo);
+    glDeleteBuffers(2, m_buffers);
+    glDeleteVertexArrays(1, &m_vao);
 }
 
 bool skybox::init(const u::string &skyboxName) {
@@ -477,10 +478,17 @@ bool skybox::init(const u::string &skyboxName) {
 
     GLushort indices[] = { 0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1 };
 
+    // create vao to encapsulate state
+    glGenVertexArrays(1, &m_vao);
+    glBindVertexArray(m_vao);
+
+    // generate the vbo and ibo
     glGenBuffers(2, m_buffers);
 
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    glEnableVertexAttribArray(0);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -522,12 +530,8 @@ void skybox::render(const rendererPipeline &pipeline) {
     m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
     m_method.setTextureUnit(0);
 
-    glEnableVertexAttribArray(0); // positions
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glBindVertexArray(m_vao);
     glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_SHORT, (void *)0);
-    glDisableVertexAttribArray(0);
 
     glCullFace(faceMode);
     glDepthFunc(depthMode);
@@ -595,29 +599,14 @@ void renderer::draw(rendererPipeline &p) {
     m_method.setMatSpecIntensity(1.0f);
     m_method.setMatSpecPower(32.0f);
 
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-    glEnableVertexAttribArray(3);
-
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), 0);                 // vertex
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-
+    glBindVertexArray(m_vao);
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
         m_textureBatches[i].tex.bind(GL_TEXTURE0);
         m_textureBatches[i].bump.bind(GL_TEXTURE1);
         glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
     }
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
-    glDisableVertexAttribArray(3);
+    glBindVertexArray(0);
 
     m_skybox.render(copy);
 }
@@ -656,10 +645,6 @@ void renderer::once(void) {
     *(void **)&glGetProgramiv             = SDL_GL_GetProcAddress("glGetProgramiv");
     *(void **)&glGetShaderInfoLog         = SDL_GL_GetProcAddress("glGetShaderInfoLog");
 
-    // default VAO. We don't utilize it, we just need one for GL 3.3
-    glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
-
     gOnce = true;
 }
 
@@ -687,10 +672,24 @@ void renderer::load(const kdMap &map) {
         m_textureBatches[i].bump.load("textures/nobump.jpg");
     }
 
+    // gen vao
+    glGenVertexArrays(1, &m_vao);
+    glBindVertexArray(m_vao);
+
+    // gen vbo and ibo
     glGenBuffers(2, m_buffers);
 
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glBufferData(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), 0);                 // vertex
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(3);
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW);
 }
