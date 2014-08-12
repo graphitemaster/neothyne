@@ -23,13 +23,32 @@ embodies the following
   * Point lighting (with ambient, diffuse, and attenuation (exp, linear, constant))
   * Sky meshes (skybox, skydome, etc, any mesh will suffice).
   * Normal mapping (dot3 bump mapping)
+  * Per pixel fog (linear, exp and exp2)
 
 ## Goals
 
+* Particles
 * Shadow mapping
-* Spot lighting
-* 3D Models
+* 3D models (iqm?)
 * Networking (client/server model)
-* A game!
+* Build the game
 
+## Screenshots
+The following screenshots are taken from in the engine.
 
+[<img src="http://i.imgur.com/Vu2DWKG.png" style="width: 200px">](http://i.imgur.com/Vu2DWKG.png)
+[<img src="http://i.imgur.com/sPxSb8e.png" style="width: 200px">](http://i.imgur.com/sPxSb8e.png)
+[<img src="http://i.imgur.com/8ZoCKWc.png" style="width: 200px">](http://i.imgur.com/8ZoCKWc.png)
+
+## Build
+Neothyne depends on the following libraries
+
+* SDL2
+* SDL2_image
+* zlib
+
+Verify you have these installed then run `make'.
+
+## System requirements
+Neothyne requires a GPU which is capable of GL 3.3. Modern low profile GPUs may
+function poorly.
