@@ -31,7 +31,8 @@ static PFNGLDELETEBUFFERSPROC            glDeleteBuffers            = nullptr;
 static PFNGLDELETEVERTEXARRAYSPROC       glDeleteVertexArrays       = nullptr;
 static PFNGLUNIFORM1IPROC                glUniform1i                = nullptr;
 static PFNGLUNIFORM1FPROC                glUniform1f                = nullptr;
-static PFNGLUNIFORM3FPROC                glUniform3f                = nullptr;
+static PFNGLUNIFORM3FVPROC               glUniform3fv               = nullptr;
+static PFNGLUNIFORM4FPROC                glUniform4f                = nullptr;
 static PFNGLGENERATEMIPMAPPROC           glGenerateMipmap           = nullptr;
 static PFNGLDELETESHADERPROC             glDeleteShader             = nullptr;
 static PFNGLGETSHADERIVPROC              glGetShaderiv              = nullptr;
@@ -287,6 +288,13 @@ bool lightMethod::init(void) {
         m_pointLights[i].positionLocation = getUniformLocation(position);
     }
 
+    // fog
+    m_fog.colorLocation = getUniformLocation("gFog.color");
+    m_fog.densityLocation = getUniformLocation("gFog.density");
+    m_fog.endLocation = getUniformLocation("gFog.end");
+    m_fog.methodLocation = getUniformLocation("gFog.method");
+    m_fog.startLocation = getUniformLocation("gFog.start");
+
     return true;
 }
 
@@ -310,8 +318,8 @@ void lightMethod::setDirectionalLight(const directionalLight &light) {
     m::vec3 direction = light.direction;
     direction.normalize();
 
-    glUniform3f(m_directionalLight.colorLocation, light.color.x, light.color.y, light.color.z);
-    glUniform3f(m_directionalLight.directionLocation, direction.x, direction.y, direction.z);
+    glUniform3fv(m_directionalLight.colorLocation, 1, &light.color.x);
+    glUniform3fv(m_directionalLight.directionLocation, 1, &direction.x);
     glUniform1f(m_directionalLight.ambientLocation, light.ambient);
     glUniform1f(m_directionalLight.diffuseLocation, light.diffuse);
 }
@@ -324,8 +332,8 @@ void lightMethod::setPointLights(u::vector<pointLight> &lights) {
     glUniform1i(m_numPointLightsLocation, lights.size());
 
     for (size_t i = 0; i < lights.size(); i++) {
-        glUniform3f(m_pointLights[i].colorLocation, lights[i].color.x, lights[i].color.y, lights[i].color.z);
-        glUniform3f(m_pointLights[i].positionLocation, lights[i].position.x, lights[i].position.y, lights[i].position.z);
+        glUniform3fv(m_pointLights[i].colorLocation, 1, &lights[i].color.x);
+        glUniform3fv(m_pointLights[i].positionLocation, 1, &lights[i].position.x);
         glUniform1f(m_pointLights[i].ambientLocation, lights[i].ambient);
         glUniform1f(m_pointLights[i].diffuseLocation, lights[i].diffuse);
         glUniform1f(m_pointLights[i].attenuation.constantLocation, lights[i].attenuation.constant);
@@ -335,7 +343,7 @@ void lightMethod::setPointLights(u::vector<pointLight> &lights) {
 }
 
 void lightMethod::setEyeWorldPos(const m::vec3 &eyeWorldPos) {
-    glUniform3f(m_eyeWorldPosLocation, eyeWorldPos.x, eyeWorldPos.y, eyeWorldPos.z);
+    glUniform3fv(m_eyeWorldPosLocation, 1, &eyeWorldPos.x);
 }
 
 void lightMethod::setMatSpecIntensity(float intensity) {
@@ -344,6 +352,23 @@ void lightMethod::setMatSpecIntensity(float intensity) {
 
 void lightMethod::setMatSpecPower(float power) {
     glUniform1f(m_matSpecPowerLocation, power);
+}
+
+void lightMethod::setFogType(fogType type) {
+    glUniform1i(m_fog.methodLocation, type);
+}
+
+void lightMethod::setFogDistance(float start, float end) {
+    glUniform1f(m_fog.startLocation, start);
+    glUniform1f(m_fog.endLocation, end);
+}
+
+void lightMethod::setFogDensity(float density) {
+    glUniform1f(m_fog.densityLocation, density);
+}
+
+void lightMethod::setFogColor(const m::vec3 &color) {
+    glUniform4f(m_fog.colorLocation, color.x, color.y, color.z, 1.0f);
 }
 
 ///! skyboxMethod
@@ -570,7 +595,7 @@ world::world(void) {
     m_directionalLight.ambient = 0.20f;
     m_directionalLight.diffuse = 0.75f;
 
-    if (!m_method.init()) {
+    if (!lightMethod::init()) {
         fprintf(stderr, "failed to initialize rendering method\n");
         abort();
     }
@@ -643,9 +668,16 @@ void world::draw(const rendererPipeline &pipeline) {
     const m::mat4 worldTransform = worldPipeline.getWorldTransform();
     const m::vec3 &pos = worldPipeline.getPosition();
 
-    m_method.enable();
-    m_method.setTextureUnit(0);
-    m_method.setNormalUnit(1);
+    enable();
+    setTextureUnit(0);
+    setNormalUnit(1);
+
+    setFogColor(m::vec3(0.7f, 0.7f, 0.7f));
+    setFogDensity(0.001f);
+    setFogType(kFogExp2);
+
+    //setFogDistance(110.0f, 470.0f);
+    //setFogType(kFogLinear);
 
     m_pointLights.clear();
     pointLight pl;
@@ -658,16 +690,16 @@ void world::draw(const rendererPipeline &pipeline) {
     m_pointLights.push_back(pl);
 
     // directional light
-    m_method.setDirectionalLight(m_directionalLight);
+    setDirectionalLight(m_directionalLight);
 
-    m_method.setPointLights(m_pointLights);
+    setPointLights(m_pointLights);
 
-    m_method.setWVP(wvp);
-    m_method.setWorld(worldTransform);
+    setWVP(wvp);
+    setWorld(worldTransform);
 
-    m_method.setEyeWorldPos(pos);
-    m_method.setMatSpecIntensity(1.0f);
-    m_method.setMatSpecPower(32.0f);
+    setEyeWorldPos(pos);
+    setMatSpecIntensity(1.0f);
+    setMatSpecPower(32.0f);
 
     glBindVertexArray(m_vao);
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
@@ -810,7 +842,8 @@ void initGL(void) {
     *(void **)&glDeleteVertexArrays       = SDL_GL_GetProcAddress("glDeleteVertexArrays");
     *(void **)&glUniform1i                = SDL_GL_GetProcAddress("glUniform1i");
     *(void **)&glUniform1f                = SDL_GL_GetProcAddress("glUniform1f");
-    *(void **)&glUniform3f                = SDL_GL_GetProcAddress("glUniform3f");
+    *(void **)&glUniform3fv               = SDL_GL_GetProcAddress("glUniform3fv");
+    *(void **)&glUniform4f                = SDL_GL_GetProcAddress("glUniform4f");
     *(void **)&glGenerateMipmap           = SDL_GL_GetProcAddress("glGenerateMipmap");
     *(void **)&glDeleteShader             = SDL_GL_GetProcAddress("glDeleteShader");
     *(void **)&glGetShaderiv              = SDL_GL_GetProcAddress("glGetShaderiv");

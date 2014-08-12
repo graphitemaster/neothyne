@@ -128,6 +128,13 @@ struct pointLight : baseLight {
     } attenuation;
 };
 
+enum fogType {
+    kFogNone,
+    kFogLinear,
+    kFogExp,
+    kFogExp2
+};
+
 ///! light rendering method
 struct lightMethod : method {
     lightMethod();
@@ -145,6 +152,12 @@ struct lightMethod : method {
     void setEyeWorldPos(const m::vec3 &eyeWorldPos);
     void setMatSpecIntensity(float intensity);
     void setMatSpecPower(float power);
+
+    // fog
+    void setFogType(fogType type);
+    void setFogDistance(float start, float end);
+    void setFogColor(const m::vec3 &color);
+    void setFogDensity(float density);
 
 private:
     friend struct renderer;
@@ -176,6 +189,14 @@ private:
             GLint expLocation;
         } attenuation;
     } m_pointLights[kMaxPointLights];
+
+    struct {
+        GLuint densityLocation;
+        GLuint colorLocation;
+        GLuint startLocation;
+        GLuint endLocation;
+        GLuint methodLocation;
+    } m_fog;
 
     GLint m_numPointLightsLocation;
 };
@@ -256,7 +277,7 @@ struct renderTextueBatch {
     texture bump;
 };
 
-struct world {
+struct world : lightMethod {
     world();
     ~world();
 
@@ -273,7 +294,6 @@ private:
     };
     GLuint m_vao;
 
-    lightMethod m_method;
     skybox m_skybox;
     directionalLight m_directionalLight;
     u::vector<pointLight> m_pointLights;

@@ -3,6 +3,11 @@ in vec2 texCoord0;
 in vec3 tangent0;
 in vec3 worldPos0;
 
+const int kFogNone = 0;
+const int kFogLinear = 1;
+const int kFogExp = 2;
+const int kFogExp2 = 3;
+
 struct baseLight {
     vec3 color;
     float ambient;
@@ -26,6 +31,14 @@ struct pointLight {
     lightAttenuation attenuation;
 };
 
+struct fog {
+    float density;
+    vec4 color;
+    float start;
+    float end;
+    int method;
+};
+
 // textures
 uniform sampler2D gSampler;     // diffuse
 uniform sampler2D gNormalMap;   // normal
@@ -39,6 +52,9 @@ uniform float gMatSpecPower;
 uniform int gNumPointLights;
 uniform directionalLight gDirectionalLight;
 uniform pointLight gPointLights[kMaxPointLights];
+
+// fog
+uniform fog gFog;
 
 // output
 out vec4 fragColor;
@@ -98,6 +114,24 @@ vec3 calcBump(void) {
     return newNormal;
 }
 
+float calcFog(vec4 fragColor) {
+    float result;
+    float fogCoord = gl_FragCoord.z / gl_FragCoord.w;
+    switch (gFog.method) {
+        case kFogLinear:
+            result = (gFog.end - fogCoord) / (gFog.end - gFog.start);
+            break;
+        case kFogExp:
+            result = exp(-gFog.density * fogCoord);
+            break;
+        case kFogExp2:
+            result = exp(-pow(gFog.density * fogCoord, 2.0f));
+            break;
+    }
+    result = 1.0f - clamp(result, 0.0f, 1.0f);
+    return result;
+}
+
 void main() {
     vec3 normal = calcBump();
     vec4 totalLight = calcLightDirectional(normal);
@@ -107,5 +141,12 @@ void main() {
         totalLight += calcLightPoint(i, normal);
 
     fragColor = sampledColor * totalLight;
-    fragColor.a = 1.0f;
+
+    // deal with fog
+    if (gFog.method != kFogNone) {
+        float fogColor = calcFog(fragColor);
+        fragColor = mix(fragColor, gFog.color, fogColor);
+    }
+
+    fragColor.a = gFog.method;
 }
