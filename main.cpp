@@ -5,8 +5,8 @@
 #include "renderer.h"
 #include "client.h"
 
-static constexpr size_t kScreenWidth = 1024;
-static constexpr size_t kScreenHeight = 768;
+static constexpr size_t kScreenWidth = 1600;
+static constexpr size_t kScreenHeight = 852;
 
 u::map<int, int> &getKeyState(int key = 0, bool keyDown = false, bool keyUp = false) {
     static u::map<int, int> gKeyMap;

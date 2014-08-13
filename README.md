@@ -36,9 +36,8 @@ embodies the following
 ## Screenshots
 The following screenshots are taken from in the engine.
 
-[<img src="http://i.imgur.com/Vu2DWKG.png" style="width: 200px">](http://i.imgur.com/Vu2DWKG.png)
-[<img src="http://i.imgur.com/sPxSb8e.png" style="width: 200px">](http://i.imgur.com/sPxSb8e.png)
-[<img src="http://i.imgur.com/8ZoCKWc.png" style="width: 200px">](http://i.imgur.com/8ZoCKWc.png)
+[!(http://i.imgur.com/Vu2DWKG.png)](http://i.imgur.com/Vu2DWKG.png)
+[!(http://i.imgur.com/sPxSb8e.png)](http://i.imgur.com/sPxSb8e.png)
 
 ## Build
 Neothyne depends on the following libraries

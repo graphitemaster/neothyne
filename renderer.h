@@ -5,6 +5,7 @@
 #include "math.h"
 #include "util.h"
 #include "kdmap.h"
+#include "resource.h"
 
 struct perspectiveProjection {
     float fov;
@@ -227,7 +228,7 @@ private:
 };
 
 /// splash screen renderer
-struct splashScreen {
+struct splashScreen : splashMethod {
     ~splashScreen();
 
     bool init(const u::string &splash);
@@ -244,11 +245,10 @@ private:
     };
     GLuint m_vao;
     texture m_texture;
-    splashMethod m_method;
 };
 
 /// skybox renderer
-struct skybox {
+struct skybox : skyboxMethod {
     ~skybox();
 
     bool init(const u::string &skyboxName);
@@ -264,7 +264,6 @@ private:
         GLuint m_buffers[2];
     };
     GLuint m_vao;
-    skyboxMethod m_method; // rendering method
     textureCubemap m_cubemap; // skybox cubemap
 };
 
@@ -273,8 +272,8 @@ struct renderTextueBatch {
     size_t start;
     size_t count;
     size_t index;
-    texture tex;
-    texture bump;
+    texture *diffuse;
+    texture *normal;
 };
 
 struct world : lightMethod {
@@ -298,6 +297,8 @@ private:
     directionalLight m_directionalLight;
     u::vector<pointLight> m_pointLights;
     u::vector<renderTextueBatch> m_textureBatches;
+
+    resourceManager<u::string, texture> m_textureManager;
 };
 
 void initGL(void);

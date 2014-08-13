@@ -5,8 +5,8 @@
 
 #include "renderer.h"
 
-static constexpr size_t kScreenWidth = 1024;
-static constexpr size_t kScreenHeight = 768;
+static constexpr size_t kScreenWidth = 1600;
+static constexpr size_t kScreenHeight = 852;
 
 static PFNGLCREATESHADERPROC             glCreateShader             = nullptr;
 static PFNGLSHADERSOURCEPROC             glShaderSource             = nullptr;
@@ -420,7 +420,7 @@ bool skybox::init(const u::string &skyboxName) {
         return false;
     }
 
-    if (!m_method.init()) {
+    if (!skyboxMethod::init()) {
         fprintf(stderr, "failed initializing skybox rendering method\n");
         return false;
     }
@@ -484,7 +484,7 @@ void splashMethod::setTextureUnit(int unit) {
 }
 
 void skybox::render(const rendererPipeline &pipeline) {
-    m_method.enable();
+    enable();
 
     // to restore later
     GLint faceMode;
@@ -506,7 +506,7 @@ void skybox::render(const rendererPipeline &pipeline) {
     p.setCamera(position, target, up);
     p.setPerspectiveProjection(projection);
 
-    m_method.setWVP(p.getWVPTransform());
+    setWVP(p.getWVPTransform());
 
     // render skybox cube
 
@@ -515,7 +515,7 @@ void skybox::render(const rendererPipeline &pipeline) {
     glDepthFunc(GL_LEQUAL);
 
     m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
-    m_method.setTextureUnit(0);
+    setTextureUnit(0);
 
     glBindVertexArray(m_vao);
     glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_SHORT, (void *)0);
@@ -539,7 +539,7 @@ bool splashScreen::init(const u::string &file) {
         return false;
     }
 
-    if (!m_method.init()) {
+    if (!splashMethod::init()) {
         fprintf(stderr, "failed to initialize splash screen rendering method\n");
         return false;
     }
@@ -575,9 +575,9 @@ void splashScreen::render(void) {
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
 
-    m_method.enable();
-    m_method.setTextureUnit(0);
-    m_method.setAspectRatio();
+    enable();
+    setTextureUnit(0);
+    setAspectRatio();
 
     m_texture.bind(GL_TEXTURE0);
 
@@ -592,7 +592,7 @@ void splashScreen::render(void) {
 world::world(void) {
     m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
     m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
-    m_directionalLight.ambient = 0.20f;
+    m_directionalLight.ambient = 0.90f;
     m_directionalLight.diffuse = 0.75f;
 
     if (!lightMethod::init()) {
@@ -600,7 +600,7 @@ world::world(void) {
         abort();
     }
 
-    if (!m_skybox.init("textures/sky")) {
+    if (!m_skybox.init("textures/sky01")) {
         fprintf(stderr, "failed to load skybox\n");
         abort();
     }
@@ -631,9 +631,19 @@ bool world::load(const kdMap &map) {
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
         const char *name = map.textures[m_textureBatches[i].index].name;
         const char *find = strrchr(name, '.');
-        m_textureBatches[i].tex.load(name);
-        if (!m_textureBatches[i].bump.load(u::string(name, find - name) + "_bump" + find))
-            m_textureBatches[i].bump.load("textures/nobump.jpg");
+
+        u::string diffuseName = name;
+        u::string normalName = find ? u::string(name, find - name) + "_bump" + find : diffuseName + "_bump";
+
+        texture *diffuse = m_textureManager.get(diffuseName);
+        texture *normal = m_textureManager.get(normalName);
+        if (!diffuse)
+            diffuse = m_textureManager.get("textures/notex.jpg");
+        if (!normal)
+            normal = m_textureManager.get("textures/nobump.jpg");
+
+        m_textureBatches[i].diffuse = diffuse;
+        m_textureBatches[i].normal = normal;
     }
 
     // gen vao
@@ -657,6 +667,10 @@ bool world::load(const kdMap &map) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW);
 
+    printf("textures:\n");
+    printf("loaded: %zu\n", m_textureManager.loaded());
+    printf("shared: %zu\n", m_textureManager.reuses());
+
     return true;
 }
 
@@ -672,9 +686,13 @@ void world::draw(const rendererPipeline &pipeline) {
     setTextureUnit(0);
     setNormalUnit(1);
 
-    setFogColor(m::vec3(0.7f, 0.7f, 0.7f));
-    setFogDensity(0.001f);
-    setFogType(kFogExp2);
+    static bool setFog = true;
+    if (setFog) {
+        setFogColor(m::vec3(0.8f, 0.8f, 0.8f));
+        setFogDensity(0.0007f);
+        setFogType(kFogExp);
+        setFog = false;
+    }
 
     //setFogDistance(110.0f, 470.0f);
     //setFogType(kFogLinear);
@@ -689,7 +707,6 @@ void world::draw(const rendererPipeline &pipeline) {
 
     m_pointLights.push_back(pl);
 
-    // directional light
     setDirectionalLight(m_directionalLight);
 
     setPointLights(m_pointLights);
@@ -698,13 +715,13 @@ void world::draw(const rendererPipeline &pipeline) {
     setWorld(worldTransform);
 
     setEyeWorldPos(pos);
-    setMatSpecIntensity(1.0f);
-    setMatSpecPower(32.0f);
+    setMatSpecIntensity(2.0f);
+    setMatSpecPower(200.0f);
 
     glBindVertexArray(m_vao);
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
-        m_textureBatches[i].tex.bind(GL_TEXTURE0);
-        m_textureBatches[i].bump.bind(GL_TEXTURE1);
+        m_textureBatches[i].diffuse->bind(GL_TEXTURE0);
+        m_textureBatches[i].normal->bind(GL_TEXTURE1);
         glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
     }
@@ -731,7 +748,6 @@ bool texture::load(const u::string &file) {
     if (m_loaded)
         return true;
 
-    fprintf(stderr, ">> loading `%s'\n", file.c_str());
     SDL_Surface *surface = IMG_Load(file.c_str());
     if (!surface)
         return false;
