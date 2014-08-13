@@ -161,7 +161,7 @@ struct lightMethod : method {
     void setFogDensity(float density);
 
 private:
-    friend struct renderer;
+    friend struct world;
 
     // uniforms
     GLint m_WVPLocation;
@@ -208,11 +208,13 @@ struct skyboxMethod : method {
 
     void setWVP(const m::mat4 &wvp);
     void setTextureUnit(int unit);
+    void setWorld(const m::mat4 &worldInverse);
 
 private:
     // uniforms
     GLint m_WVPLocation;
     GLint m_cubeMapLocation;
+    GLint m_worldLocation;
 };
 
 /// splash screen rendering method

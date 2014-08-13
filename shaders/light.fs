@@ -148,5 +148,5 @@ void main() {
         fragColor = mix(fragColor, gFog.color, fogColor);
     }
 
-    fragColor.a = gFog.method;
+    fragColor.a = 1.0f;
 }

@@ -386,6 +386,7 @@ bool skyboxMethod::init(void) {
         return false;
 
     m_WVPLocation = getUniformLocation("gWVP");
+    m_worldLocation = getUniformLocation("gWorld");
     m_cubeMapLocation = getUniformLocation("gCubemap");
 
     return true;
@@ -397,6 +398,10 @@ void skyboxMethod::setWVP(const m::mat4 &wvp) {
 
 void skyboxMethod::setTextureUnit(int unit) {
     glUniform1i(m_cubeMapLocation, unit);
+}
+
+void skyboxMethod::setWorld(const m::mat4 &worldInverse) {
+    glUniformMatrix4fv(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
 }
 
 ///! skybox renderer
@@ -492,6 +497,8 @@ void skybox::render(const rendererPipeline &pipeline) {
     GLint depthMode;
     glGetIntegerv(GL_DEPTH_FUNC, &depthMode);
 
+    rendererPipeline worldPipeline = pipeline;
+
     // get camera position, target and up vectors
     const m::vec3 &position = pipeline.getPosition();
     const m::vec3 &target = pipeline.getTarget();
@@ -507,6 +514,7 @@ void skybox::render(const rendererPipeline &pipeline) {
     p.setPerspectiveProjection(projection);
 
     setWVP(p.getWVPTransform());
+    setWorld(worldPipeline.getWorldTransform());
 
     // render skybox cube
 

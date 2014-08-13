@@ -11,9 +11,10 @@ out vec2 texCoord0;
 out vec3 tangent0;
 out vec3 worldPos0;
 
+uniform float gTime;
+
 void main() {
     gl_Position = gWVP * vec4(position, 1.0f);
-
     texCoord0 = texCoord;
     normal0 = (gWorld * vec4(normal, 0.0f)).xyz;
     worldPos0 = (gWorld * vec4(position, 1.0f)).xyz;
