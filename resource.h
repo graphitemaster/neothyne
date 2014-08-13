@@ -4,6 +4,10 @@
 
 template <typename K, typename T>
 struct resourceManager {
+    resourceManager() :
+        m_loaded(0),
+        m_reuses(0) { }
+
     ~resourceManager() {
         clear();
     }

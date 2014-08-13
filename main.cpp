@@ -41,7 +41,15 @@ static SDL_Window *initSDL(void) {
         SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL
     );
 
-    SDL_GL_CreateContext(window);
+    if (!SDL_GL_CreateContext(window)) {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+            "Neothyne: Initialization error",
+            "OpenGL 3.3 or higher is required",
+            nullptr);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+    }
+
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
     return window;

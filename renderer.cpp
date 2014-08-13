@@ -752,10 +752,16 @@ bool texture::load(const u::string &file) {
     if (!surface)
         return false;
 
+    GLuint format;
+    if (surface->format->BytesPerPixel == 4)
+        format = surface->format->Rmask == 0x000000FF ? GL_RGBA : GL_BGRA;
+    else
+        format = surface->format->Rmask == 0x000000FF ? GL_RGB : GL_BGR;
+
     glGenTextures(1, &m_textureHandle);
     glBindTexture(GL_TEXTURE_2D, m_textureHandle);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, format, GL_UNSIGNED_BYTE, surface->pixels);
 
     glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -801,8 +807,16 @@ bool textureCubemap::load(const u::string files[6]) {
         SDL_Surface *surface = IMG_Load(files[i].c_str());
         if (!surface)
             return false;
+
+        GLuint format;
+        if (surface->format->BytesPerPixel == 4)
+            format = surface->format->Rmask == 0x000000FF ? GL_RGBA : GL_BGRA;
+        else
+            format = surface->format->Rmask == 0x000000FF ? GL_RGB : GL_BGR;
+
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, surface->w, surface->h,
-            0, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
+            0, format, GL_UNSIGNED_BYTE, surface->pixels);
+
         SDL_FreeSurface(surface);
     }
 
