@@ -9,15 +9,13 @@ enum clientCommands {
     kCommandBackward,
     kCommandLeft,
     kCommandRight,
-    kCommandJump,
-    kCommandUp,
-    kCommandDown
+    kCommandJump
 };
 
 struct client {
     client();
 
-    void update(const kdMap &map);
+    void update(const kdMap &map, float dt);
     void getDirection(m::vec3 *direction, m::vec3 *up, m::vec3 *side) const;
     const m::vec3 &getPosition(void) const;
     void setRotation(const m::quat &rotation);
@@ -25,7 +23,9 @@ struct client {
 private:
     void inputMouseMove(void);
     void inputGetCommands(u::vector<clientCommands> &commands);
-    void move(const u::vector<clientCommands> &commands, const kdMap &map);
+    void move(const u::vector<clientCommands> &commands);
+
+    bool tryUnstick(const kdMap &map, float radius);
 
     float m_mouseLat;
     float m_mouseLon;
@@ -35,6 +35,7 @@ private:
     m::quat m_rotation;
 
     bool m_isOnGround;
+    bool m_isOnWall;
 };
 
 #endif

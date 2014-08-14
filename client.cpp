@@ -7,28 +7,169 @@ client::client() :
     m_mouseLon(0.0f),
     m_origin(0.0f, 150.0f, 0.0f),
     m_velocity(0.0f, 0.0f, 0.0f),
-    m_isOnGround(false) { }
+    m_isOnGround(false),
+    m_isOnWall(false)
+{
+
+}
 
 u::map<int, int> &getKeyState(int key = 0, bool keyDown = false, bool keyUp = false);
 void getMouseDelta(int *deltaX, int *deltaY);
 
-void client::update(const kdMap &map) {
+bool client::tryUnstick(const kdMap &map, float radius) {
+    static const m::vec3 offsets[] = {
+        m::vec3(-1.0f, 1.0f,-1.0f),
+        m::vec3( 1.0f, 1.0f,-1.0f),
+        m::vec3( 1.0f, 1.0f, 1.0f),
+        m::vec3(-1.0f, 1.0f, 1.0f),
+        m::vec3(-1.0f,-1.0f,-1.0f),
+        m::vec3( 1.0f,-1.0f,-1.0f),
+        m::vec3( 1.0f,-1.0f, 1.0f),
+        m::vec3(-1.0f,-1.0f, 1.0f)
+    };
+    const float radiusScale = radius * 0.1f;
+    for (size_t j = 1; j < 4; j++) {
+        for (size_t i = 0; i < sizeof(offsets)/sizeof(offsets[0]); i++) {
+            m::vec3 tryPosition = m_origin + j * radiusScale * offsets[i];
+            if (map.isSphereStuck(tryPosition, radius))
+                continue;
+            m_origin = tryPosition;
+            return true;
+        }
+    }
+    return false;
+}
+
+void client::update(const kdMap &map, float dt) {
+    static constexpr float kMaxVelocity = 165.0f;
+    static constexpr m::vec3 kGravity(0.0f, -98.0f, 0.0f);
+    static constexpr float kRadius = 5.0f;
+
+    kdSphereTrace trace;
+    trace.radius = kRadius;
+
+    m::vec3 velocity = m_velocity;
+    m::vec3 originalVelocity = m_velocity;
+    m::vec3 primalVelocity = m_velocity;
+    m::vec3 newVelocity;
+    velocity.maxLength(kMaxVelocity);
+
+    m::vec3 planes[kdMap::kMaxClippingPlanes];
+    m::vec3 pos = m_origin;
+    float timeLeft = dt;
+    float allFraction = 0.0f;
+    size_t numBumps = kdMap::kMaxBumps;
+    size_t numPlanes = 0;
+
+    bool wallHit = false;
+    bool groundHit = false;
+    for (size_t bumpCount = 0; bumpCount < numBumps; bumpCount++) {
+        if (velocity == m::vec3(0.0f, 0.0f, 0.0f))
+            break;
+
+        trace.start = pos;
+        trace.dir = timeLeft * velocity;
+        map.traceSphere(&trace);
+
+        float f = m::clamp(trace.fraction, 0.0f, 1.0f);
+        allFraction += f;
+
+        if (f > 0.0f) {
+            pos += trace.dir * f * kdMap::kFractionScale;
+            originalVelocity = velocity;
+            numPlanes = 0;
+        }
+
+        if (f == 1.0f)
+            break;
+
+        wallHit = true;
+
+        timeLeft = timeLeft * (1.0f - f);
+
+        if (trace.plane.n[1] > 0.7f) {
+            groundHit = true;
+            //break;
+        }
+
+        if (numPlanes >= kdMap::kMaxClippingPlanes) {
+            velocity = m::vec3(0.0f, 0.0f, 0.0f);
+            break;
+        }
+
+        // next clipping plane
+        planes[numPlanes++] = trace.plane.n;
+
+        size_t i;
+        for (i = 0; i < numPlanes; i++) {
+            kdMap::clipVelocity(originalVelocity, planes[i], newVelocity, kdMap::kOverClip);
+            size_t j;
+            for (j = 0; j < numPlanes; j++) {
+                if (j != i && !(planes[i] == planes[j])) {
+                    if (newVelocity * planes[j] < 0.0f)
+                        break;
+                }
+            }
+            if (j == numPlanes)
+                break;
+        }
+
+        // did we make it through the entire plane set?
+        if (i != numPlanes)
+            velocity = newVelocity;
+        else {
+            // go along the planes crease
+            if (numPlanes != 2) {
+                velocity = m::vec3(0.0f, 0.0f, 0.0f);
+                break;
+            }
+            m::vec3 dir = planes[0] ^ planes[1];
+            float d = dir * velocity;
+            velocity = dir * d;
+        }
+
+        if (velocity * primalVelocity <= 0.0f) {
+            velocity = m::vec3(0.0f, 0.0f, 0.0f);
+            break;
+        }
+    }
+
+    if (allFraction == 0.0f) {
+        velocity = m::vec3(0.0f, 0.0f, 0.0f);
+    }
+
+    m_isOnGround = groundHit;
+    m_isOnWall = wallHit;
+    if (groundHit) {
+        velocity.y = 0.0f;
+    } else {
+        velocity += kGravity * dt;
+    }
+
+    // we could be stuck
+    if (map.isSphereStuck(pos, kRadius)) {
+        m_origin = pos;
+        tryUnstick(map, kRadius);
+    }
+
+    m_origin = pos;
+    m_velocity = velocity;
+
     u::vector<clientCommands> commands;
     inputGetCommands(commands);
     inputMouseMove();
 
-    move(commands, map);
+    move(commands);
 }
 
-void client::move(const u::vector<clientCommands> &commands, const kdMap &map) {
-    m::vec3 velocity;
+void client::move(const u::vector<clientCommands> &commands) {
+    m::vec3 velocity = m_velocity;
     m::vec3 direction;
     m::vec3 side;
     m::vec3 newDirection(0.0f, 0.0f, 0.0f);
     m::vec3 jump(0.0f, 0.0f, 0.0f);
-    m::quat rotation;
+    m::quat rotation = m_rotation;
 
-    rotation = m_rotation;
     rotation.getOrient(&direction, nullptr, &side);
 
     m::vec3 upCamera;
@@ -46,20 +187,14 @@ void client::move(const u::vector<clientCommands> &commands, const kdMap &map) {
             case kCommandRight:
                 newDirection += side;
                 break;
-            case kCommandUp:
-                m_origin.y += 1.0f;
-                break;
-            case kCommandDown:
-                m_origin.y -= 1.0f;
-                break;
             case kCommandJump:
-                jump = m::vec3(0.0f, 1.0f, 0.0f);
+                jump = m::vec3(0.0f, 0.25f, 0.0f);
                 break;
         }
     }
 
-    const float clientSpeed = 2.0f;
-    const float jumpSpeed = 30.0f;
+    const float clientSpeed = 50.0f;
+    const float jumpSpeed = 100.0f;
 
     newDirection.y = 0.0f;
     if (newDirection.absSquared() > 0.1f)
@@ -68,16 +203,6 @@ void client::move(const u::vector<clientCommands> &commands, const kdMap &map) {
     if (m_isOnGround)
         newDirection += jump * jumpSpeed;
     m_velocity = newDirection;
-
-    kdSphereTrace trace;
-    trace.radius = 5.0f; // radius of sphere for client
-    trace.start = m_origin;
-    trace.dir = m_velocity;
-    map.traceSphere(&trace);
-    kdMap::clipVelocity(newDirection, trace.plane.n, m_velocity, kdMap::kOverClip);
-    float fraction = m::clamp(trace.fraction, 0.0f, 1.0f);
-    if (fraction >= 0.0f)
-        m_origin += trace.dir * fraction;
 }
 
 void client::inputMouseMove(void) {
@@ -102,13 +227,12 @@ void client::inputMouseMove(void) {
 
 void client::inputGetCommands(u::vector<clientCommands> &commands) {
     u::map<int, int> &keyState = getKeyState();
+    commands.clear();
     if (keyState[SDLK_w])     commands.push_back(kCommandForward);
     if (keyState[SDLK_s])     commands.push_back(kCommandBackward);
     if (keyState[SDLK_a])     commands.push_back(kCommandLeft);
     if (keyState[SDLK_d])     commands.push_back(kCommandRight);
     if (keyState[SDLK_SPACE]) commands.push_back(kCommandJump);
-    if (keyState[SDLK_q])     commands.push_back(kCommandUp);
-    if (keyState[SDLK_e])     commands.push_back(kCommandDown);
 }
 
 void client::setRotation(const m::quat &rotation) {

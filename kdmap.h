@@ -19,8 +19,8 @@ struct kdMap {
     bool load(const u::vector<unsigned char> &data);
     void unload(void);
 
-    void traceSphere(kdSphereTrace *trace, int32_t node) const;
     void traceSphere(kdSphereTrace *trace) const;
+    bool isSphereStuck(const m::vec3 &position, float radius) const;
 
     bool isLoaded(void) const;
 
@@ -32,12 +32,11 @@ struct kdMap {
     u::vector<kdBinEnt>      entities;
     u::vector<kdBinLeaf>     leafs;
 
-    static constexpr float kDistEpsilon = 0.02f; // 2cm epsilon for triangle collisions
+    static constexpr float kDistEpsilon = 0.2f; // 2cm epsilon for triangle collisions
     static constexpr float kMinFraction = 0.005f; // no less than 0.5% movement along a direction vector
-    // TODO: collision response
-    //static constexpr size_t kMaxClippingPlanes = 5; // maximum number of clipping planes to test
-    //static constexpr size_t kMaxBumps = 4; // Maximum collision bump iterations
-    //static constexpr float kFractionScale = 0.98f; // Collision response fractional scale
+    static constexpr size_t kMaxClippingPlanes = 5; // maximum number of clipping planes to test
+    static constexpr size_t kMaxBumps = 4; // Maximum collision bump iterations
+    static constexpr float kFractionScale = 0.98f; // Collision response fractional scale
     static constexpr float kOverClip = 1.01f; // percentage * 100 of overclip allowed in collision detection against planes
     static constexpr float kStopEpsilon = 0.2f; // minimum velocity size for clipping
 
@@ -45,8 +44,15 @@ struct kdMap {
     static void clipVelocity(const m::vec3 &in, const m::vec3 &normal, m::vec3 &out, float overBounce);
 
 private:
+    // sweeping
     bool sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &spherePosition,
         float sphereRadius, const m::vec3 &direction, float *fraction, m::vec3 *hitNormal, m::vec3 *hitPoint) const;
+
+    // static
+    bool sphereTriangleIntersectStatic(size_t triangleIndex, const m::vec3 &spherePosition, float sphereRadius) const;
+
+    void traceSphere(kdSphereTrace *trace, int32_t node) const;
+    bool isSphereStuck(const m::vec3 &position, float radius, int32_t node) const;
 };
 
 #endif

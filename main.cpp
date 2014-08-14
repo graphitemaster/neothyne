@@ -56,6 +56,13 @@ static SDL_Window *initSDL(void) {
     return window;
 }
 
+uint32_t getTicks() {
+    static uint32_t base = 0;
+    if (base == 0)
+        base = SDL_GetTicks();
+    return SDL_GetTicks() - base;
+}
+
 int main(void) {
     SDL_Window *gScreen;
     gScreen = initSDL();
@@ -98,10 +105,34 @@ int main(void) {
     projection.far = 4096.0f;
 
     // go
+    uint32_t time;
+    uint32_t oldTime;
+    uint32_t fpsTime;
+    uint32_t fpsCounter = 0;
+
+    uint32_t curTime = getTicks();
+    oldTime = curTime;
+    fpsTime = curTime;
     while (true) {
+        time = SDL_GetTicks();
+        float dt = 0.001f * (float)(time - oldTime);
+        oldTime = time;
+        fpsCounter++;
+        if (time - fpsTime > 1000.0f) {
+            u::string title = u::format("Neothyne: (%zu FPS)", fpsCounter);
+            SDL_SetWindowTitle(gScreen, title.c_str());
+            fpsCounter = 0;
+            fpsTime = time;
+        }
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        gClient.update(gMap);
+        // worldClient.Update(dt, time)
+        //  world.Update(dt, ticks)
+        //  client.move(dt)
+        // client.Update(dt, ti me)
+
+        gClient.update(gMap, dt);
         m::vec3 target;
         m::vec3 up;
         m::vec3 side;
@@ -114,6 +145,7 @@ int main(void) {
 
         gWorld.draw(pipeline);
 
+        glFinish();
         SDL_GL_SwapWindow(gScreen);
 
         SDL_Event e;

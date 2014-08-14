@@ -98,6 +98,16 @@ namespace m {
             z *= length;
         }
 
+        void maxLength(float length) {
+            const float currentLength = abs();
+            if (currentLength > length) {
+                const float scale = length / currentLength;
+                x *= scale;
+                y *= scale;
+                z *= scale;
+            }
+        }
+
         vec3 cross(const vec3 &v) const {
             return vec3(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
         }
