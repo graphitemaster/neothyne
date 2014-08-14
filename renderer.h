@@ -57,6 +57,7 @@ struct method {
     ~method();
 
     void enable(void);
+
     virtual bool init(void);
 
 protected:
@@ -229,6 +230,16 @@ private:
     GLint m_aspectRatioLocation;
 };
 
+/// depth pre pass rendering method
+struct depthPrePassMethod : method {
+    virtual bool init(void);
+
+    void setWVP(const m::mat4 &wvp);
+
+private:
+    GLint m_WVPLocation;
+};
+
 /// splash screen renderer
 struct splashScreen : splashMethod {
     ~splashScreen();
@@ -278,7 +289,7 @@ struct renderTextueBatch {
     texture *normal;
 };
 
-struct world : lightMethod {
+struct world {
     world();
     ~world();
 
@@ -286,6 +297,8 @@ struct world : lightMethod {
     void draw(const rendererPipeline &p);
 
 private:
+    void render(const rendererPipeline &p);
+
     union {
         struct {
             GLuint m_vbo;
@@ -301,6 +314,9 @@ private:
     u::vector<renderTextueBatch> m_textureBatches;
 
     resourceManager<u::string, texture> m_textureManager;
+
+    lightMethod m_lightMethod;
+    depthPrePassMethod m_depthPrePassMethod;
 };
 
 void initGL(void);

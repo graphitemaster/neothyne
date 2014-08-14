@@ -51,6 +51,7 @@ static SDL_Window *initSDL(void) {
     }
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
+    SDL_GL_SetSwapInterval(0); // no vsync please
 
     return window;
 }

@@ -488,6 +488,27 @@ void splashMethod::setTextureUnit(int unit) {
     glUniform1i(m_splashTextureLocation, unit);
 }
 
+bool depthPrePassMethod::init(void) {
+    if (!method::init())
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/zprepass.vs"))
+        return false;
+
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/zprepass.fs"))
+        return false;
+
+    if (!finalize())
+        return false;
+
+    m_WVPLocation = getUniformLocation("gWVP");
+    return true;
+}
+
+void depthPrePassMethod::setWVP(const m::mat4 &wvp) {
+    glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+}
+
 void skybox::render(const rendererPipeline &pipeline) {
     enable();
 
@@ -603,8 +624,13 @@ world::world(void) {
     m_directionalLight.ambient = 0.90f;
     m_directionalLight.diffuse = 0.75f;
 
-    if (!lightMethod::init()) {
-        fprintf(stderr, "failed to initialize rendering method\n");
+    if (!m_depthPrePassMethod.init()) {
+        fprintf(stderr, "failed to initialize depth prepass rendering method\n");
+        abort();
+    }
+
+    if (!m_lightMethod.init()) {
+        fprintf(stderr, "failed to initialize world lighting rendering method\n");
         abort();
     }
 
@@ -683,6 +709,34 @@ bool world::load(const kdMap &map) {
 }
 
 void world::draw(const rendererPipeline &pipeline) {
+    rendererPipeline depthPrePassPipeline = pipeline;
+
+    // Z prepass
+    glColorMask(0.0f, 0.0f, 0.0f, 0.0f);
+    glDepthFunc(GL_LESS);
+
+    m_depthPrePassMethod.enable();
+    m_depthPrePassMethod.setWVP(depthPrePassPipeline.getWVPTransform());
+
+    // render geometry only
+    glBindVertexArray(m_vao);
+    for (size_t i = 0; i < m_textureBatches.size(); i++) {
+        glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
+            (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
+    }
+    glBindVertexArray(0);
+
+    // normal pass
+    glColorMask(1.0f, 1.0f, 1.0f, 1.0f);
+    glDepthMask(GL_FALSE);
+    glDepthFunc(GL_LEQUAL);
+
+    render(pipeline);
+
+    glDepthMask(GL_TRUE);
+}
+
+void world::render(const rendererPipeline &pipeline) {
     rendererPipeline worldPipeline = pipeline;
     rendererPipeline skyPipeline = pipeline;
 
@@ -690,15 +744,15 @@ void world::draw(const rendererPipeline &pipeline) {
     const m::mat4 worldTransform = worldPipeline.getWorldTransform();
     const m::vec3 &pos = worldPipeline.getPosition();
 
-    enable();
-    setTextureUnit(0);
-    setNormalUnit(1);
+    m_lightMethod.enable();
+    m_lightMethod.setTextureUnit(0);
+    m_lightMethod.setNormalUnit(1);
 
     static bool setFog = true;
     if (setFog) {
-        setFogColor(m::vec3(0.8f, 0.8f, 0.8f));
-        setFogDensity(0.0007f);
-        setFogType(kFogExp);
+        m_lightMethod.setFogColor(m::vec3(0.8f, 0.8f, 0.8f));
+        m_lightMethod.setFogDensity(0.0007f);
+        m_lightMethod.setFogType(kFogExp);
         setFog = false;
     }
 
@@ -715,16 +769,16 @@ void world::draw(const rendererPipeline &pipeline) {
 
     m_pointLights.push_back(pl);
 
-    setDirectionalLight(m_directionalLight);
+    m_lightMethod.setDirectionalLight(m_directionalLight);
 
-    setPointLights(m_pointLights);
+    m_lightMethod.setPointLights(m_pointLights);
 
-    setWVP(wvp);
-    setWorld(worldTransform);
+    m_lightMethod.setWVP(wvp);
+    m_lightMethod.setWorld(worldTransform);
 
-    setEyeWorldPos(pos);
-    setMatSpecIntensity(2.0f);
-    setMatSpecPower(200.0f);
+    m_lightMethod.setEyeWorldPos(pos);
+    m_lightMethod.setMatSpecIntensity(2.0f);
+    m_lightMethod.setMatSpecPower(200.0f);
 
     glBindVertexArray(m_vao);
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
@@ -886,6 +940,8 @@ void initGL(void) {
 
     // multisample anti-aliasing
     glEnable(GL_MULTISAMPLE);
+
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     *(void **)&glCreateShader             = SDL_GL_GetProcAddress("glCreateShader");
     *(void **)&glShaderSource             = SDL_GL_GetProcAddress("glShaderSource");
