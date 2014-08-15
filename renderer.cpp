@@ -869,7 +869,7 @@ static void textureScale(unsigned char *src, size_t sw, size_t sh, size_t stride
                 xend += stride;
                 for (size_t hcur = h; --hcur; xsrc += stride, xend += stride) {
                     size_t p[S] = {0};
-                    for(const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
+                    for (const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
                         for (size_t i = 0; i < S; i++)
                             p[i] += xcur[i];
                     for (size_t i = 0; i < S; i++)
