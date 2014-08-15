@@ -41,6 +41,11 @@ bool client::tryUnstick(const kdMap &map, float radius) {
 }
 
 void client::update(const kdMap &map, float dt) {
+    // limit physics updates to 60fps
+    const float rest = 1.0f / 60.0f - dt;
+    if (rest > 0.0f)
+        return;
+
     static constexpr float kMaxVelocity = 80.0f;
     static constexpr m::vec3 kGravity(0.0f, -98.0f, 0.0f);
     static constexpr float kRadius = 5.0f;
