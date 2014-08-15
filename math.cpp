@@ -47,37 +47,19 @@ namespace m {
     bool vec3::raySphereIntersect(const vec3 &start, const vec3 &direction,
         const vec3 &sphere, float radius, float *fraction)
     {
-        // (p - c) . (p - c) = r^2
-        //
-        // given a ray with a point of origin o, and a direction vector d
-        //
-        // ray(t) = o + td, t >= 0
-        //
-        // find t at which the ray intersects the sphere by setting ray(t) = p
-        //
-        // (o + td - c) . (o + td - c) = r^2
-        //
-        // to solve for t we first expand the above into a quadratic equation form
-        //
-        // (d . d)t^2 + 2(o - c) . dt + (o - c) . (o - c) - r^2 = 0
-        //
-        // or At^2 + Bt + C = 0
-        // where
-        // A = d . d
-        // B = 2(o - c) . d
-        // C = (o - c) . (o - c) - r^2
-
         const vec3 end = start + direction;
-        const vec3 ray = end - start;
-
         // a
-        const float a = ray.absSquared();
+        const float a = (end.x - start.x) * (end.x - start.x) +
+                        (end.y - start.y) * (end.y - start.y) +
+                        (end.z - start.z) * (end.z - start.z);
         // b
         const float b = 2.0f * ((end.x - start.x) * (start.x - sphere.x) +
                                 (end.y - start.y) * (start.y - sphere.y) +
                                 (end.z - start.z) * (start.z - sphere.z));
         // c
-        const float c = sphere * sphere + start * start - 2.0f * (sphere * start) - radius * radius;
+        const float c = sphere.x * sphere.x + sphere.y * sphere.y + sphere.z * sphere.z +
+                        start.x * start.x + start.y * start.y + start.z * start.z -
+                        2.0f * (sphere.x * start.x + sphere.y * start.y + sphere.z * start.z) - radius * radius;
 
         // test
         const float test = b * b - 4.0f * a * c;

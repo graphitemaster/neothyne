@@ -731,7 +731,9 @@ void world::draw(const rendererPipeline &pipeline) {
     glDepthMask(GL_FALSE);
     glDepthFunc(GL_LEQUAL);
 
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     render(pipeline);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     glDepthMask(GL_TRUE);
 }
@@ -914,7 +916,7 @@ static void reorientTexture(unsigned char *src, size_t sw, size_t sh, size_t bpp
         dst += (sh - 1) * stridey, stridey = -stridey;
     unsigned char *srcrow = src;
     for (size_t i = 0; i < sh; i++) {
-        for(unsigned char *curdst = dst, *src = srcrow, *end = &srcrow[sw*bpp]; src < end;) {
+        for (unsigned char *curdst = dst, *src = srcrow, *end = srcrow + sw * bpp; src < end; ) {
             for (size_t k = 0; k < bpp; k++)
                 curdst[k] = *src++;
             curdst += stridex;
@@ -1087,38 +1089,42 @@ void initGL(void) {
     // multisample anti-aliasing
     glEnable(GL_MULTISAMPLE);
 
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    #define GL_RESOLVE(NAME) \
+        do { \
+            if (!(*(void **)&gl ## NAME = SDL_GL_GetProcAddress("gl" #NAME))) \
+                abort(); \
+        } while (0)
 
-    *(void **)&glCreateShader             = SDL_GL_GetProcAddress("glCreateShader");
-    *(void **)&glShaderSource             = SDL_GL_GetProcAddress("glShaderSource");
-    *(void **)&glCompileShader            = SDL_GL_GetProcAddress("glCompileShader");
-    *(void **)&glAttachShader             = SDL_GL_GetProcAddress("glAttachShader");
-    *(void **)&glCreateProgram            = SDL_GL_GetProcAddress("glCreateProgram");
-    *(void **)&glLinkProgram              = SDL_GL_GetProcAddress("glLinkProgram");
-    *(void **)&glUseProgram               = SDL_GL_GetProcAddress("glUseProgram");
-    *(void **)&glGetUniformLocation       = SDL_GL_GetProcAddress("glGetUniformLocation");
-    *(void **)&glEnableVertexAttribArray  = SDL_GL_GetProcAddress("glEnableVertexAttribArray");
-    *(void **)&glDisableVertexAttribArray = SDL_GL_GetProcAddress("glDisableVertexAttribArray");
-    *(void **)&glUniformMatrix4fv         = SDL_GL_GetProcAddress("glUniformMatrix4fv");
-    *(void **)&glBindBuffer               = SDL_GL_GetProcAddress("glBindBuffer");
-    *(void **)&glGenBuffers               = SDL_GL_GetProcAddress("glGenBuffers");
-    *(void **)&glVertexAttribPointer      = SDL_GL_GetProcAddress("glVertexAttribPointer");
-    *(void **)&glBufferData               = SDL_GL_GetProcAddress("glBufferData");
-    *(void **)&glValidateProgram          = SDL_GL_GetProcAddress("glValidateProgram");
-    *(void **)&glGenVertexArrays          = SDL_GL_GetProcAddress("glGenVertexArrays");
-    *(void **)&glBindVertexArray          = SDL_GL_GetProcAddress("glBindVertexArray");
-    *(void **)&glDeleteProgram            = SDL_GL_GetProcAddress("glDeleteProgram");
-    *(void **)&glDeleteBuffers            = SDL_GL_GetProcAddress("glDeleteBuffers");
-    *(void **)&glDeleteVertexArrays       = SDL_GL_GetProcAddress("glDeleteVertexArrays");
-    *(void **)&glUniform1i                = SDL_GL_GetProcAddress("glUniform1i");
-    *(void **)&glUniform1f                = SDL_GL_GetProcAddress("glUniform1f");
-    *(void **)&glUniform3fv               = SDL_GL_GetProcAddress("glUniform3fv");
-    *(void **)&glUniform4f                = SDL_GL_GetProcAddress("glUniform4f");
-    *(void **)&glGenerateMipmap           = SDL_GL_GetProcAddress("glGenerateMipmap");
-    *(void **)&glDeleteShader             = SDL_GL_GetProcAddress("glDeleteShader");
-    *(void **)&glGetShaderiv              = SDL_GL_GetProcAddress("glGetShaderiv");
-    *(void **)&glGetProgramiv             = SDL_GL_GetProcAddress("glGetProgramiv");
-    *(void **)&glGetShaderInfoLog         = SDL_GL_GetProcAddress("glGetShaderInfoLog");
+    GL_RESOLVE(CreateShader);
+    GL_RESOLVE(ShaderSource);
+    GL_RESOLVE(CompileShader);
+    GL_RESOLVE(AttachShader);
+    GL_RESOLVE(CreateProgram);
+    GL_RESOLVE(LinkProgram);
+    GL_RESOLVE(UseProgram);
+    GL_RESOLVE(GetUniformLocation);
+    GL_RESOLVE(EnableVertexAttribArray);
+    GL_RESOLVE(DisableVertexAttribArray);
+    GL_RESOLVE(UniformMatrix4fv);
+    GL_RESOLVE(BindBuffer);
+    GL_RESOLVE(GenBuffers);
+    GL_RESOLVE(VertexAttribPointer);
+    GL_RESOLVE(BufferData);
+    GL_RESOLVE(ValidateProgram);
+    GL_RESOLVE(GenVertexArrays);
+    GL_RESOLVE(BindVertexArray);
+    GL_RESOLVE(DeleteProgram);
+    GL_RESOLVE(DeleteBuffers);
+    GL_RESOLVE(DeleteVertexArrays);
+    GL_RESOLVE(Uniform1i);
+    GL_RESOLVE(Uniform1f);
+    GL_RESOLVE(Uniform3fv);
+    GL_RESOLVE(Uniform4f);
+    GL_RESOLVE(GenerateMipmap);
+    GL_RESOLVE(DeleteShader);
+    GL_RESOLVE(GetShaderiv);
+    GL_RESOLVE(GetProgramiv);
+    GL_RESOLVE(GetShaderInfoLog);
 }
 
 void screenShot(const u::string &file) {
