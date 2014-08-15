@@ -193,7 +193,7 @@ void client::move(const u::vector<clientCommands> &commands) {
         }
     }
 
-    const float clientSpeed = 50.0f;
+    const float clientSpeed = 40.0f;
     const float jumpSpeed = 100.0f;
 
     newDirection.y = 0.0f;
