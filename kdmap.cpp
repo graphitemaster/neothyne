@@ -245,6 +245,7 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
     // vertex detection
     for (size_t i = 0; i < 3; i++) {
         const m::vec3 &vertex = vertices[triangles[triangleIndex].v[i]].vertex;
+
         if (!m::vec3::raySphereIntersect(spherePosition, direction, vertex, sphereRadius, &fractional))
             continue;
 

@@ -793,6 +793,145 @@ void world::render(const rendererPipeline &pipeline) {
 }
 
 //! textures
+template<size_t S>
+static void halveTexture(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst) {
+    for (unsigned char *yend = src + sh * stride; src < yend;) {
+        for (unsigned char *xend = src + sw * S, *xsrc = src; xsrc < xend; xsrc += 2 * S, dst += S) {
+            for (size_t i = 0; i < S; i++)
+                dst[i] = (size_t(xsrc[i]) + size_t(xsrc[i+S]) + size_t(xsrc[stride+i]) + size_t(xsrc[stride+i+S])) >> 2;
+        }
+        src += 2 * stride;
+    }
+}
+
+template<size_t S>
+static void shiftTexture(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst, size_t dw, size_t dh) {
+    size_t wfrac = sw/dw, hfrac = sh/dh, wshift = 0, hshift = 0;
+    while (dw << wshift < sw) wshift++;
+    while (dh << hshift < sh) hshift++;
+    size_t tshift = wshift + hshift;
+    for (unsigned char *yend = src + sh * stride; src < yend; ) {
+        for (unsigned char *xend = src + sw * S, *xsrc = src; xsrc < xend; xsrc += wfrac * S, dst += S) {
+            size_t r[S] = {0};
+            for (unsigned char *ycur = xsrc, *xend = ycur + wfrac * S,
+                    *yend = src + hfrac * stride; ycur<yend; ycur += stride, xend += stride) {
+                for (unsigned char *xcur = ycur; xcur < xend; xcur += S) {
+                    for (size_t i = 0; i < S; i++)
+                        r[i] += xcur[i];
+                }
+            }
+            for (size_t i = 0; i < S; i++)
+                dst[i] = (r[i]) >> tshift;
+        }
+        src += hfrac*stride;
+    }
+}
+
+template<size_t S>
+static void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst, size_t dw, size_t dh) {
+    size_t wfrac = (sw << 12) / dw;
+    size_t hfrac = (sh << 12) / dh;
+    size_t darea = dw * dh;
+    size_t sarea = sw * sh;
+    int over, under;
+    for (over = 0; (darea >> over) > sarea; over++);
+    for (under = 0; (darea << under) < sarea; under++);
+    size_t cscale = m::clamp(under, over - 12, 12),
+    ascale = m::clamp(12 + under - over, 0, 24),
+    dscale = ascale + 12 - cscale,
+    area = ((unsigned long long)darea << ascale) / sarea;
+    dw *= wfrac;
+    dh *= hfrac;
+
+    for(size_t y = 0; y < dh; y += hfrac) {
+        const size_t yn = y + hfrac - 1;
+        const size_t yi = y >> 12;
+        const size_t h = (yn >> 12) - yi;
+        const size_t ylow = ((yn | (-int(h) >> 24)) & 0xFFFU) + 1 - (y & 0xFFFU);
+        const size_t yhigh = (yn & 0xFFFU) + 1;
+        const unsigned char *ysrc = src + yi * stride;
+        for(size_t x = 0; x < dw; x += wfrac, dst += S) {
+            const size_t xn = x + wfrac - 1;
+            const size_t xi = x >> 12;
+            const size_t w = (xn >> 12) - xi;
+            const size_t xlow = ((w + 0xFFFU) & 0x1000U) - (x & 0xFFFU);
+            const size_t xhigh = (xn & 0xFFFU) + 1;
+            const unsigned char *xsrc = ysrc + xi * S;
+            const unsigned char *xend = xsrc + w * S;
+            size_t r[S] = {0};
+            for(const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
+                for (size_t i = 0; i < S; i++)
+                    r[i] += xcur[i];
+            for (size_t i = 0; i < S; i++)
+                r[i] = (ylow * (r[i] + ((xsrc[i] * xlow + xend[i] * xhigh) >> 12))) >> cscale;
+            if (h) {
+                xsrc += stride;
+                xend += stride;
+                for(size_t hcur = h; --hcur; xsrc += stride, xend += stride) {
+                    size_t p[S] = {0};
+                    for(const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
+                        for (size_t i = 0; i < S; i++)
+                            p[i] += xcur[i];
+                    for (size_t i = 0; i < S; i++)
+                        r[i] += ((p[i] << 12) + xsrc[i] * xlow + xend[i] * xhigh) >> cscale;
+                }
+                size_t p[S] = {0};
+                for(const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
+                    for (size_t i = 0; i < S; i++)
+                        p[i] += xcur[i];
+                for (size_t i = 0; i < S; i++)
+                    r[i] += (yhigh * (p[i] + ((xsrc[i] * xlow + xend[i] * xhigh) >> 12))) >> cscale;
+            }
+            for (size_t i = 0; i < S; i++)
+                dst[i] = (r[i] * area) >> dscale;
+        }
+    }
+}
+
+void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *dst, size_t dw, size_t dh) {
+    if (sw == dw * 2 && sh == dh * 2) {
+        switch (bpp) {
+            //case 1: halveTexture<1>(src, sw, sh, pitch, dst); return;
+            //case 2: halveTexture<2>(src, sw, sh, pitch, dst); return;
+            case 3: halveTexture<3>(src, sw, sh, pitch, dst); return;
+            case 4: halveTexture<4>(src, sw, sh, pitch, dst); return;
+        }
+    } else if(sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1) || dw&(dw-1) || dh&(dh-1)) {
+        switch(bpp) {
+            //case 1: scaleTexture<1>(src, sw, sh, pitch, dst, dw, dh); return;
+            //case 2: scaleTexture<2>(src, sw, sh, pitch, dst, dw, dh); return;
+            case 3: scaleTexture<3>(src, sw, sh, pitch, dst, dw, dh); return;
+            case 4: scaleTexture<4>(src, sw, sh, pitch, dst, dw, dh); return;
+        }
+    } else {
+        switch(bpp) {
+            //case 1: shiftTexture<1>(src, sw, sh, pitch, dst, dw, dh); return;
+            //case 2: shiftTexture<2>(src, sw, sh, pitch, dst, dw, dh); return;
+            case 3: shiftTexture<3>(src, sw, sh, pitch, dst, dw, dh); return;
+            case 4: shiftTexture<4>(src, sw, sh, pitch, dst, dw, dh); return;
+        }
+    }
+}
+
+void reorientTexture(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t stride, unsigned char *dst, bool flipx, bool flipy, bool swapxy) {
+    size_t stridex = swapxy ? bpp * sh : bpp;
+    size_t stridey = swapxy ? bpp : bpp * sw;
+    if (flipx)
+        dst += (sw - 1) * stridex, stridex = -stridex;
+    if (flipy)
+        dst += (sh - 1) * stridey, stridey = -stridey;
+    unsigned char *srcrow = src;
+    for (size_t i = 0; i < sh; i++) {
+        for(unsigned char *curdst = dst, *src = srcrow, *end = &srcrow[sw*bpp]; src < end;) {
+            for (size_t k = 0; k < bpp; k++)
+                curdst[k] = *src++;
+            curdst += stridex;
+        }
+        srcrow += stride;
+        dst += stridey;
+    }
+}
+
 #ifdef GL_UNSIGNED_INT_8_8_8_8_REV
 #   define R_TEX_DATA_RGBA GL_UNSIGNED_INT_8_8_8_8_REV
 #else
@@ -897,6 +1036,8 @@ bool textureCubemap::load(const u::string files[6]) {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
+    int fw = 0;
+    int fh = 0;
     for (size_t i = 0; i < 6; i++) {
         SDL_Surface *surface = IMG_Load(files[i].c_str());
         if (!surface)
@@ -906,8 +1047,21 @@ bool textureCubemap::load(const u::string files[6]) {
         GLuint textureFormat;
         getTextureFormat(surface, dataFormat, textureFormat);
 
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, surface->w, surface->h,
-            0, textureFormat, dataFormat, surface->pixels);
+        if (i == 0) {
+            fw = surface->w;
+            fh = surface->h;
+        }
+
+        // cubemap textures need be all the same size
+        if (surface->w != fw || surface->h != fh) {
+            unsigned char *scale = new unsigned char[fw * fh * surface->format->BytesPerPixel];
+            scaleTexture((unsigned char *)surface->pixels, surface->w, surface->h,
+                surface->format->BytesPerPixel, surface->w * surface->format->BytesPerPixel, scale, fw, fh);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, fw, fh, 0, textureFormat, dataFormat, scale);
+        } else {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, surface->w, surface->h,
+                0, textureFormat, dataFormat, surface->pixels);
+        }
 
         SDL_FreeSurface(surface);
     }
@@ -976,28 +1130,14 @@ void initGL(void) {
 }
 
 void screenShot(const u::string &file) {
-    static constexpr size_t kChannels = 3;
     SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, kScreenWidth, kScreenHeight,
-        8*kChannels, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
-
-    unsigned char *pixels = new unsigned char[kChannels * kScreenWidth * kScreenHeight];
-    switch (kChannels) {
-        case 3:
-            glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-            break;
-        case 4:
-            glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-            break;
-    }
-
+        8*3, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
     SDL_LockSurface(temp);
-    for (size_t i = 0 ; i < kScreenHeight; i++)
-       memcpy(((unsigned char *)temp->pixels) + temp->pitch * i,
-            pixels + kChannels * kScreenWidth * (kScreenHeight-i - 1), kScreenWidth * kChannels);
+    unsigned char *pixels = new unsigned char[3 * kScreenWidth * kScreenHeight];
+    glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+    reorientTexture(pixels, kScreenWidth, kScreenHeight, 3, kScreenWidth * 3, (unsigned char *)temp->pixels, false, true, false);
     SDL_UnlockSurface(temp);
-
     delete[] pixels;
-
     SDL_SaveBMP(temp, file.c_str());
     SDL_FreeSurface(temp);
 }
