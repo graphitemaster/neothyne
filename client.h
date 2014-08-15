@@ -34,6 +34,8 @@ private:
     m::vec3 m_velocity;
     m::quat m_rotation;
 
+    m::vec3 m_lastDirection;
+
     bool m_isOnGround;
     bool m_isOnWall;
 };

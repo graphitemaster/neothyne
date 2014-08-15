@@ -145,7 +145,7 @@ int main(void) {
 
         gWorld.draw(pipeline);
 
-        glFinish();
+        //glFinish();
         SDL_GL_SwapWindow(gScreen);
 
         SDL_Event e;

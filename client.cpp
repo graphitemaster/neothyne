@@ -41,7 +41,7 @@ bool client::tryUnstick(const kdMap &map, float radius) {
 }
 
 void client::update(const kdMap &map, float dt) {
-    static constexpr float kMaxVelocity = 165.0f;
+    static constexpr float kMaxVelocity = 80.0f;
     static constexpr m::vec3 kGravity(0.0f, -98.0f, 0.0f);
     static constexpr float kRadius = 5.0f;
 
@@ -193,15 +193,23 @@ void client::move(const u::vector<clientCommands> &commands) {
         }
     }
 
-    const float clientSpeed = 40.0f;
-    const float jumpSpeed = 100.0f;
+    const float kClientSpeed = 40.0f; // cm/s
+    const float kJumpSpeed = 130.0f; // cm/s
+    const float kStopSpeed = 90.0f; // -cm/s
 
     newDirection.y = 0.0f;
     if (newDirection.absSquared() > 0.1f)
-        newDirection.setLength(clientSpeed);
+        newDirection.setLength(kClientSpeed);
     newDirection.y += velocity.y;
-    if (m_isOnGround)
-        newDirection += jump * jumpSpeed;
+    if (m_isOnGround) {
+        newDirection += jump * kJumpSpeed;
+    }
+    if (commands.size() == 0) {
+        m::vec3 slowDown = m_velocity * kStopSpeed * 0.01f;
+        slowDown.y = 0.0f;
+        newDirection += slowDown;
+    }
+    m_lastDirection = direction;
     m_velocity = newDirection;
 }
 
