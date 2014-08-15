@@ -41,11 +41,6 @@ bool client::tryUnstick(const kdMap &map, float radius) {
 }
 
 void client::update(const kdMap &map, float dt) {
-    // limit physics updates to 60fps
-    const float rest = 1.0f / 60.0f - dt;
-    if (rest > 0.0f)
-        return;
-
     static constexpr float kMaxVelocity = 80.0f;
     static constexpr m::vec3 kGravity(0.0f, -98.0f, 0.0f);
     static constexpr float kRadius = 5.0f;
@@ -92,10 +87,8 @@ void client::update(const kdMap &map, float dt) {
 
         timeLeft = timeLeft * (1.0f - f);
 
-        if (trace.plane.n[1] > 0.7f) {
+        if (trace.plane.n[1] > 0.7f)
             groundHit = true;
-            //break;
-        }
 
         if (numPlanes >= kdMap::kMaxClippingPlanes) {
             velocity = m::vec3(0.0f, 0.0f, 0.0f);
@@ -105,16 +98,13 @@ void client::update(const kdMap &map, float dt) {
         // next clipping plane
         planes[numPlanes++] = trace.plane.n;
 
-        size_t i;
+        size_t i, j;
         for (i = 0; i < numPlanes; i++) {
             kdMap::clipVelocity(originalVelocity, planes[i], newVelocity, kdMap::kOverClip);
-            size_t j;
-            for (j = 0; j < numPlanes; j++) {
-                if (j != i && !(planes[i] == planes[j])) {
+            for (j = 0; j < numPlanes; j++)
+                if (j != i && !(planes[i] == planes[j]))
                     if (newVelocity * planes[j] < 0.0f)
                         break;
-                }
-            }
             if (j == numPlanes)
                 break;
         }
