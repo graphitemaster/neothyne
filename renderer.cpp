@@ -793,8 +793,8 @@ void world::render(const rendererPipeline &pipeline) {
 }
 
 //! textures
-template<size_t S>
-static void halveTexture(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst) {
+template <size_t S>
+static void textureHalve(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst) {
     for (unsigned char *yend = src + sh * stride; src < yend;) {
         for (unsigned char *xend = src + sw * S, *xsrc = src; xsrc < xend; xsrc += 2 * S, dst += S) {
             for (size_t i = 0; i < S; i++)
@@ -804,8 +804,8 @@ static void halveTexture(unsigned char *src, size_t sw, size_t sh, size_t stride
     }
 }
 
-template<size_t S>
-static void shiftTexture(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst, size_t dw, size_t dh) {
+template <size_t S>
+static void textureShift(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst, size_t dw, size_t dh) {
     size_t wfrac = sw/dw, hfrac = sh/dh, wshift = 0, hshift = 0;
     while (dw << wshift < sw) wshift++;
     while (dh << hshift < sh) hshift++;
@@ -827,8 +827,8 @@ static void shiftTexture(unsigned char *src, size_t sw, size_t sh, size_t stride
     }
 }
 
-template<size_t S>
-static void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst, size_t dw, size_t dh) {
+template <size_t S>
+static void textureScale(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst, size_t dw, size_t dh) {
     size_t wfrac = (sw << 12) / dw;
     size_t hfrac = (sh << 12) / dh;
     size_t darea = dw * dh;
@@ -843,14 +843,14 @@ static void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t stride
     dw *= wfrac;
     dh *= hfrac;
 
-    for(size_t y = 0; y < dh; y += hfrac) {
+    for (size_t y = 0; y < dh; y += hfrac) {
         const size_t yn = y + hfrac - 1;
         const size_t yi = y >> 12;
         const size_t h = (yn >> 12) - yi;
         const size_t ylow = ((yn | (-int(h) >> 24)) & 0xFFFU) + 1 - (y & 0xFFFU);
         const size_t yhigh = (yn & 0xFFFU) + 1;
         const unsigned char *ysrc = src + yi * stride;
-        for(size_t x = 0; x < dw; x += wfrac, dst += S) {
+        for (size_t x = 0; x < dw; x += wfrac, dst += S) {
             const size_t xn = x + wfrac - 1;
             const size_t xi = x >> 12;
             const size_t w = (xn >> 12) - xi;
@@ -859,7 +859,7 @@ static void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t stride
             const unsigned char *xsrc = ysrc + xi * S;
             const unsigned char *xend = xsrc + w * S;
             size_t r[S] = {0};
-            for(const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
+            for (const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
                 for (size_t i = 0; i < S; i++)
                     r[i] += xcur[i];
             for (size_t i = 0; i < S; i++)
@@ -867,7 +867,7 @@ static void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t stride
             if (h) {
                 xsrc += stride;
                 xend += stride;
-                for(size_t hcur = h; --hcur; xsrc += stride, xend += stride) {
+                for (size_t hcur = h; --hcur; xsrc += stride, xend += stride) {
                     size_t p[S] = {0};
                     for(const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
                         for (size_t i = 0; i < S; i++)
@@ -876,7 +876,7 @@ static void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t stride
                         r[i] += ((p[i] << 12) + xsrc[i] * xlow + xend[i] * xhigh) >> cscale;
                 }
                 size_t p[S] = {0};
-                for(const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
+                for (const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
                     for (size_t i = 0; i < S; i++)
                         p[i] += xcur[i];
                 for (size_t i = 0; i < S; i++)
@@ -888,32 +888,24 @@ static void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t stride
     }
 }
 
-void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *dst, size_t dw, size_t dh) {
-    if (sw == dw * 2 && sh == dh * 2) {
+static void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *dst, size_t dw, size_t dh) {
+    if (sw == dw * 2 && sh == dh * 2)
         switch (bpp) {
-            //case 1: halveTexture<1>(src, sw, sh, pitch, dst); return;
-            //case 2: halveTexture<2>(src, sw, sh, pitch, dst); return;
-            case 3: halveTexture<3>(src, sw, sh, pitch, dst); return;
-            case 4: halveTexture<4>(src, sw, sh, pitch, dst); return;
+            case 3: return textureHalve<3>(src, sw, sh, pitch, dst);
+            case 4: return textureHalve<4>(src, sw, sh, pitch, dst);
         }
-    } else if(sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1) || dw&(dw-1) || dh&(dh-1)) {
-        switch(bpp) {
-            //case 1: scaleTexture<1>(src, sw, sh, pitch, dst, dw, dh); return;
-            //case 2: scaleTexture<2>(src, sw, sh, pitch, dst, dw, dh); return;
-            case 3: scaleTexture<3>(src, sw, sh, pitch, dst, dw, dh); return;
-            case 4: scaleTexture<4>(src, sw, sh, pitch, dst, dw, dh); return;
+    else if(sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1) || dw&(dw-1) || dh&(dh-1))
+        switch (bpp) {
+            case 3: return textureScale<3>(src, sw, sh, pitch, dst, dw, dh);
+            case 4: return textureScale<4>(src, sw, sh, pitch, dst, dw, dh);
         }
-    } else {
-        switch(bpp) {
-            //case 1: shiftTexture<1>(src, sw, sh, pitch, dst, dw, dh); return;
-            //case 2: shiftTexture<2>(src, sw, sh, pitch, dst, dw, dh); return;
-            case 3: shiftTexture<3>(src, sw, sh, pitch, dst, dw, dh); return;
-            case 4: shiftTexture<4>(src, sw, sh, pitch, dst, dw, dh); return;
-        }
+    switch(bpp) {
+        case 3: return textureShift<3>(src, sw, sh, pitch, dst, dw, dh);
+        case 4: return textureShift<4>(src, sw, sh, pitch, dst, dw, dh);
     }
 }
 
-void reorientTexture(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t stride, unsigned char *dst, bool flipx, bool flipy, bool swapxy) {
+static void reorientTexture(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t stride, unsigned char *dst, bool flipx, bool flipy, bool swapxy) {
     size_t stridex = swapxy ? bpp * sh : bpp;
     size_t stridey = swapxy ? bpp : bpp * sw;
     if (flipx)
