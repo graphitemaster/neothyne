@@ -5,7 +5,10 @@
 #include <vector>    // std::vector
 #include <memory>    // std::unique_ptr
 #include <algorithm> // std::sort
+#include <string.h>  // std::string
 
+#include <stdio.h>   // fopen
+#include <stdlib.h>  // abs
 #include <stdarg.h>  // va_start, va_end, va_list
 #include <string.h>  // strcpy, strlen
 
