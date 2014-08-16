@@ -8,36 +8,37 @@
 static constexpr size_t kScreenWidth = 1600;
 static constexpr size_t kScreenHeight = 852;
 
-static PFNGLCREATESHADERPROC             glCreateShader             = nullptr;
-static PFNGLSHADERSOURCEPROC             glShaderSource             = nullptr;
-static PFNGLCOMPILESHADERPROC            glCompileShader            = nullptr;
-static PFNGLATTACHSHADERPROC             glAttachShader             = nullptr;
-static PFNGLCREATEPROGRAMPROC            glCreateProgram            = nullptr;
-static PFNGLLINKPROGRAMPROC              glLinkProgram              = nullptr;
-static PFNGLUSEPROGRAMPROC               glUseProgram               = nullptr;
-static PFNGLGETUNIFORMLOCATIONPROC       glGetUniformLocation       = nullptr;
-static PFNGLENABLEVERTEXATTRIBARRAYPROC  glEnableVertexAttribArray  = nullptr;
-static PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray = nullptr;
-static PFNGLUNIFORMMATRIX4FVPROC         glUniformMatrix4fv         = nullptr;
-static PFNGLBINDBUFFERPROC               glBindBuffer               = nullptr;
-static PFNGLGENBUFFERSPROC               glGenBuffers               = nullptr;
-static PFNGLVERTEXATTRIBPOINTERPROC      glVertexAttribPointer      = nullptr;
-static PFNGLBUFFERDATAPROC               glBufferData               = nullptr;
-static PFNGLVALIDATEPROGRAMPROC          glValidateProgram          = nullptr;
-static PFNGLGENVERTEXARRAYSPROC          glGenVertexArrays          = nullptr;
-static PFNGLBINDVERTEXARRAYPROC          glBindVertexArray          = nullptr;
-static PFNGLDELETEPROGRAMPROC            glDeleteProgram            = nullptr;
-static PFNGLDELETEBUFFERSPROC            glDeleteBuffers            = nullptr;
-static PFNGLDELETEVERTEXARRAYSPROC       glDeleteVertexArrays       = nullptr;
-static PFNGLUNIFORM1IPROC                glUniform1i                = nullptr;
-static PFNGLUNIFORM1FPROC                glUniform1f                = nullptr;
-static PFNGLUNIFORM3FVPROC               glUniform3fv               = nullptr;
-static PFNGLUNIFORM4FPROC                glUniform4f                = nullptr;
-static PFNGLGENERATEMIPMAPPROC           glGenerateMipmap           = nullptr;
-static PFNGLDELETESHADERPROC             glDeleteShader             = nullptr;
-static PFNGLGETSHADERIVPROC              glGetShaderiv              = nullptr;
-static PFNGLGETPROGRAMIVPROC             glGetProgramiv             = nullptr;
-static PFNGLGETSHADERINFOLOGPROC         glGetShaderInfoLog         = nullptr;
+static PFNGLCREATESHADERPROC             glCreateShader_             = nullptr;
+static PFNGLSHADERSOURCEPROC             glShaderSource_             = nullptr;
+static PFNGLCOMPILESHADERPROC            glCompileShader_            = nullptr;
+static PFNGLATTACHSHADERPROC             glAttachShader_             = nullptr;
+static PFNGLCREATEPROGRAMPROC            glCreateProgram_            = nullptr;
+static PFNGLLINKPROGRAMPROC              glLinkProgram_              = nullptr;
+static PFNGLUSEPROGRAMPROC               glUseProgram_               = nullptr;
+static PFNGLGETUNIFORMLOCATIONPROC       glGetUniformLocation_       = nullptr;
+static PFNGLENABLEVERTEXATTRIBARRAYPROC  glEnableVertexAttribArray_  = nullptr;
+static PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray_ = nullptr;
+static PFNGLUNIFORMMATRIX4FVPROC         glUniformMatrix4fv_         = nullptr;
+static PFNGLBINDBUFFERPROC               glBindBuffer_               = nullptr;
+static PFNGLGENBUFFERSPROC               glGenBuffers_               = nullptr;
+static PFNGLVERTEXATTRIBPOINTERPROC      glVertexAttribPointer_      = nullptr;
+static PFNGLBUFFERDATAPROC               glBufferData_               = nullptr;
+static PFNGLVALIDATEPROGRAMPROC          glValidateProgram_          = nullptr;
+static PFNGLGENVERTEXARRAYSPROC          glGenVertexArrays_          = nullptr;
+static PFNGLBINDVERTEXARRAYPROC          glBindVertexArray_          = nullptr;
+static PFNGLDELETEPROGRAMPROC            glDeleteProgram_            = nullptr;
+static PFNGLDELETEBUFFERSPROC            glDeleteBuffers_            = nullptr;
+static PFNGLDELETEVERTEXARRAYSPROC       glDeleteVertexArrays_       = nullptr;
+static PFNGLUNIFORM1IPROC                glUniform1i_                = nullptr;
+static PFNGLUNIFORM1FPROC                glUniform1f_                = nullptr;
+static PFNGLUNIFORM3FVPROC               glUniform3fv_               = nullptr;
+static PFNGLUNIFORM4FPROC                glUniform4f_                = nullptr;
+static PFNGLGENERATEMIPMAPPROC           glGenerateMipmap_           = nullptr;
+static PFNGLDELETESHADERPROC             glDeleteShader_             = nullptr;
+static PFNGLGETSHADERIVPROC              glGetShaderiv_              = nullptr;
+static PFNGLGETPROGRAMIVPROC             glGetProgramiv_             = nullptr;
+static PFNGLGETSHADERINFOLOGPROC         glGetShaderInfoLog_         = nullptr;
+static PFNGLACTIVETEXTUREPROC            glActiveTexture_            = nullptr;
 
 ///! rendererPipeline
 rendererPipeline::rendererPipeline(void) :
@@ -123,14 +124,14 @@ method::method(void) :
 
 method::~method(void) {
     for (auto &it : m_shaders)
-        glDeleteShader(it);
+        glDeleteShader_(it);
 
     if (m_program)
-        glDeleteProgram(m_program);
+        glDeleteProgram_(m_program);
 }
 
 bool method::init(void) {
-    m_program = glCreateProgram();
+    m_program = glCreateProgram_();
     return !!m_program;
 }
 
@@ -160,7 +161,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
     fread((&*shaderSource->begin()) + preludeLength, shaderLength, 1, fp);
     fclose(fp);
 
-    GLuint shaderObject = glCreateShader(shaderType);
+    GLuint shaderObject = glCreateShader_(shaderType);
     if (!shaderObject)
         return false;
 
@@ -172,51 +173,51 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
     shaderSources[0] = (GLchar *)&*shaderSource->begin();
     shaderLengths[0] = (GLint)shaderSource->size();
 
-    glShaderSource(shaderObject, 1, shaderSources, shaderLengths);
-    glCompileShader(shaderObject);
+    glShaderSource_(shaderObject, 1, shaderSources, shaderLengths);
+    glCompileShader_(shaderObject);
 
     GLint shaderCompileStatus = 0;
-    glGetShaderiv(shaderObject, GL_COMPILE_STATUS, &shaderCompileStatus);
+    glGetShaderiv_(shaderObject, GL_COMPILE_STATUS, &shaderCompileStatus);
     if (shaderCompileStatus == 0) {
         u::string infoLog;
         GLint infoLogLength = 0;
-        glGetShaderiv(shaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
+        glGetShaderiv_(shaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
         infoLog.resize(infoLogLength);
-        glGetShaderInfoLog(shaderObject, infoLogLength, nullptr, &*infoLog.begin());
+        glGetShaderInfoLog_(shaderObject, infoLogLength, nullptr, &*infoLog.begin());
         printf("Shader error:\n%s\n", infoLog.c_str());
         return false;
     }
 
-    glAttachShader(m_program, shaderObject);
+    glAttachShader_(m_program, shaderObject);
     return true;
 }
 
 void method::enable(void) {
-    glUseProgram(m_program);
+    glUseProgram_(m_program);
 }
 
 GLint method::getUniformLocation(const char *name) {
-    return glGetUniformLocation(m_program, name);
+    return glGetUniformLocation_(m_program, name);
 }
 
 GLint method::getUniformLocation(const u::string &name) {
-    return glGetUniformLocation(m_program, name.c_str());
+    return glGetUniformLocation_(m_program, name.c_str());
 }
 
 bool method::finalize(void) {
     GLint success = 0;
-    glLinkProgram(m_program);
-    glGetProgramiv(m_program, GL_LINK_STATUS, &success);
+    glLinkProgram_(m_program);
+    glGetProgramiv_(m_program, GL_LINK_STATUS, &success);
     if (!success)
         return false;
 
-    glValidateProgram(m_program);
-    glGetProgramiv(m_program, GL_VALIDATE_STATUS, &success);
+    glValidateProgram_(m_program);
+    glGetProgramiv_(m_program, GL_VALIDATE_STATUS, &success);
     if (!success)
         return false;
 
     for (auto &it : m_shaders)
-        glDeleteShader(it);
+        glDeleteShader_(it);
 
     m_shaders.clear();
     return true;
@@ -299,29 +300,29 @@ bool lightMethod::init(void) {
 }
 
 void lightMethod::setWVP(const m::mat4 &wvp) {
-    glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
 }
 
 void lightMethod::setWorld(const m::mat4 &worldInverse) {
-    glUniformMatrix4fv(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
+    glUniformMatrix4fv_(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
 }
 
 void lightMethod::setTextureUnit(int unit) {
-    glUniform1i(m_samplerLocation, unit);
+    glUniform1i_(m_samplerLocation, unit);
 }
 
 void lightMethod::setNormalUnit(int unit) {
-    glUniform1i(m_normalMapLocation, unit);
+    glUniform1i_(m_normalMapLocation, unit);
 }
 
 void lightMethod::setDirectionalLight(const directionalLight &light) {
     m::vec3 direction = light.direction;
     direction.normalize();
 
-    glUniform3fv(m_directionalLight.colorLocation, 1, &light.color.x);
-    glUniform3fv(m_directionalLight.directionLocation, 1, &direction.x);
-    glUniform1f(m_directionalLight.ambientLocation, light.ambient);
-    glUniform1f(m_directionalLight.diffuseLocation, light.diffuse);
+    glUniform3fv_(m_directionalLight.colorLocation, 1, &light.color.x);
+    glUniform3fv_(m_directionalLight.directionLocation, 1, &direction.x);
+    glUniform1f_(m_directionalLight.ambientLocation, light.ambient);
+    glUniform1f_(m_directionalLight.diffuseLocation, light.diffuse);
 }
 
 void lightMethod::setPointLights(u::vector<pointLight> &lights) {
@@ -329,46 +330,46 @@ void lightMethod::setPointLights(u::vector<pointLight> &lights) {
     if (lights.size() > kMaxPointLights)
         lights.resize(kMaxPointLights);
 
-    glUniform1i(m_numPointLightsLocation, lights.size());
+    glUniform1i_(m_numPointLightsLocation, lights.size());
 
     for (size_t i = 0; i < lights.size(); i++) {
-        glUniform3fv(m_pointLights[i].colorLocation, 1, &lights[i].color.x);
-        glUniform3fv(m_pointLights[i].positionLocation, 1, &lights[i].position.x);
-        glUniform1f(m_pointLights[i].ambientLocation, lights[i].ambient);
-        glUniform1f(m_pointLights[i].diffuseLocation, lights[i].diffuse);
-        glUniform1f(m_pointLights[i].attenuation.constantLocation, lights[i].attenuation.constant);
-        glUniform1f(m_pointLights[i].attenuation.linearLocation, lights[i].attenuation.linear);
-        glUniform1f(m_pointLights[i].attenuation.expLocation, lights[i].attenuation.exp);
+        glUniform3fv_(m_pointLights[i].colorLocation, 1, &lights[i].color.x);
+        glUniform3fv_(m_pointLights[i].positionLocation, 1, &lights[i].position.x);
+        glUniform1f_(m_pointLights[i].ambientLocation, lights[i].ambient);
+        glUniform1f_(m_pointLights[i].diffuseLocation, lights[i].diffuse);
+        glUniform1f_(m_pointLights[i].attenuation.constantLocation, lights[i].attenuation.constant);
+        glUniform1f_(m_pointLights[i].attenuation.linearLocation, lights[i].attenuation.linear);
+        glUniform1f_(m_pointLights[i].attenuation.expLocation, lights[i].attenuation.exp);
     }
 }
 
 void lightMethod::setEyeWorldPos(const m::vec3 &eyeWorldPos) {
-    glUniform3fv(m_eyeWorldPosLocation, 1, &eyeWorldPos.x);
+    glUniform3fv_(m_eyeWorldPosLocation, 1, &eyeWorldPos.x);
 }
 
 void lightMethod::setMatSpecIntensity(float intensity) {
-    glUniform1f(m_matSpecIntensityLocation, intensity);
+    glUniform1f_(m_matSpecIntensityLocation, intensity);
 }
 
 void lightMethod::setMatSpecPower(float power) {
-    glUniform1f(m_matSpecPowerLocation, power);
+    glUniform1f_(m_matSpecPowerLocation, power);
 }
 
 void lightMethod::setFogType(fogType type) {
-    glUniform1i(m_fog.methodLocation, type);
+    glUniform1i_(m_fog.methodLocation, type);
 }
 
 void lightMethod::setFogDistance(float start, float end) {
-    glUniform1f(m_fog.startLocation, start);
-    glUniform1f(m_fog.endLocation, end);
+    glUniform1f_(m_fog.startLocation, start);
+    glUniform1f_(m_fog.endLocation, end);
 }
 
 void lightMethod::setFogDensity(float density) {
-    glUniform1f(m_fog.densityLocation, density);
+    glUniform1f_(m_fog.densityLocation, density);
 }
 
 void lightMethod::setFogColor(const m::vec3 &color) {
-    glUniform4f(m_fog.colorLocation, color.x, color.y, color.z, 1.0f);
+    glUniform4f_(m_fog.colorLocation, color.x, color.y, color.z, 1.0f);
 }
 
 ///! skyboxMethod
@@ -393,21 +394,21 @@ bool skyboxMethod::init(void) {
 }
 
 void skyboxMethod::setWVP(const m::mat4 &wvp) {
-    glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
 }
 
 void skyboxMethod::setTextureUnit(int unit) {
-    glUniform1i(m_cubeMapLocation, unit);
+    glUniform1i_(m_cubeMapLocation, unit);
 }
 
 void skyboxMethod::setWorld(const m::mat4 &worldInverse) {
-    glUniformMatrix4fv(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
+    glUniformMatrix4fv_(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
 }
 
 ///! skybox renderer
 skybox::~skybox(void) {
-    glDeleteBuffers(2, m_buffers);
-    glDeleteVertexArrays(1, &m_vao);
+    glDeleteBuffers_(2, m_buffers);
+    glDeleteVertexArrays_(1, &m_vao);
 }
 
 bool skybox::init(const u::string &skyboxName) {
@@ -444,19 +445,19 @@ bool skybox::init(const u::string &skyboxName) {
     GLushort indices[] = { 0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1 };
 
     // create vao to encapsulate state
-    glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
+    glGenVertexArrays_(1, &m_vao);
+    glBindVertexArray_(m_vao);
 
     // generate the vbo and ibo
-    glGenBuffers(2, m_buffers);
+    glGenBuffers_(2, m_buffers);
 
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-    glEnableVertexAttribArray(0);
+    glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData_(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    glEnableVertexAttribArray_(0);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     return true;
 }
@@ -481,11 +482,11 @@ bool splashMethod::init(void) {
 }
 
 void splashMethod::setAspectRatio(void) {
-    glUniform1f(m_aspectRatioLocation, (float)kScreenWidth / (float)kScreenHeight);
+    glUniform1f_(m_aspectRatioLocation, (float)kScreenWidth / (float)kScreenHeight);
 }
 
 void splashMethod::setTextureUnit(int unit) {
-    glUniform1i(m_splashTextureLocation, unit);
+    glUniform1i_(m_splashTextureLocation, unit);
 }
 
 bool depthPrePassMethod::init(void) {
@@ -506,7 +507,7 @@ bool depthPrePassMethod::init(void) {
 }
 
 void depthPrePassMethod::setWVP(const m::mat4 &wvp) {
-    glUniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
 }
 
 void skybox::render(const rendererPipeline &pipeline) {
@@ -546,20 +547,20 @@ void skybox::render(const rendererPipeline &pipeline) {
     m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
     setTextureUnit(0);
 
-    glBindVertexArray(m_vao);
+    glBindVertexArray_(m_vao);
     glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_SHORT, (void *)0);
 
     glCullFace(faceMode);
     glDepthFunc(depthMode);
     glEnable(GL_BLEND);
 
-    glUseProgram(0);
+    glUseProgram_(0);
 }
 
 ///! splash screen renderer
 splashScreen::~splashScreen(void) {
-    glDeleteBuffers(2, m_buffers);
-    glDeleteVertexArrays(1, &m_vao);
+    glDeleteBuffers_(2, m_buffers);
+    glDeleteVertexArrays_(1, &m_vao);
 }
 
 bool splashScreen::init(const u::string &file) {
@@ -573,11 +574,11 @@ bool splashScreen::init(const u::string &file) {
         return false;
     }
 
-    glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
+    glGenVertexArrays_(1, &m_vao);
+    glBindVertexArray_(m_vao);
 
-    glGenBuffers(2, m_buffers);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glGenBuffers_(2, m_buffers);
+    glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
 
     GLfloat vertices[] = {
          1.0f, 1.0f, 0.0f, 1.0f, -1.0f,
@@ -588,14 +589,14 @@ bool splashScreen::init(const u::string &file) {
 
     GLushort indices[] = { 0, 1, 2, 2, 1, 3 };
 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)0); // position
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)12); // uvs
-    glEnableVertexAttribArray(1);
+    glBufferData_(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)0); // position
+    glVertexAttribPointer_(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)12); // uvs
+    glEnableVertexAttribArray_(0);
+    glEnableVertexAttribArray_(1);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     return true;
 }
@@ -610,7 +611,7 @@ void splashScreen::render(void) {
 
     m_texture.bind(GL_TEXTURE0);
 
-    glBindVertexArray(m_vao);
+    glBindVertexArray_(m_vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
     glEnable(GL_DEPTH_TEST);
@@ -641,8 +642,8 @@ world::world(void) {
 }
 
 world::~world(void) {
-    glDeleteBuffers(2, m_buffers);
-    glDeleteVertexArrays(1, &m_vao);
+    glDeleteBuffers_(2, m_buffers);
+    glDeleteVertexArrays_(1, &m_vao);
 }
 
 bool world::load(const kdMap &map) {
@@ -681,25 +682,25 @@ bool world::load(const kdMap &map) {
     }
 
     // gen vao
-    glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
+    glGenVertexArrays_(1, &m_vao);
+    glBindVertexArray_(m_vao);
 
     // gen vbo and ibo
-    glGenBuffers(2, m_buffers);
+    glGenBuffers_(2, m_buffers);
 
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), 0);                 // vertex
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-    glEnableVertexAttribArray(3);
+    glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData_(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW);
+    glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), 0);                 // vertex
+    glVertexAttribPointer_(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
+    glVertexAttribPointer_(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
+    glVertexAttribPointer_(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
+    glEnableVertexAttribArray_(0);
+    glEnableVertexAttribArray_(1);
+    glEnableVertexAttribArray_(2);
+    glEnableVertexAttribArray_(3);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW);
+    glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW);
 
     printf("textures:\n");
     printf("loaded: %zu\n", m_textureManager.loaded());
@@ -719,12 +720,12 @@ void world::draw(const rendererPipeline &pipeline) {
     m_depthPrePassMethod.setWVP(depthPrePassPipeline.getWVPTransform());
 
     // render geometry only
-    glBindVertexArray(m_vao);
+    glBindVertexArray_(m_vao);
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
         glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
     }
-    glBindVertexArray(0);
+    glBindVertexArray_(0);
 
     // normal pass
     glColorMask(1.0f, 1.0f, 1.0f, 1.0f);
@@ -782,14 +783,14 @@ void world::render(const rendererPipeline &pipeline) {
     m_lightMethod.setMatSpecIntensity(2.0f);
     m_lightMethod.setMatSpecPower(200.0f);
 
-    glBindVertexArray(m_vao);
+    glBindVertexArray_(m_vao);
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
         m_textureBatches[i].diffuse->bind(GL_TEXTURE0);
         m_textureBatches[i].normal->bind(GL_TEXTURE1);
         glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
     }
-    glBindVertexArray(0);
+    glBindVertexArray_(0);
 
     m_skybox.render(skyPipeline);
 }
@@ -844,7 +845,6 @@ static void textureScale(unsigned char *src, size_t sw, size_t sh, size_t stride
     area = ((unsigned long long)darea << ascale) / sarea;
     dw *= wfrac;
     dh *= hfrac;
-
     for (size_t y = 0; y < dh; y += hfrac) {
         const size_t yn = y + hfrac - 1;
         const size_t yi = y >> 12;
@@ -990,7 +990,7 @@ bool texture::load(const u::string &file) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, textureFormat,
         dataFormat, surface->pixels);
 
-    glGenerateMipmap(GL_TEXTURE_2D);
+    glGenerateMipmap_(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -1001,7 +1001,7 @@ bool texture::load(const u::string &file) {
 }
 
 void texture::bind(GLenum unit) {
-    glActiveTexture(unit);
+    glActiveTexture_(unit);
     glBindTexture(GL_TEXTURE_2D, m_textureHandle);
 }
 
@@ -1064,7 +1064,7 @@ bool textureCubemap::load(const u::string files[6]) {
 }
 
 void textureCubemap::bind(GLenum unit) {
-    glActiveTexture(unit);
+    glActiveTexture_(unit);
     glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
 }
 
@@ -1091,40 +1091,45 @@ void initGL(void) {
 
     #define GL_RESOLVE(NAME) \
         do { \
-            if (!(*(void **)&gl ## NAME = SDL_GL_GetProcAddress("gl" #NAME))) \
+            union { \
+                void *p; \
+                decltype(NAME##_) gl; \
+            } cast = { SDL_GL_GetProcAddress(#NAME) }; \
+            if (!(NAME##_ = cast.gl)) \
                 abort(); \
         } while (0)
 
-    GL_RESOLVE(CreateShader);
-    GL_RESOLVE(ShaderSource);
-    GL_RESOLVE(CompileShader);
-    GL_RESOLVE(AttachShader);
-    GL_RESOLVE(CreateProgram);
-    GL_RESOLVE(LinkProgram);
-    GL_RESOLVE(UseProgram);
-    GL_RESOLVE(GetUniformLocation);
-    GL_RESOLVE(EnableVertexAttribArray);
-    GL_RESOLVE(DisableVertexAttribArray);
-    GL_RESOLVE(UniformMatrix4fv);
-    GL_RESOLVE(BindBuffer);
-    GL_RESOLVE(GenBuffers);
-    GL_RESOLVE(VertexAttribPointer);
-    GL_RESOLVE(BufferData);
-    GL_RESOLVE(ValidateProgram);
-    GL_RESOLVE(GenVertexArrays);
-    GL_RESOLVE(BindVertexArray);
-    GL_RESOLVE(DeleteProgram);
-    GL_RESOLVE(DeleteBuffers);
-    GL_RESOLVE(DeleteVertexArrays);
-    GL_RESOLVE(Uniform1i);
-    GL_RESOLVE(Uniform1f);
-    GL_RESOLVE(Uniform3fv);
-    GL_RESOLVE(Uniform4f);
-    GL_RESOLVE(GenerateMipmap);
-    GL_RESOLVE(DeleteShader);
-    GL_RESOLVE(GetShaderiv);
-    GL_RESOLVE(GetProgramiv);
-    GL_RESOLVE(GetShaderInfoLog);
+    GL_RESOLVE(glCreateShader);
+    GL_RESOLVE(glShaderSource);
+    GL_RESOLVE(glCompileShader);
+    GL_RESOLVE(glAttachShader);
+    GL_RESOLVE(glCreateProgram);
+    GL_RESOLVE(glLinkProgram);
+    GL_RESOLVE(glUseProgram);
+    GL_RESOLVE(glGetUniformLocation);
+    GL_RESOLVE(glEnableVertexAttribArray);
+    GL_RESOLVE(glDisableVertexAttribArray);
+    GL_RESOLVE(glUniformMatrix4fv);
+    GL_RESOLVE(glBindBuffer);
+    GL_RESOLVE(glGenBuffers);
+    GL_RESOLVE(glVertexAttribPointer);
+    GL_RESOLVE(glBufferData);
+    GL_RESOLVE(glValidateProgram);
+    GL_RESOLVE(glGenVertexArrays);
+    GL_RESOLVE(glBindVertexArray);
+    GL_RESOLVE(glDeleteProgram);
+    GL_RESOLVE(glDeleteBuffers);
+    GL_RESOLVE(glDeleteVertexArrays);
+    GL_RESOLVE(glUniform1i);
+    GL_RESOLVE(glUniform1f);
+    GL_RESOLVE(glUniform3fv);
+    GL_RESOLVE(glUniform4f);
+    GL_RESOLVE(glGenerateMipmap);
+    GL_RESOLVE(glDeleteShader);
+    GL_RESOLVE(glGetShaderiv);
+    GL_RESOLVE(glGetProgramiv);
+    GL_RESOLVE(glGetShaderInfoLog);
+    GL_RESOLVE(glActiveTexture);
 }
 
 void screenShot(const u::string &file) {

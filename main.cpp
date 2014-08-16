@@ -127,11 +127,6 @@ int main(void) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // worldClient.Update(dt, time)
-        //  world.Update(dt, ticks)
-        //  client.move(dt)
-        // client.Update(dt, ti me)
-
         gClient.update(gMap, dt);
         m::vec3 target;
         m::vec3 up;
