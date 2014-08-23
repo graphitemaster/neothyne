@@ -229,11 +229,13 @@ struct splashMethod : method {
     virtual bool init(void);
 
     void setTextureUnit(int unit);
-    void setAspectRatio(void);
+    void setResolution(void);
+    void setTime(float dt);
 
 private:
     GLint m_splashTextureLocation;
-    GLint m_aspectRatioLocation;
+    GLint m_resolutionLocation;
+    GLint m_timeLocation;
 };
 
 /// depth pre pass rendering method
@@ -253,7 +255,7 @@ struct splashScreen : splashMethod {
     bool load(const u::string &splashScreen);
     bool upload(void);
 
-    void render(void);
+    void render(float dt);
 
 private:
     union {

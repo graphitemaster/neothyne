@@ -20,6 +20,42 @@ void getMouseDelta(int *deltaX, int *deltaY) {
     SDL_GetRelativeMouseState(deltaX, deltaY);
 }
 
+// we load assets in a different thread
+struct loadThreadData {
+    kdMap gMap;
+    world gWorld;
+    SDL_atomic_t done;
+};
+
+static bool loadThread(void *threadData) {
+    loadThreadData *data = (loadThreadData*)threadData;
+
+    FILE *fp = fopen("maps/garden.kdgz", "r");
+    u::vector<unsigned char> mapData;
+    if (!fp) {
+        fprintf(stderr, "failed opening map\n");
+        return 0;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t length = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    mapData.resize(length);
+    fread(&*mapData.begin(), length, 1, fp);
+    fclose(fp);
+
+    if (!data->gMap.load(mapData))
+        return false;
+
+    if (!data->gWorld.load(data->gMap))
+        return false;
+
+    SDL_Delay(3500); // Temporary
+    SDL_AtomicSet(&data->done, 1);
+
+    return true;
+}
+
 static SDL_Window *initSDL(void) {
     SDL_Window *window;
     SDL_Init(SDL_INIT_VIDEO);
@@ -58,43 +94,34 @@ static SDL_Window *initSDL(void) {
 }
 
 int main(void) {
-    SDL_Window *gScreen;
-    gScreen = initSDL();
+    SDL_Window *gScreen = initSDL();
 
+    // before loading any art assets we need to establish a loading screen
     initGL();
-
-    client gClient;
-    kdMap gMap;
-    world gWorld;
     splashScreen gSplash;
-
-    // render the splash screen
-    gSplash.load("textures/splash.jpg");
+    gSplash.load("textures/logo.png");
     gSplash.upload();
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    gSplash.render();
-    SDL_GL_SwapWindow(gScreen);
+    // create a loader thread
+    loadThreadData loadData;
+    SDL_AtomicSet(&loadData.done, 0);
+    SDL_CreateThread((SDL_ThreadFunction)&loadThread, nullptr, (void*)&loadData);
 
-    // open map
-    FILE *fp = fopen("maps/garden.kdgz", "r");
-    u::vector<unsigned char> mapData;
-    if (!fp) {
-        fprintf(stderr, "failed opening map\n");
-        return 0;
-    } else {
-        fseek(fp, 0, SEEK_END);
-        size_t length = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-        mapData.resize(length);
-        fread(&*mapData.begin(), length, 1, fp);
-        fclose(fp);
+    // while that thread is running render the loading screen
+    uint32_t splashTime = SDL_GetTicks();
+    while (!SDL_AtomicGet(&loadData.done)) {
+        glClear(GL_COLOR_BUFFER_BIT);
+        gSplash.render(0.002f * (float)(SDL_GetTicks() - splashTime));
+        SDL_GL_SwapWindow(gScreen);
     }
-    gMap.load(mapData);
-    gWorld.load(gMap);
-    gWorld.upload(gMap);
 
-    // setup projection
+    // we're done loading the resources, now upload them (we can't render a loading
+    // screen when uploading so we assume the process will be sufficently fast.)
+    loadData.gWorld.upload(loadData.gMap);
+
+    // Now render the world
+    client gClient;
+
     perspectiveProjection projection;
     projection.fov = 90.0f;
     projection.width = kScreenWidth;
@@ -102,7 +129,6 @@ int main(void) {
     projection.near = 1.0f;
     projection.far = 4096.0f;
 
-    // go
     uint32_t time;
     uint32_t oldTime;
     uint32_t fpsTime;
@@ -125,7 +151,7 @@ int main(void) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        gClient.update(gMap, dt);
+        gClient.update(loadData.gMap, dt);
         m::vec3 target;
         m::vec3 up;
         m::vec3 side;
@@ -136,7 +162,7 @@ int main(void) {
         pipeline.setCamera(gClient.getPosition(), target, up);
         pipeline.setPerspectiveProjection(projection);
 
-        gWorld.draw(pipeline);
+        loadData.gWorld.draw(pipeline);
 
         //glFinish();
         SDL_GL_SwapWindow(gScreen);

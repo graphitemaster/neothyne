@@ -30,6 +30,7 @@ static PFNGLDELETEBUFFERSPROC            glDeleteBuffers_            = nullptr;
 static PFNGLDELETEVERTEXARRAYSPROC       glDeleteVertexArrays_       = nullptr;
 static PFNGLUNIFORM1IPROC                glUniform1i_                = nullptr;
 static PFNGLUNIFORM1FPROC                glUniform1f_                = nullptr;
+static PFNGLUNIFORM2FPROC                glUniform2f_                = nullptr;
 static PFNGLUNIFORM3FVPROC               glUniform3fv_               = nullptr;
 static PFNGLUNIFORM4FPROC                glUniform4f_                = nullptr;
 static PFNGLGENERATEMIPMAPPROC           glGenerateMipmap_           = nullptr;
@@ -555,13 +556,18 @@ bool splashMethod::init(void) {
         return false;
 
     m_splashTextureLocation = getUniformLocation("gSplashTexture");
-    m_aspectRatioLocation = getUniformLocation("gAspectRatio");
+    m_resolutionLocation = getUniformLocation("gResolution");
+    m_timeLocation = getUniformLocation("gTime");
 
     return true;
 }
 
-void splashMethod::setAspectRatio(void) {
-    glUniform1f_(m_aspectRatioLocation, (float)kScreenWidth / (float)kScreenHeight);
+void splashMethod::setResolution(void) {
+    glUniform2f_(m_resolutionLocation, (float)kScreenWidth, (float)kScreenHeight);
+}
+
+void splashMethod::setTime(float dt) {
+    glUniform1f_(m_timeLocation, dt);
 }
 
 void splashMethod::setTextureUnit(int unit) {
@@ -749,13 +755,14 @@ bool splashScreen::upload(void) {
     return true;
 }
 
-void splashScreen::render(void) {
+void splashScreen::render(float dt) {
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
 
     enable();
     setTextureUnit(0);
-    setAspectRatio();
+    setResolution();
+    setTime(dt);
 
     m_texture.bind(GL_TEXTURE0);
 
@@ -1009,6 +1016,7 @@ void initGL(void) {
     GL_RESOLVE(glDeleteVertexArrays);
     GL_RESOLVE(glUniform1i);
     GL_RESOLVE(glUniform1f);
+    GL_RESOLVE(glUniform2f);
     GL_RESOLVE(glUniform3fv);
     GL_RESOLVE(glUniform4f);
     GL_RESOLVE(glGenerateMipmap);
