@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 #include "kdtree.h"
 #include "kdmap.h"
@@ -66,6 +67,7 @@ uint32_t getTicks() {
 int main(void) {
     SDL_Window *gScreen;
     gScreen = initSDL();
+
     initGL();
 
     client gClient;
@@ -74,7 +76,9 @@ int main(void) {
     splashScreen gSplash;
 
     // render the splash screen
-    gSplash.init("textures/splash.jpg");
+    gSplash.load("textures/splash.jpg");
+    gSplash.upload();
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     gSplash.render();
     SDL_GL_SwapWindow(gScreen);
@@ -95,6 +99,7 @@ int main(void) {
     }
     gMap.load(mapData);
     gWorld.load(gMap);
+    gWorld.upload(gMap);
 
     // setup projection
     perspectiveProjection projection;

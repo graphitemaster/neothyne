@@ -1,7 +1,6 @@
 #include <string.h>
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
 
 #include "renderer.h"
 
@@ -113,7 +112,141 @@ const m::vec3 &rendererPipeline::getUp(void) const {
     return m_camera.up;
 }
 
-///! method
+///! textures (2D and 3D)
+#ifdef GL_UNSIGNED_INT_8_8_8_8_REV
+#   define R_TEX_DATA_RGBA GL_UNSIGNED_INT_8_8_8_8_REV
+#else
+#   define R_TEX_DATA_RGBA GL_UNSINGED_BYTE
+#endif
+#ifdef GL_UNSIGNED_INT_8_8_8_8
+#   define R_TEX_DATA_BGRA GL_UNSIGNED_INT_8_8_8_8
+#else
+#   define R_TEX_DATA_BGRA GL_UNSIGNED_BYTE
+#endif
+
+static void getTextureFormat(const texture &tex, GLenum &tf, GLenum &df) {
+    switch (tex.format()) {
+        case TEX_RGBA:
+            tf = GL_RGBA;
+            df = R_TEX_DATA_RGBA;
+            break;
+        case TEX_BGRA:
+            tf = GL_BGRA;
+            df = R_TEX_DATA_BGRA;
+            break;
+        case TEX_RGB:
+            tf = GL_RGB;
+            df = GL_UNSIGNED_BYTE;
+            break;
+        case TEX_BGR:
+            tf = GL_BGR;
+            df = GL_UNSIGNED_BYTE;
+            break;
+    }
+}
+
+texture2D::texture2D(void) :
+    m_uploaded(false),
+    m_textureHandle(0)
+{
+    //
+}
+
+texture2D::~texture2D(void) {
+    if (m_uploaded)
+        glDeleteTextures(1, &m_textureHandle);
+}
+
+bool texture2D::load(const u::string &file) {
+    return m_texture.load(file);
+}
+
+bool texture2D::upload(void) {
+    glGenTextures(1, &m_textureHandle);
+    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
+
+    GLenum tf;
+    GLenum df;
+    getTextureFormat(m_texture, tf, df);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texture.width(),
+        m_texture.height(), 0, tf, df, m_texture.data());
+
+    glGenerateMipmap_(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+    return m_uploaded = true;
+}
+
+void texture2D::bind(GLenum unit) {
+    glActiveTexture_(unit);
+    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
+}
+
+///! textureCubemap
+texture3D::texture3D() :
+    m_uploaded(false),
+    m_textureHandle(0)
+{
+}
+
+texture3D::~texture3D(void) {
+    if (m_uploaded)
+        glDeleteTextures(1, &m_textureHandle);
+}
+
+bool texture3D::load(const u::string &ft, const u::string &bk, const u::string &up,
+                     const u::string &dn, const u::string &rt, const u::string &lf)
+{
+    if (!m_textures[0].load(ft)) return false;
+    if (!m_textures[1].load(bk)) return false;
+    if (!m_textures[2].load(up)) return false;
+    if (!m_textures[3].load(dn)) return false;
+    if (!m_textures[4].load(rt)) return false;
+    if (!m_textures[5].load(lf)) return false;
+    return true;
+}
+
+bool texture3D::upload(void) {
+    glGenTextures(1, &m_textureHandle);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    // find the largest texture in the cubemap and scale all others to it
+    size_t mw = 0;
+    size_t mh = 0;
+    size_t mi = 0;
+    for (size_t i = 0; i < 6; i++) {
+        if (m_textures[i].width() > mw && m_textures[i].height() > mh)
+            mi = i;
+    }
+
+    const size_t fw = m_textures[mi].width();
+    const size_t fh = m_textures[mi].height();
+    for (size_t i = 0; i < 6; i++) {
+        if (m_textures[i].width() != fw || m_textures[i].height() != fh)
+            m_textures[i].resize(fw, fh);
+        GLuint tf, df;
+        getTextureFormat(m_textures[i], tf, df);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, fw, fh, 0, tf, df, m_textures[i].data());
+    }
+
+    return m_uploaded = true;
+}
+
+void texture3D::bind(GLenum unit) {
+    glActiveTexture_(unit);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
+}
+
+///! A rendering method
 method::method(void) :
     m_program(0),
     m_vertexSource("#version 330 core\n"),
@@ -233,7 +366,9 @@ void method::addFragmentPrelude(const u::string &prelude) {
     m_fragmentSource += "\n";
 }
 
-///! lightMethod
+//// Rendering methods:
+
+///! Light Rendering Method
 lightMethod::lightMethod(void)
 {
 
@@ -372,7 +507,7 @@ void lightMethod::setFogColor(const m::vec3 &color) {
     glUniform4f_(m_fog.colorLocation, color.x, color.y, color.z, 1.0f);
 }
 
-///! skyboxMethod
+///! Skybox Rendering Method
 bool skyboxMethod::init(void) {
     if (!method::init())
         return false;
@@ -405,27 +540,75 @@ void skyboxMethod::setWorld(const m::mat4 &worldInverse) {
     glUniformMatrix4fv_(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
 }
 
-///! skybox renderer
+///! SplashScreen Rendering Method
+bool splashMethod::init(void) {
+    if (!method::init())
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/splash.vs"))
+        return false;
+
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/splash.fs"))
+        return false;
+
+    if (!finalize())
+        return false;
+
+    m_splashTextureLocation = getUniformLocation("gSplashTexture");
+    m_aspectRatioLocation = getUniformLocation("gAspectRatio");
+
+    return true;
+}
+
+void splashMethod::setAspectRatio(void) {
+    glUniform1f_(m_aspectRatioLocation, (float)kScreenWidth / (float)kScreenHeight);
+}
+
+void splashMethod::setTextureUnit(int unit) {
+    glUniform1i_(m_splashTextureLocation, unit);
+}
+
+///! Depth Pre-Pass Rendering Method
+bool depthPrePassMethod::init(void) {
+    if (!method::init())
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/zprepass.vs"))
+        return false;
+
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/zprepass.fs"))
+        return false;
+
+    if (!finalize())
+        return false;
+
+    m_WVPLocation = getUniformLocation("gWVP");
+    return true;
+}
+
+void depthPrePassMethod::setWVP(const m::mat4 &wvp) {
+    glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+}
+
+//// Renderers:
+
+///! Skybox Renderer
 skybox::~skybox(void) {
     glDeleteBuffers_(2, m_buffers);
     glDeleteVertexArrays_(1, &m_vao);
 }
 
-bool skybox::init(const u::string &skyboxName) {
-    const u::string files[] = {
-        skyboxName + "_ft.jpg",
-        skyboxName + "_bk.jpg",
-        skyboxName + "_up.jpg",
-        skyboxName + "_dn.jpg",
-        skyboxName + "_rt.jpg",
-        skyboxName + "_lf.jpg"
-    };
-
-    if (!m_cubemap.load(files)) {
-        fprintf(stderr, "couldn't create cubemap\n");
+bool skybox::load(const u::string &skyboxName) {
+    if(!(m_cubemap.load(skyboxName + "_ft.jpg", skyboxName + "_bk.jpg", skyboxName + "_up.jpg",
+                        skyboxName + "_dn.jpg", skyboxName + "_rt.jpg", skyboxName + "_lf.jpg")))
+    {
+        fprintf(stderr, "couldn't load skybox textures\n");
         return false;
     }
+    return true;
+}
 
+bool skybox::upload(void) {
     if (!skyboxMethod::init()) {
         fprintf(stderr, "failed initializing skybox rendering method\n");
         return false;
@@ -460,54 +643,6 @@ bool skybox::init(const u::string &skyboxName) {
     glBufferData_(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     return true;
-}
-
-bool splashMethod::init(void) {
-    if (!method::init())
-        return false;
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/splash.vs"))
-        return false;
-
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/splash.fs"))
-        return false;
-
-    if (!finalize())
-        return false;
-
-    m_splashTextureLocation = getUniformLocation("gSplashTexture");
-    m_aspectRatioLocation = getUniformLocation("gAspectRatio");
-
-    return true;
-}
-
-void splashMethod::setAspectRatio(void) {
-    glUniform1f_(m_aspectRatioLocation, (float)kScreenWidth / (float)kScreenHeight);
-}
-
-void splashMethod::setTextureUnit(int unit) {
-    glUniform1i_(m_splashTextureLocation, unit);
-}
-
-bool depthPrePassMethod::init(void) {
-    if (!method::init())
-        return false;
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/zprepass.vs"))
-        return false;
-
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/zprepass.fs"))
-        return false;
-
-    if (!finalize())
-        return false;
-
-    m_WVPLocation = getUniformLocation("gWVP");
-    return true;
-}
-
-void depthPrePassMethod::setWVP(const m::mat4 &wvp) {
-    glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
 }
 
 void skybox::render(const rendererPipeline &pipeline) {
@@ -557,18 +692,21 @@ void skybox::render(const rendererPipeline &pipeline) {
     glUseProgram_(0);
 }
 
-///! splash screen renderer
+///! Splash Screen Renderer
 splashScreen::~splashScreen(void) {
     glDeleteBuffers_(2, m_buffers);
     glDeleteVertexArrays_(1, &m_vao);
 }
 
-bool splashScreen::init(const u::string &file) {
-    if (!m_texture.load(file)) {
-        fprintf(stderr, "failed to load texture `%s'\n", file.c_str());
+bool splashScreen::load(const u::string &splashScreen) {
+    if (!m_texture.load(splashScreen)) {
+        fprintf(stderr, "failed to load splash screen texture\n");
         return false;
     }
+    return true;
+}
 
+bool splashScreen::upload(void) {
     if (!splashMethod::init()) {
         fprintf(stderr, "failed to initialize splash screen rendering method\n");
         return false;
@@ -618,27 +756,12 @@ void splashScreen::render(void) {
     glEnable(GL_CULL_FACE);
 }
 
-///! world renderer
+///! World Renderer
 world::world(void) {
     m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
     m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
     m_directionalLight.ambient = 0.90f;
     m_directionalLight.diffuse = 0.75f;
-
-    if (!m_depthPrePassMethod.init()) {
-        fprintf(stderr, "failed to initialize depth prepass rendering method\n");
-        abort();
-    }
-
-    if (!m_lightMethod.init()) {
-        fprintf(stderr, "failed to initialize world lighting rendering method\n");
-        abort();
-    }
-
-    if (!m_skybox.init("textures/sky01")) {
-        fprintf(stderr, "failed to load skybox\n");
-        abort();
-    }
 }
 
 world::~world(void) {
@@ -647,18 +770,22 @@ world::~world(void) {
 }
 
 bool world::load(const kdMap &map) {
+    if (!m_skybox.load("textures/sky01")) {
+        fprintf(stderr, "failed to load skybox\n");
+        return false;
+    }
+
     // make rendering batches for triangles which share the same texture
-    u::vector<uint32_t> indices;
     for (size_t i = 0; i < map.textures.size(); i++) {
         renderTextueBatch batch;
-        batch.start = indices.size();
+        batch.start = m_indices.size();
         batch.index = i;
         for (size_t j = 0; j < map.triangles.size(); j++) {
             if (map.triangles[j].texture == i)
                 for (size_t k = 0; k < 3; k++)
-                    indices.push_back(map.triangles[j].v[k]);
+                    m_indices.push_back(map.triangles[j].v[k]);
         }
-        batch.count = indices.size() - batch.start;
+        batch.count = m_indices.size() - batch.start;
         m_textureBatches.push_back(batch);
     }
 
@@ -670,15 +797,39 @@ bool world::load(const kdMap &map) {
         u::string diffuseName = name;
         u::string normalName = find ? u::string(name, find - name) + "_bump" + find : diffuseName + "_bump";
 
-        texture *diffuse = m_textureManager.get(diffuseName);
-        texture *normal = m_textureManager.get(normalName);
+        texture2D *diffuse = m_textures2D.get(diffuseName);
+        texture2D *normal = m_textures2D.get(normalName);
         if (!diffuse)
-            diffuse = m_textureManager.get("textures/notex.jpg");
+            diffuse = m_textures2D.get("textures/notex.jpg");
         if (!normal)
-            normal = m_textureManager.get("textures/nobump.jpg");
+            normal = m_textures2D.get("textures/nobump.jpg");
 
         m_textureBatches[i].diffuse = diffuse;
         m_textureBatches[i].normal = normal;
+    }
+    return true;
+}
+
+bool world::upload(const kdMap &map) {
+    if (!m_depthPrePassMethod.init()) {
+        fprintf(stderr, "failed to initialize depth prepass rendering method\n");
+        return false;
+    }
+
+    if (!m_lightMethod.init()) {
+        fprintf(stderr, "failed to initialize world lighting rendering method\n");
+        return false;
+    }
+
+    if (!m_skybox.upload()) {
+        fprintf(stderr, "failed to upload skybox\n");
+        return false;
+    }
+
+    // upload textures
+    for (auto &it : m_textureBatches) {
+        it.diffuse->upload();
+        it.normal->upload();
     }
 
     // gen vao
@@ -699,12 +850,9 @@ bool world::load(const kdMap &map) {
     glEnableVertexAttribArray_(2);
     glEnableVertexAttribArray_(3);
 
+    // upload data
     glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), &*indices.begin(), GL_STATIC_DRAW);
-
-    printf("textures:\n");
-    printf("loaded: %zu\n", m_textureManager.loaded());
-    printf("shared: %zu\n", m_textureManager.reuses());
+    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLushort), &*m_indices.begin(), GL_STATIC_DRAW);
 
     return true;
 }
@@ -795,278 +943,7 @@ void world::render(const rendererPipeline &pipeline) {
     m_skybox.render(skyPipeline);
 }
 
-//! textures
-template <size_t S>
-static void textureHalve(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst) {
-    for (unsigned char *yend = src + sh * stride; src < yend;) {
-        for (unsigned char *xend = src + sw * S, *xsrc = src; xsrc < xend; xsrc += 2 * S, dst += S) {
-            for (size_t i = 0; i < S; i++)
-                dst[i] = (size_t(xsrc[i]) + size_t(xsrc[i+S]) + size_t(xsrc[stride+i]) + size_t(xsrc[stride+i+S])) >> 2;
-        }
-        src += 2 * stride;
-    }
-}
-
-template <size_t S>
-static void textureShift(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst, size_t dw, size_t dh) {
-    size_t wfrac = sw/dw, hfrac = sh/dh, wshift = 0, hshift = 0;
-    while (dw << wshift < sw) wshift++;
-    while (dh << hshift < sh) hshift++;
-    size_t tshift = wshift + hshift;
-    for (unsigned char *yend = src + sh * stride; src < yend; ) {
-        for (unsigned char *xend = src + sw * S, *xsrc = src; xsrc < xend; xsrc += wfrac * S, dst += S) {
-            size_t r[S] = {0};
-            for (unsigned char *ycur = xsrc, *xend = ycur + wfrac * S,
-                    *yend = src + hfrac * stride; ycur<yend; ycur += stride, xend += stride) {
-                for (unsigned char *xcur = ycur; xcur < xend; xcur += S) {
-                    for (size_t i = 0; i < S; i++)
-                        r[i] += xcur[i];
-                }
-            }
-            for (size_t i = 0; i < S; i++)
-                dst[i] = (r[i]) >> tshift;
-        }
-        src += hfrac*stride;
-    }
-}
-
-template <size_t S>
-static void textureScale(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst, size_t dw, size_t dh) {
-    size_t wfrac = (sw << 12) / dw;
-    size_t hfrac = (sh << 12) / dh;
-    size_t darea = dw * dh;
-    size_t sarea = sw * sh;
-    int over, under;
-    for (over = 0; (darea >> over) > sarea; over++);
-    for (under = 0; (darea << under) < sarea; under++);
-    size_t cscale = m::clamp(under, over - 12, 12),
-    ascale = m::clamp(12 + under - over, 0, 24),
-    dscale = ascale + 12 - cscale,
-    area = ((unsigned long long)darea << ascale) / sarea;
-    dw *= wfrac;
-    dh *= hfrac;
-    for (size_t y = 0; y < dh; y += hfrac) {
-        const size_t yn = y + hfrac - 1;
-        const size_t yi = y >> 12;
-        const size_t h = (yn >> 12) - yi;
-        const size_t ylow = ((yn | (-int(h) >> 24)) & 0xFFFU) + 1 - (y & 0xFFFU);
-        const size_t yhigh = (yn & 0xFFFU) + 1;
-        const unsigned char *ysrc = src + yi * stride;
-        for (size_t x = 0; x < dw; x += wfrac, dst += S) {
-            const size_t xn = x + wfrac - 1;
-            const size_t xi = x >> 12;
-            const size_t w = (xn >> 12) - xi;
-            const size_t xlow = ((w + 0xFFFU) & 0x1000U) - (x & 0xFFFU);
-            const size_t xhigh = (xn & 0xFFFU) + 1;
-            const unsigned char *xsrc = ysrc + xi * S;
-            const unsigned char *xend = xsrc + w * S;
-            size_t r[S] = {0};
-            for (const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
-                for (size_t i = 0; i < S; i++)
-                    r[i] += xcur[i];
-            for (size_t i = 0; i < S; i++)
-                r[i] = (ylow * (r[i] + ((xsrc[i] * xlow + xend[i] * xhigh) >> 12))) >> cscale;
-            if (h) {
-                xsrc += stride;
-                xend += stride;
-                for (size_t hcur = h; --hcur; xsrc += stride, xend += stride) {
-                    size_t p[S] = {0};
-                    for (const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
-                        for (size_t i = 0; i < S; i++)
-                            p[i] += xcur[i];
-                    for (size_t i = 0; i < S; i++)
-                        r[i] += ((p[i] << 12) + xsrc[i] * xlow + xend[i] * xhigh) >> cscale;
-                }
-                size_t p[S] = {0};
-                for (const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
-                    for (size_t i = 0; i < S; i++)
-                        p[i] += xcur[i];
-                for (size_t i = 0; i < S; i++)
-                    r[i] += (yhigh * (p[i] + ((xsrc[i] * xlow + xend[i] * xhigh) >> 12))) >> cscale;
-            }
-            for (size_t i = 0; i < S; i++)
-                dst[i] = (r[i] * area) >> dscale;
-        }
-    }
-}
-
-static void scaleTexture(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *dst, size_t dw, size_t dh) {
-    if (sw == dw * 2 && sh == dh * 2)
-        switch (bpp) {
-            case 3: return textureHalve<3>(src, sw, sh, pitch, dst);
-            case 4: return textureHalve<4>(src, sw, sh, pitch, dst);
-        }
-    else if(sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1) || dw&(dw-1) || dh&(dh-1))
-        switch (bpp) {
-            case 3: return textureScale<3>(src, sw, sh, pitch, dst, dw, dh);
-            case 4: return textureScale<4>(src, sw, sh, pitch, dst, dw, dh);
-        }
-    switch(bpp) {
-        case 3: return textureShift<3>(src, sw, sh, pitch, dst, dw, dh);
-        case 4: return textureShift<4>(src, sw, sh, pitch, dst, dw, dh);
-    }
-}
-
-static void reorientTexture(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t stride, unsigned char *dst, bool flipx, bool flipy, bool swapxy) {
-    size_t stridex = swapxy ? bpp * sh : bpp;
-    size_t stridey = swapxy ? bpp : bpp * sw;
-    if (flipx)
-        dst += (sw - 1) * stridex, stridex = -stridex;
-    if (flipy)
-        dst += (sh - 1) * stridey, stridey = -stridey;
-    unsigned char *srcrow = src;
-    for (size_t i = 0; i < sh; i++) {
-        for (unsigned char *curdst = dst, *src = srcrow, *end = srcrow + sw * bpp; src < end; ) {
-            for (size_t k = 0; k < bpp; k++)
-                curdst[k] = *src++;
-            curdst += stridex;
-        }
-        srcrow += stride;
-        dst += stridey;
-    }
-}
-
-#ifdef GL_UNSIGNED_INT_8_8_8_8_REV
-#   define R_TEX_DATA_RGBA GL_UNSIGNED_INT_8_8_8_8_REV
-#else
-#   define R_TEX_DATA_RGBA GL_UNSINGED_BYTE
-#endif
-#ifdef GL_UNSIGNED_INT_8_8_8_8
-#   define R_TEX_DATA_BGRA GL_UNSIGNED_INT_8_8_8_8
-#else
-#   define R_TEX_DATA_BGRA GL_UNSIGNED_BYTE
-#endif
-#define R_TEX_DATA_RGB GL_UNSIGNED_BYTE
-#define R_TEX_DATA_BGR GL_UNSIGNED_BYTE
-
-static void getTextureFormat(const SDL_Surface *const surface, GLuint &dataFormat, GLuint &textureFormat) {
-    if (surface->format->BytesPerPixel == 4) {
-        if (surface->format->Rmask == 0x000000FF) {
-            textureFormat = GL_RGBA;
-            dataFormat = R_TEX_DATA_RGBA;
-        } else {
-            textureFormat = GL_BGRA;
-            dataFormat = R_TEX_DATA_BGRA;
-        }
-    } else {
-        if (surface->format->Rmask == 0x000000FF) {
-            textureFormat = GL_RGB;
-            dataFormat = R_TEX_DATA_RGB;
-        } else {
-            textureFormat = GL_BGR;
-            dataFormat = R_TEX_DATA_BGR;
-        }
-    }
-}
-
-texture::texture(void) :
-    m_loaded(false),
-    m_textureHandle(0)
-{
-    //
-}
-
-texture::~texture(void) {
-    if (m_textureHandle)
-        glDeleteTextures(1, &m_textureHandle);
-}
-
-bool texture::load(const u::string &file) {
-    // do not load multiple times
-    if (m_loaded)
-        return true;
-
-    SDL_Surface *surface = IMG_Load(file.c_str());
-    if (!surface)
-        return false;
-
-    glGenTextures(1, &m_textureHandle);
-    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
-
-    GLuint dataFormat;
-    GLuint textureFormat;
-    getTextureFormat(surface, dataFormat, textureFormat);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, textureFormat,
-        dataFormat, surface->pixels);
-
-    glGenerateMipmap_(GL_TEXTURE_2D);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-    SDL_FreeSurface(surface);
-    return m_loaded = true;
-}
-
-void texture::bind(GLenum unit) {
-    glActiveTexture_(unit);
-    glBindTexture(GL_TEXTURE_2D, m_textureHandle);
-}
-
-///! textureCubemap
-textureCubemap::textureCubemap() :
-    m_loaded(false),
-    m_textureHandle(0)
-{
-}
-
-textureCubemap::~textureCubemap(void) {
-    if (m_textureHandle)
-        glDeleteTextures(1, &m_textureHandle);
-}
-
-bool textureCubemap::load(const u::string files[6]) {
-    if (m_loaded)
-        return false;
-
-    glGenTextures(1, &m_textureHandle);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    int fw = 0;
-    int fh = 0;
-    for (size_t i = 0; i < 6; i++) {
-        SDL_Surface *surface = IMG_Load(files[i].c_str());
-        if (!surface)
-            return false;
-
-        GLuint dataFormat;
-        GLuint textureFormat;
-        getTextureFormat(surface, dataFormat, textureFormat);
-
-        if (i == 0) {
-            fw = surface->w;
-            fh = surface->h;
-        }
-
-        // cubemap textures need be all the same size
-        if (surface->w != fw || surface->h != fh) {
-            unsigned char *scale = new unsigned char[fw * fh * surface->format->BytesPerPixel];
-            scaleTexture((unsigned char *)surface->pixels, surface->w, surface->h,
-                surface->format->BytesPerPixel, surface->w * surface->format->BytesPerPixel, scale, fw, fh);
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, fw, fh, 0, textureFormat, dataFormat, scale);
-        } else {
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, surface->w, surface->h,
-                0, textureFormat, dataFormat, surface->pixels);
-        }
-
-        SDL_FreeSurface(surface);
-    }
-
-    return m_loaded = true;
-}
-
-void textureCubemap::bind(GLenum unit) {
-    glActiveTexture_(unit);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
-}
+//// Miscellaneous
 
 void initGL(void) {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -1138,7 +1015,8 @@ void screenShot(const u::string &file) {
     SDL_LockSurface(temp);
     unsigned char *pixels = new unsigned char[3 * kScreenWidth * kScreenHeight];
     glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-    reorientTexture(pixels, kScreenWidth, kScreenHeight, 3, kScreenWidth * 3, (unsigned char *)temp->pixels, false, true, false);
+    texture::reorient(pixels, kScreenWidth, kScreenHeight, 3, kScreenWidth * 3,
+        (unsigned char *)temp->pixels, false, true, false);
     SDL_UnlockSurface(temp);
     delete[] pixels;
     SDL_SaveBMP(temp, file.c_str());

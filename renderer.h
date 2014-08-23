@@ -6,6 +6,7 @@
 #include "util.h"
 #include "kdmap.h"
 #include "resource.h"
+#include "texture.h"
 
 struct perspectiveProjection {
     float fov;
@@ -77,28 +78,33 @@ private:
 };
 
 ///! textures
-struct texture {
-    texture();
-    ~texture();
+struct texture2D {
+    texture2D();
+    ~texture2D();
 
     bool load(const u::string &file);
+    bool upload(void);
     void bind(GLenum unit);
 
 private:
-    bool m_loaded;
+    bool m_uploaded;
     GLuint m_textureHandle;
+    texture m_texture;
 };
 
-struct textureCubemap {
-    textureCubemap();
-    ~textureCubemap();
+struct texture3D {
+    texture3D();
+    ~texture3D();
 
-    bool load(const u::string files[6]);
+    bool load(const u::string &ft, const u::string &bk, const u::string &up,
+              const u::string &dn, const u::string &rt, const u::string &lf);
+    bool upload(void);
     void bind(GLenum unit);
 
 private:
-    bool m_loaded;
+    bool m_uploaded;
     GLuint m_textureHandle;
+    texture m_textures[6];
 };
 
 ///! lights
@@ -244,7 +250,8 @@ private:
 struct splashScreen : splashMethod {
     ~splashScreen();
 
-    bool init(const u::string &splash);
+    bool load(const u::string &splashScreen);
+    bool upload(void);
 
     void render(void);
 
@@ -257,14 +264,15 @@ private:
         GLuint m_buffers[2];
     };
     GLuint m_vao;
-    texture m_texture;
+    texture2D m_texture;
 };
 
 /// skybox renderer
 struct skybox : skyboxMethod {
     ~skybox();
 
-    bool init(const u::string &skyboxName);
+    bool load(const u::string &skyboxName);
+    bool upload(void);
 
     void render(const rendererPipeline &pipeline);
 
@@ -277,7 +285,7 @@ private:
         GLuint m_buffers[2];
     };
     GLuint m_vao;
-    textureCubemap m_cubemap; // skybox cubemap
+    texture3D m_cubemap; // skybox cubemap
 };
 
 ///! world renderer
@@ -285,8 +293,8 @@ struct renderTextueBatch {
     size_t start;
     size_t count;
     size_t index;
-    texture *diffuse;
-    texture *normal;
+    texture2D *diffuse;
+    texture2D *normal;
 };
 
 struct world {
@@ -294,6 +302,8 @@ struct world {
     ~world();
 
     bool load(const kdMap &map);
+    bool upload(const kdMap &map);
+
     void draw(const rendererPipeline &p);
 
 private:
@@ -312,8 +322,9 @@ private:
     directionalLight m_directionalLight;
     u::vector<pointLight> m_pointLights;
     u::vector<renderTextueBatch> m_textureBatches;
+    u::vector<uint32_t> m_indices;
 
-    resourceManager<u::string, texture> m_textureManager;
+    resourceManager<u::string, texture2D> m_textures2D;
 
     lightMethod m_lightMethod;
     depthPrePassMethod m_depthPrePassMethod;
