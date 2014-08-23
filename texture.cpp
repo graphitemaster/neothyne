@@ -140,7 +140,7 @@ bool texture::load(const u::string &file) {
 
     m_width = surface->w;
     m_height = surface->h;
-    m_bpp = surface->format->BytesPerPixel ? surface->format->BytesPerPixel : 3;
+    m_bpp = 3; // surface->format->BytesPerPixel;// ? surface->format->BytesPerPixel : 3;
     m_pitch = surface->pitch;
     const size_t size = m_bpp * m_width * m_height;
 

@@ -609,8 +609,8 @@ bool skybox::load(const u::string &skyboxName) {
 }
 
 bool skybox::upload(void) {
-    if (!skyboxMethod::init()) {
-        fprintf(stderr, "failed initializing skybox rendering method\n");
+    if (!m_cubemap.upload()) {
+        fprintf(stderr, "failed to upload skybox cubemap\n");
         return false;
     }
 
@@ -641,6 +641,11 @@ bool skybox::upload(void) {
 
     glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     glBufferData_(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    if (!skyboxMethod::init()) {
+        fprintf(stderr, "failed initializing skybox rendering method\n");
+        return false;
+    }
 
     return true;
 }
@@ -707,8 +712,8 @@ bool splashScreen::load(const u::string &splashScreen) {
 }
 
 bool splashScreen::upload(void) {
-    if (!splashMethod::init()) {
-        fprintf(stderr, "failed to initialize splash screen rendering method\n");
+    if (!m_texture.upload()) {
+        fprintf(stderr, "failed to upload splash screen texture\n");
         return false;
     }
 
@@ -735,6 +740,11 @@ bool splashScreen::upload(void) {
 
     glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     glBufferData_(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    if (!splashMethod::init()) {
+        fprintf(stderr, "failed to initialize splash screen rendering method\n");
+        return false;
+    }
 
     return true;
 }
@@ -811,16 +821,6 @@ bool world::load(const kdMap &map) {
 }
 
 bool world::upload(const kdMap &map) {
-    if (!m_depthPrePassMethod.init()) {
-        fprintf(stderr, "failed to initialize depth prepass rendering method\n");
-        return false;
-    }
-
-    if (!m_lightMethod.init()) {
-        fprintf(stderr, "failed to initialize world lighting rendering method\n");
-        return false;
-    }
-
     if (!m_skybox.upload()) {
         fprintf(stderr, "failed to upload skybox\n");
         return false;
@@ -852,7 +852,17 @@ bool world::upload(const kdMap &map) {
 
     // upload data
     glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLushort), &*m_indices.begin(), GL_STATIC_DRAW);
+    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(uint32_t), &*m_indices.begin(), GL_STATIC_DRAW);
+
+    if (!m_depthPrePassMethod.init()) {
+        fprintf(stderr, "failed to initialize depth prepass rendering method\n");
+        return false;
+    }
+
+    if (!m_lightMethod.init()) {
+        fprintf(stderr, "failed to initialize world lighting rendering method\n");
+        return false;
+    }
 
     return true;
 }
