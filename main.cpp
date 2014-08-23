@@ -57,13 +57,6 @@ static SDL_Window *initSDL(void) {
     return window;
 }
 
-uint32_t getTicks() {
-    static uint32_t base = 0;
-    if (base == 0)
-        base = SDL_GetTicks();
-    return SDL_GetTicks() - base;
-}
-
 int main(void) {
     SDL_Window *gScreen;
     gScreen = initSDL();
@@ -115,7 +108,7 @@ int main(void) {
     uint32_t fpsTime;
     uint32_t fpsCounter = 0;
 
-    uint32_t curTime = getTicks();
+    uint32_t curTime = SDL_GetTicks();
     oldTime = curTime;
     fpsTime = curTime;
     while (true) {
@@ -152,10 +145,13 @@ int main(void) {
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
                 case SDL_QUIT:
+                    SDL_Quit();
                     return 0;
                 case SDL_KEYDOWN:
-                    if (e.key.keysym.sym == SDLK_ESCAPE)
+                    if (e.key.keysym.sym == SDLK_ESCAPE) {
+                        SDL_Quit();
                         return 0;
+                    }
                     if (e.key.keysym.sym == SDLK_F8)
                         screenShot("screenshot.bmp");
                     getKeyState(e.key.keysym.sym, true);

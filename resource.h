@@ -18,8 +18,10 @@ struct resourceManager {
             return m_resources[key];
         }
         T *resource = new T;
-        if (!resource->load(key))
+        if (!resource->load(key)) {
+            delete resource;
             return nullptr;
+        }
         m_resources[key] = resource;
         m_loaded++;
         return m_resources[key];
