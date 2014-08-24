@@ -50,7 +50,6 @@ static bool loadThread(void *threadData) {
     if (!data->gWorld.load(data->gMap))
         return false;
 
-    SDL_Delay(3500); // Temporary
     SDL_AtomicSet(&data->done, 1);
 
     return true;

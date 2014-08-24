@@ -631,7 +631,7 @@ bool skybox::upload(void) {
         1.0,  1.0, -1.0,
     };
 
-    GLushort indices[] = { 0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1 };
+    GLubyte indices[] = { 0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1 };
 
     // create vao to encapsulate state
     glGenVertexArrays_(1, &m_vao);
@@ -694,13 +694,11 @@ void skybox::render(const rendererPipeline &pipeline) {
     setTextureUnit(0);
 
     glBindVertexArray_(m_vao);
-    glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_SHORT, (void *)0);
+    glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_BYTE, (void *)0);
 
     glCullFace(faceMode);
     glDepthFunc(depthMode);
     glEnable(GL_BLEND);
-
-    glUseProgram_(0);
 }
 
 ///! Splash Screen Renderer
@@ -736,7 +734,7 @@ bool splashScreen::upload(void) {
         -1.0f,-1.0f, 0.0f, 0.0f,  0.0f,
     };
 
-    GLushort indices[] = { 0, 1, 2, 2, 1, 3 };
+    GLubyte indices[] = { 0, 1, 2, 2, 1, 3 };
 
     glBufferData_(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)0); // position
@@ -767,7 +765,7 @@ void splashScreen::render(float dt) {
     m_texture.bind(GL_TEXTURE0);
 
     glBindVertexArray_(m_vao);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -886,11 +884,7 @@ void world::draw(const rendererPipeline &pipeline) {
 
     // render geometry only
     glBindVertexArray_(m_vao);
-    for (size_t i = 0; i < m_textureBatches.size(); i++) {
-        glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
-            (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
-    }
-    glBindVertexArray_(0);
+    glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, (const GLvoid*)0);
 
     // normal pass
     glColorMask(1.0f, 1.0f, 1.0f, 1.0f);
@@ -948,14 +942,13 @@ void world::render(const rendererPipeline &pipeline) {
     m_lightMethod.setMatSpecIntensity(2.0f);
     m_lightMethod.setMatSpecPower(200.0f);
 
-    glBindVertexArray_(m_vao);
-    for (size_t i = 0; i < m_textureBatches.size(); i++) {
-        m_textureBatches[i].diffuse->bind(GL_TEXTURE0);
-        m_textureBatches[i].normal->bind(GL_TEXTURE1);
-        glDrawElements(GL_TRIANGLES, m_textureBatches[i].count, GL_UNSIGNED_INT,
-            (const GLvoid*)(sizeof(uint32_t) * m_textureBatches[i].start));
+    // vao already bound by world::draw
+    for (auto &it : m_textureBatches) {
+        it.diffuse->bind(GL_TEXTURE0);
+        it.normal->bind(GL_TEXTURE1);
+        glDrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
+            (const GLvoid*)(sizeof(uint32_t) * it.start));
     }
-    glBindVertexArray_(0);
 
     m_skybox.render(skyPipeline);
 }
