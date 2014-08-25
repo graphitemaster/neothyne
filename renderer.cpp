@@ -81,8 +81,7 @@ const m::mat4 &rendererPipeline::getWorldTransform(void) {
     return m_worldTransform;
 }
 
-const m::mat4 &rendererPipeline::getWVPTransform(void) {
-    getWorldTransform();
+const m::mat4 &rendererPipeline::getVPTransform(void) {
     m::mat4 translate, rotate, perspective;
     translate.setTranslateTrans(-m_camera.position.x, -m_camera.position.y, -m_camera.position.z);
     rotate.setCameraTrans(m_camera.target, m_camera.up);
@@ -93,7 +92,15 @@ const m::mat4 &rendererPipeline::getWVPTransform(void) {
         m_perspectiveProjection.near,
         m_perspectiveProjection.far);
 
-    m_WVPTransform = perspective * rotate * translate * m_worldTransform;
+    m_VPTransform = perspective * rotate * translate;
+    return m_VPTransform;
+}
+
+const m::mat4 &rendererPipeline::getWVPTransform(void) {
+    getWorldTransform();
+    getVPTransform();
+
+    m_WVPTransform = m_VPTransform * m_worldTransform;
     return m_WVPTransform;
 }
 
@@ -251,7 +258,8 @@ void texture3D::bind(GLenum unit) {
 method::method(void) :
     m_program(0),
     m_vertexSource("#version 330 core\n"),
-    m_fragmentSource("#version 330 core\n")
+    m_fragmentSource("#version 330 core\n"),
+    m_geometrySource("#version 330 core\n")
 {
 
 }
@@ -280,6 +288,10 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
         case GL_FRAGMENT_SHADER:
             preludeLength = m_fragmentSource.size();
             shaderSource = &m_fragmentSource;
+            break;
+        case GL_GEOMETRY_SHADER:
+            preludeLength = m_geometrySource.size();
+            shaderSource = &m_geometrySource;
             break;
     }
 
@@ -365,6 +377,11 @@ void method::addVertexPrelude(const u::string &prelude) {
 void method::addFragmentPrelude(const u::string &prelude) {
     m_fragmentSource += prelude;
     m_fragmentSource += "\n";
+}
+
+void method::addGeometryPrelude(const u::string &prelude) {
+    m_geometrySource += prelude;
+    m_geometrySource += "\n";
 }
 
 //// Rendering methods:
@@ -596,6 +613,47 @@ void depthPrePassMethod::setWVP(const m::mat4 &wvp) {
     glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
 }
 
+///! Billboard Rendering Method
+bool billboardMethod::init(void) {
+    if (!method::init())
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/billboard.vs"))
+        return false;
+
+    if (!addShader(GL_GEOMETRY_SHADER, "shaders/billboard.gs"))
+        return false;
+
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/billboard.fs"))
+        return false;
+
+    if (!finalize())
+        return false;
+
+    m_VPLocation = getUniformLocation("gVP");
+    m_cameraPositionLocation = getUniformLocation("gCameraPosition");
+    m_colorMapLocation = getUniformLocation("gColorMap");
+    m_sizeLocation = getUniformLocation("gSize");
+
+    return true;
+}
+
+void billboardMethod::setVP(const m::mat4 &vp) {
+    glUniformMatrix4fv_(m_VPLocation, 1, GL_TRUE, (const GLfloat*)vp.m);
+}
+
+void billboardMethod::setCamera(const m::vec3 &cameraPosition) {
+    glUniform3fv_(m_cameraPositionLocation, 1, &cameraPosition.x);
+}
+
+void billboardMethod::setTextureUnit(int unit) {
+    glUniform1i_(m_colorMapLocation, unit);
+}
+
+void billboardMethod::setSize(float width, float height) {
+    glUniform2f_(m_sizeLocation, width, height);
+}
+
 //// Renderers:
 
 ///! Skybox Renderer
@@ -685,20 +743,18 @@ void skybox::render(const rendererPipeline &pipeline) {
     setWorld(worldPipeline.getWorldTransform());
 
     // render skybox cube
-
-    glDisable(GL_BLEND);
     glCullFace(GL_FRONT);
     glDepthFunc(GL_LEQUAL);
 
-    m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
     setTextureUnit(0);
+    m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
 
     glBindVertexArray_(m_vao);
     glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_BYTE, (void *)0);
+    glBindVertexArray_(0);
 
     glCullFace(faceMode);
     glDepthFunc(depthMode);
-    glEnable(GL_BLEND);
 }
 
 ///! Splash Screen Renderer
@@ -769,6 +825,62 @@ void splashScreen::render(float dt) {
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
+
+    glUseProgram_(0);
+}
+
+///! Billboard Renderer
+billboard::billboard() {
+
+}
+
+billboard::~billboard() {
+    glDeleteBuffers_(1, &m_vbo);
+    glDeleteVertexArrays_(1, &m_vao);
+}
+
+bool billboard::load(const u::string &billboardTexture) {
+    if (!m_texture.load(billboardTexture))
+        return false;
+    return true;
+}
+
+bool billboard::upload(void) {
+    if (!m_texture.upload())
+        return false;
+
+    glGenVertexArrays_(1, &m_vao);
+    glBindVertexArray_(m_vao);
+
+    glGenBuffers_(1, &m_vbo);
+    glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData_(GL_ARRAY_BUFFER, sizeof(m::vec3) * m_positions.size(), &*m_positions.begin(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    glEnableVertexAttribArray_(0);
+
+    return init();
+}
+
+void billboard::render(const rendererPipeline &pipeline) {
+    rendererPipeline p = pipeline;
+
+    enable();
+
+    setCamera(p.getPosition());
+    setVP(p.getVPTransform());
+    setSize(16, 16);
+
+    setTextureUnit(0);
+    m_texture.bind(GL_TEXTURE0);
+
+    glBindVertexArray_(m_vao);
+    glDrawArrays(GL_POINTS, 0, m_positions.size());
+    glBindVertexArray_(0);
+}
+
+void billboard::add(const m::vec3 &position) {
+    m_positions.push_back(position);
 }
 
 ///! World Renderer
@@ -777,6 +889,33 @@ world::world(void) {
     m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
     m_directionalLight.ambient = 0.90f;
     m_directionalLight.diffuse = 0.75f;
+
+    billboard b1;
+
+    b1.add(m::vec3(153.04, 105.02, 197.67));
+    b1.add(m::vec3(-64.14, 105.02, 328.36));
+    b1.add(m::vec3(-279.83, 105.02, 204.61));
+    b1.add(m::vec3(-458.72, 101.02, 189.58));
+    b1.add(m::vec3(-664.53, 75.02, -1.75));
+    b1.add(m::vec3(-580.69, 68.02, -184.89));
+    b1.add(m::vec3(-104.43, 84.02, -292.99));
+    b1.add(m::vec3(-23.59, 84.02, -292.40));
+    b1.add(m::vec3(333.00, 101.02, 194.46));
+    b1.add(m::vec3(167.13, 101.02, 0.32));
+    b1.add(m::vec3(-63.36, 37.20, 2.30));
+    b1.add(m::vec3(459.97, 68.02, -181.60));
+    b1.add(m::vec3(536.75, 75.01, 2.80));
+    b1.add(m::vec3(-4.61, 117.02, -91.74));
+    b1.add(m::vec3(-2.33, 117.02, 86.34));
+    b1.add(m::vec3(-122.92, 117.02, 84.58));
+    b1.add(m::vec3(-123.44, 117.02, -86.57));
+    b1.add(m::vec3(-300.24, 101.02, -0.15));
+    b1.add(m::vec3(-448.34, 101.02, -156.27));
+    b1.add(m::vec3(-452.94, 101.02, 23.58));
+    b1.add(m::vec3(-206.59, 101.02, -209.52));
+    b1.add(m::vec3(62.59, 101.02, -207.53));
+
+    m_billboards.push_back(b1);
 }
 
 world::~world(void) {
@@ -785,9 +924,18 @@ world::~world(void) {
 }
 
 bool world::load(const kdMap &map) {
+    // load skybox
     if (!m_skybox.load("textures/sky01")) {
         fprintf(stderr, "failed to load skybox\n");
         return false;
+    }
+
+    // load billboards
+    for (auto &it : m_billboards) {
+        if (!it.load("textures/railgun.png")) {
+            fprintf(stderr, "failed to load billboards\n");
+            return false;
+        }
     }
 
     // make rendering batches for triangles which share the same texture
@@ -826,9 +974,18 @@ bool world::load(const kdMap &map) {
 }
 
 bool world::upload(const kdMap &map) {
+    // upload skybox
     if (!m_skybox.upload()) {
         fprintf(stderr, "failed to upload skybox\n");
         return false;
+    }
+
+    // upload billboards
+    for (auto &it : m_billboards) {
+        if (!it.upload()) {
+            fprintf(stderr, "failed to upload billboard\n");
+            return false;
+        }
     }
 
     // upload textures
@@ -873,38 +1030,40 @@ bool world::upload(const kdMap &map) {
 }
 
 void world::draw(const rendererPipeline &pipeline) {
-    rendererPipeline depthPrePassPipeline = pipeline;
+    rendererPipeline p = pipeline;
 
     // Z prepass
-    glColorMask(0.0f, 0.0f, 0.0f, 0.0f);
     glDepthFunc(GL_LESS);
+    glColorMask(0.0f, 0.0f, 0.0f, 0.0f);
+    glDepthMask(GL_TRUE);
 
     m_depthPrePassMethod.enable();
-    m_depthPrePassMethod.setWVP(depthPrePassPipeline.getWVPTransform());
+    m_depthPrePassMethod.setWVP(p.getWVPTransform());
 
     // render geometry only
     glBindVertexArray_(m_vao);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, (const GLvoid*)0);
+    glBindVertexArray_(0);
 
     // normal pass
+    glDepthFunc(GL_LEQUAL);
     glColorMask(1.0f, 1.0f, 1.0f, 1.0f);
     glDepthMask(GL_FALSE);
-    glDepthFunc(GL_LEQUAL);
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     render(pipeline);
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+    // needs to be enabled to clear the depth buffer bit
     glDepthMask(GL_TRUE);
 }
 
 void world::render(const rendererPipeline &pipeline) {
-    rendererPipeline worldPipeline = pipeline;
-    rendererPipeline skyPipeline = pipeline;
+    rendererPipeline p = pipeline;
 
-    const m::mat4 wvp = worldPipeline.getWVPTransform();
-    const m::mat4 worldTransform = worldPipeline.getWorldTransform();
-    const m::vec3 &pos = worldPipeline.getPosition();
+    const m::mat4 wvp = p.getWVPTransform();
+    const m::mat4 worldTransform = p.getWorldTransform();
+    const m::vec3 &pos = p.getPosition();
 
     m_lightMethod.enable();
     m_lightMethod.setTextureUnit(0);
@@ -942,15 +1101,20 @@ void world::render(const rendererPipeline &pipeline) {
     m_lightMethod.setMatSpecIntensity(2.0f);
     m_lightMethod.setMatSpecPower(200.0f);
 
-    // vao already bound by world::draw
+    glBindVertexArray_(m_vao);
     for (auto &it : m_textureBatches) {
         it.diffuse->bind(GL_TEXTURE0);
         it.normal->bind(GL_TEXTURE1);
         glDrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(uint32_t) * it.start));
     }
+    glBindVertexArray_(0);
 
-    m_skybox.render(skyPipeline);
+    m_skybox.render(p);
+
+    // render billboards
+    for (auto &it : m_billboards)
+        it.render(p);
 }
 
 //// Miscellaneous

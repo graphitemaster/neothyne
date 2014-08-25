@@ -26,6 +26,7 @@ struct rendererPipeline {
     void setCamera(const m::vec3 &position, const m::vec3 &target, const m::vec3 &up);
     const m::mat4 &getWorldTransform(void);
     const m::mat4 &getWVPTransform(void);
+    const m::mat4 &getVPTransform(void);
 
     // camera accessors.
     const m::vec3 &getPosition(void) const;
@@ -50,6 +51,7 @@ private:
 
     m::mat4 m_worldTransform;
     m::mat4 m_WVPTransform;
+    m::mat4 m_VPTransform;
 };
 
 // inherit when writing a rendering method
@@ -63,8 +65,11 @@ struct method {
 
 protected:
     bool addShader(GLenum shaderType, const char *shaderText);
+
     void addVertexPrelude(const u::string &prelude);
     void addFragmentPrelude(const u::string &prelude);
+    void addGeometryPrelude(const u::string &prelude);
+
     bool finalize(void);
 
     GLint getUniformLocation(const char *name);
@@ -74,6 +79,7 @@ private:
     GLuint m_program;
     u::string m_vertexSource;
     u::string m_fragmentSource;
+    u::string m_geometrySource;
     u::list<GLuint> m_shaders;
 };
 
@@ -248,6 +254,22 @@ private:
     GLint m_WVPLocation;
 };
 
+/// billboard rendering method
+struct billboardMethod : method {
+    virtual bool init(void);
+
+    void setVP(const m::mat4 &vp);
+    void setCamera(const m::vec3 &position);
+    void setTextureUnit(int unit);
+    void setSize(float width, float height);
+
+private:
+    GLuint m_VPLocation;
+    GLuint m_cameraPositionLocation;
+    GLuint m_colorMapLocation;
+    GLuint m_sizeLocation;
+};
+
 /// splash screen renderer
 struct splashScreen : splashMethod {
     ~splashScreen();
@@ -266,6 +288,26 @@ private:
         GLuint m_buffers[2];
     };
     GLuint m_vao;
+    texture2D m_texture;
+};
+
+/// billboard renderer
+struct billboard : billboardMethod {
+    billboard();
+    ~billboard();
+
+    bool load(const u::string &billboardTexture);
+    bool upload(void);
+
+    void render(const rendererPipeline &pipeline);
+
+    // you must add all positions for this billboard before calling `upload'
+    void add(const m::vec3 &position);
+
+private:
+    GLuint m_vbo;
+    GLuint m_vao;
+    u::vector<m::vec3> m_positions;
     texture2D m_texture;
 };
 
@@ -330,6 +372,9 @@ private:
 
     lightMethod m_lightMethod;
     depthPrePassMethod m_depthPrePassMethod;
+
+
+    u::vector<billboard> m_billboards;
 };
 
 void initGL(void);

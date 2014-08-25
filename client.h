@@ -17,7 +17,7 @@ struct client {
 
     void update(const kdMap &map, float dt);
     void getDirection(m::vec3 *direction, m::vec3 *up, m::vec3 *side) const;
-    const m::vec3 &getPosition(void) const;
+    m::vec3 getPosition(void) const;
     void setRotation(const m::quat &rotation);
 
 private:

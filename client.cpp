@@ -188,7 +188,7 @@ void client::move(const u::vector<clientCommands> &commands) {
         }
     }
 
-    const float kClientSpeed = 40.0f; // cm/s
+    const float kClientSpeed = 60.0f; // cm/s
     const float kJumpSpeed = 130.0f; // cm/s
     const float kStopSpeed = 90.0f; // -cm/s
 
@@ -246,6 +246,7 @@ void client::getDirection(m::vec3 *direction, m::vec3 *up, m::vec3 *side) const 
     return m_rotation.getOrient(direction, up, side);
 }
 
-const m::vec3 &client::getPosition(void) const {
-    return m_origin;
+m::vec3 client::getPosition(void) const {
+    // adjust for eye height
+    return m::vec3(m_origin.x, m_origin.y + 5.5f, m_origin.z);
 }
