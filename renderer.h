@@ -371,6 +371,12 @@ struct world {
     world();
     ~world();
 
+    enum {
+        kBillboardRail,
+        kBillboardLightning,
+        kBillboardMax
+    };
+
     bool load(const kdMap &map);
     bool upload(const kdMap &map);
 

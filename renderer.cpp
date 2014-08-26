@@ -938,32 +938,44 @@ world::world(void) {
     m_directionalLight.ambient = 0.90f;
     m_directionalLight.diffuse = 0.75f;
 
-    billboard b1;
+    billboard rail;
+    billboard lightning;
 
-    b1.add(m::vec3(153.04, 105.02, 197.67));
-    b1.add(m::vec3(-64.14, 105.02, 328.36));
-    b1.add(m::vec3(-279.83, 105.02, 204.61));
-    b1.add(m::vec3(-458.72, 101.02, 189.58));
-    b1.add(m::vec3(-664.53, 75.02, -1.75));
-    b1.add(m::vec3(-580.69, 68.02, -184.89));
-    b1.add(m::vec3(-104.43, 84.02, -292.99));
-    b1.add(m::vec3(-23.59, 84.02, -292.40));
-    b1.add(m::vec3(333.00, 101.02, 194.46));
-    b1.add(m::vec3(167.13, 101.02, 0.32));
-    b1.add(m::vec3(-63.36, 37.20, 2.30));
-    b1.add(m::vec3(459.97, 68.02, -181.60));
-    b1.add(m::vec3(536.75, 75.01, 2.80));
-    b1.add(m::vec3(-4.61, 117.02, -91.74));
-    b1.add(m::vec3(-2.33, 117.02, 86.34));
-    b1.add(m::vec3(-122.92, 117.02, 84.58));
-    b1.add(m::vec3(-123.44, 117.02, -86.57));
-    b1.add(m::vec3(-300.24, 101.02, -0.15));
-    b1.add(m::vec3(-448.34, 101.02, -156.27));
-    b1.add(m::vec3(-452.94, 101.02, 23.58));
-    b1.add(m::vec3(-206.59, 101.02, -209.52));
-    b1.add(m::vec3(62.59, 101.02, -207.53));
+    const m::vec3 places[] = {
+        m::vec3(153.04, 105.02, 197.67),
+        m::vec3(-64.14, 105.02, 328.36),
+        m::vec3(-279.83, 105.02, 204.61),
+        m::vec3(-458.72, 101.02, 189.58),
+        m::vec3(-664.53, 75.02, -1.75),
+        m::vec3(-580.69, 68.02, -184.89),
+        m::vec3(-104.43, 84.02, -292.99),
+        m::vec3(-23.59, 84.02, -292.40),
+        m::vec3(333.00, 101.02, 194.46),
+        m::vec3(167.13, 101.02, 0.32),
+        m::vec3(-63.36, 37.20, 2.30),
+        m::vec3(459.97, 68.02, -181.60),
+        m::vec3(536.75, 75.01, 2.80),
+        m::vec3(-4.61, 117.02, -91.74),
+        m::vec3(-2.33, 117.02, 86.34),
+        m::vec3(-122.92, 117.02, 84.58),
+        m::vec3(-123.44, 117.02, -86.57),
+        m::vec3(-300.24, 101.02, -0.15),
+        m::vec3(-448.34, 101.02, -156.27),
+        m::vec3(-452.94, 101.02, 23.58),
+        m::vec3(-206.59, 101.02, -209.52),
+        m::vec3(62.59, 101.02, -207.53)
+    };
 
-    m_billboards.push_back(b1);
+    for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
+        switch (rand() % 2 == 0) {
+            case 0: rail.add(places[i]); break;
+            case 1: lightning.add(places[i]); break;
+        }
+    }
+
+    m_billboards.resize(kBillboardMax);
+    m_billboards[0] = rail;
+    m_billboards[1] = lightning;
 }
 
 world::~world(void) {
@@ -979,12 +991,16 @@ bool world::load(const kdMap &map) {
     }
 
     // load billboards
-    for (auto &it : m_billboards) {
-        if (!it.load("textures/railgun.png")) {
-            fprintf(stderr, "failed to load billboards\n");
-            return false;
-        }
+    if (!m_billboards[kBillboardRail].load("textures/railgun.png")) {
+        fprintf(stderr, "failed to load railgun billboard\n");
+        return false;
     }
+
+    if (!m_billboards[kBillboardLightning].load("textures/lightgun.png")) {
+        fprintf(stderr, "failed to load lightning gun billboard\n");
+        return false;
+    }
+
 
     // make rendering batches for triangles which share the same texture
     for (size_t i = 0; i < map.textures.size(); i++) {

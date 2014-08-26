@@ -161,20 +161,21 @@ void client::move(const u::vector<clientCommands> &commands) {
     m::vec3 velocity = m_velocity;
     m::vec3 direction;
     m::vec3 side;
+    m::vec3 up;
     m::vec3 newDirection(0.0f, 0.0f, 0.0f);
     m::vec3 jump(0.0f, 0.0f, 0.0f);
     m::quat rotation = m_rotation;
 
-    rotation.getOrient(&direction, nullptr, &side);
+    rotation.getOrient(&direction, &up, &side);
 
     m::vec3 upCamera;
     for (auto &it : commands) {
         switch (it) {
             case kCommandForward:
-                newDirection += direction;
+                newDirection += direction + up;
                 break;
             case kCommandBackward:
-                newDirection -= direction;
+                newDirection -= direction + up;
                 break;
             case kCommandLeft:
                 newDirection -= side;
