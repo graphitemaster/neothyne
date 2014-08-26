@@ -136,7 +136,9 @@ int main(void) {
     uint32_t curTime = SDL_GetTicks();
     oldTime = curTime;
     fpsTime = curTime;
-    while (true) {
+
+    bool running = true;
+    while (running) {
         time = SDL_GetTicks();
         float dt = 0.001f * (float)(time - oldTime);
         oldTime = time;
@@ -172,14 +174,19 @@ int main(void) {
                     SDL_Quit();
                     return 0;
                 case SDL_KEYDOWN:
-                    if (e.key.keysym.sym == SDLK_ESCAPE) {
-                        SDL_Quit();
-                        return 0;
+                    switch (e.key.keysym.sym) {
+                        case SDLK_ESCAPE:
+                            running = false;
+                            break;
+                        case SDLK_F8:
+                            screenShot("screenshot.bmp");
+                            break;
+                        case SDLK_F12:
+                            SDL_SetRelativeMouseMode(
+                                SDL_GetRelativeMouseMode() == SDL_TRUE
+                                    ? SDL_FALSE : SDL_TRUE);
+                            break;
                     }
-                    if (e.key.keysym.sym == SDLK_F8)
-                        screenShot("screenshot.bmp");
-                    if (e.key.keysym.sym == SDLK_F12)
-                        SDL_SetRelativeMouseMode((SDL_GetRelativeMouseMode() == SDL_TRUE) ? SDL_FALSE : SDL_TRUE);
                     getKeyState(e.key.keysym.sym, true);
                     break;
                 case SDL_KEYUP:
