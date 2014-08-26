@@ -1,4 +1,5 @@
 #include "math.h"
+
 namespace m {
     ///! vec3
     const vec3 vec3::xAxis(1.0f, 0.0f, 0.0f);
@@ -148,14 +149,64 @@ namespace m {
         m[3][0] = 0.0f; m[3][1] = 0.0f; m[3][2] = 0.0f; m[3][3] = 1.0f;
     }
 
-    void mat4::setPersProjTrans(float fov, float width, float height, float near, float far) {
-        const float ar = width / height;
-        const float range = near - far;
-        const float halfFov = tanf(m::toRadian(fov / 2.0f));
-        m[0][0] = 1.0f/(halfFov * ar);  m[0][1] = 0.0f;         m[0][2] = 0.0f;               m[0][3] = 0.0;
-        m[1][0] = 0.0f;                 m[1][1] = 1.0f/halfFov; m[1][2] = 0.0f;               m[1][3] = 0.0;
-        m[2][0] = 0.0f;                 m[2][1] = 0.0f;         m[2][2] = (-near -far)/range; m[2][3] = 2.0f * far*near/range;
-        m[3][0] = 0.0f;                 m[3][1] = 0.0f;         m[3][2] = 1.0f;               m[3][3] = 0.0;
+    void mat4::setCameraTrans(const vec3 &position, const quat &q) {
+        m[0][0] = 1.0f - 2.0f * (q.y * q.y + q.z*q.z);
+        m[1][0] = 2.0f * (q.x * q.y + q.w * q.z);
+        m[2][0] = 2.0f * (q.x * q.z - q.w * q.y);
+        m[0][1] = 2.0f * (q.x * q.y - q.w * q.z);
+        m[1][1] = 1.0f - 2.0f * (q.x * q.x + q.z * q.z);
+        m[2][1] = 2.0f * (q.y * q.z + q.w * q.x);
+        m[0][2] = 2.0f * (q.x * q.z + q.w * q.y);
+        m[1][2] = 2.0f * (q.y * q.z - q.w * q.x);
+        m[2][2] = 1.0f - 2.0f * (q.x * q.x + q.y * q.y);
+        m[3][0] = -(position.x * m[0][0] + position.y * m[1][0] + position.z * m[2][0]);
+        m[3][1] = -(position.x * m[0][1] + position.y * m[1][1] + position.z * m[2][1]);
+        m[3][2] = -(position.x * m[0][2] + position.y * m[1][2] + position.z * m[2][2]);
+        m[0][3] = 0.0f;
+        m[1][3] = 0.0f;
+        m[2][3] = 0.0f;
+        m[3][3] = 1.0f;
+    }
+
+    void mat4::setPersProjTrans(const perspectiveProjection &projection) {
+        const float ar = projection.width / projection.height;
+        const float range = projection.near - projection.far;
+        const float halfFov = tanf(m::toRadian(projection.fov / 2.0f));
+
+        m[0][0] = 1.0f/(halfFov * ar);
+        m[0][1] = 0.0f;
+        m[0][2] = 0.0f;
+        m[0][3] = 0.0f;
+        m[1][0] = 0.0f;
+        m[1][1] = 1.0f/halfFov;
+        m[1][2] = 0.0f;
+        m[1][3] = 0.0f;
+        m[2][0] = 0.0f;
+        m[2][1] = 0.0f;
+        m[2][2] = (-projection.near -projection.far) / range;
+        m[2][3] = 2.0f * projection.far * projection.near / range;
+        m[3][0] = 0.0f;
+        m[3][1] = 0.0f;
+        m[3][2] = 1.0f;
+        m[3][3] = 0.0f;
+    }
+
+    void mat4::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
+        if (side) {
+            side->x = m[0][0];
+            side->y = m[1][0];
+            side->z = m[2][0];
+        }
+        if (up) {
+            up->x = m[0][1];
+            up->y = m[1][1];
+            up->z = m[2][1];
+        }
+        if (direction) {
+            direction->x = m[0][2];
+            direction->y = m[1][2];
+            direction->z = m[2][2];
+        }
     }
 
     ///! quat

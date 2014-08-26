@@ -121,12 +121,12 @@ int main(void) {
     // Now render the world
     client gClient;
 
-    perspectiveProjection projection;
+    m::perspectiveProjection projection;
     projection.fov = 90.0f;
     projection.width = kScreenWidth;
     projection.height = kScreenHeight;
     projection.near = 1.0f;
-    projection.far = 4096.0f;
+    projection.far = 2048.0f;
 
     uint32_t time;
     uint32_t oldTime;
@@ -151,14 +151,13 @@ int main(void) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         gClient.update(loadData.gMap, dt);
-        m::vec3 target;
-        m::vec3 up;
-        m::vec3 side;
-        gClient.getDirection(&target, &up, &side);
 
         rendererPipeline pipeline;
-        pipeline.setWorldPosition(0.0f, 0.0f, 0.0f);
-        pipeline.setCamera(gClient.getPosition(), target, up);
+        pipeline.setWorldPosition(m::vec3(0.0f, 0.0f, 0.0f));
+
+        pipeline.setRotation(gClient.getRotation());
+        pipeline.setPosition(gClient.getPosition());
+
         pipeline.setPerspectiveProjection(projection);
 
         loadData.gWorld.draw(pipeline);

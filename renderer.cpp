@@ -49,26 +49,23 @@ rendererPipeline::rendererPipeline(void) :
     //
 }
 
-void rendererPipeline::setScale(float scaleX, float scaleY, float scaleZ) {
-    m_scale = m::vec3(scaleX, scaleY, scaleZ);
+void rendererPipeline::setScale(const m::vec3 &scale) {
+    m_scale = scale;
 }
-
-void rendererPipeline::setWorldPosition(float x, float y, float z) {
-    m_worldPosition = m::vec3(x, y, z);
+void rendererPipeline::setWorldPosition(const m::vec3 &worldPosition) {
+    m_worldPosition = worldPosition;
 }
-
-void rendererPipeline::setRotate(float rotateX, float rotateY, float rotateZ) {
-    m_rotate = m::vec3(rotateX, rotateY, rotateZ);
+void rendererPipeline::setRotate(const m::vec3 &rotate) {
+    m_rotate = rotate;
 }
-
-void rendererPipeline::setPerspectiveProjection(const perspectiveProjection &projection) {
+void rendererPipeline::setRotation(const m::quat &rotation) {
+    m_rotation = rotation;
+}
+void rendererPipeline::setPosition(const m::vec3 &position) {
+    m_position = position;
+}
+void rendererPipeline::setPerspectiveProjection(const m::perspectiveProjection &projection) {
     m_perspectiveProjection = projection;
-}
-
-void rendererPipeline::setCamera(const m::vec3 &position, const m::vec3 &target, const m::vec3 &up) {
-    m_camera.position = position;
-    m_camera.target = target;
-    m_camera.up = up;
 }
 
 const m::mat4 &rendererPipeline::getWorldTransform(void) {
@@ -83,15 +80,9 @@ const m::mat4 &rendererPipeline::getWorldTransform(void) {
 
 const m::mat4 &rendererPipeline::getVPTransform(void) {
     m::mat4 translate, rotate, perspective;
-    translate.setTranslateTrans(-m_camera.position.x, -m_camera.position.y, -m_camera.position.z);
-    rotate.setCameraTrans(m_camera.target, m_camera.up);
-    perspective.setPersProjTrans(
-        m_perspectiveProjection.fov,
-        m_perspectiveProjection.width,
-        m_perspectiveProjection.height,
-        m_perspectiveProjection.near,
-        m_perspectiveProjection.far);
-
+    translate.setTranslateTrans(-m_position.x, -m_position.y, -m_position.z);
+    rotate.setCameraTrans(getTarget(), getUp());
+    perspective.setPersProjTrans(getPerspectiveProjection());
     m_VPTransform = perspective * rotate * translate;
     return m_VPTransform;
 }
@@ -104,20 +95,26 @@ const m::mat4 &rendererPipeline::getWVPTransform(void) {
     return m_WVPTransform;
 }
 
-const perspectiveProjection &rendererPipeline::getPerspectiveProjection(void) const {
+const m::perspectiveProjection &rendererPipeline::getPerspectiveProjection(void) const {
     return m_perspectiveProjection;
 }
 
+const m::vec3 rendererPipeline::getTarget(void) const {
+    m::vec3 target;
+    m_rotation.getOrient(&target, nullptr, nullptr);
+    return target;
+}
+const m::vec3 rendererPipeline::getUp(void) const {
+    m::vec3 up;
+    m_rotation.getOrient(nullptr, &up, nullptr);
+    return up;
+}
+
 const m::vec3 &rendererPipeline::getPosition(void) const {
-    return m_camera.position;
+    return m_position;
 }
-
-const m::vec3 &rendererPipeline::getTarget(void) const {
-    return m_camera.target;
-}
-
-const m::vec3 &rendererPipeline::getUp(void) const {
-    return m_camera.up;
+const m::quat &rendererPipeline::getRotation(void) const {
+    return m_rotation;
 }
 
 ///! textures (2D and 3D)
@@ -779,19 +776,12 @@ void skybox::render(const rendererPipeline &pipeline) {
 
     rendererPipeline worldPipeline = pipeline;
 
-    // get camera position, target and up vectors
-    const m::vec3 &position = pipeline.getPosition();
-    const m::vec3 &target = pipeline.getTarget();
-    const m::vec3 &up = pipeline.getUp();
-
-    // inherit the perspective projection as well
-    const perspectiveProjection projection = pipeline.getPerspectiveProjection();
-
     rendererPipeline p;
-    p.setRotate(0.0f, 0.0f, 0.0f);
-    p.setWorldPosition(position.x, position.y, position.z);
-    p.setCamera(position, target, up);
-    p.setPerspectiveProjection(projection);
+    p.setRotate(m::vec3(0.0f, 0.0f, 0.0f));
+    p.setWorldPosition(pipeline.getPosition());
+    p.setPosition(pipeline.getPosition());
+    p.setRotation(pipeline.getRotation());
+    p.setPerspectiveProjection(pipeline.getPerspectiveProjection());
 
     setWVP(p.getWVPTransform());
     setWorld(worldPipeline.getWorldTransform());
@@ -930,7 +920,9 @@ void billboard::render(const rendererPipeline &pipeline) {
 
     glDepthMask(GL_TRUE);
     glBindVertexArray_(m_vao);
+
     glDrawArrays(GL_POINTS, 0, m_positions.size());
+
     glBindVertexArray_(0);
     glDepthMask(GL_FALSE);
 }
@@ -1117,10 +1109,6 @@ void world::draw(const rendererPipeline &pipeline) {
 void world::render(const rendererPipeline &pipeline) {
     rendererPipeline p = pipeline;
 
-    const m::mat4 wvp = p.getWVPTransform();
-    const m::mat4 worldTransform = p.getWorldTransform();
-    const m::vec3 &pos = p.getPosition();
-
     m_lightMethod.enable();
     m_lightMethod.setTextureUnit(0);
     m_lightMethod.setNormalUnit(1);
@@ -1141,10 +1129,10 @@ void world::render(const rendererPipeline &pipeline) {
     m_lightMethod.setPointLights(m_pointLights);
     m_lightMethod.setSpotLights(m_spotLights);
 
-    m_lightMethod.setWVP(wvp);
-    m_lightMethod.setWorld(worldTransform);
+    m_lightMethod.setWVP(p.getWVPTransform());
+    m_lightMethod.setWorld(p.getWorldTransform());
 
-    m_lightMethod.setEyeWorldPos(pos);
+    m_lightMethod.setEyeWorldPos(p.getPosition());
     m_lightMethod.setMatSpecIntensity(2.0f);
     m_lightMethod.setMatSpecPower(200.0f);
 

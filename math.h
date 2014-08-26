@@ -16,6 +16,12 @@ namespace m {
     inline float toRadian(float x) { return x * kDegToRad; }
     inline float toDegree(float x) { return x * kRadToDeg; }
 
+    inline float angleMod(float angle) {
+        static const float f = 65536.0f / 360.0f;
+        static const float i = 360.0f / 65536.0f;
+        return i * ((int)(angle * f) & 65535);
+    }
+
     template <typename T>
     inline T clamp(const T& current, const T &min, const T &max) {
         return (current > max) ? max : ((current < min) ? min : current);
@@ -25,6 +31,14 @@ namespace m {
         kAxisX,
         kAxisY,
         kAxisZ
+    };
+
+    struct perspectiveProjection {
+        float fov;
+        float width;
+        float height;
+        float near;
+        float far;
     };
 
     ///! vec3
@@ -369,7 +383,9 @@ namespace m {
         void setRotateTrans(float rotateX, float rotateY, float rotateZ);
         void setTranslateTrans(float x, float y, float z);
         void setCameraTrans(const vec3 &target, const vec3 &up);
-        void setPersProjTrans(float fov, float width, float height, float near, float far);
+        void setCameraTrans(const vec3 &position, const quat &q);
+        void setPersProjTrans(const perspectiveProjection &projection);
+        void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
     };
 }
 #endif

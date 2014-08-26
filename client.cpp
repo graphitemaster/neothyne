@@ -221,6 +221,7 @@ void client::inputMouseMove(void) {
     m_mouseLat = m::clamp(m_mouseLat, -89.0f, 89.0f);
 
     m_mouseLon -= (float)deltaX * kSensitivity * invert;
+    m_mouseLon = m::angleMod(m_mouseLon);
 
     m::quat qlat(m::vec3::xAxis, m_mouseLat * m::kDegToRad);
     m::quat qlon(m::vec3::yAxis, m_mouseLon * m::kDegToRad);
@@ -244,6 +245,10 @@ void client::setRotation(const m::quat &rotation) {
 
 void client::getDirection(m::vec3 *direction, m::vec3 *up, m::vec3 *side) const {
     return m_rotation.getOrient(direction, up, side);
+}
+
+const m::quat &client::getRotation(void) const {
+    return m_rotation;
 }
 
 m::vec3 client::getPosition(void) const {

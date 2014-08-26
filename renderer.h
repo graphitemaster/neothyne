@@ -8,50 +8,44 @@
 #include "resource.h"
 #include "texture.h"
 
-struct perspectiveProjection {
-    float fov;
-    float width;
-    float height;
-    float near;
-    float far;
-};
-
 struct rendererPipeline {
     rendererPipeline(void);
 
-    void setScale(float scaleX, float scaleY, float scaleZ);
-    void setWorldPosition(float x, float y, float z);
-    void setRotate(float rotateX, float rotateY, float rotateZ);
-    void setPerspectiveProjection(const perspectiveProjection &projection);
-    void setCamera(const m::vec3 &position, const m::vec3 &target, const m::vec3 &up);
+    void setScale(const m::vec3 &scale);
+    void setWorldPosition(const m::vec3 &worldPosition);
+
+    void setRotate(const m::vec3 &rotate);
+
+    void setPosition(const m::vec3 &position);
+    void setRotation(const m::quat &rotation);
+
+    void setPerspectiveProjection(const m::perspectiveProjection &projection);
+
     const m::mat4 &getWorldTransform(void);
     const m::mat4 &getWVPTransform(void);
     const m::mat4 &getVPTransform(void);
 
     // camera accessors.
     const m::vec3 &getPosition(void) const;
-    const m::vec3 &getTarget(void) const;
-    const m::vec3 &getUp(void) const;
+    const m::vec3 getTarget(void) const;
+    const m::vec3 getUp(void) const;
+    const m::quat &getRotation(void) const;
 
-    const perspectiveProjection &getPerspectiveProjection(void) const;
+    const m::perspectiveProjection &getPerspectiveProjection(void) const;
 
 private:
+    m::perspectiveProjection m_perspectiveProjection;
 
     m::vec3 m_scale;
     m::vec3 m_worldPosition;
     m::vec3 m_rotate;
-
-    perspectiveProjection m_perspectiveProjection;
-
-    struct {
-        m::vec3 position;
-        m::vec3 target;
-        m::vec3 up;
-    } m_camera;
+    m::vec3 m_position;
 
     m::mat4 m_worldTransform;
     m::mat4 m_WVPTransform;
     m::mat4 m_VPTransform;
+
+    m::quat m_rotation;
 };
 
 // inherit when writing a rendering method
@@ -405,7 +399,6 @@ private:
 
     lightMethod m_lightMethod;
     depthPrePassMethod m_depthPrePassMethod;
-
 
     u::vector<billboard> m_billboards;
 };

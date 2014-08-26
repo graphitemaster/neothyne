@@ -19,6 +19,7 @@ struct client {
     void getDirection(m::vec3 *direction, m::vec3 *up, m::vec3 *side) const;
     m::vec3 getPosition(void) const;
     void setRotation(const m::quat &rotation);
+    const m::quat &getRotation(void) const;
 
 private:
     void inputMouseMove(void);
