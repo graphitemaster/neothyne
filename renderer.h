@@ -107,6 +107,7 @@ struct texture3D {
               const u::string &dn, const u::string &rt, const u::string &lf);
     bool upload(void);
     void bind(GLenum unit);
+    void resize(size_t width, size_t height);
 
 private:
     bool m_uploaded;

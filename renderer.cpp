@@ -258,6 +258,11 @@ void texture3D::bind(GLenum unit) {
     glBindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
 }
 
+void texture3D::resize(size_t width, size_t height) {
+    for (size_t i = 0; i < 6; i++)
+        m_textures[i].resize(width, height);
+}
+
 ///! A rendering method
 method::method(void) :
     m_program(0),
@@ -923,9 +928,11 @@ void billboard::render(const rendererPipeline &pipeline) {
     setTextureUnit(0);
     m_texture.bind(GL_TEXTURE0);
 
+    glDepthMask(GL_TRUE);
     glBindVertexArray_(m_vao);
     glDrawArrays(GL_POINTS, 0, m_positions.size());
     glBindVertexArray_(0);
+    glDepthMask(GL_FALSE);
 }
 
 void billboard::add(const m::vec3 &position) {
