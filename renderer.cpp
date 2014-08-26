@@ -397,6 +397,7 @@ bool lightMethod::init(void) {
         return false;
 
     addFragmentPrelude(u::format("const int kMaxPointLights = %zu;", kMaxPointLights));
+    addFragmentPrelude(u::format("const int kMaxSpotLights = %zu;", kMaxSpotLights));
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/light.vs"))
         return false;
@@ -440,6 +441,30 @@ bool lightMethod::init(void) {
         m_pointLights[i].attenuation.linearLocation = getUniformLocation(linear);
         m_pointLights[i].attenuation.expLocation = getUniformLocation(exp);
         m_pointLights[i].positionLocation = getUniformLocation(position);
+    }
+
+    // spot lights
+    m_numSpotLightsLocation = getUniformLocation("gNumSpotLights");
+    for (size_t i = 0; i < kMaxSpotLights; i++) {
+        u::string color = u::format("gSpotLights[%zu].base.base.color", i);
+        u::string ambient = u::format("gSpotLights[%zu].base.base.ambient", i);
+        u::string diffuse = u::format("gSpotLights[%zu].base.base.diffuse", i);
+        u::string constant = u::format("gSpotLights[%zu].base.attenuation.constant", i);
+        u::string linear = u::format("gSpotLights[%zu].base.attenuation.linear", i);
+        u::string exp = u::format("gSpotLights[%zu].base.attenuation.exp", i);
+        u::string position = u::format("gSpotLights[%zu].base.position", i);
+        u::string direction = u::format("gSpotLights[%zu].direction", i);
+        u::string cutOff = u::format("gSpotLights[%zu].cutOff", i);
+
+        m_spotLights[i].colorLocation = getUniformLocation(color);
+        m_spotLights[i].ambientLocation = getUniformLocation(ambient);
+        m_spotLights[i].diffuseLocation = getUniformLocation(diffuse);
+        m_spotLights[i].attenuation.constantLocation = getUniformLocation(constant);
+        m_spotLights[i].attenuation.linearLocation = getUniformLocation(linear);
+        m_spotLights[i].attenuation.expLocation = getUniformLocation(exp);
+        m_spotLights[i].positionLocation = getUniformLocation(position);
+        m_spotLights[i].directionLocation = getUniformLocation(direction);
+        m_spotLights[i].cutOffLocation = getUniformLocation(cutOff);
     }
 
     // fog
@@ -493,6 +518,26 @@ void lightMethod::setPointLights(u::vector<pointLight> &lights) {
         glUniform1f_(m_pointLights[i].attenuation.constantLocation, lights[i].attenuation.constant);
         glUniform1f_(m_pointLights[i].attenuation.linearLocation, lights[i].attenuation.linear);
         glUniform1f_(m_pointLights[i].attenuation.expLocation, lights[i].attenuation.exp);
+    }
+}
+
+void lightMethod::setSpotLights(u::vector<spotLight> &lights) {
+    if (lights.size() > kMaxSpotLights)
+        lights.resize(kMaxSpotLights);
+
+    glUniform1i_(m_numSpotLightsLocation, lights.size());
+
+    for (size_t i = 0; i < lights.size(); i++) {
+        m::vec3 direction = lights[i].direction.normalized();
+        glUniform3fv_(m_spotLights[i].colorLocation, 1, &lights[i].color.x);
+        glUniform3fv_(m_spotLights[i].positionLocation, 1, &lights[i].position.x);
+        glUniform3fv_(m_spotLights[i].directionLocation, 1, &direction.x);
+        glUniform1f_(m_spotLights[i].cutOffLocation, cosf(m::toRadian(lights[i].cutOff)));
+        glUniform1f_(m_spotLights[i].ambientLocation, lights[i].ambient);
+        glUniform1f_(m_spotLights[i].diffuseLocation, lights[i].diffuse);
+        glUniform1f_(m_spotLights[i].attenuation.constantLocation, lights[i].attenuation.constant);
+        glUniform1f_(m_spotLights[i].attenuation.linearLocation, lights[i].attenuation.linear);
+        glUniform1f_(m_spotLights[i].attenuation.expLocation, lights[i].attenuation.exp);
     }
 }
 
@@ -1080,19 +1125,10 @@ void world::render(const rendererPipeline &pipeline) {
     //setFogDistance(110.0f, 470.0f);
     //setFogType(kFogLinear);
 
-    m_pointLights.clear();
-    pointLight pl;
-    pl.diffuse = 0.75f;
-    pl.ambient = 0.45f;
-    pl.color = m::vec3(1.0f, 0.0f, 0.0f);
-    pl.position = pos;
-    pl.attenuation.linear = 0.1f;
-
-    m_pointLights.push_back(pl);
-
     m_lightMethod.setDirectionalLight(m_directionalLight);
 
     m_lightMethod.setPointLights(m_pointLights);
+    m_lightMethod.setSpotLights(m_spotLights);
 
     m_lightMethod.setWVP(wvp);
     m_lightMethod.setWorld(worldTransform);

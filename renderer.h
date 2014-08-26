@@ -142,6 +142,15 @@ struct pointLight : baseLight {
     } attenuation;
 };
 
+// a spot light
+struct spotLight : pointLight {
+    spotLight() :
+        cutOff(0.0f)
+    { }
+    m::vec3 direction;
+    float cutOff;
+};
+
 enum fogType {
     kFogNone,
     kFogLinear,
@@ -155,14 +164,20 @@ struct lightMethod : method {
 
     virtual bool init(void);
 
-    static constexpr size_t kMaxPointLights = 20;
+    static constexpr size_t kMaxPointLights = 5;
+    static constexpr size_t kMaxSpotLights = 5;
 
     void setWVP(const m::mat4 &wvp);
     void setWorld(const m::mat4 &wvp);
     void setTextureUnit(int unit);
     void setNormalUnit(int unit);
+
+    // lighting
     void setDirectionalLight(const directionalLight &light);
     void setPointLights(u::vector<pointLight> &pointLights);
+    void setSpotLights(u::vector<spotLight> &spotLights);
+
+    // specularity
     void setEyeWorldPos(const m::vec3 &eyeWorldPos);
     void setMatSpecIntensity(float intensity);
     void setMatSpecPower(float power);
@@ -205,6 +220,20 @@ private:
     } m_pointLights[kMaxPointLights];
 
     struct {
+        GLint colorLocation;
+        GLint positionLocation;
+        GLint ambientLocation;
+        GLint diffuseLocation;
+        GLint directionLocation;
+        GLint cutOffLocation;
+        struct {
+            GLint constantLocation;
+            GLint linearLocation;
+            GLint expLocation;
+        } attenuation;
+    } m_spotLights[kMaxSpotLights];
+
+    struct {
         GLuint densityLocation;
         GLuint colorLocation;
         GLuint startLocation;
@@ -213,6 +242,7 @@ private:
     } m_fog;
 
     GLint m_numPointLightsLocation;
+    GLint m_numSpotLightsLocation;
 };
 
 ///! skybox rendering method
@@ -365,6 +395,7 @@ private:
     skybox m_skybox;
     directionalLight m_directionalLight;
     u::vector<pointLight> m_pointLights;
+    u::vector<spotLight> m_spotLights;
     u::vector<renderTextueBatch> m_textureBatches;
     u::vector<uint32_t> m_indices;
 

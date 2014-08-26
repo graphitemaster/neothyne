@@ -31,6 +31,12 @@ struct pointLight {
     lightAttenuation attenuation;
 };
 
+struct spotLight {
+    pointLight base;
+    vec3 direction;
+    float cutOff;
+};
+
 struct fog {
     float density;
     vec4 color;
@@ -50,8 +56,10 @@ uniform float gMatSpecPower;
 
 // lights
 uniform int gNumPointLights;
+uniform int gNumSpotLights;
 uniform directionalLight gDirectionalLight;
 uniform pointLight gPointLights[kMaxPointLights];
+uniform spotLight gSpotLights[kMaxSpotLights];
 
 // fog
 uniform fog gFog;
@@ -87,17 +95,26 @@ vec4 calcLightDirectional(vec3 normal) {
     return calcLightGeneric(gDirectionalLight.base, gDirectionalLight.direction, normal, 1.0f);
 }
 
-vec4 calcLightPoint(int index, vec3 normal) {
-    vec3 lightDirection = worldPos0 - gPointLights[index].position;
+vec4 calcLightPoint(pointLight light, vec3 normal) {
+    vec3 lightDirection = worldPos0 - light.position;
     float distance = length(lightDirection);
     lightDirection = normalize(lightDirection);
 
-    vec4 color = calcLightGeneric(gPointLights[index].base, lightDirection, normal, 1.0f);
-    float attenuation = gPointLights[index].attenuation.constant +
-                        gPointLights[index].attenuation.linear * distance +
-                        gPointLights[index].attenuation.exp * distance * distance;
+    vec4 color = calcLightGeneric(light.base, lightDirection, normal, 1.0f);
+    float attenuation = light.attenuation.constant +
+                        light.attenuation.linear * distance +
+                        light.attenuation.exp * distance * distance;
 
     return color / attenuation;
+}
+
+vec4 calcLightSpot(spotLight light, vec3 normal) {
+    vec3 lightToPixel = normalize(worldPos0 - light.base.position);
+    float spotFactor = dot(lightToPixel, light.direction);
+
+    if (spotFactor > light.cutOff)
+        return calcLightPoint(light.base, normal) * (1.0f - (1.0f - spotFactor) * 1.0f / (1.0f - light.cutOff));
+    return vec4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 vec3 calcBump(void) {
@@ -138,7 +155,10 @@ void main() {
     vec4 sampledColor = texture2D(gSampler, texCoord0.xy);
 
     for (int i = 0; i < gNumPointLights; i++)
-        totalLight += calcLightPoint(i, normal);
+        totalLight += calcLightPoint(gPointLights[i], normal);
+
+    for (int i = 0; i < gNumSpotLights; i++)
+        totalLight += calcLightSpot(gSpotLights[i], normal);
 
     fragColor = sampledColor * totalLight;
 
