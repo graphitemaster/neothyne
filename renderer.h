@@ -91,6 +91,7 @@ struct texture2D {
     bool load(const u::string &file);
     bool upload(void);
     void bind(GLenum unit);
+    void resize(size_t width, size_t height);
 
 private:
     bool m_uploaded;

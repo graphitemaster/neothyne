@@ -193,6 +193,10 @@ void texture2D::bind(GLenum unit) {
     glBindTexture(GL_TEXTURE_2D, m_textureHandle);
 }
 
+void texture2D::resize(size_t width, size_t height) {
+    m_texture.resize(width, height);
+}
+
 ///! textureCubemap
 texture3D::texture3D() :
     m_uploaded(false),
