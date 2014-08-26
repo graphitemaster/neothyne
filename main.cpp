@@ -178,6 +178,8 @@ int main(void) {
                     }
                     if (e.key.keysym.sym == SDLK_F8)
                         screenShot("screenshot.bmp");
+                    if (e.key.keysym.sym == SDLK_F12)
+                        SDL_SetRelativeMouseMode((SDL_GetRelativeMouseMode() == SDL_TRUE) ? SDL_FALSE : SDL_TRUE);
                     getKeyState(e.key.keysym.sym, true);
                     break;
                 case SDL_KEYUP:
