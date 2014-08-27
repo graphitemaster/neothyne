@@ -4,9 +4,6 @@
 
 #include "renderer.h"
 
-static constexpr size_t kScreenWidth = 1600;
-static constexpr size_t kScreenHeight = 852;
-
 static PFNGLCREATESHADERPROC             glCreateShader_             = nullptr;
 static PFNGLSHADERSOURCEPROC             glShaderSource_             = nullptr;
 static PFNGLCOMPILESHADERPROC            glCompileShader_            = nullptr;
@@ -635,8 +632,8 @@ bool splashMethod::init(void) {
     return true;
 }
 
-void splashMethod::setResolution(void) {
-    glUniform2f_(m_resolutionLocation, (float)kScreenWidth, (float)kScreenHeight);
+void splashMethod::setResolution(const m::perspectiveProjection &project) {
+    glUniform2f_(m_resolutionLocation, project.width, project.height);
 }
 
 void splashMethod::setTime(float dt) {
@@ -858,13 +855,13 @@ bool splashScreen::upload(void) {
     return true;
 }
 
-void splashScreen::render(float dt) {
+void splashScreen::render(float dt, const rendererPipeline &pipeline) {
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
 
     enable();
     setTextureUnit(0);
-    setResolution();
+    setResolution(pipeline.getPerspectiveProjection());
     setTime(dt);
 
     m_texture.bind(GL_TEXTURE0);
@@ -1240,13 +1237,16 @@ void initGL(void) {
     GL_RESOLVE(glActiveTexture);
 }
 
-void screenShot(const u::string &file) {
-    SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, kScreenWidth, kScreenHeight,
+void screenShot(const u::string &file, const m::perspectiveProjection &project) {
+    const size_t screenWidth = project.width;
+    const size_t screenHeight = project.height;
+    const size_t screenSize = screenWidth * screenHeight;
+    SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, screenWidth, screenHeight,
         8*3, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
     SDL_LockSurface(temp);
-    unsigned char *pixels = new unsigned char[3 * kScreenWidth * kScreenHeight];
-    glReadPixels(0, 0, kScreenWidth, kScreenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-    texture::reorient(pixels, kScreenWidth, kScreenHeight, 3, kScreenWidth * 3,
+    unsigned char *pixels = new unsigned char[screenSize * 3];
+    glReadPixels(0, 0, screenWidth, screenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+    texture::reorient(pixels, screenWidth, screenHeight, 3, screenWidth * 3,
         (unsigned char *)temp->pixels, false, true, false);
     SDL_UnlockSurface(temp);
     delete[] pixels;

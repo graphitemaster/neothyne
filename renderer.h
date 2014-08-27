@@ -261,7 +261,7 @@ struct splashMethod : method {
     virtual bool init(void);
 
     void setTextureUnit(int unit);
-    void setResolution(void);
+    void setResolution(const m::perspectiveProjection &project);
     void setTime(float dt);
 
 private:
@@ -303,7 +303,7 @@ struct splashScreen : splashMethod {
     bool load(const u::string &splashScreen);
     bool upload(void);
 
-    void render(float dt);
+    void render(float dt, const rendererPipeline &pipeline);
 
 private:
     union {
@@ -410,6 +410,6 @@ private:
 };
 
 void initGL(void);
-void screenShot(const u::string &file);
+void screenShot(const u::string &file, const m::perspectiveProjection &project);
 
 #endif

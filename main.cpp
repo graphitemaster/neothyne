@@ -55,7 +55,7 @@ static bool loadThread(void *threadData) {
     return true;
 }
 
-static SDL_Window *initSDL(void) {
+static SDL_Window *initSDL(size_t width, size_t height) {
     SDL_Window *window;
     SDL_Init(SDL_INIT_VIDEO);
 
@@ -72,8 +72,8 @@ static SDL_Window *initSDL(void) {
     window = SDL_CreateWindow("Neothyne",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        kScreenWidth,
-        kScreenHeight,
+        width,
+        height,
         SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL
     );
 
@@ -92,14 +92,36 @@ static SDL_Window *initSDL(void) {
     return window;
 }
 
-int main(void) {
-    SDL_Window *gScreen = initSDL();
+int main(int argc, char **argv) {
+    argc--;
+    argv++;
+
+    size_t screenWidth = kScreenWidth;
+    size_t screenHeight = kScreenHeight;
+
+    if (argc == 2) {
+        screenWidth = atoi(argv[0]);
+        screenHeight = atoi(argv[1]);
+    }
+
+    SDL_Window *gScreen = initSDL(screenWidth, screenHeight);
 
     // before loading any art assets we need to establish a loading screen
     initGL();
     splashScreen gSplash;
     gSplash.load("textures/logo.png");
     gSplash.upload();
+
+    rendererPipeline pipeline;
+    m::perspectiveProjection projection;
+    projection.fov = 90.0f;
+    projection.width = screenWidth;
+    projection.height = screenHeight;
+    projection.nearp = 1.0f;
+    projection.farp = 2048.0f;
+
+    pipeline.setPerspectiveProjection(projection);
+    pipeline.setWorldPosition(m::vec3(0.0f, 0.0f, 0.0f));
 
     // create a loader thread
     loadThreadData loadData;
@@ -110,7 +132,7 @@ int main(void) {
     uint32_t splashTime = SDL_GetTicks();
     while (!SDL_AtomicGet(&loadData.done)) {
         glClear(GL_COLOR_BUFFER_BIT);
-        gSplash.render(0.002f * (float)(SDL_GetTicks() - splashTime));
+        gSplash.render(0.002f * (float)(SDL_GetTicks() - splashTime), pipeline);
         SDL_GL_SwapWindow(gScreen);
     }
 
@@ -120,13 +142,6 @@ int main(void) {
 
     // Now render the world
     client gClient;
-
-    m::perspectiveProjection projection;
-    projection.fov = 90.0f;
-    projection.width = kScreenWidth;
-    projection.height = kScreenHeight;
-    projection.nearp = 1.0f;
-    projection.farp = 2048.0f;
 
     uint32_t time;
     uint32_t oldTime;
@@ -154,13 +169,8 @@ int main(void) {
 
         gClient.update(loadData.gMap, dt);
 
-        rendererPipeline pipeline;
-        pipeline.setWorldPosition(m::vec3(0.0f, 0.0f, 0.0f));
-
         pipeline.setRotation(gClient.getRotation());
         pipeline.setPosition(gClient.getPosition());
-
-        pipeline.setPerspectiveProjection(projection);
 
         loadData.gWorld.draw(pipeline);
 
@@ -179,7 +189,7 @@ int main(void) {
                             running = false;
                             break;
                         case SDLK_F8:
-                            screenShot("screenshot.bmp");
+                            screenShot("screenshot.bmp", projection);
                             break;
                         case SDLK_F12:
                             SDL_SetRelativeMouseMode(
