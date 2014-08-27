@@ -64,7 +64,7 @@ struct kdTree {
     kdTree(void);
     ~kdTree(void);
 
-    static constexpr float kMaxTraceDistance = 99999.999f;
+    static constexpr float kMaxTraceDistance = 9.999f;
     static constexpr float kEpsilon = 0.01f; // Plane offset for point classification
     static constexpr size_t kMaxTrianglesPerLeaf = 5;
     static constexpr size_t kMaxRecursionDepth = 35;

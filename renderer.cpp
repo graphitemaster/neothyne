@@ -148,7 +148,7 @@ static void getTextureFormat(const texture &tex, GLenum &tf, GLenum &df) {
             df = GL_UNSIGNED_BYTE;
             break;
         default:
-            // to silent possible uninitialized errors
+            // to silent possible uninitialized warnings
             tf = 0;
             df = GL_UNSIGNED_BYTE;
             break;

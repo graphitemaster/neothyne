@@ -44,6 +44,7 @@ void client::update(const kdMap &map, float dt) {
     static constexpr float kMaxVelocity = 80.0f;
     static constexpr m::vec3 kGravity(0.0f, -98.0f, 0.0f);
     static constexpr float kRadius = 5.0f;
+    static constexpr float kWallReduce = 0.5f; // 50% reduction of collision responce when sliding up a wall
 
     kdSphereTrace trace;
     trace.radius = kRadius;
@@ -139,6 +140,8 @@ void client::update(const kdMap &map, float dt) {
         velocity.y = 0.0f;
     } else {
         velocity += kGravity * dt;
+        if (wallHit)
+            velocity.y *= kWallReduce;
     }
 
     // we could be stuck

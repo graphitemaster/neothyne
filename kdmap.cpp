@@ -256,6 +256,7 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
             hitNormal->normalize();
         }
     }
+
     return *fraction != kdTree::kMaxTraceDistance;
 }
 
