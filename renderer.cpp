@@ -1007,7 +1007,7 @@ bool world::load(const kdMap &map) {
     }
 
     if (!m_billboards[kBillboardRocket].load("textures/rocketgun.png")) {
-        fprintf(stderr, "failed to laod rocket launcher billboard\n");
+        fprintf(stderr, "failed to load rocket launcher billboard\n");
         return false;
     }
 
