@@ -125,8 +125,8 @@ int main(void) {
     projection.fov = 90.0f;
     projection.width = kScreenWidth;
     projection.height = kScreenHeight;
-    projection.near = 1.0f;
-    projection.far = 2048.0f;
+    projection.nearp = 1.0f;
+    projection.farp = 2048.0f;
 
     uint32_t time;
     uint32_t oldTime;

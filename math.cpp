@@ -170,7 +170,7 @@ namespace m {
 
     void mat4::setPersProjTrans(const perspectiveProjection &projection) {
         const float ar = projection.width / projection.height;
-        const float range = projection.near - projection.far;
+        const float range = projection.nearp - projection.farp;
         const float halfFov = tanf(m::toRadian(projection.fov / 2.0f));
 
         m[0][0] = 1.0f/(halfFov * ar);
@@ -183,8 +183,8 @@ namespace m {
         m[1][3] = 0.0f;
         m[2][0] = 0.0f;
         m[2][1] = 0.0f;
-        m[2][2] = (-projection.near -projection.far) / range;
-        m[2][3] = 2.0f * projection.far * projection.near / range;
+        m[2][2] = (-projection.nearp -projection.farp) / range;
+        m[2][3] = 2.0f * projection.farp * projection.nearp / range;
         m[3][0] = 0.0f;
         m[3][1] = 0.0f;
         m[3][2] = 1.0f;

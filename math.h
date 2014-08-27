@@ -37,8 +37,8 @@ namespace m {
         float fov;
         float width;
         float height;
-        float near;
-        float far;
+        float nearp;
+        float farp;
     };
 
     ///! vec3
