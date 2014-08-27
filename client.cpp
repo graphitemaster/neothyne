@@ -2,13 +2,27 @@
 
 #include "client.h"
 
+static constexpr float kClientMaxVelocity = 80.0f;
+static constexpr m::vec3 kClientGravity(0.0f, -98.0f, 0.0f);
+static constexpr float kClientRadius = 5.0f; // client sphere radius (ft / 2pi)
+static constexpr float kClientWallReduce = 0.5f; // 50% reduction of collision responce when sliding up a wal
+static constexpr float kClientSpeed = 60.0f; // cm/s
+static constexpr float kClientCrouchSpeed = 30.0f; // cm/s
+static constexpr float kClientJumpSpeed = 130.0f; // cm/s
+static constexpr float kClientStopSpeed = 90.0f; // -cm/s
+static constexpr float kClientCrouchHeight = 3.0f; // ft
+static constexpr float kClientCrouchTransitionSpeed = 0.25f; // -ft/s
+static constexpr float kClientViewHeight = 5.0f; // ft
+
 client::client() :
     m_mouseLat(0.0f),
     m_mouseLon(0.0f),
+    m_viewHeight(kClientViewHeight),
     m_origin(0.0f, 150.0f, 0.0f),
     m_velocity(0.0f, 0.0f, 0.0f),
     m_isOnGround(false),
-    m_isOnWall(false)
+    m_isOnWall(false),
+    m_isCrouching(false)
 {
 
 }
@@ -41,19 +55,14 @@ bool client::tryUnstick(const kdMap &map, float radius) {
 }
 
 void client::update(const kdMap &map, float dt) {
-    static constexpr float kMaxVelocity = 80.0f;
-    static constexpr m::vec3 kGravity(0.0f, -98.0f, 0.0f);
-    static constexpr float kRadius = 5.0f;
-    static constexpr float kWallReduce = 0.5f; // 50% reduction of collision responce when sliding up a wall
-
     kdSphereTrace trace;
-    trace.radius = kRadius;
+    trace.radius = kClientRadius;
 
     m::vec3 velocity = m_velocity;
     m::vec3 originalVelocity = m_velocity;
     m::vec3 primalVelocity = m_velocity;
     m::vec3 newVelocity;
-    velocity.maxLength(kMaxVelocity);
+    velocity.maxLength(kClientMaxVelocity);
 
     m::vec3 planes[kdMap::kMaxClippingPlanes];
     m::vec3 pos = m_origin;
@@ -139,15 +148,15 @@ void client::update(const kdMap &map, float dt) {
     if (groundHit) {
         velocity.y = 0.0f;
     } else {
-        velocity += kGravity * dt;
+        velocity += kClientGravity * dt;
         if (wallHit)
-            velocity.y *= kWallReduce;
+            velocity.y *= kClientWallReduce;
     }
 
     // we could be stuck
-    if (map.isSphereStuck(pos, kRadius)) {
+    if (map.isSphereStuck(pos, kClientRadius)) {
         m_origin = pos;
-        tryUnstick(map, kRadius);
+        tryUnstick(map, kClientRadius);
     }
 
     m_origin = pos;
@@ -157,10 +166,10 @@ void client::update(const kdMap &map, float dt) {
     inputGetCommands(commands);
     inputMouseMove();
 
-    move(commands);
+    move(dt, commands);
 }
 
-void client::move(const u::vector<clientCommands> &commands) {
+void client::move(float dt, const u::vector<clientCommands> &commands) {
     m::vec3 velocity = m_velocity;
     m::vec3 direction;
     m::vec3 side;
@@ -176,6 +185,7 @@ void client::move(const u::vector<clientCommands> &commands) {
     // camera is just at the right axis thus preventing movement.
     up = (m::toDegree(direction.y) > 45.0f / 2.0f) ? -up : up;
     m::vec3 upCamera;
+    bool crouchReleased = true;
     for (auto &it : commands) {
         switch (it) {
             case kCommandForward:
@@ -193,22 +203,38 @@ void client::move(const u::vector<clientCommands> &commands) {
             case kCommandJump:
                 jump = m::vec3(0.0f, 0.25f, 0.0f);
                 break;
+            case kCommandCrouch:
+                crouchReleased = false;
+                if (m_isOnGround)
+                    m_isCrouching = true;
+                break;
         }
     }
 
-    const float kClientSpeed = 60.0f; // cm/s
-    const float kJumpSpeed = 130.0f; // cm/s
-    const float kStopSpeed = 90.0f; // -cm/s
+    if (crouchReleased)
+        m_isCrouching = false;
+
+    float clientSpeed;
+    float crouchTransitionSpeed = kClientCrouchTransitionSpeed * (1.0f - dt);
+    if (m_isCrouching) {
+        clientSpeed = kClientCrouchSpeed;
+        m_viewHeight = m::clamp(m_viewHeight - crouchTransitionSpeed,
+            kClientCrouchHeight, m_viewHeight - crouchTransitionSpeed);
+    } else {
+        clientSpeed = kClientSpeed;
+        if (m_viewHeight < kClientViewHeight)
+            m_viewHeight = m::clamp(m_viewHeight + crouchTransitionSpeed,
+                m_viewHeight + crouchTransitionSpeed, kClientViewHeight);
+    }
 
     newDirection.y = 0.0f;
     if (newDirection.absSquared() > 0.1f)
-        newDirection.setLength(kClientSpeed);
+        newDirection.setLength(clientSpeed);
     newDirection.y += velocity.y;
-    if (m_isOnGround) {
-        newDirection += jump * kJumpSpeed;
-    }
+    if (m_isOnGround)
+        newDirection += jump * kClientJumpSpeed;
     if (commands.size() == 0) {
-        m::vec3 slowDown = m_velocity * kStopSpeed * 0.01f;
+        m::vec3 slowDown = m_velocity * kClientStopSpeed * 0.01f;
         slowDown.y = 0.0f;
         newDirection += slowDown;
     }
@@ -240,11 +266,12 @@ void client::inputMouseMove(void) {
 void client::inputGetCommands(u::vector<clientCommands> &commands) {
     u::map<int, int> &keyState = getKeyState();
     commands.clear();
-    if (keyState[SDLK_w])     commands.push_back(kCommandForward);
-    if (keyState[SDLK_s])     commands.push_back(kCommandBackward);
-    if (keyState[SDLK_a])     commands.push_back(kCommandLeft);
-    if (keyState[SDLK_d])     commands.push_back(kCommandRight);
-    if (keyState[SDLK_SPACE]) commands.push_back(kCommandJump);
+    if (keyState[SDLK_w])      commands.push_back(kCommandForward);
+    if (keyState[SDLK_s])      commands.push_back(kCommandBackward);
+    if (keyState[SDLK_a])      commands.push_back(kCommandLeft);
+    if (keyState[SDLK_d])      commands.push_back(kCommandRight);
+    if (keyState[SDLK_SPACE])  commands.push_back(kCommandJump);
+    if (keyState[SDLK_LSHIFT]) commands.push_back(kCommandCrouch);
 }
 
 void client::setRotation(const m::quat &rotation) {
@@ -261,5 +288,5 @@ const m::quat &client::getRotation(void) const {
 
 m::vec3 client::getPosition(void) const {
     // adjust for eye height
-    return m::vec3(m_origin.x, m_origin.y + 5.5f, m_origin.z);
+    return m::vec3(m_origin.x, m_origin.y + m_viewHeight, m_origin.z);
 }
