@@ -168,6 +168,10 @@ void client::move(const u::vector<clientCommands> &commands) {
 
     rotation.getOrient(&direction, &up, &side);
 
+    // at half of the 45 degrees in either direction invert the sign
+    // we do it between to two points to prevent a situation where the
+    // camera is just at the right axis thus preventing movement.
+    up = (m::toDegree(direction.y) > 45.0f / 2.0f) ? -up : up;
     m::vec3 upCamera;
     for (auto &it : commands) {
         switch (it) {
