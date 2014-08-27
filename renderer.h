@@ -374,6 +374,7 @@ struct world {
     enum {
         kBillboardRail,
         kBillboardLightning,
+        kBillboardRocket,
         kBillboardMax
     };
 

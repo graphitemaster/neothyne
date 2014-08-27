@@ -942,6 +942,7 @@ world::world(void) {
 
     billboard rail;
     billboard lightning;
+    billboard rocket;
 
     const m::vec3 places[] = {
         m::vec3(153.04, 105.02, 197.67),
@@ -969,15 +970,17 @@ world::world(void) {
     };
 
     for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
-        switch (rand() % 2 == 0) {
+        switch (rand() % 3) {
             case 0: rail.add(places[i]); break;
             case 1: lightning.add(places[i]); break;
+            case 2: rocket.add(places[i]); break;
         }
     }
 
     m_billboards.resize(kBillboardMax);
-    m_billboards[0] = rail;
-    m_billboards[1] = lightning;
+    m_billboards[kBillboardRail] = rail;
+    m_billboards[kBillboardLightning] = lightning;
+    m_billboards[kBillboardRocket] = rocket;
 }
 
 world::~world(void) {
@@ -1003,6 +1006,10 @@ bool world::load(const kdMap &map) {
         return false;
     }
 
+    if (!m_billboards[kBillboardRocket].load("textures/rocketgun.png")) {
+        fprintf(stderr, "failed to laod rocket launcher billboard\n");
+        return false;
+    }
 
     // make rendering batches for triangles which share the same texture
     for (size_t i = 0; i < map.textures.size(); i++) {
