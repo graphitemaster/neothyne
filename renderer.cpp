@@ -975,7 +975,7 @@ world::world(void) {
             case 0: rail.add(places[i]); break;
             case 1: lightning.add(places[i]); break;
             case 2: rocket.add(places[i]); break;
-	    case 3: shotgun.add(places[i]); break;
+            case 3: shotgun.add(places[i]); break;
         }
     }
 
@@ -1013,7 +1013,7 @@ bool world::load(const kdMap &map) {
         fprintf(stderr, "failed to load rocket launcher billboard\n");
         return false;
     }
-    
+
     if (!m_billboards[kBillboardShotgun].load("textures/shotgun.png")) {
         fprintf(stderr, "failed to load shotgun billboard\n");
         return false;
