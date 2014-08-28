@@ -21,6 +21,12 @@ void getMouseDelta(int *deltaX, int *deltaY) {
 }
 
 // we load assets in a different thread
+enum {
+    kLoadInProgress, // loading in progress
+    kLoadFailed,     // loading failed
+    kLoadSucceeded   // loading succeeded
+};
+
 struct loadThreadData {
     kdMap gMap;
     world gWorld;
@@ -44,13 +50,17 @@ static bool loadThread(void *threadData) {
     fread(&*mapData.begin(), length, 1, fp);
     fclose(fp);
 
-    if (!data->gMap.load(mapData))
+    if (!data->gMap.load(mapData)) {
+        SDL_AtomicSet(&data->done, kLoadFailed);
         return false;
+    }
 
-    if (!data->gWorld.load(data->gMap))
+    if (!data->gWorld.load(data->gMap)) {
+        SDL_AtomicSet(&data->done, kLoadFailed);
         return false;
+    }
 
-    SDL_AtomicSet(&data->done, 1);
+    SDL_AtomicSet(&data->done, kLoadSucceeded);
 
     return true;
 }
@@ -125,16 +135,19 @@ int main(int argc, char **argv) {
 
     // create a loader thread
     loadThreadData loadData;
-    SDL_AtomicSet(&loadData.done, 0);
+    SDL_AtomicSet(&loadData.done, kLoadInProgress);
     SDL_CreateThread((SDL_ThreadFunction)&loadThread, nullptr, (void*)&loadData);
 
     // while that thread is running render the loading screen
     uint32_t splashTime = SDL_GetTicks();
-    while (!SDL_AtomicGet(&loadData.done)) {
+    while (SDL_AtomicGet(&loadData.done) == kLoadInProgress) {
         glClear(GL_COLOR_BUFFER_BIT);
         gSplash.render(0.002f * (float)(SDL_GetTicks() - splashTime), pipeline);
         SDL_GL_SwapWindow(gScreen);
     }
+
+    if (SDL_AtomicGet(&loadData.done) != kLoadSucceeded)
+        return 1;
 
     // we're done loading the resources, now upload them (we can't render a loading
     // screen when uploading so we assume the process will be sufficently fast.)
