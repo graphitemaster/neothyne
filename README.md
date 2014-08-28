@@ -34,11 +34,8 @@ embodies the following
 * Build the game
 
 ## Screenshots
-The following screenshots are taken from in the engine.
-
-[![](http://i.imgur.com/fc36Xa3.png)](http://i.imgur.com/fc36Xa3.png)
-[![](http://i.imgur.com/sPxSb8e.png)](http://i.imgur.com/sPxSb8e.png)
-[![](http://i.imgur.com/Vu2DWKG.png)](http://i.imgur.com/Vu2DWKG.png)
+An imgur album of screenshots showing the engine and development of it can
+be found [here](http://imgur.com/a/Y3Rfi)
 
 ## Build
 Neothyne depends on the following libraries
