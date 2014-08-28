@@ -23,7 +23,7 @@ void kdMap::unload(void) {
 
 template <typename T>
 static size_t mapUnserialize(T *dest, const u::vector<unsigned char> &data, size_t offset = 0, size_t count = 1) {
-    const unsigned char *const beg = &*data.begin() + offset;
+    const unsigned char *const beg = &data[0] + offset;
     memcpy(dest, beg, sizeof(T) * count);
     return offset + sizeof(T);
 }
@@ -33,8 +33,10 @@ bool kdMap::isLoaded(void) const {
 }
 
 bool kdMap::load(const u::vector<unsigned char> &compressedData) {
-    // decompress it
-    u::vector<unsigned char> data = u::decompress(compressedData);
+    u::zlib zlib;
+    u::vector<unsigned char> data;
+    if (!zlib.decompress(data, compressedData))
+        return false;
 
     size_t seek;
     kdBinHeader header;
@@ -86,11 +88,11 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
         planes[i].n = m::vec3::getAxis((m::axis)plane.type);
     }
 
-    mapUnserialize(&*textures.begin(), data, textureEntry.offset, textures.size());
-    mapUnserialize(&*nodes.begin(), data, nodeEntry.offset, nodes.size());
-    mapUnserialize(&*triangles.begin(), data, triangleEntry.offset, triangles.size());
-    mapUnserialize(&*vertices.begin(), data, vertexEntry.offset, vertices.size());
-    mapUnserialize(&*entities.begin(), data, entEntry.offset, entities.size());
+    mapUnserialize(&textures[0], data, textureEntry.offset, textures.size());
+    mapUnserialize(&nodes[0], data, nodeEntry.offset, nodes.size());
+    mapUnserialize(&triangles[0], data, triangleEntry.offset, triangles.size());
+    mapUnserialize(&vertices[0], data, vertexEntry.offset, vertices.size());
+    mapUnserialize(&entities[0], data, entEntry.offset, entities.size());
 
     // triangle indices of the leafs
     seek = leafEntry.offset;

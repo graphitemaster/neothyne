@@ -312,7 +312,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
     fseek(fp, 0, SEEK_SET);
 
     shaderSource->resize(preludeLength + shaderLength);
-    fread((&*shaderSource->begin()) + preludeLength, shaderLength, 1, fp);
+    fread(&(*shaderSource)[preludeLength], shaderLength, 1, fp);
     fclose(fp);
 
     GLuint shaderObject = glCreateShader_(shaderType);
@@ -324,7 +324,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
     const GLchar *shaderSources[1];
     GLint shaderLengths[1];
 
-    shaderSources[0] = (GLchar *)&*shaderSource->begin();
+    shaderSources[0] = (GLchar *)&(*shaderSource)[0];
     shaderLengths[0] = (GLint)shaderSource->size();
 
     glShaderSource_(shaderObject, 1, shaderSources, shaderLengths);
@@ -337,7 +337,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
         GLint infoLogLength = 0;
         glGetShaderiv_(shaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
         infoLog.resize(infoLogLength);
-        glGetShaderInfoLog_(shaderObject, infoLogLength, nullptr, &*infoLog.begin());
+        glGetShaderInfoLog_(shaderObject, infoLogLength, nullptr, &infoLog[0]);
         printf("Shader error:\n%s\n", infoLog.c_str());
         return false;
     }
@@ -900,7 +900,7 @@ bool billboard::upload(void) {
 
     glGenBuffers_(1, &m_vbo);
     glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData_(GL_ARRAY_BUFFER, sizeof(m::vec3) * m_positions.size(), &*m_positions.begin(), GL_STATIC_DRAW);
+    glBufferData_(GL_ARRAY_BUFFER, sizeof(m::vec3) * m_positions.size(), &m_positions[0], GL_STATIC_DRAW);
 
     glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
     glEnableVertexAttribArray_(0);
@@ -1083,7 +1083,7 @@ bool world::upload(const kdMap &map) {
     glGenBuffers_(2, m_buffers);
 
     glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData_(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &*map.vertices.begin(), GL_STATIC_DRAW);
+    glBufferData_(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &map.vertices[0], GL_STATIC_DRAW);
     glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), 0);                 // vertex
     glVertexAttribPointer_(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
     glVertexAttribPointer_(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
@@ -1095,7 +1095,7 @@ bool world::upload(const kdMap &map) {
 
     // upload data
     glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(uint32_t), &*m_indices.begin(), GL_STATIC_DRAW);
+    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(uint32_t), &m_indices[0], GL_STATIC_DRAW);
 
     if (!m_depthPrePassMethod.init()) {
         fprintf(stderr, "failed to initialize depth prepass rendering method\n");

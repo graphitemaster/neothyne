@@ -6,13 +6,11 @@ enum textureFormat {
     TEX_RGB,
     TEX_RGBA,
     TEX_BGR,
-    TEX_BGRA
+    TEX_BGRA,
+    TEX_LUMINANCE
 };
 
 struct texture {
-    texture();
-    ~texture();
-
     bool load(const u::string &file);
 
     template <size_t S>
@@ -33,10 +31,10 @@ struct texture {
     size_t height(void) const;
     textureFormat format(void) const;
 
-    unsigned char *data(void) const;
+    const unsigned char *data(void);
 
 private:
-    unsigned char *m_data;
+    u::vector<unsigned char> m_data;
     size_t m_width;
     size_t m_height;
     size_t m_bpp;

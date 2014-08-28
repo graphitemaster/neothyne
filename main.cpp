@@ -47,7 +47,7 @@ static bool loadThread(void *threadData) {
     size_t length = ftell(fp);
     fseek(fp, 0, SEEK_SET);
     mapData.resize(length);
-    fread(&*mapData.begin(), length, 1, fp);
+    fread(&mapData[0], length, 1, fp);
     fclose(fp);
 
     if (!data->gMap.load(mapData)) {
@@ -61,7 +61,6 @@ static bool loadThread(void *threadData) {
     }
 
     SDL_AtomicSet(&data->done, kLoadSucceeded);
-
     return true;
 }
 
