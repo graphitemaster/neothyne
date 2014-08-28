@@ -971,7 +971,7 @@ world::world(void) {
     };
 
     for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
-        switch (rand() % 3) {
+        switch (rand() % 4) {
             case 0: rail.add(places[i]); break;
             case 1: lightning.add(places[i]); break;
             case 2: rocket.add(places[i]); break;
