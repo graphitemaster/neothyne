@@ -5,7 +5,7 @@
 #include <vector>    // std::vector
 #include <memory>    // std::unique_ptr
 #include <algorithm> // std::sort
-#include <string.h>  // std::string
+#include <string>    // std::string
 
 #include <stdio.h>   // fopen
 #include <stdlib.h>  // abs
