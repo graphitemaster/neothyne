@@ -943,6 +943,7 @@ world::world(void) {
     billboard rail;
     billboard lightning;
     billboard rocket;
+    billboard shotgun;
 
     const m::vec3 places[] = {
         m::vec3(153.04, 105.02, 197.67),
@@ -974,6 +975,7 @@ world::world(void) {
             case 0: rail.add(places[i]); break;
             case 1: lightning.add(places[i]); break;
             case 2: rocket.add(places[i]); break;
+	    case 3: shotgun.add(places[i]); break;
         }
     }
 
@@ -981,6 +983,7 @@ world::world(void) {
     m_billboards[kBillboardRail] = rail;
     m_billboards[kBillboardLightning] = lightning;
     m_billboards[kBillboardRocket] = rocket;
+    m_billboards[kBillboardShotgun] = shotgun;
 }
 
 world::~world(void) {
@@ -1008,6 +1011,11 @@ bool world::load(const kdMap &map) {
 
     if (!m_billboards[kBillboardRocket].load("textures/rocketgun.png")) {
         fprintf(stderr, "failed to load rocket launcher billboard\n");
+        return false;
+    }
+    
+    if (!m_billboards[kBillboardShotgun].load("textures/shotgun.png")) {
+        fprintf(stderr, "failed to load shotgun billboard\n");
         return false;
     }
 

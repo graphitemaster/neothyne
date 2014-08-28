@@ -375,6 +375,7 @@ struct world {
         kBillboardRail,
         kBillboardLightning,
         kBillboardRocket,
+	kBillboardShotgun,
         kBillboardMax
     };
 
