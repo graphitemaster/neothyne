@@ -44,10 +44,8 @@ The following screenshots are taken from in the engine.
 Neothyne depends on the following libraries
 
 * SDL2
-* SDL2_image
-* zlib
 
-Verify you have these installed then run `make'.
+Verify you have this installed then run `make'.
 
 ## System requirements
 Neothyne requires a GPU which is capable of GL 3.3. Modern low profile GPUs may
