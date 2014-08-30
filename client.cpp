@@ -201,7 +201,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
                 newDirection += side;
                 break;
             case kCommandJump:
-                jump = m::vec3(0.0f, 0.25f, 0.0f);
+                jump = m::vec3(0.0f, 8.0f, 0.0f);
                 break;
             case kCommandCrouch:
                 crouchReleased = false;
@@ -232,7 +232,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
         newDirection.setLength(clientSpeed);
     newDirection.y += velocity.y;
     if (m_isOnGround)
-        newDirection += jump * kClientJumpSpeed;
+        newDirection += jump * pow(kClientJumpSpeed, 0.3);
     if (commands.size() == 0) {
         m::vec3 slowDown = m_velocity * kClientStopSpeed * 0.01f;
         slowDown.y = 0.0f;
