@@ -32,9 +32,14 @@ struct jpeg  {
         kFinished,
     };
 
-    jpeg(const u::vector<unsigned char> &data) {
+    enum chromaFilter {
+        kBicubic,
+        kPixelRepetition
+    };
+
+    jpeg(const u::vector<unsigned char> &data, chromaFilter filter = kBicubic) {
         memset(this, 0, sizeof *this);
-        decode(data);
+        decode(data, filter);
     }
 
     result status(void) const {
@@ -569,21 +574,51 @@ private:
         c->pixels = u::move(out);
     }
 
-    void convert(void) {
+    // fast pixel repetition upsampler
+    void upSample(component *c) {
+        size_t xshift = 0;
+        size_t yshift = 0;
+
+        while (c->width < m_width) c->width <<= 1, ++xshift;
+        while (c->height < m_height) c->height <<= 1, ++yshift;
+
+        u::vector<unsigned char> out;
+        out.resize(c->width * c->height);
+
+        unsigned char *lin = &c->pixels[0];
+        unsigned char *lout = &out[0];
+
+        for (size_t y = 0; y < c->height; ++y) {
+            lin = &c->pixels[(y >> yshift) * c->stride];
+            for (size_t x = 0; x < c->width; ++x)
+                lout[x] = lin[x >> xshift];
+            lout += c->width;
+        }
+
+        c->stride = c->width;
+        c->pixels = u::move(out);
+    }
+
+    void convert(chromaFilter filter) {
         int i;
         component* c;
         for (i = 0, c = m_comp; i < m_ncomp; ++i, ++c) {
-            while ((c->width < m_width) || (c->height < m_height)) {
-                if (c->width < m_width)
-                    upSampleH(c);
-                if (m_error)
-                    return;
-                if (c->height < m_height)
-                    upSampleV(c);
-                if (m_error)
-                    return;
+            if (filter == kBicubic) {
+                while (c->width < m_width || c->height < m_height) {
+                    if (c->width < m_width)
+                        upSampleH(c);
+                    if (m_error)
+                        return;
+                    if (c->height < m_height)
+                        upSampleV(c);
+                    if (m_error)
+                        return;
+                }
+            } else if (filter == kPixelRepetition) {
+                if (c->width < m_width || c->height < m_height)
+                    upSample(c);
             }
-            if ((c->width < m_width) || (c->height < m_height))
+            if (c->width < m_width || c->height < m_height)
                 returnResult(kInternalError);
         }
         if (m_ncomp == 3) {
@@ -618,7 +653,7 @@ private:
         }
     }
 
-    result decode(const u::vector<unsigned char> &data) {
+    result decode(const u::vector<unsigned char> &data, chromaFilter filter) {
         m_position = (const unsigned char*)&data[0];
         m_size = data.size() & 0x7FFFFFFF;
 
@@ -665,7 +700,7 @@ private:
             return m_error;
 
         m_error = kSuccess;
-        convert();
+        convert(filter);
 
         return m_error;
     }
