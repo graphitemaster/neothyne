@@ -32,9 +32,14 @@ struct jpeg  {
         kFinished,
     };
 
-    jpeg(const u::vector<unsigned char> &data) {
+    enum chromaFilter {
+        kBicubic,
+        kPixelRepetition
+    };
+
+    jpeg(const u::vector<unsigned char> &data, chromaFilter filter = kBicubic) {
         memset(this, 0, sizeof *this);
-        decode(data);
+        decode(data, filter);
     }
 
     result status(void) const {
@@ -488,6 +493,57 @@ private:
         m_error = kFinished;
     }
 
+    // http://www.media.mit.edu/pia/Research/deepview/exif.html
+    uint16_t exifRead16(const unsigned char *data) {
+        if (m_exifLittleEndian)
+            return data[0] | (data[1] << 8);
+        return (data[0] << 8) | data[1];
+    }
+
+    uint32_t exifRead32(const unsigned char *data) {
+        if (m_exifLittleEndian)
+            return data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+        return (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
+    }
+
+    void decodeExif(void) {
+        decodeLength();
+        const unsigned char *pos = m_position;
+        if (m_length < 18)
+            return;
+
+        size_t size = m_length;
+        skip(size);
+
+        if (!memcmp(pos, "Exif\0\0II*\0", 10))
+            m_exifLittleEndian = true;
+        else if (!memcmp(pos, "Exif\0\0MM\0*", 10))
+            m_exifLittleEndian = false;
+        else
+            returnResult(kMalformatted);
+
+        uint32_t i = exifRead32(pos + 10) + 6;
+        if ((i < 14) || (i > size - 2))
+            return;
+
+        pos += i;
+        size -= i;
+        uint16_t count = exifRead16(pos);
+        i = (size - 2) / 12;
+        if (count > i)
+            return;
+
+        // read all the Exif information until we find a YCbCrPositioning tag
+        pos += 2;
+        while (count--) {
+            if (exifRead16(pos) == 0x0213 && exifRead16(pos + 2) == 3 && exifRead32(pos + 4) == 1) {
+                m_coSitedChroma = !!(exifRead16(pos + 8) == 2);
+                return;
+            }
+            pos += 12;
+        }
+    }
+
     static constexpr int kCF4A = -9;
     static constexpr int kCF4B = 111;
     static constexpr int kCF4C = 29;
@@ -501,12 +557,19 @@ private:
     static constexpr int kCF2A = 139;
     static constexpr int kCF2B = -11;
 
-    unsigned char CF(const int x) {
-        return clip((x + 64) >> 7);
+    template <size_t clipAdd, size_t clipShift>
+    unsigned char clipGen(const size_t x) {
+        return clip((x + clipAdd) >> clipShift);
+    }
+    unsigned char CF(const size_t x) {
+        return clipGen<64, 7>(x);
+    }
+    unsigned char SF(const size_t x) {
+        return clipGen<8, 4>(x);
     }
 
     // bicubic chroma upsampler
-    void upSampleH(component* c) {
+    void upSampleCenteredH(component* c) {
         const size_t xmax = c->width - 3;
         u::vector<unsigned char> out;
         out.resize((c->width * c->height) << 1);
@@ -531,7 +594,7 @@ private:
         c->pixels = u::move(out);
     }
 
-    void upSampleV(component* c) {
+    void upSampleCenteredV(component* c) {
         const size_t w = c->width;
         const size_t s1 = c->stride;
         const size_t s2 = s1 + s1;
@@ -569,21 +632,122 @@ private:
         c->pixels = u::move(out);
     }
 
-    void convert(void) {
+    void upSampleCositedH(component *c) {
+        const size_t xmax = c->width - 1;
+        u::vector<unsigned char> out;
+        out.resize((c->width * c->height) << 1);
+
+        unsigned char *lin = &c->pixels[0];
+        unsigned char *lout = &out[0];
+
+        for (size_t y = c->height; y; --y) {
+            lout[0] = lin[0];
+            lout[1] = SF((lin[0] << 3) + 9 * lin[1] - lin[2]);
+            lout[2] = lin[1];
+            for (size_t x = 2; x < xmax; ++x) {
+                lout[(x << 1) - 1] = SF(9 * (lin[x - 1] + lin[x]) - (lin[x - 2] + lin[x + 1]));
+                lout[x << 1] = lin[x];
+            }
+            lin += c->stride;
+            lout += c->width << 1;
+            lout[-3] = SF((lin[-1] << 3) + 9 * lin[-2] - lin[-3]);
+            lout[-2] = lin[-1];
+            lout[-1] = SF(17 * lin[-1] - lin[-2]);
+        }
+        c->width <<= 1;
+        c->stride = c->width;
+        c->pixels = u::move(out);
+    }
+
+    void upSampleCositedV(component *c) {
+        const size_t w = c->width;
+        const size_t s1 = c->stride;
+        const size_t s2 = s1 + s1;
+
+        u::vector<unsigned char> out;
+        out.resize((c->width * c->height) << 1);
+
+        for (size_t x = 0; x < w; ++x) {
+            unsigned char *cin = &c->pixels[x];
+            unsigned char *cout = &out[x];
+            *cout = cin[0];
+            cout += w;
+            *cout = SF((cin[0] << 3) + 9 * cin[s1] - cin[s2]);
+            cout += w;
+            *cout = cin[s1];
+            cout += w;
+            cin += s1;
+            for (size_t y = c->height - 3; y; --y) {
+                *cout = SF(9 * (cin[0] + cin[s1]) - (cin[-s1] + cin[s2]));
+                cout += w;
+                *cout = cin[s1];  cout += w;
+                cin += s1;
+            }
+            *cout = SF((cin[s1] << 3) + 9 * cin[0] - cin[-s1]);
+            cout += w;
+            *cout = cin[-s1];  cout += w;
+            *cout = SF(17 * cin[s1] - cin[0]);
+        }
+        c->height <<= 1;
+        c->stride = c->width;
+        c->pixels = u::move(out);
+    }
+
+    // fast pixel repetition upsampler
+    void upSampleFast(component *c) {
+        size_t xshift = 0;
+        size_t yshift = 0;
+
+        while (c->width < m_width) c->width <<= 1, ++xshift;
+        while (c->height < m_height) c->height <<= 1, ++yshift;
+
+        u::vector<unsigned char> out;
+        out.resize(c->width * c->height);
+
+        unsigned char *lin = &c->pixels[0];
+        unsigned char *lout = &out[0];
+
+        for (size_t y = 0; y < c->height; ++y) {
+            lin = &c->pixels[(y >> yshift) * c->stride];
+            for (size_t x = 0; x < c->width; ++x)
+                lout[x] = lin[x >> xshift];
+            lout += c->width;
+        }
+
+        c->stride = c->width;
+        c->pixels = u::move(out);
+    }
+
+    void convert(chromaFilter filter) {
         int i;
         component* c;
         for (i = 0, c = m_comp; i < m_ncomp; ++i, ++c) {
-            while ((c->width < m_width) || (c->height < m_height)) {
-                if (c->width < m_width)
-                    upSampleH(c);
-                if (m_error)
-                    return;
-                if (c->height < m_height)
-                    upSampleV(c);
+            if (filter == kBicubic) {
+                while (c->width < m_width || c->height < m_height) {
+                    if (c->width < m_width) {
+                        if (m_coSitedChroma)
+                            upSampleCositedH(c);
+                        else
+                            upSampleCenteredH(c);
+                    }
+                    if (m_error)
+                        return;
+                    if (c->height < m_height) {
+                        if (m_coSitedChroma)
+                            upSampleCositedV(c);
+                        else
+                            upSampleCenteredV(c);
+                    }
+                    if (m_error)
+                        return;
+                }
+            } else if (filter == kPixelRepetition) {
+                if (c->width < m_width || c->height < m_height)
+                    upSampleFast(c);
                 if (m_error)
                     return;
             }
-            if ((c->width < m_width) || (c->height < m_height))
+            if (c->width < m_width || c->height < m_height)
                 returnResult(kInternalError);
         }
         if (m_ncomp == 3) {
@@ -618,7 +782,7 @@ private:
         }
     }
 
-    result decode(const u::vector<unsigned char> &data) {
+    result decode(const u::vector<unsigned char> &data, chromaFilter filter) {
         m_position = (const unsigned char*)&data[0];
         m_size = data.size() & 0x7FFFFFFF;
 
@@ -652,6 +816,9 @@ private:
                 case 0xFE:
                     skipMarker();
                     break;
+                case 0xE1:
+                    decodeExif();
+                    break;
 
                 default:
                     if ((m_position[-1] & 0xF0) == 0xE0)
@@ -665,7 +832,7 @@ private:
             return m_error;
 
         m_error = kSuccess;
-        convert();
+        convert(filter);
 
         return m_error;
     }
@@ -689,6 +856,8 @@ private:
     int m_buf;
     int m_bufbits;
     int m_block[64];
+    bool m_exifLittleEndian;
+    bool m_coSitedChroma;
     static const unsigned char m_zz[64];
 };
 
@@ -1092,7 +1261,6 @@ const size_t png::m_adam7Pattern[28]  = {
     0, 4, 0, 2, 0, 1, 0, 0, 0, 4, 0, 2, 0, 1,
     8, 8, 4, 4, 2, 2, 1, 8, 8, 8, 4, 4, 2, 2
 };
-
 
 ///
 /// Texture utilities:
