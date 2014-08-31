@@ -9,6 +9,7 @@ static constexpr float kClientWallReduce = 0.5f; // 50% reduction of collision r
 static constexpr float kClientSpeed = 60.0f; // cm/s
 static constexpr float kClientCrouchSpeed = 30.0f; // cm/s
 static constexpr float kClientJumpSpeed = 130.0f; // cm/s
+static constexpr float kClientJumpExponent = 0.3f;
 static constexpr float kClientStopSpeed = 90.0f; // -cm/s
 static constexpr float kClientCrouchHeight = 3.0f; // ft
 static constexpr float kClientCrouchTransitionSpeed = 0.25f; // -ft/s
@@ -232,7 +233,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
         newDirection.setLength(clientSpeed);
     newDirection.y += velocity.y;
     if (m_isOnGround)
-        newDirection += jump * pow(kClientJumpSpeed, 0.3);
+        newDirection += jump * powf(kClientJumpSpeed, kClientJumpExponent);
     if (commands.size() == 0) {
         m::vec3 slowDown = m_velocity * kClientStopSpeed * 0.01f;
         slowDown.y = 0.0f;
