@@ -13,7 +13,7 @@ static constexpr float kClientJumpExponent = 0.3f;
 static constexpr float kClientStopSpeed = 90.0f; // -cm/s
 static constexpr float kClientCrouchHeight = 3.0f; // ft
 static constexpr float kClientCrouchTransitionSpeed = 0.25f; // -ft/s
-static constexpr float kClientViewHeight = 5.0f; // ft
+static constexpr float kClientViewHeight = 6.0f; // ft
 
 client::client() :
     m_mouseLat(0.0f),
@@ -96,7 +96,7 @@ void client::update(const kdMap &map, float dt) {
 
         wallHit = true;
 
-        timeLeft = timeLeft * (1.0f - f);
+        timeLeft *= (1.0f - f);
 
         if (trace.plane.n[1] > 0.7f)
             groundHit = true;
@@ -140,7 +140,7 @@ void client::update(const kdMap &map, float dt) {
         }
     }
 
-    if (allFraction == 0.0f) {
+    if (!allFraction) {
         velocity = m::vec3(0.0f, 0.0f, 0.0f);
     }
 
@@ -178,6 +178,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
     m::vec3 newDirection(0.0f, 0.0f, 0.0f);
     m::vec3 jump(0.0f, 0.0f, 0.0f);
     m::quat rotation = m_rotation;
+    bool needSlowDown = true;
 
     rotation.getOrient(&direction, &up, &side);
 
@@ -191,15 +192,19 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
         switch (it) {
             case kCommandForward:
                 newDirection += direction + up;
+                needSlowDown = false;
                 break;
             case kCommandBackward:
                 newDirection -= direction + up;
+                needSlowDown = false;
                 break;
             case kCommandLeft:
                 newDirection -= side;
+                needSlowDown = false;
                 break;
             case kCommandRight:
                 newDirection += side;
+                needSlowDown = false;
                 break;
             case kCommandJump:
                 jump = m::vec3(0.0f, 8.0f, 0.0f);
@@ -234,7 +239,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
     newDirection.y += velocity.y;
     if (m_isOnGround)
         newDirection += jump * powf(kClientJumpSpeed, kClientJumpExponent);
-    if (commands.size() == 0) {
+    if (needSlowDown) {
         m::vec3 slowDown = m_velocity * kClientStopSpeed * 0.01f;
         slowDown.y = 0.0f;
         newDirection += slowDown;
