@@ -998,24 +998,22 @@ bool world::load(const kdMap &map) {
         return false;
     }
 
-    // load billboards
-    if (!m_billboards[kBillboardRail].load("textures/railgun.png")) {
-        fprintf(stderr, "failed to load railgun billboard\n");
-        return false;
-    }
+    static const struct {
+        const char *name;
+        const char *file;
+        billboardType type;
+    } billboards[] = {
+        { "railgun",         "textures/railgun.png",   kBillboardRail },
+        { "lightning gun",   "textures/lightgun.png",  kBillboardLightning },
+        { "rocket launcher", "textures/rocketgun.png", kBillboardRocket },
+        { "shotgun",         "textures/shotgun.png",   kBillboardShotgun }
+    };
 
-    if (!m_billboards[kBillboardLightning].load("textures/lightgun.png")) {
-        fprintf(stderr, "failed to load lightning gun billboard\n");
-        return false;
-    }
-
-    if (!m_billboards[kBillboardRocket].load("textures/rocketgun.png")) {
-        fprintf(stderr, "failed to load rocket launcher billboard\n");
-        return false;
-    }
-
-    if (!m_billboards[kBillboardShotgun].load("textures/shotgun.png")) {
-        fprintf(stderr, "failed to load shotgun billboard\n");
+    for (size_t i = 0; i < sizeof(billboards)/sizeof(*billboards); i++) {
+        auto &billboard = billboards[i];
+        if (m_billboards[billboard.type].load(billboard.file))
+            continue;
+        fprintf(stderr, "failed to load billboard for `%s'\n", billboard.name);
         return false;
     }
 

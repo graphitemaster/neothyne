@@ -371,7 +371,7 @@ struct world {
     world();
     ~world();
 
-    enum {
+    enum billboardType {
         kBillboardRail,
         kBillboardLightning,
         kBillboardRocket,
