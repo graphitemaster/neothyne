@@ -2,17 +2,17 @@
 
 #include "client.h"
 
-static constexpr float kClientMaxVelocity = 80.0f;
+static constexpr float kClientMaxVelocity = 120.0f;
 static constexpr m::vec3 kClientGravity(0.0f, -98.0f, 0.0f);
 static constexpr float kClientRadius = 5.0f; // client sphere radius (ft / 2pi)
 static constexpr float kClientWallReduce = 0.5f; // 50% reduction of collision responce when sliding up a wal
-static constexpr float kClientSpeed = 60.0f; // cm/s
+static constexpr float kClientSpeed = 80.0f; // cm/s
 static constexpr float kClientCrouchSpeed = 30.0f; // cm/s
 static constexpr float kClientJumpSpeed = 130.0f; // cm/s
 static constexpr float kClientJumpExponent = 0.3f;
 static constexpr float kClientStopSpeed = 90.0f; // -cm/s
 static constexpr float kClientCrouchHeight = 3.0f; // ft
-static constexpr float kClientCrouchTransitionSpeed = 0.25f; // -ft/s
+static constexpr float kClientCrouchTransitionSpeed = 24.0f; // -m/s
 static constexpr float kClientViewHeight = 6.0f; // ft
 
 client::client() :
@@ -221,7 +221,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
         m_isCrouching = false;
 
     float clientSpeed;
-    float crouchTransitionSpeed = kClientCrouchTransitionSpeed * (1.0f - dt);
+    float crouchTransitionSpeed = kClientCrouchTransitionSpeed * dt;
     if (m_isCrouching) {
         clientSpeed = kClientCrouchSpeed;
         m_viewHeight = m::clamp(m_viewHeight - crouchTransitionSpeed,
@@ -240,7 +240,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
     if (m_isOnGround)
         newDirection += jump * powf(kClientJumpSpeed, kClientJumpExponent);
     if (needSlowDown) {
-        m::vec3 slowDown = m_velocity * kClientStopSpeed * 0.01f;
+        m::vec3 slowDown = m_velocity * kClientStopSpeed * ((1.0f - dt) * 0.01f);
         slowDown.y = 0.0f;
         newDirection += slowDown;
     }
