@@ -10,6 +10,64 @@
         return; \
     } while (0)
 
+struct decoder {
+    decoder() :
+        m_error(kSuccess),
+        m_width(0),
+        m_height(0),
+        m_bpp(0)
+    {
+
+    }
+
+    enum result {
+        kSuccess,
+        kInvalid,
+        kUnsupported,
+        kInternalError,
+        kMalformatted,
+        kFinished,
+    };
+
+    const char *error(void) const {
+        switch (m_error) {
+            case kSuccess:
+                return "success";
+            case kInvalid:
+                return "invalid";
+            case kUnsupported:
+                return "unsupported";
+            case kMalformatted:
+                return "malformatted";
+            default:
+                break;
+        }
+        return "internal error";
+    }
+
+    size_t width(void) const {
+        return m_width;
+    }
+
+    size_t height(void) const {
+        return m_height;
+    }
+
+    size_t bpp(void) const {
+        return m_bpp;
+    }
+
+    result status(void) const {
+        return m_error;
+    }
+
+protected:
+    result m_error;
+    size_t m_width;
+    size_t m_height;
+    size_t m_bpp;
+};
+
 ///
 /// Baseline JPEG decoder
 ///  * Doesn't support progressive or lossless JPEG
@@ -22,44 +80,35 @@
 ///  Decoder itself decodes to either 8-bit greyscale compatible with GL_LUMINANCE8
 ///  or 24-bit RGB compatible with GL_RGB8.
 ///
-struct jpeg  {
-    enum result {
-        kSuccess,
-        kNotJpeg,
-        kUnsupported,
-        kInternalError,
-        kMalformatted,
-        kFinished,
-    };
-
+struct jpeg : decoder {
     enum chromaFilter {
         kBicubic,
         kPixelRepetition
     };
 
-    jpeg(const u::vector<unsigned char> &data, chromaFilter filter = kBicubic) {
-        memset(this, 0, sizeof *this);
+    jpeg(const u::vector<unsigned char> &data, chromaFilter filter = kBicubic) :
+        m_rstinterval(0),
+        m_size(0),
+        m_length(0),
+        m_mbwidth(0),
+        m_mbheight(0),
+        m_mbsizex(0),
+        m_mbsizey(0),
+        m_buf(0),
+        m_bufbits(0),
+        m_exifLittleEndian(false),
+        m_coSitedChroma(false)
+    {
+        memset(m_comp, 0, sizeof(m_comp));
+        memset(m_vlctab, 0, sizeof(m_vlctab));
+        memset(m_qtab, 0, sizeof(m_qtab));
+        memset(m_block, 0, sizeof(m_block));
+
         decode(data, filter);
     }
 
-    result status(void) const {
-        return m_error;
-    }
-
-    size_t width(void) const {
-        return m_width;
-    }
-
-    size_t height(void) const {
-        return m_height;
-    }
-
-    size_t bpp(void) const {
-        return m_ncomp;
-    }
-
     u::vector<unsigned char> data(void) {
-        if (m_ncomp == 1)
+        if (m_bpp == 1)
             return u::move(m_comp[0].pixels);
         return u::move(m_rgb);
     }
@@ -270,7 +319,6 @@ private:
     }
 
     void decodeSOF(void) {
-        int i;
         int ssxmax = 0;
         int ssymax = 0;
         component* c;
@@ -284,10 +332,10 @@ private:
 
         m_height = decode16(m_position + 1);
         m_width = decode16(m_position + 3);
-        m_ncomp = m_position[5];
+        m_bpp = m_position[5];
         skip(6);
 
-        switch (m_ncomp) {
+        switch (m_bpp) {
             case 1:
             case 3:
                 break;
@@ -295,10 +343,11 @@ private:
                 returnResult(kUnsupported);
         }
 
-        if (m_length < (m_ncomp * 3))
+        if (m_length < int(m_bpp * 3))
             returnResult(kMalformatted);
 
-        for (i = 0, c = m_comp; i < m_ncomp; ++i, ++c) {
+        size_t i;
+        for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
             c->cid = m_position[0];
             if (!(c->ssx = m_position[1] >> 4))
                 returnResult(kMalformatted);
@@ -320,7 +369,7 @@ private:
         m_mbsizey = ssymax << 3;
         m_mbwidth = (m_width + m_mbsizex - 1) / m_mbsizex;
         m_mbheight = (m_height + m_mbsizey - 1) / m_mbsizey;
-        for (i = 0, c = m_comp; i < m_ncomp; ++i, ++c) {
+        for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
             c->width = (m_width * c->ssx + ssxmax - 1) / ssxmax;
             c->stride = (c->width + 7) & 0x7FFFFFF8;
             c->height = (m_height * c->ssy + ssymax - 1) / ssymax;
@@ -329,8 +378,8 @@ private:
                 returnResult(kUnsupported);
             c->pixels.resize(c->stride * (m_mbheight * m_mbsizey * c->ssy / ssymax));
         }
-        if (m_ncomp == 3)
-            m_rgb.resize(m_width * m_height * m_ncomp);
+        if (m_bpp == 3)
+            m_rgb.resize(m_width * m_height * m_bpp);
         skip(m_length);
     }
 
@@ -445,17 +494,17 @@ private:
     }
 
     void decodeScanlines(void) {
-        int i;
+        size_t i;
         size_t rstcount = m_rstinterval;
         size_t nextrst = 0;
         component* c;
         decodeLength();
-        if (m_length < (4 + 2 * m_ncomp))
+        if (m_length < int(4 + 2 * m_bpp))
             returnResult(kMalformatted);
-        if (m_position[0] != m_ncomp)
+        if (m_position[0] != m_bpp)
             returnResult(kUnsupported);
         skip(1);
-        for (i = 0, c = m_comp;  i < m_ncomp;  ++i, ++c) {
+        for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
             if (m_position[0] != c->cid)
                 returnResult(kMalformatted);
             if (m_position[1] & 0xEE)
@@ -469,7 +518,7 @@ private:
         skip(m_length);
         for (int mby = 0; mby < m_mbheight; ++mby) {
             for (int mbx = 0; mbx < m_mbwidth; ++mbx) {
-                for (i = 0, c = m_comp; i < m_ncomp; ++i, ++c) {
+                for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
                     for (int sby = 0; sby < c->ssy; ++sby) {
                         for (int sbx = 0; sbx < c->ssx; ++sbx) {
                             decodeBlock(c, &c->pixels[((mby * c->ssy + sby) * c->stride + mbx * c->ssx + sbx) << 3]);
@@ -719,9 +768,9 @@ private:
     }
 
     void convert(chromaFilter filter) {
-        int i;
+        size_t i;
         component* c;
-        for (i = 0, c = m_comp; i < m_ncomp; ++i, ++c) {
+        for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
             if (filter == kBicubic) {
                 while (c->width < m_width || c->height < m_height) {
                     if (c->width < m_width) {
@@ -750,7 +799,7 @@ private:
             if (c->width < m_width || c->height < m_height)
                 returnResult(kInternalError);
         }
-        if (m_ncomp == 3) {
+        if (m_bpp == 3) {
             // convert to RGB24
             unsigned char *prgb = &m_rgb[0];
             const unsigned char *py  = &m_comp[0].pixels[0];
@@ -787,9 +836,9 @@ private:
         m_size = data.size() & 0x7FFFFFFF;
 
         if (m_size < 2)
-            return kNotJpeg;
+            return kInvalid;
         if ((m_position[0] ^ 0xFF) | (m_position[1] ^ 0xD8))
-            return kNotJpeg;
+            return kInvalid;
         skip(2);
         while (!m_error) {
             if ((m_size < 2) || (m_position[0] != 0xFF))
@@ -839,12 +888,9 @@ private:
 
     component m_comp[3];
     vlcCode m_vlctab[4][65536];
-    result m_error;
     const unsigned char *m_position;
     unsigned char m_qtab[4][64];
     u::vector<unsigned char> m_rgb;
-    size_t m_width;
-    size_t m_height;
     size_t m_rstinterval;
     int m_size;
     int m_length;
@@ -852,7 +898,6 @@ private:
     int m_mbheight;
     int m_mbsizex;
     int m_mbsizey;
-    int m_ncomp;
     int m_buf;
     int m_bufbits;
     int m_block[64];
@@ -884,36 +929,13 @@ const unsigned char jpeg::m_zz[64] = {
 /// |       16 |         4 | greyscale (with alpha)  |
 /// |       16 |         6 | RGBA64                  |
 ///
-struct png {
-    enum result {
-        kSuccess,
-        kNotPng,
-        kMalformatted
-    };
-
+struct png : decoder {
     png(const u::vector<unsigned char> &data) {
-        memset(this, 0, sizeof *this);
         decode(m_decoded, data);
     }
 
-    result status(void) const {
-        return m_error;
-    }
-
-    size_t width(void) const {
-        return m_width;
-    }
-
-    size_t height(void) const {
-        return m_height;
-    }
-
-    size_t bpp(void) const {
-        return calculateBitsPerPixel() / 8;
-    }
-
     u::vector<unsigned char> data(void) {
-        return m_decoded;
+        return u::move(m_decoded);
     }
 
 private:
@@ -994,6 +1016,7 @@ private:
         }
 
         const size_t bpp = calculateBitsPerPixel();
+        m_bpp = bpp / 8;
         u::vector<unsigned char> scanlines(((m_width * (m_height * bpp + 7)) / 8) + m_height);
         u::zlib zlib;
         if (!zlib.decompress(scanlines, idat))
@@ -1066,11 +1089,11 @@ private:
 
     void readHeader(const unsigned char* in, size_t inlength) {
         if (inlength < 29)
-            returnResult(kNotPng);
+            returnResult(kInvalid);
         if (memcmp(in, "\x89\x50\x4E\x47\xD\xA\x1A\xA", 8))
-            returnResult(kNotPng);
+            returnResult(kInvalid);
         if (memcmp(in + 12, "IHDR", 4))
-            returnResult(kNotPng);
+            returnResult(kInvalid);
 
         m_width = readWord(&in[16]);
         m_height = readWord(&in[20]);
@@ -1239,8 +1262,6 @@ private:
     }
 
 protected:
-    size_t m_width;
-    size_t m_height;
     size_t m_colorType;
     size_t m_bitDepth;
     size_t m_compressionMethod;
@@ -1250,7 +1271,6 @@ protected:
     size_t m_chromaKeyGreen;
     size_t m_chromaKeyBlue;
     bool m_hasChromaKey;
-    result m_error;
     u::vector<unsigned char> m_palette;
     u::vector<unsigned char> m_decoded;
     static const size_t m_adam7Pattern[28];
@@ -1260,6 +1280,224 @@ protected:
 const size_t png::m_adam7Pattern[28]  = {
     0, 4, 0, 2, 0, 1, 0, 0, 0, 4, 0, 2, 0, 1,
     8, 8, 4, 4, 2, 2, 1, 8, 8, 8, 4, 4, 2, 2
+};
+
+///
+/// TGA decoder
+///
+struct tga : decoder {
+    tga(const u::vector<unsigned char> &data) {
+        decode(data);
+    }
+
+    u::vector<unsigned char> data(void) {
+        return u::move(m_data);
+    }
+
+private:
+    void read(unsigned char *dest, size_t size) {
+        memcpy(dest, m_position, size);
+        seek(size);
+    }
+
+    int get(void) {
+        return *m_position++;
+    }
+
+    void seek(size_t where) {
+        m_position += where;
+    }
+
+    result decode(const u::vector<unsigned char> &data) {
+        m_position = &data[0];
+        read((unsigned char *)&header, sizeof(header));
+        seek(header.identSize);
+
+        if (!memchr("\x8\x18\x20", header.pixelSize, 3))
+            return kUnsupported;
+
+        m_bpp = header.pixelSize / 8;
+        m_width = header.width[0] | (header.width[1] << 8);
+        m_height = header.height[0] | (header.height[1] << 8);
+
+        switch (header.imageType) {
+            case 1:
+                decodeColor();
+                break;
+            case 2:
+                decodeImage();
+                break;
+            case 9:
+                decodeColorRLE();
+                break;
+            case 10:
+                decodeImageRLE();
+                break;
+            default:
+                return kUnsupported;
+        }
+
+        return m_error ? m_error : kSuccess;
+    }
+
+    void decodeColor(void) {
+        size_t colorMapSize = header.colorMapSize[0] | (header.colorMapSize[1] << 8);
+        if (!memchr("\x8\x18\x20", header.colorMapEntrySize, 3))
+            returnResult(kUnsupported);
+
+        m_bpp = header.colorMapEntrySize / 8;
+        u::vector<unsigned char> colorMap;
+        colorMap.resize(m_bpp * colorMapSize);
+        read(&colorMap[0], m_bpp * colorMapSize);
+
+        if (m_bpp >= 3)
+            convert(&colorMap[0], m_bpp * colorMapSize, m_bpp);
+
+        m_data.resize(m_bpp * m_width * m_height);
+        unsigned char *indices = &m_data[(m_bpp - 1) * m_width * m_height];
+        read(indices, m_width * m_height);
+        unsigned char *src = indices;
+        unsigned char *dst = &m_data[m_bpp * m_width * m_height];
+
+        for (size_t i = 0; i < m_height; i++) {
+            dst -= m_bpp * m_width;
+            unsigned char *row = dst;
+            for (size_t j = 0; j < m_width; j++) {
+                memcpy(row, &colorMap[*src++ * m_bpp], m_bpp);
+                row += m_bpp;
+            }
+        }
+    }
+
+    void decodeImage(void) {
+        m_data.resize(m_bpp * m_width * m_height);
+        unsigned char *dst = &m_data[m_bpp * m_width * m_height];
+        for (size_t i = 0; i < m_height; i++) {
+            dst -= m_bpp * m_width;
+            read(dst, m_bpp * m_width);
+        }
+        if (m_bpp >= 3)
+            convert(&m_data[0], m_bpp * m_width * m_height, m_bpp);
+    }
+
+    void decodeColorRLE(void) {
+        size_t colorMapSize = header.colorMapSize[0] | (header.colorMapSize[1] << 8);
+        if (!memchr("\x8\x18\x20", header.colorMapEntrySize, 3))
+            returnResult(kUnsupported);
+
+        m_bpp = header.colorMapEntrySize / 8;
+        u::vector<unsigned char> colorMap;
+        colorMap.resize(m_bpp * colorMapSize);
+        read(&colorMap[0], m_bpp * colorMapSize);
+
+        if (m_bpp >= 3)
+            convert(&colorMap[0], m_bpp * colorMapSize, m_bpp);
+
+        m_data.resize(m_bpp * m_width * m_height);
+
+        unsigned char buffer[128];
+        for (unsigned char *end = &m_data[m_bpp * m_width * m_height], *dst = end - m_bpp * m_width; dst >= &m_data[0]; ) {
+            int c = get();
+            if (c & 0x80) {
+                int index = get();
+                const unsigned char *column = &colorMap[index * m_bpp];
+                c -= 0x7F;
+                c *= m_bpp;
+
+                while (c > 0 && dst >= &m_data[0]) {
+                    int n = u::min(c, int(end - dst));
+                    for (unsigned char *run = dst + n; dst < run; dst += m_bpp)
+                        memcpy(dst, column, m_bpp);
+                    c -= n;
+                    if (dst >= end) {
+                        end -= m_bpp * m_width;
+                        dst = end - m_bpp * m_width;
+                    }
+                }
+            } else {
+                c += 1;
+                while (c > 0 && dst >= &m_data[0]) {
+                    int n = u::min(c, int(end - dst) / int(m_bpp));
+                    read(buffer, n);
+                    for (unsigned char *src = buffer; src <= &buffer[n]; dst += m_bpp)
+                        memcpy(dst, &colorMap[*src++ * m_bpp], m_bpp);
+                    c -= n;
+                    if (dst >= end) {
+                        end -= m_bpp * m_width;
+                        dst = end - m_bpp * m_width;
+                    }
+                }
+            }
+        }
+    }
+
+    void decodeImageRLE(void) {
+        m_data.resize(m_bpp * m_width * m_height);
+        unsigned char buffer[4];
+        for (unsigned char *end = &m_data[m_bpp * m_width * m_height], *dst = end - m_bpp * m_width; dst >= &m_data[0]; ) {
+            int c = get();
+            if (c & 0x80) {
+                read(buffer, m_bpp);
+                c -= 0x7F;
+                if (m_bpp >= 3)
+                    u::swap(buffer[0], buffer[2]);
+                c *= m_bpp;
+
+                while (c > 0) {
+                    int n = u::min(c, int(end - dst));
+                    for (unsigned char *run = dst + n; dst < run; dst += m_bpp)
+                        memcpy(dst, buffer, m_bpp);
+                    c -= n;
+                    if (dst >= end) {
+                        end -= m_bpp * m_width;
+                        dst = end - m_bpp * m_width;
+                        if (dst < &m_data[0])
+                            break;
+                    }
+                }
+            } else {
+                c += 1;
+                c *= m_bpp;
+                while (c > 0) {
+                    int n = u::min(c, int(end - dst));
+                    read(dst, n);
+                    if (m_bpp >= 3)
+                        convert(dst, n, m_bpp);
+                    dst += n;
+                    c -= n;
+                    if (dst >= end) {
+                        end -= m_bpp * m_width;
+                        dst = end - m_bpp * m_width;
+                        if (dst < &m_data[0])
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    void convert(unsigned char *data, size_t length, size_t m_bpp) {
+        for (unsigned char *end = &data[length]; data < end; data += m_bpp)
+            u::swap(data[0], data[2]);
+    }
+
+    struct {
+        unsigned char identSize;
+        unsigned char colorMapType;
+        unsigned char imageType;
+        unsigned char colorMapOrigin[2];
+        unsigned char colorMapSize[2];
+        unsigned char colorMapEntrySize;
+        unsigned char xorigin[2];
+        unsigned char yorigin[2];
+        unsigned char width[2];
+        unsigned char height[2];
+        unsigned char pixelSize;
+        unsigned char description;
+    } header;
+
+    const unsigned char *m_position;
+    u::vector<unsigned char> m_data;
 };
 
 ///
@@ -1401,7 +1639,8 @@ enum decoderType  {
     kDecoderNone,
     kDecoderPNG,
     kDecoderJPEG,
-    // TODO DXTn and TGA
+    kDecoderTGA
+    // TODO DXTn
 };
 
 static const struct {
@@ -1409,12 +1648,43 @@ static const struct {
     decoderType decoder;
 } decoders[] = {
     { {{"jpg", "jpeg", "jpe", "jif", "jfif", "jfi"}}, kDecoderJPEG },
-    { {{"png"}},                                      kDecoderPNG  }
+    { {{"png"}},                                      kDecoderPNG  },
+    { {{"tga"}},                                      kDecoderTGA  }
 };
 
+template <typename T>
+bool texture::decode(const u::vector<unsigned char> &data, const char *name) {
+    T decode(data);
+    if (decode.status() != decoder::kSuccess) {
+        fprintf(stderr, "failed to decode `%s' %s\n", name, decode.error());
+        return false;
+    }
+
+    switch (decode.bpp()) {
+        case 1:
+            m_format = TEX_LUMINANCE;
+            break;
+        case 3:
+            m_format = TEX_RGB;
+            break;
+        case 4:
+            m_format = TEX_RGBA;
+            break;
+    }
+
+    m_width = decode.width();
+    m_height = decode.height();
+    m_pitch = m_width * decode.bpp();
+    m_data = u::move(decode.data());
+
+    return true;
+}
+
 bool texture::load(const u::string &file) {
+    const char *fileName = file.c_str();
+
     // load into vector
-    FILE *fp = fopen(file.c_str(), "r");
+    FILE *fp = fopen(fileName, "r");
     if (!fp)
         return false;
 
@@ -1430,70 +1700,39 @@ bool texture::load(const u::string &file) {
     fclose(fp);
 
     // find the appropriate decoder
-    const char *extension = strrchr(file.c_str(), '.');
+    const char *extension = strrchr(fileName, '.');
     if (!extension)
         return false;
 
-    decoderType decoder = kDecoderNone;
+    decoderType decodeMethod = kDecoderNone;
     for (size_t i = 0; i < sizeof(decoders)/sizeof(*decoders); i++) {
         for (auto &it : decoders[i].extensions) {
             if (strcmp(it, extension + 1))
                 continue;
-            decoder = decoders[i].decoder;
+            decodeMethod = decoders[i].decoder;
             break;
         }
     }
 
     // decode it
-    if (decoder == kDecoderJPEG) {
-        jpeg decoder(data);
-        if (decoder.status() != jpeg::kSuccess)
+    switch (decodeMethod) {
+        case kDecoderJPEG:
+            if (!decode<jpeg>(data, fileName))
+                return false;
+            break;
+        case kDecoderPNG:
+            if (!decode<png>(data, fileName))
+                return false;
+            break;
+        case kDecoderTGA:
+            if (!decode<tga>(data, fileName))
+                return false;
+            break;
+        case kDecoderNone:
+            fprintf(stderr, "no decoder found for `%s'\n", fileName);
             return false;
-
-        m_width = decoder.width();
-        m_height = decoder.height();
-        m_pitch = m_width * decoder.bpp();
-        m_data = decoder.data();
-
-        switch (decoder.bpp()) {
-            case 1:
-                m_format = TEX_LUMINANCE;
-                break;
-            case 3:
-                m_format = TEX_RGB;
-                break;
-        }
-        return true;
-    } else if (decoder == kDecoderPNG) {
-        png decoder(data);
-        if (decoder.status() != png::kSuccess) {
-            fprintf(stderr, "failed decoding PNG `%s'\n", file.c_str());
-            return false;
-        }
-
-        m_width = decoder.width();
-        m_height = decoder.height();
-        m_pitch = m_width * decoder.bpp();
-        m_data = decoder.data();
-
-        // TODO: convert the odd formats of PNG
-        switch (decoder.bpp()) {
-            case 1:
-                m_format = TEX_LUMINANCE;
-                break;
-            case 3:
-                m_format = TEX_RGB;
-                break;
-            case 4:
-                m_format = TEX_RGBA;
-                break;
-        }
-
-        return true;
-    } else {
-        fprintf(stderr, "no supported decoder found for `%s'\n", file.c_str());
-        return false;
     }
+
     return true;
 }
 

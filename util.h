@@ -33,6 +33,23 @@ namespace u {
         return static_cast<typename std::remove_reference<T>::type&&>(t);
     }
 
+    template <typename T>
+    T min(const T &lhs, const T &rhs) {
+        return lhs < rhs ? lhs : rhs;
+    }
+
+    template <typename T>
+    T max(const T &lhs, const T &rhs) {
+        return lhs > rhs ? lhs : rhs;
+    }
+
+    template <typename T>
+    void swap(T &lhs, T &rhs) {
+        // use std here because their swap is more efficent than what we could
+        // implement (memcpy for trivially copy assignable for instance)
+        std::swap(lhs, rhs);
+    }
+
     // A small implementation of boost.optional
     struct optional_none { };
 

@@ -34,6 +34,10 @@ struct texture {
     const unsigned char *data(void);
 
 private:
+
+    template <typename T>
+    bool decode(const u::vector<unsigned char> &data, const char *fileName);
+
     u::vector<unsigned char> m_data;
     size_t m_width;
     size_t m_height;
