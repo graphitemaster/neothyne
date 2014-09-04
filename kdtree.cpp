@@ -212,12 +212,12 @@ polyPlane kdTree::testTriangle(size_t index, const m::plane &plane) const {
 bool kdTree::load(const u::string &file) {
     unload();
 
-    FILE *fp = u::fopen(file, "rt");
-    if (!fp)
+    u::unique_ptr<FILE, int(*)(FILE*)> fp(u::fopen(file, "rt"), &fclose);
+    if (!fp.get())
         return false;
 
     u::string texturePath;
-    while (auto getline = u::getline(fp)) {
+    while (auto getline = u::getline(fp.get())) {
         u::string& line = *getline;
         float x0, y0, z0, x1, y1, z1, w;
         int v0, v1, v2, t0, t1, t2, i;
@@ -264,7 +264,6 @@ bool kdTree::load(const u::string &file) {
             textureCount++;
         }
     }
-    fclose(fp);
 
     nodeCount = 0;
     leafCount = 0;
