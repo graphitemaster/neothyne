@@ -1684,20 +1684,10 @@ bool texture::load(const u::string &file) {
     const char *fileName = file.c_str();
 
     // load into vector
-    FILE *fp = fopen(fileName, "r");
-    if (!fp)
+    auto load = u::read(file, "r");
+    if (!load)
         return false;
-
-    u::vector<unsigned char> data;
-    fseek(fp, 0, SEEK_END);
-    data.resize(ftell(fp));
-    fseek(fp, 0, SEEK_SET);
-
-    if (fread(&data[0], data.size(), 1, fp) != 1) {
-        fclose(fp);
-        return false;
-    }
-    fclose(fp);
+    u::vector<unsigned char> data = *load;
 
     // find the appropriate decoder
     const char *extension = strrchr(fileName, '.');

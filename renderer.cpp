@@ -286,34 +286,24 @@ bool method::init(void) {
 }
 
 bool method::addShader(GLenum shaderType, const char *shaderFile) {
-    size_t preludeLength = 0;
     u::string *shaderSource;
     switch (shaderType) {
         case GL_VERTEX_SHADER:
-            preludeLength = m_vertexSource.size();
             shaderSource = &m_vertexSource;
             break;
         case GL_FRAGMENT_SHADER:
-            preludeLength = m_fragmentSource.size();
             shaderSource = &m_fragmentSource;
             break;
         case GL_GEOMETRY_SHADER:
-            preludeLength = m_geometrySource.size();
             shaderSource = &m_geometrySource;
             break;
     }
 
-    FILE *fp = fopen(shaderFile, "r");
-    if (!fp)
+    auto source = u::read(shaderFile, "r");
+    if (source)
+        *shaderSource += u::string((*source).begin(), (*source).end());
+    else
         return false;
-
-    fseek(fp, 0, SEEK_END);
-    size_t shaderLength = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    shaderSource->resize(preludeLength + shaderLength);
-    fread(&(*shaderSource)[preludeLength], shaderLength, 1, fp);
-    fclose(fp);
 
     GLuint shaderObject = glCreateShader_(shaderType);
     if (!shaderObject)

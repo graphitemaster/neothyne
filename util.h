@@ -19,8 +19,8 @@ namespace u {
     template <typename T>
     using list = std::list<T>;
 
-    template <typename T>
-    using unique_ptr = std::unique_ptr<T>;
+    template <typename T, typename D = std::default_delete<T>>
+    using unique_ptr = std::unique_ptr<T, D>;
 
     template <typename T>
     using vector = std::vector<T>;
@@ -190,6 +190,21 @@ namespace u {
             if (n < sizeof(buf) - 1)
                 return u::move(s);
         }
+    }
+
+    inline optional<vector<unsigned char>> read(const string &file, const char *mode) {
+        unique_ptr<FILE, int(*)(FILE*)> fp(fopen(file.c_str(), mode), &fclose);
+        if (!fp)
+            return none;
+
+        vector<unsigned char> data;
+        fseek(fp.get(), 0, SEEK_END);
+        data.resize(ftell(fp.get()));
+        fseek(fp.get(), 0, SEEK_SET);
+
+        if (fread(&data[0], data.size(), 1, fp.get()) != 1)
+            return none;
+        return data;
     }
 
     // zlib decompression

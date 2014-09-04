@@ -35,32 +35,18 @@ struct loadThreadData {
 static bool loadThread(void *threadData) {
     loadThreadData *data = (loadThreadData*)threadData;
 
-    FILE *fp = fopen("maps/garden.kdgz", "r");
-    u::vector<unsigned char> mapData;
-    if (!fp) {
-        fprintf(stderr, "failed opening map\n");
-        return 0;
+    auto read = u::read("maps/garden.kdgz", "rb");
+    if (read) {
+        if (!data->gMap.load(*read))
+            goto error;
+        if (!data->gWorld.load(data->gMap))
+            goto error;
+        SDL_AtomicSet(&data->done, kLoadSucceeded);
+        return true;
     }
-
-    fseek(fp, 0, SEEK_END);
-    size_t length = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    mapData.resize(length);
-    fread(&mapData[0], length, 1, fp);
-    fclose(fp);
-
-    if (!data->gMap.load(mapData)) {
-        SDL_AtomicSet(&data->done, kLoadFailed);
-        return false;
-    }
-
-    if (!data->gWorld.load(data->gMap)) {
-        SDL_AtomicSet(&data->done, kLoadFailed);
-        return false;
-    }
-
-    SDL_AtomicSet(&data->done, kLoadSucceeded);
-    return true;
+error:
+    SDL_AtomicSet(&data->done, kLoadFailed);
+    return false;
 }
 
 static SDL_Window *initSDL(size_t width, size_t height) {
