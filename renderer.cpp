@@ -930,11 +930,6 @@ world::world(void) {
     m_directionalLight.ambient = 0.90f;
     m_directionalLight.diffuse = 0.75f;
 
-    billboard rail;
-    billboard lightning;
-    billboard rocket;
-    billboard shotgun;
-
     const m::vec3 places[] = {
         m::vec3(153.04, 105.02, 197.67),
         m::vec3(-64.14, 105.02, 328.36),
@@ -960,20 +955,16 @@ world::world(void) {
         m::vec3(62.59, 101.02, -207.53)
     };
 
+    m_billboards.resize(kBillboardMax);
+
     for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
         switch (rand() % 4) {
-            case 0: rail.add(places[i]); break;
-            case 1: lightning.add(places[i]); break;
-            case 2: rocket.add(places[i]); break;
-            case 3: shotgun.add(places[i]); break;
+            case 0: m_billboards[kBillboardRail].add(places[i]); break;
+            case 1: m_billboards[kBillboardLightning].add(places[i]); break;
+            case 2: m_billboards[kBillboardRocket].add(places[i]); break;
+            case 3: m_billboards[kBillboardShotgun].add(places[i]); break;
         }
     }
-
-    m_billboards.resize(kBillboardMax);
-    m_billboards[kBillboardRail] = rail;
-    m_billboards[kBillboardLightning] = lightning;
-    m_billboards[kBillboardRocket] = rocket;
-    m_billboards[kBillboardShotgun] = shotgun;
 }
 
 world::~world(void) {
