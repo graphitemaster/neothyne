@@ -98,7 +98,7 @@ vec4 calcLightDirectional(vec3 normal) {
 vec4 calcLightPoint(pointLight light, vec3 normal) {
     vec3 lightDirection = worldPos0 - light.position;
     float distance = length(lightDirection);
-    lightDirection = normalize(lightDirection);
+    lightDirection /= distance;
 
     vec4 color = calcLightGeneric(light.base, lightDirection, normal, 1.0f);
     float attenuation = light.attenuation.constant +
@@ -118,17 +118,12 @@ vec4 calcLightSpot(spotLight light, vec3 normal) {
 }
 
 vec3 calcBump(void) {
-    vec3 normal = normalize(normal0);
-    vec3 tangent = normalize(tangent0);
-    tangent = normalize(tangent - dot(tangent, normal) * normal);
-    vec3 bitangent = cross(tangent, normal);
+    vec3 tangent = normalize(tangent0 - dot(tangent0, normal0) * normal0);
+    vec3 bitangent = cross(tangent, normal0);
     vec3 bumpMapNormal = texture(gNormalMap, texCoord0).xyz;
     bumpMapNormal = 2.0f * bumpMapNormal - vec3(1.0f, 1.0f, 1.0f);
-    vec3 newNormal;
-    mat3 tbn = mat3(tangent, bitangent, normal);
-    newNormal = tbn * bumpMapNormal;
-    newNormal = normalize(newNormal);
-    return newNormal;
+    mat3 tbn = mat3(tangent, bitangent, normal0);
+    return normalize(tbn * bumpMapNormal);
 }
 
 float calcFog(vec4 fragColor) {
@@ -149,6 +144,8 @@ float calcFog(vec4 fragColor) {
     return result;
 }
 
+const vec2 maskAlpha = vec2(1.0f, 0.0f);
+
 void main() {
     vec3 normal = calcBump();
     vec4 totalLight = calcLightDirectional(normal);
@@ -160,13 +157,9 @@ void main() {
     for (int i = 0; i < gNumSpotLights; i++)
         totalLight += calcLightSpot(gSpotLights[i], normal);
 
-    fragColor = sampledColor * totalLight;
+    vec4 transposedColor = sampledColor * totalLight;
+    if (gFog.method != kFogNone)
+        transposedColor = mix(transposedColor, gFog.color, calcFog(transposedColor));
 
-    // deal with fog
-    if (gFog.method != kFogNone) {
-        float fogColor = calcFog(fragColor);
-        fragColor = mix(fragColor, gFog.color, fogColor);
-    }
-
-    fragColor.a = 1.0f;
+    fragColor = transposedColor.xyzw * maskAlpha.xxxy + maskAlpha.yyyx;
 }
