@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 
     // we're done loading the resources, now upload them (we can't render a loading
     // screen when uploading so we assume the process will be sufficently fast.)
-    loadData.gWorld.upload(loadData.gMap);
+    loadData.gWorld.upload();
 
     // Now render the world
     client gClient;

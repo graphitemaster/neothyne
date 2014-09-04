@@ -380,7 +380,7 @@ struct world {
     };
 
     bool load(const kdMap &map);
-    bool upload(const kdMap &map);
+    bool upload(void);
 
     void draw(const rendererPipeline &p);
 
@@ -402,6 +402,10 @@ private:
     u::vector<spotLight> m_spotLights;
     u::vector<renderTextueBatch> m_textureBatches;
     u::vector<uint32_t> m_indices;
+    u::vector<kdBinVertex> m_vertices;
+
+    GLenum m_indexType;
+    size_t m_indexSize;
 
     resourceManager<u::string, texture2D> m_textures2D;
 

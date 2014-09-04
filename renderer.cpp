@@ -1012,6 +1012,19 @@ bool world::load(const kdMap &map) {
         m_textureBatches.push_back(batch);
     }
 
+    // figure out optimal index format for bandwidth
+    const size_t indicesCount = m_indices.size();
+    if (indicesCount <= 0xFF) {
+        m_indexSize = 1;
+        m_indexType = GL_UNSIGNED_BYTE;
+    } else if (indicesCount <= 0xFFFF) {
+        m_indexSize = 2;
+        m_indexType = GL_UNSIGNED_SHORT;
+    } else {
+        m_indexSize = 4;
+        m_indexType = GL_UNSIGNED_INT;
+    }
+
     // load textures
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
         const char *name = map.textures[m_textureBatches[i].index].name;
@@ -1030,10 +1043,13 @@ bool world::load(const kdMap &map) {
         m_textureBatches[i].diffuse = diffuse;
         m_textureBatches[i].normal = normal;
     }
+
+    m_vertices = u::move(map.vertices);
+
     return true;
 }
 
-bool world::upload(const kdMap &map) {
+bool world::upload(void) {
     // upload skybox
     if (!m_skybox.upload()) {
         fprintf(stderr, "failed to upload skybox\n");
@@ -1062,7 +1078,7 @@ bool world::upload(const kdMap &map) {
     glGenBuffers_(2, m_buffers);
 
     glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData_(GL_ARRAY_BUFFER, map.vertices.size() * sizeof(kdBinVertex), &map.vertices[0], GL_STATIC_DRAW);
+    glBufferData_(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(kdBinVertex), &m_vertices[0], GL_STATIC_DRAW);
     glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), 0);                 // vertex
     glVertexAttribPointer_(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
     glVertexAttribPointer_(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
@@ -1074,7 +1090,7 @@ bool world::upload(const kdMap &map) {
 
     // upload data
     glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(uint32_t), &m_indices[0], GL_STATIC_DRAW);
+    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * m_indexSize, &m_indices[0], GL_STATIC_DRAW);
 
     if (!m_depthPrePassMethod.init()) {
         fprintf(stderr, "failed to initialize depth prepass rendering method\n");
@@ -1103,7 +1119,7 @@ void world::draw(const rendererPipeline &pipeline) {
     // render geometry only
     glBindVertexArray_(m_vao);
     //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, (const GLvoid*)0);
+    glDrawElements(GL_TRIANGLES, m_indices.size(), m_indexType, (const GLvoid*)0);
     glBindVertexArray_(0);
 
     // normal pass
@@ -1152,8 +1168,8 @@ void world::render(const rendererPipeline &pipeline) {
     for (auto &it : m_textureBatches) {
         it.diffuse->bind(GL_TEXTURE0);
         it.normal->bind(GL_TEXTURE1);
-        glDrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
-            (const GLvoid*)(sizeof(uint32_t) * it.start));
+        glDrawElements(GL_TRIANGLES, it.count, m_indexType,
+            (const GLvoid*)(m_indexSize * it.start));
     }
     glBindVertexArray_(0);
 
