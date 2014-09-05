@@ -3,9 +3,12 @@
 #include <math.h>
 #include <stddef.h>
 
+#include "util.h"
+
 namespace m {
     ///! constants
     const float kPi        = 3.141592654f;
+    const float kTau       = kPi * 2.0f;
     const float kPiHalf    = kPi * 0.5f;
     const float kSqrt2Half = 0.707106781186547f;
     const float kSqrt2     = 1.4142135623730950488f;
@@ -372,7 +375,7 @@ namespace m {
         return quat(x, y, z, w);
     }
 
-    ///!mat4
+    ///! mat4
     struct mat4 {
         float m[4][4];
         mat4() { }
@@ -386,6 +389,15 @@ namespace m {
         void setCameraTrans(const vec3 &position, const quat &q);
         void setPersProjTrans(const perspectiveProjection &projection);
         void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
+    };
+
+    ///! sphere
+    struct sphere {
+        u::vector<float> vertices;
+        u::vector<uint16_t> indices;
+        sphere();
+        sphere(float radius, size_t rings, size_t sectors);
+        void build(float radius, size_t rings, size_t sectors);
     };
 }
 #endif

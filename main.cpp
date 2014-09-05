@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 
     // we're done loading the resources, now upload them (we can't render a loading
     // screen when uploading so we assume the process will be sufficently fast.)
-    loadData.gWorld.upload();
+    loadData.gWorld.upload(projection);
 
     // Now render the world
     client gClient;
@@ -162,14 +162,14 @@ int main(int argc, char **argv) {
             fpsTime = time;
         }
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         gClient.update(loadData.gMap, dt);
 
         pipeline.setRotation(gClient.getRotation());
         pipeline.setPosition(gClient.getPosition());
 
-        loadData.gWorld.draw(pipeline);
+        loadData.gWorld.render(pipeline);
 
         //glFinish();
         SDL_GL_SwapWindow(gScreen);

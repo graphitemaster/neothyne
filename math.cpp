@@ -226,4 +226,46 @@ namespace m {
         z = s * vec.z;
         w = c;
     }
+
+    ///! sphere
+    sphere::sphere()
+    {
+
+    }
+
+    sphere::sphere(float radius, size_t rings, size_t sectors) {
+        build(radius, rings, sectors);
+    }
+
+    void sphere::build(float radius, size_t rings, size_t sectors) {
+        const float rr = 1.0f / (float)(rings - 1);
+        const float ss = 1.0f / (float)(sectors - 1);
+
+        vertices.resize(rings * sectors * 3);
+        auto v = vertices.begin();
+        for (size_t r = 0; r < rings; r++) {
+            for (size_t s = 0; s < sectors; s++) {
+                const float y = sin(-kTau + kPi * r * rr);
+                const float x = cos(kTau * s * ss) * sin(kPi * r * rr);
+                const float z = sin(kTau * s * ss) * sin(kPi * r * rr);
+
+                *v++ = x * radius;
+                *v++ = y * radius;
+                *v++ = z * radius;
+            }
+        }
+
+        indices.resize(rings * sectors * 6);
+        auto i = indices.begin();
+        for (size_t r = 0; r < rings; r++) {
+            for (size_t s = 0; s < sectors; s++) {
+                *i++ = r * sectors + s;
+                *i++ = (r + 1) * sectors + (s + 1);
+                *i++ = r * sectors + (s + 1);
+                *i++ = r * sectors + s;
+                *i++ = (r + 1) * sectors + s;
+                *i++ = (r + 1) * sectors + (s + 1);
+            }
+        }
+    }
 }

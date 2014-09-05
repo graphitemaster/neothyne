@@ -48,6 +48,32 @@ private:
     m::quat m_rotation;
 };
 
+// gbuffer
+struct gBuffer {
+    // also the texture unit order
+    enum textureType {
+        kPosition,
+        kDiffuse,
+        kNormal,
+        //kTexCoord,
+        kMax
+    };
+
+    gBuffer();
+    ~gBuffer();
+
+    bool init(const m::perspectiveProjection &project);
+
+    void bindReading(void);
+    void bindWriting(void);
+    void bindAccumulate(void);
+
+private:
+    GLuint m_fbo;
+    GLuint m_textures[kMax];
+    GLuint m_depthTexture;
+};
+
 // inherit when writing a rendering method
 struct method {
     method();
@@ -136,8 +162,17 @@ struct pointLight : baseLight {
         float linear;
         float exp;
     } attenuation;
+
+    // http://en.wikipedia.org/wiki/Quadratic_equation
+    static float calcBounding(const pointLight &light) {
+        float maxChannel = fmax(fmax(light.color.x, light.color.y), light.color.z);
+        return (-light.attenuation.linear + sqrtf(light.attenuation.linear - 4.0f *
+                light.attenuation.exp * (light.attenuation.exp - 256.0f *
+                maxChannel * light.diffuse))) / 2.0f * light.attenuation.exp;
+    }
 };
 
+#if 0
 // a spot light
 struct spotLight : pointLight {
     spotLight() :
@@ -146,6 +181,7 @@ struct spotLight : pointLight {
     m::vec3 direction;
     float cutOff;
 };
+#endif
 
 enum fogType {
     kFogNone,
@@ -154,91 +190,75 @@ enum fogType {
     kFogExp2
 };
 
-///! light rendering method
-struct lightMethod : method {
-    lightMethod();
-
+///! geometry rendering method
+struct geomMethod : method {
     virtual bool init(void);
-
-    static constexpr size_t kMaxPointLights = 5;
-    static constexpr size_t kMaxSpotLights = 5;
 
     void setWVP(const m::mat4 &wvp);
     void setWorld(const m::mat4 &wvp);
-    void setTextureUnit(int unit);
-    void setNormalUnit(int unit);
-
-    // lighting
-    void setDirectionalLight(const directionalLight &light);
-    void setPointLights(u::vector<pointLight> &pointLights);
-    void setSpotLights(u::vector<spotLight> &spotLights);
-
-    // specularity
-    void setEyeWorldPos(const m::vec3 &eyeWorldPos);
-    void setMatSpecIntensity(float intensity);
-    void setMatSpecPower(float power);
-
-    // fog
-    void setFogType(fogType type);
-    void setFogDistance(float start, float end);
-    void setFogColor(const m::vec3 &color);
-    void setFogDensity(float density);
+    void setColorTextureUnit(int unit);
 
 private:
-    friend struct world;
-
-    // uniforms
     GLint m_WVPLocation;
     GLint m_worldLocation;
-    GLint m_samplerLocation;
-    GLint m_normalMapLocation;
-    GLint m_eyeWorldPosLocation;
-    GLint m_matSpecIntensityLocation;
-    GLint m_matSpecPowerLocation;
+    GLint m_colorMapLocation;
+};
 
-    struct {
-        GLint colorLocation;
-        GLint directionLocation;
-        GLint ambientLocation;
-        GLint diffuseLocation;
-    } m_directionalLight;
+///! Light rendering method
+struct lightMethod : method {
+    bool init(const char *vs, const char *fs);
 
+    void setWVP(const m::mat4 &wvp);
+    void setPositionTextureUnit(int unit);
+    void setColorTextureUnit(int unit);
+    void setNormalTextureUnit(int unit);
+    void setEyeWorldPos(const m::vec3 &position);
+    void setMatSpecIntensity(float intensity);
+    void setMatSpecPower(float power);
+    void setScreenSize(size_t width, size_t height);
+
+private:
+    GLint m_WVPLocation;
+    GLint m_positionTextureUnitLocation;
+    GLint m_normalTextureUnitLocation;
+    GLint m_colorTextureUnitLocation;
+    GLint m_eyeWorldPositionLocation;
+    GLint m_matSpecularIntensityLocation;
+    GLint m_matSpecularPowerLocation;
+    GLint m_screenSizeLocation;
+};
+
+struct directionalLightMethod : lightMethod {
+    bool init(void);
+
+    void setDirectionalLight(const directionalLight &light);
+
+private:
     struct {
-        GLint colorLocation;
-        GLint positionLocation;
-        GLint ambientLocation;
-        GLint diffuseLocation;
+        GLint color;
+        GLint ambient;
+        GLint diffuse;
+        GLint direction;
+    } m_directionalLightLocation;
+};
+
+struct pointLightMethod : lightMethod {
+    bool init(void);
+
+    void setPointLight(const pointLight &light);
+
+private:
+    struct {
+        GLint color;
+        GLint ambient;
+        GLint diffuse;
+        GLint position;
         struct {
-            GLint constantLocation;
-            GLint linearLocation;
-            GLint expLocation;
+            GLint constant;
+            GLint linear;
+            GLint exp;
         } attenuation;
-    } m_pointLights[kMaxPointLights];
-
-    struct {
-        GLint colorLocation;
-        GLint positionLocation;
-        GLint ambientLocation;
-        GLint diffuseLocation;
-        GLint directionLocation;
-        GLint cutOffLocation;
-        struct {
-            GLint constantLocation;
-            GLint linearLocation;
-            GLint expLocation;
-        } attenuation;
-    } m_spotLights[kMaxSpotLights];
-
-    struct {
-        GLuint densityLocation;
-        GLuint colorLocation;
-        GLuint startLocation;
-        GLuint endLocation;
-        GLuint methodLocation;
-    } m_fog;
-
-    GLint m_numPointLightsLocation;
-    GLint m_numSpotLightsLocation;
+    } m_pointLightLocation;
 };
 
 ///! skybox rendering method
@@ -270,8 +290,8 @@ private:
     GLint m_timeLocation;
 };
 
-/// depth pre pass rendering method
-struct depthPrePassMethod : method {
+/// Depth Pass Method
+struct depthMethod : method {
     virtual bool init(void);
 
     void setWVP(const m::mat4 &wvp);
@@ -296,24 +316,52 @@ private:
     GLuint m_sizeLocation;
 };
 
-/// splash screen renderer
-struct splashScreen : splashMethod {
-    ~splashScreen();
+// a sphere
+struct sphere {
+    ~sphere();
 
-    bool load(const u::string &splashScreen);
+    bool load(float radius, size_t rings, size_t sectors);
     bool upload(void);
-
-    void render(float dt, const rendererPipeline &pipeline);
+    void render(void);
 
 private:
     union {
         struct {
-            GLint m_vbo;
-            GLint m_ibo;
+            GLuint m_vbo;
+            GLuint m_ibo;
         };
         GLuint m_buffers[2];
     };
     GLuint m_vao;
+    m::sphere m_sphere;
+};
+
+// a quad
+struct quad {
+    ~quad();
+
+    bool upload(void);
+    void render(void);
+
+private:
+    union {
+        struct {
+            GLuint m_vbo;
+            GLuint m_ibo;
+        };
+        GLuint m_buffers[2];
+    };
+    GLuint m_vao;
+};
+
+/// splash screen renderer
+struct splashScreen : splashMethod {
+    bool load(const u::string &splashScreen);
+    bool upload(void);
+
+    void render(float dt, const rendererPipeline &pipeline);
+private:
+    quad m_quad;
     texture2D m_texture;
 };
 
@@ -380,12 +428,17 @@ struct world {
     };
 
     bool load(const kdMap &map);
-    bool upload(void);
+    bool upload(const m::perspectiveProjection &p);
 
-    void draw(const rendererPipeline &p);
+    void render(const rendererPipeline &p);
 
 private:
-    void render(const rendererPipeline &p);
+    void depthPass(const rendererPipeline &pipeline);
+    void depthPrePass(const rendererPipeline &pipeline);
+    void geometryPass(const rendererPipeline &pipeline);
+    void beginLightPass(void);
+    void pointLightPass(const rendererPipeline &pipeline);
+    void directionalLightPass(const rendererPipeline &pipeline);
 
     union {
         struct {
@@ -396,23 +449,33 @@ private:
     };
     GLuint m_vao;
 
+    // The following rendering methods / passes for the world
+    depthMethod m_depthMethod;
+    geomMethod m_geomMethod;
+    directionalLightMethod m_directionalLightMethod;
+    pointLightMethod m_pointLightMethod;
+
+    // Other things in the world to render
     skybox m_skybox;
-    directionalLight m_directionalLight;
-    u::vector<pointLight> m_pointLights;
-    u::vector<spotLight> m_spotLights;
-    u::vector<renderTextueBatch> m_textureBatches;
+    sphere m_pointLightSphere;
+    quad m_directionalLightQuad;
+    u::vector<billboard> m_billboards;
+
+    // The world itself
     u::vector<uint32_t> m_indices;
     u::vector<kdBinVertex> m_vertices;
-
-    GLenum m_indexType;
-    size_t m_indexSize;
-
+    u::vector<renderTextueBatch> m_textureBatches;
     resourceManager<u::string, texture2D> m_textures2D;
 
-    lightMethod m_lightMethod;
-    depthPrePassMethod m_depthPrePassMethod;
+    // World lights
+    u::vector<pointLight> m_pointLights;
+    directionalLight m_directionalLight;
 
-    u::vector<billboard> m_billboards;
+#if 0
+    u::vector<spotLight> m_spotLights;
+#endif
+
+    gBuffer m_gBuffer;
 };
 
 void initGL(void);

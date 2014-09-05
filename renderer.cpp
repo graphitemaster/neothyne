@@ -36,6 +36,13 @@ static PFNGLGETSHADERIVPROC              glGetShaderiv_              = nullptr;
 static PFNGLGETPROGRAMIVPROC             glGetProgramiv_             = nullptr;
 static PFNGLGETSHADERINFOLOGPROC         glGetShaderInfoLog_         = nullptr;
 static PFNGLACTIVETEXTUREPROC            glActiveTexture_            = nullptr;
+static PFNGLGENFRAMEBUFFERSPROC          glGenFramebuffers_          = nullptr;
+static PFNGLBINDFRAMEBUFFERPROC          glBindFramebuffer_          = nullptr;
+static PFNGLFRAMEBUFFERTEXTURE2DPROC     glFramebufferTexture2D_     = nullptr;
+static PFNGLDRAWBUFFERSPROC              glDrawBuffers_              = nullptr;
+static PFNGLCHECKFRAMEBUFFERSTATUSPROC   glCheckFramebufferStatus_   = nullptr;
+static PFNGLDELETEFRAMEBUFFERSPROC       glDeleteFramebuffers_       = nullptr;
+static PFNGLBLITFRAMEBUFFERPROC          glBlitFramebuffer_          = nullptr;
 
 ///! rendererPipeline
 rendererPipeline::rendererPipeline(void) :
@@ -382,190 +389,225 @@ void method::addGeometryPrelude(const u::string &prelude) {
     m_geometrySource += "\n";
 }
 
+gBuffer::gBuffer() :
+    m_fbo(0),
+    m_depthTexture(0)
+{
+    memset(m_textures, 0, sizeof(m_textures));
+}
+
+gBuffer::~gBuffer() {
+    if (m_fbo)
+        glDeleteFramebuffers_(1, &m_fbo);
+
+    if (*m_textures)
+        glDeleteTextures(kMax, m_textures);
+
+    if (m_depthTexture)
+        glDeleteTextures(1, &m_depthTexture);
+}
+
+bool gBuffer::init(const m::perspectiveProjection &project) {
+    glGenFramebuffers_(1, &m_fbo);
+    glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, m_fbo);
+
+    glGenTextures(kMax, m_textures);
+    glGenTextures(1, &m_depthTexture);
+
+    // position (16-bit float)
+    glBindTexture(GL_TEXTURE_2D, m_textures[kPosition]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, project.width, project.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D_(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textures[kPosition], 0);
+
+    // diffuse RGBA
+    glBindTexture(GL_TEXTURE_2D, m_textures[kDiffuse]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, project.width, project.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D_(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 1, GL_TEXTURE_2D, m_textures[kDiffuse], 0);
+
+    // normals
+    glBindTexture(GL_TEXTURE_2D, m_textures[kNormal]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, project.width, project.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D_(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 2, GL_TEXTURE_2D, m_textures[kNormal], 0);
+
+    glBindTexture(GL_TEXTURE_2D, m_depthTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16,
+        project.width, project.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glFramebufferTexture2D_(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+        GL_TEXTURE_2D, m_depthTexture, 0);
+
+    static GLenum drawBuffers[] = {
+        GL_COLOR_ATTACHMENT0, // position
+        GL_COLOR_ATTACHMENT1, // diffuse
+        GL_COLOR_ATTACHMENT2, // normal
+        //GL_COLOR_ATTACHMENT3  // texCoord
+    };
+
+    glDrawBuffers_(kMax, drawBuffers);
+
+    GLenum status = glCheckFramebufferStatus_(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+        return false;
+
+    glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, 0);
+    return true;
+}
+
+void gBuffer::bindReading(void) {
+    glBindFramebuffer_(GL_READ_FRAMEBUFFER, m_fbo);
+}
+
+void gBuffer::bindAccumulate(void) {
+    glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, 0);
+    for (size_t i = 0; i < kMax; i++) {
+        glActiveTexture_(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, m_textures[kPosition + i]);
+    }
+}
+
+void gBuffer::bindWriting(void) {
+    glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, m_fbo);
+}
+
 //// Rendering methods:
 
 ///! Light Rendering Method
-lightMethod::lightMethod(void)
-{
-
-}
-
-bool lightMethod::init(void) {
+bool lightMethod::init(const char *vs, const char *fs) {
     if (!method::init())
         return false;
 
-    addFragmentPrelude(u::format("const int kMaxPointLights = %zu;", kMaxPointLights));
-    addFragmentPrelude(u::format("const int kMaxSpotLights = %zu;", kMaxSpotLights));
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/light.vs"))
+    if (!addShader(GL_VERTEX_SHADER, vs))
         return false;
-
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/light.fs"))
+    if (!addShader(GL_FRAGMENT_SHADER, fs))
         return false;
-
     if (!finalize())
         return false;
 
     m_WVPLocation = getUniformLocation("gWVP");
-    m_worldLocation = getUniformLocation("gWorld");
-    m_samplerLocation = getUniformLocation("gSampler");
-    m_normalMapLocation = getUniformLocation("gNormalMap");
-
-    m_eyeWorldPosLocation = getUniformLocation("gEyeWorldPos");
-    m_matSpecIntensityLocation = getUniformLocation("gMatSpecIntensity");
-    m_matSpecPowerLocation = getUniformLocation("gMatSpecPower");
-
-    // directional light
-    m_directionalLight.colorLocation = getUniformLocation("gDirectionalLight.base.color");
-    m_directionalLight.ambientLocation = getUniformLocation("gDirectionalLight.base.ambient");
-    m_directionalLight.diffuseLocation = getUniformLocation("gDirectionalLight.base.diffuse");
-    m_directionalLight.directionLocation = getUniformLocation("gDirectionalLight.direction");
-
-    // point lights
-    m_numPointLightsLocation = getUniformLocation("gNumPointLights");
-    for (size_t i = 0; i < kMaxPointLights; i++) {
-        u::string color = u::format("gPointLights[%zu].base.color", i);
-        u::string ambient = u::format("gPointLights[%zu].base.ambient", i);
-        u::string diffuse = u::format("gPointLights[%zu].base.diffuse", i);
-        u::string constant = u::format("gPointLights[%zu].attenuation.constant", i);
-        u::string linear = u::format("gPointLights[%zu].attenuation.linear", i);
-        u::string exp = u::format("gPointLights[%zu].attenuation.exp", i);
-        u::string position = u::format("gPointLights[%zu].position", i);
-
-        m_pointLights[i].colorLocation = getUniformLocation(color);
-        m_pointLights[i].ambientLocation = getUniformLocation(ambient);
-        m_pointLights[i].diffuseLocation = getUniformLocation(diffuse);
-        m_pointLights[i].attenuation.constantLocation = getUniformLocation(constant);
-        m_pointLights[i].attenuation.linearLocation = getUniformLocation(linear);
-        m_pointLights[i].attenuation.expLocation = getUniformLocation(exp);
-        m_pointLights[i].positionLocation = getUniformLocation(position);
-    }
-
-    // spot lights
-    m_numSpotLightsLocation = getUniformLocation("gNumSpotLights");
-    for (size_t i = 0; i < kMaxSpotLights; i++) {
-        u::string color = u::format("gSpotLights[%zu].base.base.color", i);
-        u::string ambient = u::format("gSpotLights[%zu].base.base.ambient", i);
-        u::string diffuse = u::format("gSpotLights[%zu].base.base.diffuse", i);
-        u::string constant = u::format("gSpotLights[%zu].base.attenuation.constant", i);
-        u::string linear = u::format("gSpotLights[%zu].base.attenuation.linear", i);
-        u::string exp = u::format("gSpotLights[%zu].base.attenuation.exp", i);
-        u::string position = u::format("gSpotLights[%zu].base.position", i);
-        u::string direction = u::format("gSpotLights[%zu].direction", i);
-        u::string cutOff = u::format("gSpotLights[%zu].cutOff", i);
-
-        m_spotLights[i].colorLocation = getUniformLocation(color);
-        m_spotLights[i].ambientLocation = getUniformLocation(ambient);
-        m_spotLights[i].diffuseLocation = getUniformLocation(diffuse);
-        m_spotLights[i].attenuation.constantLocation = getUniformLocation(constant);
-        m_spotLights[i].attenuation.linearLocation = getUniformLocation(linear);
-        m_spotLights[i].attenuation.expLocation = getUniformLocation(exp);
-        m_spotLights[i].positionLocation = getUniformLocation(position);
-        m_spotLights[i].directionLocation = getUniformLocation(direction);
-        m_spotLights[i].cutOffLocation = getUniformLocation(cutOff);
-    }
-
-    // fog
-    m_fog.colorLocation = getUniformLocation("gFog.color");
-    m_fog.densityLocation = getUniformLocation("gFog.density");
-    m_fog.endLocation = getUniformLocation("gFog.end");
-    m_fog.methodLocation = getUniformLocation("gFog.method");
-    m_fog.startLocation = getUniformLocation("gFog.start");
+    m_positionTextureUnitLocation = getUniformLocation("gPositionMap");
+    m_colorTextureUnitLocation = getUniformLocation("gColorMap");
+    m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
+    m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
+    m_matSpecularIntensityLocation = getUniformLocation("gMatSpecularIntensity");
+    m_matSpecularPowerLocation = getUniformLocation("gMatSpecularPower");
+    m_screenSizeLocation = getUniformLocation("gScreenSize");
 
     return true;
 }
 
 void lightMethod::setWVP(const m::mat4 &wvp) {
-    glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat*)wvp.m);
 }
 
-void lightMethod::setWorld(const m::mat4 &worldInverse) {
-    glUniformMatrix4fv_(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
+void lightMethod::setPositionTextureUnit(int unit) {
+    glUniform1i_(m_positionTextureUnitLocation, unit);
 }
 
-void lightMethod::setTextureUnit(int unit) {
-    glUniform1i_(m_samplerLocation, unit);
+void lightMethod::setColorTextureUnit(int unit) {
+    glUniform1i_(m_colorTextureUnitLocation, unit);
 }
 
-void lightMethod::setNormalUnit(int unit) {
-    glUniform1i_(m_normalMapLocation, unit);
+void lightMethod::setNormalTextureUnit(int unit) {
+    glUniform1i_(m_normalTextureUnitLocation, unit);
 }
 
-void lightMethod::setDirectionalLight(const directionalLight &light) {
-    m::vec3 direction = light.direction;
-    direction.normalize();
-
-    glUniform3fv_(m_directionalLight.colorLocation, 1, &light.color.x);
-    glUniform3fv_(m_directionalLight.directionLocation, 1, &direction.x);
-    glUniform1f_(m_directionalLight.ambientLocation, light.ambient);
-    glUniform1f_(m_directionalLight.diffuseLocation, light.diffuse);
-}
-
-void lightMethod::setPointLights(u::vector<pointLight> &lights) {
-    // limit the number of maximum lights
-    if (lights.size() > kMaxPointLights)
-        lights.resize(kMaxPointLights);
-
-    glUniform1i_(m_numPointLightsLocation, lights.size());
-
-    for (size_t i = 0; i < lights.size(); i++) {
-        glUniform3fv_(m_pointLights[i].colorLocation, 1, &lights[i].color.x);
-        glUniform3fv_(m_pointLights[i].positionLocation, 1, &lights[i].position.x);
-        glUniform1f_(m_pointLights[i].ambientLocation, lights[i].ambient);
-        glUniform1f_(m_pointLights[i].diffuseLocation, lights[i].diffuse);
-        glUniform1f_(m_pointLights[i].attenuation.constantLocation, lights[i].attenuation.constant);
-        glUniform1f_(m_pointLights[i].attenuation.linearLocation, lights[i].attenuation.linear);
-        glUniform1f_(m_pointLights[i].attenuation.expLocation, lights[i].attenuation.exp);
-    }
-}
-
-void lightMethod::setSpotLights(u::vector<spotLight> &lights) {
-    if (lights.size() > kMaxSpotLights)
-        lights.resize(kMaxSpotLights);
-
-    glUniform1i_(m_numSpotLightsLocation, lights.size());
-
-    for (size_t i = 0; i < lights.size(); i++) {
-        m::vec3 direction = lights[i].direction.normalized();
-        glUniform3fv_(m_spotLights[i].colorLocation, 1, &lights[i].color.x);
-        glUniform3fv_(m_spotLights[i].positionLocation, 1, &lights[i].position.x);
-        glUniform3fv_(m_spotLights[i].directionLocation, 1, &direction.x);
-        glUniform1f_(m_spotLights[i].cutOffLocation, cosf(m::toRadian(lights[i].cutOff)));
-        glUniform1f_(m_spotLights[i].ambientLocation, lights[i].ambient);
-        glUniform1f_(m_spotLights[i].diffuseLocation, lights[i].diffuse);
-        glUniform1f_(m_spotLights[i].attenuation.constantLocation, lights[i].attenuation.constant);
-        glUniform1f_(m_spotLights[i].attenuation.linearLocation, lights[i].attenuation.linear);
-        glUniform1f_(m_spotLights[i].attenuation.expLocation, lights[i].attenuation.exp);
-    }
-}
-
-void lightMethod::setEyeWorldPos(const m::vec3 &eyeWorldPos) {
-    glUniform3fv_(m_eyeWorldPosLocation, 1, &eyeWorldPos.x);
+void lightMethod::setEyeWorldPos(const m::vec3 &position) {
+    glUniform3fv_(m_eyeWorldPositionLocation, 1, &position.x);
 }
 
 void lightMethod::setMatSpecIntensity(float intensity) {
-    glUniform1f_(m_matSpecIntensityLocation, intensity);
+    glUniform1f_(m_matSpecularIntensityLocation, intensity);
 }
 
 void lightMethod::setMatSpecPower(float power) {
-    glUniform1f_(m_matSpecPowerLocation, power);
+    glUniform1f_(m_matSpecularPowerLocation, power);
 }
 
-void lightMethod::setFogType(fogType type) {
-    glUniform1i_(m_fog.methodLocation, type);
+void lightMethod::setScreenSize(size_t width, size_t height) {
+    glUniform2f_(m_screenSizeLocation, (float)width, (float)height);
 }
 
-void lightMethod::setFogDistance(float start, float end) {
-    glUniform1f_(m_fog.startLocation, start);
-    glUniform1f_(m_fog.endLocation, end);
+///! Directional Light Rendering Method
+bool directionalLightMethod::init(void) {
+    if (!lightMethod::init("shaders/dlight.vs", "shaders/dlight.fs"))
+        return false;
+
+    m_directionalLightLocation.color = getUniformLocation("gDirectionalLight.base.color");
+    m_directionalLightLocation.ambient = getUniformLocation("gDirectionalLight.base.ambient");
+    m_directionalLightLocation.diffuse = getUniformLocation("gDirectionalLight.base.diffuse");
+    m_directionalLightLocation.direction = getUniformLocation("gDirectionalLight.direction");
+
+    return true;
 }
 
-void lightMethod::setFogDensity(float density) {
-    glUniform1f_(m_fog.densityLocation, density);
+void directionalLightMethod::setDirectionalLight(const directionalLight &light) {
+    m::vec3 direction = light.direction.normalized();
+    glUniform3fv_(m_directionalLightLocation.color, 1, &light.color.x);
+    glUniform1f_(m_directionalLightLocation.ambient, light.ambient);
+    glUniform3fv_(m_directionalLightLocation.direction, 1, &direction.x);
+    glUniform1f_(m_directionalLightLocation.diffuse, light.diffuse);
 }
 
-void lightMethod::setFogColor(const m::vec3 &color) {
-    glUniform4f_(m_fog.colorLocation, color.x, color.y, color.z, 1.0f);
+///! Point Light Rendering Method
+bool pointLightMethod::init(void) {
+    if (!lightMethod::init("shaders/plight.vs", "shaders/plight.fs"))
+        return false;
+
+    m_pointLightLocation.color = getUniformLocation("gPointLight.base.color");
+    m_pointLightLocation.ambient = getUniformLocation("gPointLight.base.ambient");
+    m_pointLightLocation.diffuse = getUniformLocation("gPointLight.base.diffuse");
+    m_pointLightLocation.position = getUniformLocation("gPointLight.position");
+    m_pointLightLocation.attenuation.constant = getUniformLocation("gPointLight.attenuation.constant");
+    m_pointLightLocation.attenuation.linear = getUniformLocation("gPointLight.attenuation.linear");
+    m_pointLightLocation.attenuation.exp = getUniformLocation("gPointLight.attenuation.exp");
+
+    return true;
+}
+
+void pointLightMethod::setPointLight(const pointLight &light) {
+    glUniform3fv_(m_pointLightLocation.color, 1, &light.color.x);
+    glUniform3fv_(m_pointLightLocation.position, 1, &light.position.x);
+    glUniform1f_(m_pointLightLocation.ambient, light.ambient);
+    glUniform1f_(m_pointLightLocation.diffuse, light.diffuse);
+    glUniform1f_(m_pointLightLocation.attenuation.constant, light.attenuation.constant);
+    glUniform1f_(m_pointLightLocation.attenuation.linear, light.attenuation.linear);
+    glUniform1f_(m_pointLightLocation.attenuation.exp, light.attenuation.exp);
+}
+
+///! Geomety Rendering Method
+bool geomMethod::init(void) {
+    if (!method::init())
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/geom.vs"))
+        return false;
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/geom.fs"))
+        return false;
+    if (!finalize())
+        return false;
+
+    m_WVPLocation = getUniformLocation("gWVP");
+    m_worldLocation = getUniformLocation("gWorld");
+    m_colorMapLocation = getUniformLocation("gColorMap");
+
+    return true;
+}
+
+void geomMethod::setWVP(const m::mat4 &wvp) {
+    glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+}
+
+void geomMethod::setWorld(const m::mat4 &worldInverse) {
+    glUniformMatrix4fv_(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
+}
+
+void geomMethod::setColorTextureUnit(int unit) {
+    glUniform1i_(m_colorMapLocation, unit);
 }
 
 ///! Skybox Rendering Method
@@ -575,10 +617,8 @@ bool skyboxMethod::init(void) {
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/skybox.vs"))
         return false;
-
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/skybox.fs"))
         return false;
-
     if (!finalize())
         return false;
 
@@ -608,10 +648,8 @@ bool splashMethod::init(void) {
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/splash.vs"))
         return false;
-
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/splash.fs"))
         return false;
-
     if (!finalize())
         return false;
 
@@ -634,28 +672,6 @@ void splashMethod::setTextureUnit(int unit) {
     glUniform1i_(m_splashTextureLocation, unit);
 }
 
-///! Depth Pre-Pass Rendering Method
-bool depthPrePassMethod::init(void) {
-    if (!method::init())
-        return false;
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/zprepass.vs"))
-        return false;
-
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/zprepass.fs"))
-        return false;
-
-    if (!finalize())
-        return false;
-
-    m_WVPLocation = getUniformLocation("gWVP");
-    return true;
-}
-
-void depthPrePassMethod::setWVP(const m::mat4 &wvp) {
-    glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
-}
-
 ///! Billboard Rendering Method
 bool billboardMethod::init(void) {
     if (!method::init())
@@ -663,13 +679,10 @@ bool billboardMethod::init(void) {
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/billboard.vs"))
         return false;
-
     if (!addShader(GL_GEOMETRY_SHADER, "shaders/billboard.gs"))
         return false;
-
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/billboard.fs"))
         return false;
-
     if (!finalize())
         return false;
 
@@ -695,6 +708,25 @@ void billboardMethod::setTextureUnit(int unit) {
 
 void billboardMethod::setSize(float width, float height) {
     glUniform2f_(m_sizeLocation, width, height);
+}
+
+///! Depth Pass Method
+bool depthMethod::init(void) {
+    if (!method::init())
+        return false;
+    if (!addShader(GL_VERTEX_SHADER, "shaders/depthpass.vs"))
+        return false;
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/depthpass.fs"))
+        return false;
+    if (!finalize())
+        return false;
+
+    m_WVPLocation = getUniformLocation("gWVP");
+    return true;
+}
+
+void depthMethod::setWVP(const m::mat4 &wvp) {
+    glUniformMatrix4fv_(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
 }
 
 //// Renderers:
@@ -794,11 +826,6 @@ void skybox::render(const rendererPipeline &pipeline) {
 }
 
 ///! Splash Screen Renderer
-splashScreen::~splashScreen(void) {
-    glDeleteBuffers_(2, m_buffers);
-    glDeleteVertexArrays_(1, &m_vao);
-}
-
 bool splashScreen::load(const u::string &splashScreen) {
     if (!m_texture.load(splashScreen)) {
         fprintf(stderr, "failed to load splash screen texture\n");
@@ -813,29 +840,10 @@ bool splashScreen::upload(void) {
         return false;
     }
 
-    glGenVertexArrays_(1, &m_vao);
-    glBindVertexArray_(m_vao);
-
-    glGenBuffers_(2, m_buffers);
-    glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
-
-    GLfloat vertices[] = {
-         1.0f, 1.0f, 0.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, 0.0f, 0.0f, -1.0f,
-         1.0f,-1.0f, 0.0f, 1.0f,  0.0f,
-        -1.0f,-1.0f, 0.0f, 0.0f,  0.0f,
-    };
-
-    GLubyte indices[] = { 0, 1, 2, 2, 1, 3 };
-
-    glBufferData_(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)0); // position
-    glVertexAttribPointer_(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)12); // uvs
-    glEnableVertexAttribArray_(0);
-    glEnableVertexAttribArray_(1);
-
-    glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    if (!m_quad.upload()) {
+        fprintf(stderr, "failed to upload quad for splash screen\n");
+        return false;
+    }
 
     if (!splashMethod::init()) {
         fprintf(stderr, "failed to initialize splash screen rendering method\n");
@@ -855,14 +863,10 @@ void splashScreen::render(float dt, const rendererPipeline &pipeline) {
     setTime(dt);
 
     m_texture.bind(GL_TEXTURE0);
-
-    glBindVertexArray_(m_vao);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
+    m_quad.render();
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
-
-    glUseProgram_(0);
 }
 
 ///! Billboard Renderer
@@ -910,17 +914,87 @@ void billboard::render(const rendererPipeline &pipeline) {
     setTextureUnit(0);
     m_texture.bind(GL_TEXTURE0);
 
-    glDepthMask(GL_TRUE);
     glBindVertexArray_(m_vao);
-
     glDrawArrays(GL_POINTS, 0, m_positions.size());
-
     glBindVertexArray_(0);
-    glDepthMask(GL_FALSE);
 }
 
 void billboard::add(const m::vec3 &position) {
     m_positions.push_back(position);
+}
+
+///! Sphere Renderer
+sphere::~sphere(void) {
+    glDeleteBuffers_(2, m_buffers);
+}
+
+bool sphere::load(float radius, size_t rings, size_t sectors) {
+    m_sphere.build(radius, rings, sectors);
+    return m_sphere.indices.size() != 0;
+}
+
+bool sphere::upload(void) {
+    glGenVertexArrays_(1, &m_vao);
+    glBindVertexArray_(m_vao);
+
+    glGenBuffers_(2, m_buffers);
+    glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData_(GL_ARRAY_BUFFER, m_sphere.vertices.size() * sizeof(float),
+        &m_sphere.vertices[0], GL_STATIC_DRAW);
+
+    glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, m_sphere.indices.size() * sizeof(GLushort),
+        &m_sphere.indices[0], GL_STATIC_DRAW);
+
+    glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    glEnableVertexAttribArray_(0);
+
+    return true;
+}
+
+void sphere::render(void) {
+    glBindVertexArray_(m_vao);
+    glDrawElements(GL_TRIANGLES, m_sphere.indices.size(), GL_UNSIGNED_SHORT, 0);
+    glBindVertexArray_(0);
+}
+
+///! Quad Renderer
+quad::~quad(void) {
+    glDeleteBuffers_(2, m_buffers);
+}
+
+bool quad::upload(void) {
+    glGenVertexArrays_(1, &m_vao);
+    glBindVertexArray_(m_vao);
+
+    glGenBuffers_(2, m_buffers);
+    glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
+
+    GLfloat vertices[] = {
+        -1.0f,-1.0f, 0.0f, 0.0f,  0.0f,
+        -1.0f, 1.0f, 0.0f, 0.0f, -1.0f,
+         1.0f, 1.0f, 0.0f, 1.0f, -1.0f,
+         1.0f,-1.0f, 0.0f, 1.0f,  0.0f,
+    };
+
+    GLubyte indices[] = { 0, 1, 2, 0, 2, 3 };
+
+    glBufferData_(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)0); // position
+    glVertexAttribPointer_(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)12); // uvs
+    glEnableVertexAttribArray_(0);
+    glEnableVertexAttribArray_(1);
+
+    glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    return true;
+}
+
+void quad::render(void) {
+    glBindVertexArray_(m_vao);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
+    glBindVertexArray_(0);
 }
 
 ///! World Renderer
@@ -957,6 +1031,12 @@ world::world(void) {
 
     m_billboards.resize(kBillboardMax);
 
+    pointLight pl;
+    pl.diffuse = 0.75f;
+    pl.ambient = 0.45f;
+    pl.color = m::vec3(1.0f, 0.0f, 0.0f);
+    pl.attenuation.linear = 0.1f;
+
     for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
         switch (rand() % 4) {
             case 0: m_billboards[kBillboardRail].add(places[i]); break;
@@ -964,6 +1044,8 @@ world::world(void) {
             case 2: m_billboards[kBillboardRocket].add(places[i]); break;
             case 3: m_billboards[kBillboardShotgun].add(places[i]); break;
         }
+        pl.position = places[i];
+        m_pointLights.push_back(pl);
     }
 }
 
@@ -1012,19 +1094,6 @@ bool world::load(const kdMap &map) {
         m_textureBatches.push_back(batch);
     }
 
-    // figure out optimal index format for bandwidth
-    const size_t indicesCount = m_indices.size();
-    if (indicesCount <= 0xFF) {
-        m_indexSize = 1;
-        m_indexType = GL_UNSIGNED_BYTE;
-    } else if (indicesCount <= 0xFFFF) {
-        m_indexSize = 2;
-        m_indexType = GL_UNSIGNED_SHORT;
-    } else {
-        m_indexSize = 4;
-        m_indexType = GL_UNSIGNED_INT;
-    }
-
     // load textures
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
         const char *name = map.textures[m_textureBatches[i].index].name;
@@ -1044,12 +1113,15 @@ bool world::load(const kdMap &map) {
         m_textureBatches[i].normal = normal;
     }
 
+    m_pointLightSphere.load(1.0f, 24, 24);
+
     m_vertices = u::move(map.vertices);
 
+    printf("[world] => loaded\n");
     return true;
 }
 
-bool world::upload(void) {
+bool world::upload(const m::perspectiveProjection &project) {
     // upload skybox
     if (!m_skybox.upload()) {
         fprintf(stderr, "failed to upload skybox\n");
@@ -1070,6 +1142,12 @@ bool world::upload(void) {
         it.normal->upload();
     }
 
+    // upload sphere and quad
+    if (!m_pointLightSphere.upload())
+        return false;
+    if (!m_directionalLightQuad.upload())
+        return false;
+
     // gen vao
     glGenVertexArrays_(1, &m_vao);
     glBindVertexArray_(m_vao);
@@ -1080,104 +1158,197 @@ bool world::upload(void) {
     glBindBuffer_(GL_ARRAY_BUFFER, m_vbo);
     glBufferData_(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(kdBinVertex), &m_vertices[0], GL_STATIC_DRAW);
     glVertexAttribPointer_(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), 0);                 // vertex
-    glVertexAttribPointer_(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
-    glVertexAttribPointer_(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
-    glVertexAttribPointer_(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
+    glVertexAttribPointer_(1, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
+    glVertexAttribPointer_(2, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
+    //glVertexAttribPointer_(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
     glEnableVertexAttribArray_(0);
     glEnableVertexAttribArray_(1);
     glEnableVertexAttribArray_(2);
-    glEnableVertexAttribArray_(3);
+    //glEnableVertexAttribArray_(3);
 
     // upload data
     glBindBuffer_(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * m_indexSize, &m_indices[0], GL_STATIC_DRAW);
+    glBufferData_(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
 
-    if (!m_depthPrePassMethod.init()) {
-        fprintf(stderr, "failed to initialize depth prepass rendering method\n");
+    if (!m_depthMethod.init()) {
+        fprintf(stderr, "failed to initialize depth pass method\n");
         return false;
     }
 
-    if (!m_lightMethod.init()) {
-        fprintf(stderr, "failed to initialize world lighting rendering method\n");
+    if (!m_geomMethod.init()) {
+        fprintf(stderr, "failed to initialize geometry rendering method\n");
         return false;
     }
 
+    if (!m_directionalLightMethod.init()) {
+        fprintf(stderr, "failed to initialize directional light rendering method\n");
+        return false;
+    }
+
+    if (!m_pointLightMethod.init()) {
+        fprintf(stderr, "failed to initialize point light rendering method\n");
+        return false;
+    }
+
+    // setup g-buffer
+    if (!m_gBuffer.init(project)) {
+        fprintf(stderr, "failed to initialize G-buffer\n");
+        return false;
+    }
+
+    printf("[world] => uploaded\n");
     return true;
 }
 
-void world::draw(const rendererPipeline &pipeline) {
+void world::geometryPass(const rendererPipeline &pipeline) {
     rendererPipeline p = pipeline;
 
-    // Z prepass
-    glDepthFunc(GL_LESS);
-    glColorMask(0.0f, 0.0f, 0.0f, 0.0f);
+    m_geomMethod.enable();
+    m_gBuffer.bindWriting();
+
+    // Only the geometry pass should update the depth buffer
     glDepthMask(GL_TRUE);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m_depthPrePassMethod.enable();
-    m_depthPrePassMethod.setWVP(p.getWVPTransform());
+    // Only the geometry pass should update the depth buffer
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 
-    // render geometry only
-    glBindVertexArray_(m_vao);
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glDrawElements(GL_TRIANGLES, m_indices.size(), m_indexType, (const GLvoid*)0);
-    glBindVertexArray_(0);
+    m_geomMethod.setWVP(p.getWVPTransform());
+    m_geomMethod.setWorld(p.getWorldTransform());
 
-    // normal pass
-    glDepthFunc(GL_LEQUAL);
-    glColorMask(1.0f, 1.0f, 1.0f, 1.0f);
-    glDepthMask(GL_FALSE);
-
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    render(pipeline);
-
-    // needs to be enabled to clear the depth buffer bit
-    glDepthMask(GL_TRUE);
-}
-
-void world::render(const rendererPipeline &pipeline) {
-    rendererPipeline p = pipeline;
-
-    m_lightMethod.enable();
-    m_lightMethod.setTextureUnit(0);
-    m_lightMethod.setNormalUnit(1);
-
-    static bool setFog = true;
-    if (setFog) {
-        m_lightMethod.setFogColor(m::vec3(0.8f, 0.8f, 0.8f));
-        m_lightMethod.setFogDensity(0.0007f);
-        m_lightMethod.setFogType(kFogExp);
-        setFog = false;
-    }
-
-    //setFogDistance(110.0f, 470.0f);
-    //setFogType(kFogLinear);
-
-    m_lightMethod.setDirectionalLight(m_directionalLight);
-
-    m_lightMethod.setPointLights(m_pointLights);
-    m_lightMethod.setSpotLights(m_spotLights);
-
-    m_lightMethod.setWVP(p.getWVPTransform());
-    m_lightMethod.setWorld(p.getWorldTransform());
-
-    m_lightMethod.setEyeWorldPos(p.getPosition());
-    m_lightMethod.setMatSpecIntensity(2.0f);
-    m_lightMethod.setMatSpecPower(200.0f);
-
+    // Render the world
+    m_geomMethod.setColorTextureUnit(0);
     glBindVertexArray_(m_vao);
     for (auto &it : m_textureBatches) {
         it.diffuse->bind(GL_TEXTURE0);
-        it.normal->bind(GL_TEXTURE1);
-        glDrawElements(GL_TRIANGLES, it.count, m_indexType,
-            (const GLvoid*)(m_indexSize * it.start));
+        //it.normal->bind(GL_TEXTURE1);
+        glDrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
+            (const GLvoid*)(sizeof(GLuint) * it.start));
     }
-    glBindVertexArray_(0);
+    //glBindVertexArray_(0);
 
-    m_skybox.render(p);
+    // The depth buffer is populated and the stencil pass will require it.
+    // However, it will not write to it.
+    glDepthMask(GL_FALSE);
+    glDisable(GL_DEPTH_TEST);
+}
 
-    // render billboards
+void world::beginLightPass(void) {
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_ONE, GL_ONE);
+
+    m_gBuffer.bindAccumulate();
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void world::pointLightPass(const rendererPipeline &pipeline) {
+    const m::perspectiveProjection &project = pipeline.getPerspectiveProjection();
+
+    m_pointLightMethod.enable();
+
+    m_pointLightMethod.setPositionTextureUnit(gBuffer::kPosition);
+    m_pointLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
+    m_pointLightMethod.setNormalTextureUnit(gBuffer::kNormal);
+    m_pointLightMethod.setScreenSize(project.width, project.height);
+
+    //m_pointLightMethod.setEyeWorldPos(pipeline.getPosition());
+    //m_pointLightMethod.setMatSpecIntensity(2.0f);
+    //m_pointLightMethod.setMatSpecPower(200.0f);
+
+    rendererPipeline p;
+    p.setRotation(pipeline.getRotation());
+    p.setPerspectiveProjection(project);
+
+    for (auto &it : m_pointLights) {
+        m_pointLightMethod.setPointLight(it);
+        p.setWorldPosition(it.position);
+
+        const float sphereScale = pointLight::calcBounding(it);
+        const m::vec3 sphere(sphereScale, sphereScale, sphereScale);
+        p.setScale(sphere);
+        m_pointLightMethod.setWVP(p.getWVPTransform());
+        m_pointLightSphere.render();
+    }
+}
+
+void world::directionalLightPass(const rendererPipeline &pipeline) {
+    const m::perspectiveProjection &project = pipeline.getPerspectiveProjection();
+    m_directionalLightMethod.enable();
+
+    m_directionalLightMethod.setPositionTextureUnit(gBuffer::kPosition);
+    m_directionalLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
+    m_directionalLightMethod.setNormalTextureUnit(gBuffer::kNormal);
+    m_directionalLightMethod.setDirectionalLight(m_directionalLight);
+    m_directionalLightMethod.setScreenSize(project.width, project.height);
+
+    m_directionalLightMethod.setEyeWorldPos(pipeline.getPosition());
+    m_directionalLightMethod.setMatSpecIntensity(2.0f);
+    m_directionalLightMethod.setMatSpecPower(20.0f);
+
+    m::mat4 wvp;
+    wvp.loadIdentity();
+
+    m_directionalLightMethod.setWVP(wvp);
+    m_directionalLightQuad.render();
+}
+
+void world::depthPass(const rendererPipeline &pipeline) {
+    rendererPipeline p = pipeline;
+    m_depthMethod.enable();
+    m_depthMethod.setWVP(p.getWVPTransform());
+
+    glEnable(GL_DEPTH_TEST); // make sure depth testing is enabled
+    glClear(GL_DEPTH_BUFFER_BIT); // clear
+
+    // do a depth pass
+    glBindVertexArray_(m_vao);
+    glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
+}
+
+void world::depthPrePass(const rendererPipeline &pipeline) {
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+    glColorMask(0.0f, 0.0f, 0.0f, 0.0f);
+
+    depthPass(pipeline);
+
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    glColorMask(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+void world::render(const rendererPipeline &pipeline) {
+    // depth pre pass
+    depthPrePass(pipeline);
+
+    // geometry pass
+    geometryPass(pipeline);
+
+    // begin lighting pass
+    beginLightPass();
+
+    // point light pass
+    pointLightPass(pipeline);
+
+    // directional light pass
+    directionalLightPass(pipeline);
+
+    //glBindFramebuffer_(GL_DRAW_FRAMEBUFFER, 0);
+
+    // deferred rendering is done, reestablish depth buffer for forward
+    // rendering.
+    //depthPass(pipeline);
+
+    // Now standard forward rendering
+    m_gBuffer.bindReading();
+    glEnable(GL_DEPTH_TEST);
+    m_skybox.render(pipeline);
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for (auto &it : m_billboards)
-        it.render(p);
+        it.render(pipeline);
 }
 
 //// Miscellaneous
@@ -1191,17 +1362,17 @@ void initGL(void) {
     glEnable(GL_CULL_FACE);
 
     // depth buffer + depth test
-    glClearDepth(1.0f);
-    glDepthFunc(GL_LEQUAL);
-    glEnable(GL_DEPTH_TEST);
+    //glClearDepth(1.0f);
+    //glDepthFunc(GL_LEQUAL);
+    //glEnable(GL_DEPTH_TEST);
 
     // shade model
     glShadeModel(GL_SMOOTH);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // multisample anti-aliasing
-    glEnable(GL_MULTISAMPLE);
+    //glEnable(GL_MULTISAMPLE);
 
     #define GL_RESOLVE(NAME) \
         do { \
@@ -1245,6 +1416,13 @@ void initGL(void) {
     GL_RESOLVE(glGetProgramiv);
     GL_RESOLVE(glGetShaderInfoLog);
     GL_RESOLVE(glActiveTexture);
+    GL_RESOLVE(glGenFramebuffers);
+    GL_RESOLVE(glBindFramebuffer);
+    GL_RESOLVE(glFramebufferTexture2D);
+    GL_RESOLVE(glDrawBuffers);
+    GL_RESOLVE(glCheckFramebufferStatus);
+    GL_RESOLVE(glDeleteFramebuffers);
+    GL_RESOLVE(glBlitFramebuffer);
 }
 
 void screenShot(const u::string &file, const m::perspectiveProjection &project) {
@@ -1255,6 +1433,9 @@ void screenShot(const u::string &file, const m::perspectiveProjection &project) 
         8*3, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
     SDL_LockSurface(temp);
     unsigned char *pixels = new unsigned char[screenSize * 3];
+    // make sure we're reading from the final framebuffer when obtaining the pixels
+    // for the screenshot.
+    glBindFramebuffer_(GL_READ_FRAMEBUFFER, 0);
     glReadPixels(0, 0, screenWidth, screenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
     texture::reorient(pixels, screenWidth, screenHeight, 3, screenWidth * 3,
         (unsigned char *)temp->pixels, false, true, false);
