@@ -430,7 +430,7 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
 
     // normals
     glBindTexture(GL_TEXTURE_2D, m_textures[kNormal]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, project.width, project.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, project.width, project.height, 0, GL_RGB, GL_FLOAT, nullptr);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D_(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 2, GL_TEXTURE_2D, m_textures[kNormal], 0);
@@ -793,10 +793,10 @@ void skybox::render(const rendererPipeline &pipeline) {
     enable();
 
     // to restore later
-    GLint faceMode;
-    glGetIntegerv(GL_CULL_FACE_MODE, &faceMode);
-    GLint depthMode;
-    glGetIntegerv(GL_DEPTH_FUNC, &depthMode);
+    //GLint faceMode;
+    //glGetIntegerv(GL_CULL_FACE_MODE, &faceMode);
+    //GLint depthMode;
+    //glGetIntegerv(GL_DEPTH_FUNC, &depthMode);
 
     rendererPipeline worldPipeline = pipeline;
 
@@ -812,7 +812,7 @@ void skybox::render(const rendererPipeline &pipeline) {
 
     // render skybox cube
     glCullFace(GL_FRONT);
-    glDepthFunc(GL_LEQUAL);
+    //glDepthFunc(GL_LEQUAL);
 
     setTextureUnit(0);
     m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
@@ -821,8 +821,8 @@ void skybox::render(const rendererPipeline &pipeline) {
     glDrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_BYTE, (void *)0);
     glBindVertexArray_(0);
 
-    glCullFace(faceMode);
-    glDepthFunc(depthMode);
+    glCullFace(GL_BACK);
+    //glDepthFunc(GL_LESS);
 }
 
 ///! Splash Screen Renderer
@@ -1196,6 +1196,19 @@ bool world::upload(const m::perspectiveProjection &project) {
         return false;
     }
 
+    m_pointLightMethod.enable();
+    m_pointLightMethod.setPositionTextureUnit(gBuffer::kPosition);
+    m_pointLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
+    m_pointLightMethod.setNormalTextureUnit(gBuffer::kNormal);
+
+    m_directionalLightMethod.enable();
+    m_directionalLightMethod.setPositionTextureUnit(gBuffer::kPosition);
+    m_directionalLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
+    m_directionalLightMethod.setNormalTextureUnit(gBuffer::kNormal);
+
+    m_directionalLightMethod.setMatSpecIntensity(2.0f);
+    m_directionalLightMethod.setMatSpecPower(200.0f);
+
     printf("[world] => uploaded\n");
     return true;
 }
@@ -1247,10 +1260,6 @@ void world::pointLightPass(const rendererPipeline &pipeline) {
     const m::perspectiveProjection &project = pipeline.getPerspectiveProjection();
 
     m_pointLightMethod.enable();
-
-    m_pointLightMethod.setPositionTextureUnit(gBuffer::kPosition);
-    m_pointLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
-    m_pointLightMethod.setNormalTextureUnit(gBuffer::kNormal);
     m_pointLightMethod.setScreenSize(project.width, project.height);
 
     //m_pointLightMethod.setEyeWorldPos(pipeline.getPosition());
@@ -1277,15 +1286,10 @@ void world::directionalLightPass(const rendererPipeline &pipeline) {
     const m::perspectiveProjection &project = pipeline.getPerspectiveProjection();
     m_directionalLightMethod.enable();
 
-    m_directionalLightMethod.setPositionTextureUnit(gBuffer::kPosition);
-    m_directionalLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
-    m_directionalLightMethod.setNormalTextureUnit(gBuffer::kNormal);
     m_directionalLightMethod.setDirectionalLight(m_directionalLight);
     m_directionalLightMethod.setScreenSize(project.width, project.height);
 
     m_directionalLightMethod.setEyeWorldPos(pipeline.getPosition());
-    m_directionalLightMethod.setMatSpecIntensity(2.0f);
-    m_directionalLightMethod.setMatSpecPower(20.0f);
 
     m::mat4 wvp;
     wvp.loadIdentity();
@@ -1330,7 +1334,7 @@ void world::render(const rendererPipeline &pipeline) {
     beginLightPass();
 
     // point light pass
-    pointLightPass(pipeline);
+    //pointLightPass(pipeline);
 
     // directional light pass
     directionalLightPass(pipeline);
