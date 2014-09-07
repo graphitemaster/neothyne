@@ -55,7 +55,7 @@ struct gBuffer {
         kPosition,
         kDiffuse,
         kNormal,
-        //kTexCoord,
+        kDepth,
         kMax
     };
 
@@ -66,12 +66,9 @@ struct gBuffer {
 
     void bindReading(void);
     void bindWriting(void);
-    void bindAccumulate(void);
-
 private:
     GLuint m_fbo;
     GLuint m_textures[kMax];
-    GLuint m_depthTexture;
 };
 
 ///! textures

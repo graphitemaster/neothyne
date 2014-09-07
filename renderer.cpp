@@ -350,8 +350,7 @@ void method::addGeometryPrelude(const u::string &prelude) {
 }
 
 gBuffer::gBuffer() :
-    m_fbo(0),
-    m_depthTexture(0)
+    m_fbo(0)
 {
     memset(m_textures, 0, sizeof(m_textures));
 }
@@ -362,9 +361,6 @@ gBuffer::~gBuffer() {
 
     if (*m_textures)
         gl::DeleteTextures(kMax, m_textures);
-
-    if (m_depthTexture)
-        gl::DeleteTextures(1, &m_depthTexture);
 }
 
 bool gBuffer::init(const m::perspectiveProjection &project) {
@@ -372,11 +368,10 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
 
     gl::GenTextures(kMax, m_textures);
-    gl::GenTextures(1, &m_depthTexture);
 
     // position (16-bit float)
     gl::BindTexture(GL_TEXTURE_2D, m_textures[kPosition]);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, project.width, project.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, project.width, project.height, 0, GL_RGB, GL_FLOAT, nullptr);
     gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textures[kPosition], 0);
@@ -390,16 +385,17 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
 
     // normals
     gl::BindTexture(GL_TEXTURE_2D, m_textures[kNormal]);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, project.width, project.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, project.width, project.height, 0, GL_RG, GL_FLOAT, nullptr);
     gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 2, GL_TEXTURE_2D, m_textures[kNormal], 0);
 
-    gl::BindTexture(GL_TEXTURE_2D, m_depthTexture);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16,
+    // depth
+    gl::BindTexture(GL_TEXTURE_2D, m_textures[kDepth]);
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
         project.width, project.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-        GL_TEXTURE_2D, m_depthTexture, 0);
+        GL_TEXTURE_2D, m_textures[kDepth], 0);
 
     static GLenum drawBuffers[] = {
         GL_COLOR_ATTACHMENT0, // position
@@ -418,10 +414,6 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
 }
 
 void gBuffer::bindReading(void) {
-    gl::BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo);
-}
-
-void gBuffer::bindAccumulate(void) {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     for (size_t i = 0; i < kMax; i++) {
         gl::ActiveTexture(GL_TEXTURE0 + i);
@@ -1100,7 +1092,6 @@ void world::geometryPass(const rendererPipeline &pipeline) {
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }
-    //glBindVertexArray_(0);
 
     // The depth buffer is populated and the stencil pass will require it.
     // However, it will not write to it.
@@ -1113,7 +1104,7 @@ void world::beginLightPass(void) {
     gl::BlendEquation(GL_FUNC_ADD);
     gl::BlendFunc(GL_ONE, GL_ONE);
 
-    m_gBuffer.bindAccumulate();
+    m_gBuffer.bindReading();
     gl::Clear(GL_COLOR_BUFFER_BIT);
 }
 
