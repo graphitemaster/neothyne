@@ -101,7 +101,8 @@ int main(int argc, char **argv) {
     SDL_Window *gScreen = initSDL(screenWidth, screenHeight);
 
     // before loading any art assets we need to establish a loading screen
-    initGL();
+    gl::init();
+
     splashScreen gSplash;
     gSplash.load("textures/logo.png");
     gSplash.upload();
