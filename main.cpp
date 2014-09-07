@@ -143,7 +143,7 @@ int neoMain(int argc, char **argv) {
                             // Resize the window
                             neoResize(e.window.data1, e.window.data2);
                             projection.width = neoWidth();
-                            projection.height = neoWidth();
+                            projection.height = neoHeight();
                             pipeline.setPerspectiveProjection(projection);
                             break;
                     }
