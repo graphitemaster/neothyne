@@ -1,52 +1,11 @@
 #ifndef RENDERER_HDR
 #define RENDERER_HDR
 #include "r_methods.h"
+#include "r_pipeline.h"
+#include "r_texture.h"
 
-//#include "math.h"
-#include "util.h"
 #include "kdmap.h"
 #include "resource.h"
-#include "texture.h"
-
-struct rendererPipeline {
-    rendererPipeline(void);
-
-    void setScale(const m::vec3 &scale);
-    void setWorldPosition(const m::vec3 &worldPosition);
-
-    void setRotate(const m::vec3 &rotate);
-
-    void setPosition(const m::vec3 &position);
-    void setRotation(const m::quat &rotation);
-
-    void setPerspectiveProjection(const m::perspectiveProjection &projection);
-
-    const m::mat4 &getWorldTransform(void);
-    const m::mat4 &getWVPTransform(void);
-    const m::mat4 &getVPTransform(void);
-
-    // camera accessors.
-    const m::vec3 &getPosition(void) const;
-    const m::vec3 getTarget(void) const;
-    const m::vec3 getUp(void) const;
-    const m::quat &getRotation(void) const;
-
-    const m::perspectiveProjection &getPerspectiveProjection(void) const;
-
-private:
-    m::perspectiveProjection m_perspectiveProjection;
-
-    m::vec3 m_scale;
-    m::vec3 m_worldPosition;
-    m::vec3 m_rotate;
-    m::vec3 m_position;
-
-    m::mat4 m_worldTransform;
-    m::mat4 m_WVPTransform;
-    m::mat4 m_VPTransform;
-
-    m::quat m_rotation;
-};
 
 // gbuffer
 struct gBuffer {
@@ -69,38 +28,6 @@ struct gBuffer {
 private:
     GLuint m_fbo;
     GLuint m_textures[kMax];
-};
-
-///! textures
-struct texture2D {
-    texture2D();
-    ~texture2D();
-
-    bool load(const u::string &file);
-    bool upload(void);
-    void bind(GLenum unit);
-    void resize(size_t width, size_t height);
-
-private:
-    bool m_uploaded;
-    GLuint m_textureHandle;
-    texture m_texture;
-};
-
-struct texture3D {
-    texture3D();
-    ~texture3D();
-
-    bool load(const u::string &ft, const u::string &bk, const u::string &up,
-              const u::string &dn, const u::string &rt, const u::string &lf);
-    bool upload(void);
-    void bind(GLenum unit);
-    void resize(size_t width, size_t height);
-
-private:
-    bool m_uploaded;
-    GLuint m_textureHandle;
-    texture m_textures[6];
 };
 
 enum fogType {

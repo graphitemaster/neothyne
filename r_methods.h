@@ -1,8 +1,38 @@
 #ifndef R_METHODS_HDR
 #define R_METHODS_HDR
 
-#include "r_method.h"
+#include "r_common.h"
 #include "r_light.h"
+
+#include "util.h"
+
+struct method {
+    method();
+    ~method();
+
+    void enable(void);
+
+    bool init(void);
+
+protected:
+    bool addShader(GLenum shaderType, const char *shaderText);
+
+    void addVertexPrelude(const u::string &prelude);
+    void addFragmentPrelude(const u::string &prelude);
+    void addGeometryPrelude(const u::string &prelude);
+
+    bool finalize(void);
+
+    GLint getUniformLocation(const char *name);
+    GLint getUniformLocation(const u::string &name);
+
+private:
+    GLuint m_program;
+    u::string m_vertexSource;
+    u::string m_fragmentSource;
+    u::string m_geometrySource;
+    u::list<GLuint> m_shaders;
+};
 
 struct geomMethod : method {
     bool init(void);
