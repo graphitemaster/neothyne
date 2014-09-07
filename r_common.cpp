@@ -26,6 +26,7 @@ typedef void (APIENTRYP PFNGLBLENDFUNCPROC)(GLenum sfactor, GLenum dfactor);
 typedef void (APIENTRYP PFNGLDEPTHFUNCPROC)(GLenum func);
 typedef void (APIENTRYP PFNGLCOLORMASKPROC)(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 typedef void (APIENTRYP PFNGLREADPIXELSPROC)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *data);
+typedef void (APIENTRYP PFNGLVIEWPORTPROC)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 static PFNGLCREATESHADERPROC             glCreateShader_             = nullptr;
 static PFNGLSHADERSOURCEPROC             glShaderSource_             = nullptr;
@@ -84,6 +85,7 @@ static PFNGLBLENDFUNCPROC                glBlendFunc_                = nullptr;
 static PFNGLDEPTHFUNCPROC                glDepthFunc_                = nullptr;
 static PFNGLCOLORMASKPROC                glColorMask_                = nullptr;
 static PFNGLREADPIXELSPROC               glReadPixels_               = nullptr;
+static PFNGLVIEWPORTPROC                 glViewport_                 = nullptr;
 
 namespace gl {
     // Generate function wrapper around them now. We will eventually add trace
@@ -157,6 +159,7 @@ namespace gl {
         GL_RESOLVE(glDepthFunc);
         GL_RESOLVE(glColorMask);
         GL_RESOLVE(glReadPixels);
+        GL_RESOLVE(glViewport);
 
         ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -405,5 +408,9 @@ namespace gl {
         GLvoid *data)
     {
         glReadPixels_(x, y, width, height, format, type, data);
+    }
+
+    void Viewport(GLint x, GLint y, GLsizei width, GLsizei height) {
+        glViewport_(x, y, width, height);
     }
 }

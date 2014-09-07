@@ -1,6 +1,5 @@
-#include <SDL2/SDL.h>
-
 #include "client.h"
+#include "engine.h"
 
 static constexpr float kClientMaxVelocity = 120.0f;
 static constexpr m::vec3 kClientGravity(0.0f, -98.0f, 0.0f);
@@ -27,9 +26,6 @@ client::client() :
 {
 
 }
-
-u::map<int, int> &getKeyState(int key = 0, bool keyDown = false, bool keyUp = false);
-void getMouseDelta(int *deltaX, int *deltaY);
 
 bool client::tryUnstick(const kdMap &map, float radius) {
     static const m::vec3 offsets[] = {
@@ -253,9 +249,9 @@ void client::inputMouseMove(void) {
     static const bool kInvert = true;
     const float invert = kInvert ? -1.0f : 1.0f;
 
-    int deltaX;
-    int deltaY;
-    getMouseDelta(&deltaX, &deltaY);
+    int deltaX = 0;
+    int deltaY = 0;
+    neoMouseDelta(&deltaX, &deltaY);
 
     m_mouseLat -= (float)deltaY * kSensitivity * invert;
     m_mouseLat = m::clamp(m_mouseLat, -89.0f, 89.0f);
@@ -270,7 +266,7 @@ void client::inputMouseMove(void) {
 }
 
 void client::inputGetCommands(u::vector<clientCommands> &commands) {
-    u::map<int, int> &keyState = getKeyState();
+    u::map<int, int> &keyState = neoKeyState();
     commands.clear();
     if (keyState[SDLK_w])      commands.push_back(kCommandForward);
     if (keyState[SDLK_s])      commands.push_back(kCommandBackward);

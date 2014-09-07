@@ -1,7 +1,4 @@
 #include <string.h>
-
-#include <SDL2/SDL.h>
-
 #include "renderer.h"
 
 ///! A rendering method
@@ -125,20 +122,36 @@ void method::addGeometryPrelude(const u::string &prelude) {
 }
 
 gBuffer::gBuffer() :
-    m_fbo(0)
+    m_fbo(0),
+    m_width(0),
+    m_height(0)
 {
     memset(m_textures, 0, sizeof(m_textures));
 }
 
 gBuffer::~gBuffer() {
-    if (m_fbo)
-        gl::DeleteFramebuffers(1, &m_fbo);
+    destroy();
+}
 
-    if (*m_textures)
-        gl::DeleteTextures(kMax, m_textures);
+void gBuffer::destroy(void) {
+    gl::DeleteFramebuffers(1, &m_fbo);
+    gl::DeleteTextures(kMax, m_textures);
+}
+
+void gBuffer::update(const m::perspectiveProjection &project) {
+    size_t width = project.width;
+    size_t height = project.height;
+
+    if (m_width != width || m_height != height) {
+        destroy();
+        init(project);
+    }
 }
 
 bool gBuffer::init(const m::perspectiveProjection &project) {
+    m_width = project.width;
+    m_height = project.height;
+
     gl::GenFramebuffers(1, &m_fbo);
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
 
@@ -146,21 +159,21 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
 
     // position (16-bit float)
     gl::BindTexture(GL_TEXTURE_2D, m_textures[kPosition]);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, project.width, project.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, m_width, m_height, 0, GL_RGB, GL_FLOAT, nullptr);
     gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textures[kPosition], 0);
 
     // diffuse RGBA
     gl::BindTexture(GL_TEXTURE_2D, m_textures[kDiffuse]);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, project.width, project.height, 0, GL_RGB, GL_FLOAT, nullptr);
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, GL_FLOAT, nullptr);
     gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 1, GL_TEXTURE_2D, m_textures[kDiffuse], 0);
 
     // normals
     gl::BindTexture(GL_TEXTURE_2D, m_textures[kNormal]);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, project.width, project.height, 0, GL_RG, GL_FLOAT, nullptr);
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, m_width, m_height, 0, GL_RG, GL_FLOAT, nullptr);
     gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 2, GL_TEXTURE_2D, m_textures[kNormal], 0);
@@ -168,7 +181,7 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
     // depth
     gl::BindTexture(GL_TEXTURE_2D, m_textures[kDepth]);
     gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-        project.width, project.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        m_width, m_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
         GL_TEXTURE_2D, m_textures[kDepth], 0);
 
@@ -354,14 +367,14 @@ bool splashMethod::init(void) {
         return false;
 
     m_splashTextureLocation = getUniformLocation("gSplashTexture");
-    m_resolutionLocation = getUniformLocation("gResolution");
+    m_screenSizeLocation = getUniformLocation("gScreenSize");
     m_timeLocation = getUniformLocation("gTime");
 
     return true;
 }
 
-void splashMethod::setResolution(const m::perspectiveProjection &project) {
-    gl::Uniform2f(m_resolutionLocation, project.width, project.height);
+void splashMethod::setScreenSize(const m::perspectiveProjection &project) {
+    gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
 }
 
 void splashMethod::setTime(float dt) {
@@ -549,7 +562,7 @@ void splashScreen::render(float dt, const rendererPipeline &pipeline) {
 
     enable();
     setTextureUnit(0);
-    setResolution(pipeline.getPerspectiveProjection());
+    setScreenSize(pipeline.getPerspectiveProjection());
     setTime(dt);
 
     m_texture.bind(GL_TEXTURE0);
@@ -883,7 +896,6 @@ void world::beginLightPass(void) {
     gl::Clear(GL_COLOR_BUFFER_BIT);
 }
 
-
 void world::directionalLightPass(const rendererPipeline &pipeline) {
     const m::perspectiveProjection &project = pipeline.getPerspectiveProjection();
     m_directionalLightMethod.enable();
@@ -926,6 +938,8 @@ void world::depthPrePass(const rendererPipeline &pipeline) {
 }
 
 void world::render(const rendererPipeline &pipeline) {
+    m_gBuffer.update(pipeline.getPerspectiveProjection());
+
     // depth pre pass
     depthPrePass(pipeline);
 
@@ -946,24 +960,4 @@ void world::render(const rendererPipeline &pipeline) {
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for (auto &it : m_billboards)
         it.render(pipeline);
-}
-
-void screenShot(const u::string &file, const m::perspectiveProjection &project) {
-    const size_t screenWidth = project.width;
-    const size_t screenHeight = project.height;
-    const size_t screenSize = screenWidth * screenHeight;
-    SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, screenWidth, screenHeight,
-        8*3, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
-    SDL_LockSurface(temp);
-    unsigned char *pixels = new unsigned char[screenSize * 3];
-    // make sure we're reading from the final framebuffer when obtaining the pixels
-    // for the screenshot.
-    gl::BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-    gl::ReadPixels(0, 0, screenWidth, screenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-    texture::reorient(pixels, screenWidth, screenHeight, 3, screenWidth * 3,
-        (unsigned char *)temp->pixels, false, true, false);
-    SDL_UnlockSurface(temp);
-    delete[] pixels;
-    SDL_SaveBMP(temp, file.c_str());
-    SDL_FreeSurface(temp);
 }

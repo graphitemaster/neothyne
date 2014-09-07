@@ -4,7 +4,7 @@ LDFLAGS= `sdl2-config --libs` -lGL
 
 GAMESOURCES=client.cpp main.cpp
 RENDERSOURCES=r_common.cpp r_pipeline.cpp r_texture.cpp renderer.cpp
-SOURCES=kdmap.cpp kdtree.cpp math.cpp texture.cpp util.cpp $(RENDERSOURCES) $(GAMESOURCES)
+SOURCES=engine.cpp kdmap.cpp kdtree.cpp math.cpp texture.cpp util.cpp $(RENDERSOURCES) $(GAMESOURCES)
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=neothyne
 

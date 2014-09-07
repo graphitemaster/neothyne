@@ -390,14 +390,5 @@ namespace m {
         void setPersProjTrans(const perspectiveProjection &projection);
         void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
     };
-
-    ///! sphere
-    struct sphere {
-        u::vector<float> vertices;
-        u::vector<uint16_t> indices;
-        sphere();
-        sphere(float radius, size_t rings, size_t sectors);
-        void build(float radius, size_t rings, size_t sectors);
-    };
 }
 #endif

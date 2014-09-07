@@ -23,11 +23,17 @@ struct gBuffer {
 
     bool init(const m::perspectiveProjection &project);
 
+    void update(const m::perspectiveProjection &project);
     void bindReading(void);
     void bindWriting(void);
+
 private:
+    void destroy(void);
+
     GLuint m_fbo;
     GLuint m_textures[kMax];
+    size_t m_width;
+    size_t m_height;
 };
 
 enum fogType {
@@ -35,26 +41,6 @@ enum fogType {
     kFogLinear,
     kFogExp,
     kFogExp2
-};
-
-// a sphere
-struct sphere {
-    ~sphere();
-
-    bool load(float radius, size_t rings, size_t sectors);
-    bool upload(void);
-    void render(void);
-
-private:
-    union {
-        struct {
-            GLuint m_vbo;
-            GLuint m_ibo;
-        };
-        GLuint m_buffers[2];
-    };
-    GLuint m_vao;
-    m::sphere m_sphere;
 };
 
 // a quad
@@ -190,7 +176,5 @@ private:
     directionalLight m_directionalLight;
     gBuffer m_gBuffer;
 };
-
-void screenShot(const u::string &file, const m::perspectiveProjection &project);
 
 #endif

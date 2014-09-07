@@ -102,12 +102,12 @@ struct splashMethod : method {
     virtual bool init(void);
 
     void setTextureUnit(int unit);
-    void setResolution(const m::perspectiveProjection &project);
+    void setScreenSize(const m::perspectiveProjection &project);
     void setTime(float dt);
 
 private:
     GLint m_splashTextureLocation;
-    GLint m_resolutionLocation;
+    GLint m_screenSizeLocation;
     GLint m_timeLocation;
 };
 

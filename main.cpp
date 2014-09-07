@@ -1,23 +1,10 @@
 #include <SDL2/SDL.h>
 
-#include "kdtree.h"
 #include "kdmap.h"
-#include "renderer.h"
+#include "kdtree.h"
 #include "client.h"
-
-static constexpr size_t kScreenWidth = 1600;
-static constexpr size_t kScreenHeight = 852;
-
-u::map<int, int> &getKeyState(int key = 0, bool keyDown = false, bool keyUp = false) {
-    static u::map<int, int> gKeyMap;
-    if (keyDown) gKeyMap[key]++;
-    if (keyUp) gKeyMap[key] = 0;
-    return gKeyMap;
-}
-
-void getMouseDelta(int *deltaX, int *deltaY) {
-    SDL_GetRelativeMouseState(deltaX, deltaY);
-}
+#include "renderer.h"
+#include "engine.h"
 
 // we load assets in a different thread
 enum {
@@ -49,59 +36,31 @@ error:
     return false;
 }
 
-static SDL_Window *initSDL(size_t width, size_t height) {
-    SDL_Window *window;
-    SDL_Init(SDL_INIT_VIDEO);
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-
-    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 6);
-
-    window = SDL_CreateWindow("Neothyne",
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
-        width,
-        height,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL
-    );
-
-    if (!SDL_GL_CreateContext(window)) {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-            "Neothyne: Initialization error",
-            "OpenGL 3.3 or higher is required",
-            nullptr);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-    }
-
-    SDL_SetRelativeMouseMode(SDL_TRUE);
-    SDL_GL_SetSwapInterval(0); // no vsync please
-
-    return window;
+static void screenShot(const u::string &file) {
+    const size_t screenWidth = neoWidth();
+    const size_t screenHeight = neoHeight();
+    const size_t screenSize = screenWidth * screenHeight;
+    SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, screenWidth, screenHeight,
+        8*3, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+    SDL_LockSurface(temp);
+    unsigned char *pixels = new unsigned char[screenSize * 3];
+    // make sure we're reading from the final framebuffer when obtaining the pixels
+    // for the screenshot.
+    gl::BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    gl::ReadPixels(0, 0, screenWidth, screenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+    texture::reorient(pixels, screenWidth, screenHeight, 3, screenWidth * 3,
+        (unsigned char *)temp->pixels, false, true, false);
+    SDL_UnlockSurface(temp);
+    delete[] pixels;
+    SDL_SaveBMP(temp, file.c_str());
+    SDL_FreeSurface(temp);
 }
 
-int main(int argc, char **argv) {
+int neoMain(int argc, char **argv) {
     argc--;
     argv++;
-
-    size_t screenWidth = kScreenWidth;
-    size_t screenHeight = kScreenHeight;
-
-    if (argc == 2) {
-        screenWidth = atoi(argv[0]);
-        screenHeight = atoi(argv[1]);
-    }
-
-    SDL_Window *gScreen = initSDL(screenWidth, screenHeight);
-
-    // before loading any art assets we need to establish a loading screen
-    gl::init();
+    if (argc == 2)
+        neoResize(atoi(argv[0]), atoi(argv[1]));
 
     splashScreen gSplash;
     gSplash.load("textures/logo.png");
@@ -110,8 +69,8 @@ int main(int argc, char **argv) {
     rendererPipeline pipeline;
     m::perspectiveProjection projection;
     projection.fov = 90.0f;
-    projection.width = screenWidth;
-    projection.height = screenHeight;
+    projection.width = neoWidth();
+    projection.height = neoHeight();
     projection.nearp = 1.0f;
     projection.farp = 2048.0f;
 
@@ -128,7 +87,7 @@ int main(int argc, char **argv) {
     while (SDL_AtomicGet(&loadData.done) == kLoadInProgress) {
         glClear(GL_COLOR_BUFFER_BIT);
         gSplash.render(0.002f * (float)(SDL_GetTicks() - splashTime), pipeline);
-        SDL_GL_SwapWindow(gScreen);
+        neoSwap();
     }
 
     if (SDL_AtomicGet(&loadData.done) != kLoadSucceeded)
@@ -158,12 +117,10 @@ int main(int argc, char **argv) {
         fpsCounter++;
         if (time - fpsTime > 1000.0f) {
             u::string title = u::format("Neothyne: (%zu FPS)", fpsCounter);
-            SDL_SetWindowTitle(gScreen, title.c_str());
+            neoSetWindowTitle(title.c_str());
             fpsCounter = 0;
             fpsTime = time;
         }
-
-        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         gClient.update(loadData.gMap, dt);
 
@@ -172,8 +129,7 @@ int main(int argc, char **argv) {
 
         loadData.gWorld.render(pipeline);
 
-        //glFinish();
-        SDL_GL_SwapWindow(gScreen);
+        neoSwap();
 
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
@@ -181,24 +137,33 @@ int main(int argc, char **argv) {
                 case SDL_QUIT:
                     SDL_Quit();
                     return 0;
+                case SDL_WINDOWEVENT:
+                    switch (e.window.event) {
+                        case SDL_WINDOWEVENT_RESIZED:
+                            // Resize the window
+                            neoResize(e.window.data1, e.window.data2);
+                            projection.width = neoWidth();
+                            projection.height = neoWidth();
+                            pipeline.setPerspectiveProjection(projection);
+                            break;
+                    }
+                    break;
                 case SDL_KEYDOWN:
                     switch (e.key.keysym.sym) {
                         case SDLK_ESCAPE:
                             running = false;
                             break;
                         case SDLK_F8:
-                            screenShot("screenshot.bmp", projection);
+                            screenShot("screenshot.bmp");
                             break;
                         case SDLK_F12:
-                            SDL_SetRelativeMouseMode(
-                                SDL_GetRelativeMouseMode() == SDL_TRUE
-                                    ? SDL_FALSE : SDL_TRUE);
+                            neoToggleRelativeMouseMode();
                             break;
                     }
-                    getKeyState(e.key.keysym.sym, true);
+                    neoKeyState(e.key.keysym.sym, true);
                     break;
                 case SDL_KEYUP:
-                    getKeyState(e.key.keysym.sym, false, true);
+                    neoKeyState(e.key.keysym.sym, false, true);
                     break;
             }
         }

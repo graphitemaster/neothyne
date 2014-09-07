@@ -68,6 +68,7 @@ namespace gl {
     void ColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
     void ReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type,
         GLvoid *data);
+    void Viewport(GLint x, GLint y, GLsizei width, GLsizei height);
 }
 
 #endif
