@@ -410,7 +410,7 @@ private:
                 if (remain < 0)
                     returnResult(kMalformatted);
                 for (i = 0; i < currcnt; ++i) {
-                    register unsigned char code = m_position[i];
+                    unsigned char code = m_position[i];
                     for (int j = spread; j; --j) {
                         vlc->bits = (unsigned char) codelen;
                         vlc->code = code;
@@ -807,9 +807,9 @@ private:
             const unsigned char *pcr = &m_comp[2].pixels[0];
             for (size_t yy = m_height; yy; --yy) {
                 for (size_t x = 0; x < m_width; ++x) {
-                    register int y = py[x] << 8;
-                    register int cb = pcb[x] - 128;
-                    register int cr = pcr[x] - 128;
+                    int y = py[x] << 8;
+                    int cb = pcb[x] - 128;
+                    int cr = pcr[x] - 128;
                     *prgb++ = clip((y            + 359 * cr + 128) >> 8);
                     *prgb++ = clip((y -  88 * cb - 183 * cr + 128) >> 8);
                     *prgb++ = clip((y + 454 * cb            + 128) >> 8);
@@ -1647,9 +1647,9 @@ static const struct {
     u::vector<const char *> extensions;
     decoderType decoder;
 } decoders[] = {
-    { {{"jpg", "jpeg", "jpe", "jif", "jfif", "jfi"}}, kDecoderJPEG },
-    { {{"png"}},                                      kDecoderPNG  },
-    { {{"tga"}},                                      kDecoderTGA  }
+    { {"jpg", "jpeg", "jpe", "jif", "jfif", "jfi"}, kDecoderJPEG },
+    { {"png"},                                      kDecoderPNG  },
+    { {"tga"},                                      kDecoderTGA  }
 };
 
 template <typename T>
