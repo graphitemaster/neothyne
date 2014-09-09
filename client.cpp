@@ -4,7 +4,6 @@
 static constexpr float kClientMaxVelocity = 120.0f;
 static constexpr m::vec3 kClientGravity(0.0f, -98.0f, 0.0f);
 static constexpr float kClientRadius = 5.0f; // client sphere radius (ft / 2pi)
-static constexpr float kClientWallReduce = 0.5f; // 50% reduction of collision responce when sliding up a wal
 static constexpr float kClientSpeed = 80.0f; // cm/s
 static constexpr float kClientCrouchSpeed = 30.0f; // cm/s
 static constexpr float kClientJumpSpeed = 130.0f; // cm/s
@@ -24,32 +23,12 @@ client::client() :
     m_isOnWall(false),
     m_isCrouching(false)
 {
-
 }
 
-bool client::tryUnstick(const kdMap &map, float radius) {
-    static const m::vec3 offsets[] = {
-        m::vec3(-1.0f, 1.0f,-1.0f),
-        m::vec3( 1.0f, 1.0f,-1.0f),
-        m::vec3( 1.0f, 1.0f, 1.0f),
-        m::vec3(-1.0f, 1.0f, 1.0f),
-        m::vec3(-1.0f,-1.0f,-1.0f),
-        m::vec3( 1.0f,-1.0f,-1.0f),
-        m::vec3( 1.0f,-1.0f, 1.0f),
-        m::vec3(-1.0f,-1.0f, 1.0f)
-    };
-    const float radiusScale = radius * 0.1f;
-    for (size_t j = 1; j < 4; j++) {
-        for (size_t i = 0; i < sizeof(offsets)/sizeof(offsets[0]); i++) {
-            m::vec3 tryPosition = m_origin + j * radiusScale * offsets[i];
-            if (map.isSphereStuck(tryPosition, radius))
-                continue;
-            m_origin = tryPosition;
-            return true;
-        }
-    }
-    return false;
-}
+enum {
+    COLLIDE_WALL = 1 << 0,
+    COLLIDE_GROUND = 1 << 1
+};
 
 void client::update(const kdMap &map, float dt) {
     kdSphereTrace trace;
@@ -57,108 +36,144 @@ void client::update(const kdMap &map, float dt) {
 
     m::vec3 velocity = m_velocity;
     m::vec3 originalVelocity = m_velocity;
-    m::vec3 primalVelocity = m_velocity;
     m::vec3 newVelocity;
     velocity.maxLength(kClientMaxVelocity);
 
     m::vec3 planes[kdMap::kMaxClippingPlanes];
     m::vec3 pos = m_origin;
     float timeLeft = dt;
-    float allFraction = 0.0f;
     size_t numBumps = kdMap::kMaxBumps;
     size_t numPlanes = 0;
 
-    bool wallHit = false;
-    bool groundHit = false;
-    for (size_t bumpCount = 0; bumpCount < numBumps; bumpCount++) {
+    // Never turn against original velocity
+    planes[numPlanes++] = m_velocity.normalized();
+
+    size_t collide = 0;
+    size_t bumpCount = 0;
+    for (; bumpCount < numBumps; bumpCount++) {
+        // Don't bother if we didn't move
         if (velocity == m::vec3(0.0f, 0.0f, 0.0f))
             break;
 
+        // Begin the movement trace
         trace.start = pos;
         trace.dir = timeLeft * velocity;
         map.traceSphere(&trace);
 
         float f = m::clamp(trace.fraction, 0.0f, 1.0f);
-        allFraction += f;
 
+        // Moved some distance
         if (f > 0.0f) {
             pos += trace.dir * f * kdMap::kFractionScale;
             originalVelocity = velocity;
             numPlanes = 0;
         }
 
+        // Moved the entire distance
         if (f == 1.0f)
             break;
 
-        wallHit = true;
-
         timeLeft *= (1.0f - f);
 
+        // We assume a high value in Y to be ground
         if (trace.plane.n[1] > 0.7f)
-            groundHit = true;
+            collide |= COLLIDE_GROUND;
+
+        // If we made it this far it also means we're hitting a wall
+        collide |= COLLIDE_WALL;
 
         if (numPlanes >= kdMap::kMaxClippingPlanes) {
             velocity = m::vec3(0.0f, 0.0f, 0.0f);
             break;
         }
 
+        // If we hit the same plane before, nudge the velocity ever so slightly
+        // away from the plane to deal with non-axial plane sticking
+        size_t i;
+        for (i = 0; i < numPlanes; i++) {
+            if ((trace.plane.n * planes[i]) > 0.99f)
+                velocity += trace.plane.n;
+        }
+        // If we didn't make it through the entire plane set, apply the nudged
+        // velocity and try again.
+        if (i < numPlanes)
+            continue;
+
         // next clipping plane
         planes[numPlanes++] = trace.plane.n;
 
-        size_t i, j;
-        for (i = 0; i < numPlanes; i++) {
+        // Find a plane that it enters
+        for (size_t i = 0; i < numPlanes; i++) {
+            // Check to see if the movement even interacts with the plane
+            float into = (originalVelocity * planes[i]);
+            // Does it interact?
+            if (into >= 0.1f)
+                continue;
+
+            // Slide along the plane
             kdMap::clipVelocity(originalVelocity, planes[i], newVelocity, kdMap::kOverClip);
-            for (j = 0; j < numPlanes; j++)
-                if (j != i && !(planes[i] == planes[j]))
-                    if (newVelocity * planes[j] < 0.0f)
-                        break;
-            if (j == numPlanes)
-                break;
-        }
 
-        // did we make it through the entire plane set?
-        if (i != numPlanes)
-            velocity = newVelocity;
-        else {
-            // go along the planes crease
-            if (numPlanes != 2) {
-                velocity = m::vec3(0.0f, 0.0f, 0.0f);
-                break;
+            // Check for a second plane
+            for (size_t j = 0; j < numPlanes; j++) {
+                if (j == i)
+                    continue;
+
+                // Don't process unless movement interacts with the plane
+                if (newVelocity * planes[j] >= 0.1f)
+                    continue;
+
+                // Try clipping the movement to the plane
+                kdMap::clipVelocity(newVelocity, planes[j], newVelocity, kdMap::kOverClip);
+
+                // If it goes back to the first clipping plane then then ignore
+                // Otherwise we may stick.
+                if (newVelocity * planes[i] >= 0.0f)
+                    continue;
+
+                // Slide the original velocity along the crease
+                m::vec3 dir = (planes[i] ^ planes[j]).normalized();
+                float d = dir * originalVelocity;
+                newVelocity = dir * d;
+
+                // Check for a third plane
+                for (size_t k = 0; k < numPlanes; k++) {
+                    if (k == i || k == j)
+                        continue;
+
+                    // Don't process unless movement interacts with the plane
+                    if (newVelocity * planes[k] >= 0.1f)
+                        continue;
+
+                    // Stop dead for three intersections
+                    newVelocity = m::vec3(0.0f, 0.0f, 0.0f);
+                }
             }
-            m::vec3 dir = planes[0] ^ planes[1];
-            float d = dir * velocity;
-            velocity = dir * d;
         }
-
-        if (velocity * primalVelocity <= 0.0f) {
-            velocity = m::vec3(0.0f, 0.0f, 0.0f);
-            break;
-        }
+        velocity = newVelocity;
     }
 
-    if (!allFraction) {
-        velocity = m::vec3(0.0f, 0.0f, 0.0f);
+    if (bumpCount != 0) {
+        // Bumped ourselfs because we didn't make it in the first pass.
+        // Here we should do proper STEP traces but for now we dampen the result
+        // On Y so that STEPs don't actually throw us in the air.
+        velocity.y *= 0.25f;
     }
 
-    m_isOnGround = groundHit;
-    m_isOnWall = wallHit;
-    if (groundHit) {
+    m_isOnGround = collide & COLLIDE_GROUND;
+    m_isOnWall = collide & COLLIDE_WALL;
+    if (m_isOnGround) {
+        // Prevent oscillations when we're sitting on the ground
         velocity.y = 0.0f;
     } else {
+        // Carry through with gravity
         velocity += kClientGravity * dt;
-        if (wallHit)
-            velocity.y *= kClientWallReduce;
     }
 
-    // we could be stuck
-    if (map.isSphereStuck(pos, kClientRadius)) {
-        m_origin = pos;
-        tryUnstick(map, kClientRadius);
-    }
-
+    // Update the new positions
     m_origin = pos;
     m_velocity = velocity;
 
+    // Query the next changes
     u::vector<clientCommands> commands;
     inputGetCommands(commands);
     inputMouseMove();

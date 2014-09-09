@@ -27,8 +27,6 @@ private:
     void inputGetCommands(u::vector<clientCommands> &commands);
     void move(float dt, const u::vector<clientCommands> &commands);
 
-    bool tryUnstick(const kdMap &map, float radius);
-
     float m_mouseLat;
     float m_mouseLon;
     float m_viewHeight;
