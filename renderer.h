@@ -11,7 +11,6 @@
 struct gBuffer {
     // also the texture unit order
     enum textureType {
-        kPosition,
         kDiffuse,
         kNormal,
         kDepth,

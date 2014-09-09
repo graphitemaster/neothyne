@@ -5,7 +5,6 @@ layout (location = 2) in vec3 normal;
 uniform mat4 gWVP;
 uniform mat4 gWorld;
 
-out vec3 worldPosition0;
 out vec2 texCoord0;
 out vec3 normal0;
 
@@ -13,5 +12,4 @@ void main() {
     gl_Position = gWVP * vec4(position, 1.0f);
     texCoord0 = texCoord;
     normal0 = (gWorld * vec4(normal, 0.0f)).xyz;
-    worldPosition0 = (gWorld * vec4(position, 1.0f)).xyz;
 }

@@ -52,23 +52,26 @@ struct lightMethod : method {
     bool init(const char *vs, const char *fs);
 
     void setWVP(const m::mat4 &wvp);
-    void setPositionTextureUnit(int unit);
+    void setInverse(const m::mat4 &inverse);
     void setColorTextureUnit(int unit);
     void setNormalTextureUnit(int unit);
     void setEyeWorldPos(const m::vec3 &position);
     void setMatSpecIntensity(float intensity);
     void setMatSpecPower(float power);
-    void setScreenSize(size_t width, size_t height);
+    void setPerspectiveProjection(const m::perspectiveProjection &project);
+    void setDepthTextureUnit(int unit);
 
 private:
     GLint m_WVPLocation;
-    GLint m_positionTextureUnitLocation;
+    GLint m_inverseLocation;
     GLint m_normalTextureUnitLocation;
     GLint m_colorTextureUnitLocation;
     GLint m_eyeWorldPositionLocation;
     GLint m_matSpecularIntensityLocation;
     GLint m_matSpecularPowerLocation;
     GLint m_screenSizeLocation;
+    GLint m_screenFrustumLocation;
+    GLint m_depthTextureUnitLocation;
 };
 
 struct directionalLightMethod : lightMethod {

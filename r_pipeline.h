@@ -18,6 +18,7 @@ struct rendererPipeline {
     const m::mat4 &getWorldTransform(void);
     const m::mat4 &getWVPTransform(void);
     const m::mat4 &getVPTransform(void);
+    const m::mat4 &getInverseTransform(void);
 
     // camera accessors.
     const m::vec3 &getPosition(void) const;
@@ -38,6 +39,7 @@ private:
     m::mat4 m_worldTransform;
     m::mat4 m_WVPTransform;
     m::mat4 m_VPTransform;
+    m::mat4 m_inverseTransform;
 
     m::quat m_rotation;
 };

@@ -58,6 +58,12 @@ const m::mat4 &rendererPipeline::getWVPTransform(void) {
     return m_WVPTransform;
 }
 
+const m::mat4 &rendererPipeline::getInverseTransform(void) {
+    getVPTransform();
+    m_inverseTransform = m_VPTransform.inverse();
+    return m_inverseTransform;
+}
+
 const m::perspectiveProjection &rendererPipeline::getPerspectiveProjection(void) const {
     return m_perspectiveProjection;
 }

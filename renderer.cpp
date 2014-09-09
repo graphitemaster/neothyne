@@ -157,38 +157,34 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
 
     gl::GenTextures(kMax, m_textures);
 
-    // position (16-bit float)
-    gl::BindTexture(GL_TEXTURE_2D, m_textures[kPosition]);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, m_width, m_height, 0, GL_RGB, GL_FLOAT, nullptr);
-    gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textures[kPosition], 0);
-
     // diffuse RGBA
     gl::BindTexture(GL_TEXTURE_2D, m_textures[kDiffuse]);
     gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, GL_FLOAT, nullptr);
-    gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 1, GL_TEXTURE_2D, m_textures[kDiffuse], 0);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textures[kDiffuse], 0);
 
     // normals
     gl::BindTexture(GL_TEXTURE_2D, m_textures[kNormal]);
     gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, m_width, m_height, 0, GL_RG, GL_FLOAT, nullptr);
-    gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 2, GL_TEXTURE_2D, m_textures[kNormal], 0);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_textures[kNormal], 0);
 
     // depth
     gl::BindTexture(GL_TEXTURE_2D, m_textures[kDepth]);
     gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
         m_width, m_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
         GL_TEXTURE_2D, m_textures[kDepth], 0);
 
     static GLenum drawBuffers[] = {
-        GL_COLOR_ATTACHMENT0, // position
-        GL_COLOR_ATTACHMENT1, // diffuse
-        GL_COLOR_ATTACHMENT2, // normal
+        GL_COLOR_ATTACHMENT0, // diffuse
+        GL_COLOR_ATTACHMENT1  // normal
     };
 
     gl::DrawBuffers(kMax, drawBuffers);
@@ -205,7 +201,7 @@ void gBuffer::bindReading(void) {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     for (size_t i = 0; i < kMax; i++) {
         gl::ActiveTexture(GL_TEXTURE0 + i);
-        gl::BindTexture(GL_TEXTURE_2D, m_textures[kPosition + i]);
+        gl::BindTexture(GL_TEXTURE_2D, m_textures[i]);
     }
 }
 
@@ -227,14 +223,23 @@ bool lightMethod::init(const char *vs, const char *fs) {
     if (!finalize())
         return false;
 
+    // matrices
     m_WVPLocation = getUniformLocation("gWVP");
-    m_positionTextureUnitLocation = getUniformLocation("gPositionMap");
+    m_inverseLocation = getUniformLocation("gInverse");
+
+    // samplers
     m_colorTextureUnitLocation = getUniformLocation("gColorMap");
     m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
+    m_depthTextureUnitLocation = getUniformLocation("gDepthMap");
+
+    // specular lighting
     m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
     m_matSpecularIntensityLocation = getUniformLocation("gMatSpecularIntensity");
     m_matSpecularPowerLocation = getUniformLocation("gMatSpecularPower");
+
+    // device uniforms
     m_screenSizeLocation = getUniformLocation("gScreenSize");
+    m_screenFrustumLocation = getUniformLocation("gScreenFrustum");
 
     return true;
 }
@@ -243,8 +248,8 @@ void lightMethod::setWVP(const m::mat4 &wvp) {
     gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat*)wvp.m);
 }
 
-void lightMethod::setPositionTextureUnit(int unit) {
-    gl::Uniform1i(m_positionTextureUnitLocation, unit);
+void lightMethod::setInverse(const m::mat4 &inverse) {
+    gl::UniformMatrix4fv(m_inverseLocation, 1, GL_TRUE, (const GLfloat*)inverse.m);
 }
 
 void lightMethod::setColorTextureUnit(int unit) {
@@ -267,8 +272,13 @@ void lightMethod::setMatSpecPower(float power) {
     gl::Uniform1f(m_matSpecularPowerLocation, power);
 }
 
-void lightMethod::setScreenSize(size_t width, size_t height) {
-    gl::Uniform2f(m_screenSizeLocation, (float)width, (float)height);
+void lightMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
+    gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
+    gl::Uniform2f(m_screenFrustumLocation, project.nearp, project.farp);
+}
+
+void lightMethod::setDepthTextureUnit(int unit) {
+    gl::Uniform1i(m_depthTextureUnitLocation, unit);
 }
 
 ///! Directional Light Rendering Method
@@ -844,9 +854,9 @@ bool world::upload(const m::perspectiveProjection &project) {
     }
 
     m_directionalLightMethod.enable();
-    m_directionalLightMethod.setPositionTextureUnit(gBuffer::kPosition);
     m_directionalLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
     m_directionalLightMethod.setNormalTextureUnit(gBuffer::kNormal);
+    m_directionalLightMethod.setDepthTextureUnit(gBuffer::kDepth);
     m_directionalLightMethod.setMatSpecIntensity(2.0f);
     m_directionalLightMethod.setMatSpecPower(200.0f);
 
@@ -901,14 +911,16 @@ void world::directionalLightPass(const rendererPipeline &pipeline) {
     m_directionalLightMethod.enable();
 
     m_directionalLightMethod.setDirectionalLight(m_directionalLight);
-    m_directionalLightMethod.setScreenSize(project.width, project.height);
+    m_directionalLightMethod.setPerspectiveProjection(project);
 
     m_directionalLightMethod.setEyeWorldPos(pipeline.getPosition());
 
     m::mat4 wvp;
     wvp.loadIdentity();
 
+    rendererPipeline p = pipeline;
     m_directionalLightMethod.setWVP(wvp);
+    m_directionalLightMethod.setInverse(p.getInverseTransform());
     m_directionalLightQuad.render();
 }
 
@@ -953,8 +965,10 @@ void world::render(const rendererPipeline &pipeline) {
     directionalLightPass(pipeline);
 
     // Now standard forward rendering
-    m_gBuffer.bindReading();
+    //m_gBuffer.bindReading();
     gl::Enable(GL_DEPTH_TEST);
+    //gl::DepthFunc(GL_LEQUAL);
+    //gl::DepthMask(GL_FALSE);
     m_skybox.render(pipeline);
 
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

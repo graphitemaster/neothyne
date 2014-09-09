@@ -9,15 +9,18 @@ struct directionalLight {
     vec3 direction;
 };
 
-uniform sampler2D gPositionMap;
 uniform sampler2D gColorMap;
 uniform sampler2D gNormalMap;
+uniform sampler2D gDepthMap;
 
 uniform vec3 gEyeWorldPosition;
 uniform float gMatSpecularIntensity;
 uniform float gMatSpecularPower;
 
 uniform vec2 gScreenSize;
+uniform vec2 gScreenFrustum;
+
+uniform mat4 gInverse;
 
 uniform directionalLight gDirectionalLight;
 
@@ -81,12 +84,25 @@ vec3 decodeNormal(vec2 encodedNormal) {
     return v;
 }
 
+vec3 calcPosition(vec2 texCoord) {
+    float depth = texture(gDepthMap, texCoord).r * 2.0f - 1.0f;
+    vec4 pos = vec4(texCoord * 2.0f - 1.0f, depth, 1.0f);
+    pos = gInverse * pos;
+    return pos.xyz / pos.w;
+}
+
 void main(void) {
     vec2 texCoord = calcTexCoord();
-    vec3 worldPosition = texture(gPositionMap, texCoord).xyz;
+    vec3 worldPosition = calcPosition(texCoord);
+
+    // Uncomment to visualize depth buffer
+    //float z = texture(gDepthMap, texCoord).r;
+    //float c = (2.0f * gScreenFrustum.x) / (gScreenFrustum.y +
+    //    gScreenFrustum.x - z * (gScreenFrustum.y - gScreenFrustum.x));
+    //fragColor.rgb = vec3(c);
+
     vec3 color = texture(gColorMap, texCoord).xyz;
     vec3 normal = decodeNormal(texture(gNormalMap, texCoord).xy);
 
     fragColor = vec4(color, 1.0f) * calcDirectionalLight(worldPosition, normal);
-    //fragColor = calcDirectionalLight(worldPosition, normal);
 }

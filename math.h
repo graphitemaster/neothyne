@@ -381,6 +381,7 @@ namespace m {
         mat4() { }
 
         void loadIdentity(void);
+        mat4 inverse(void);
         mat4 operator*(const mat4 &t) const;
         void setScaleTrans(float scaleX, float scaleY, float scaleZ);
         void setRotateTrans(float rotateX, float rotateY, float rotateZ);
