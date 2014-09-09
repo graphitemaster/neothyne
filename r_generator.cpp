@@ -166,7 +166,12 @@ static void genSource(void) {
     fprintf(fp, "\n");
 
     // start from 1 to skip GLvoid
+    size_t boolean = 0;
     for (size_t i = 1; i < sizeof(types)/sizeof(*types); i++) {
+        if (!strcmp(types[i].name, "GLboolean")) {
+            boolean = i;
+            continue;
+        }
         fprintf(fp, "    template <>\n");
         fprintf(fp, "    u::string stringize<'%c', %s>(%s value, char) {\n",
             types[i].spec, types[i].name, types[i].name);
@@ -174,6 +179,14 @@ static void genSource(void) {
             types[i].name, types[i].format);
         fprintf(fp, "    }\n");
     }
+
+    // special treatment for booleans
+    fprintf(fp, "    template <>\n");
+    fprintf(fp, "    u::string stringize<'%c', GLboolean>(GLboolean value, char) {\n",
+        types[boolean].spec);
+    fprintf(fp, "        return u::format(\"%s=%%s\", value ? \"true\" : \"false\");\n",
+        types[boolean].name);
+    fprintf(fp, "    }\n");
 
     // specializations for pointer
     fprintf(fp, "    template <>\n");

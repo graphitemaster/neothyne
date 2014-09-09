@@ -242,10 +242,6 @@ namespace gl {
         return u::format("GLenum=0x%X", value);
     }
     template <>
-    u::string stringize<'3', GLboolean>(GLboolean value, char) {
-        return u::format("GLboolean=%c", value);
-    }
-    template <>
     u::string stringize<'4', GLbitfield>(GLbitfield value, char) {
         return u::format("GLbitfield=%u", value);
     }
@@ -292,6 +288,10 @@ namespace gl {
     template <>
     u::string stringize<'f', GLsizeiptr>(GLsizeiptr value, char) {
         return u::format("GLsizeiptr=%p", value);
+    }
+    template <>
+    u::string stringize<'3', GLboolean>(GLboolean value, char) {
+        return u::format("GLboolean=%s", value ? "true" : "false");
     }
     template <>
     u::string stringize<'*', void *>(void *value, char base) {
