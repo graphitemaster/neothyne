@@ -85,7 +85,8 @@ static SDL_Window *getContext(void) {
         gScreenHeight = kDefaultScreenHeight;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+        SDL_GL_CONTEXT_PROFILE_CORE | SDL_GL_CONTEXT_DEBUG_FLAG);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 
@@ -159,5 +160,20 @@ extern int neoMain(int argc, char **argv);
 int main(int argc, char **argv) {
     gScreen = getContext();
     gl::init();
+    gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+    // back face culling
+    gl::FrontFace(GL_CW);
+    gl::CullFace(GL_BACK);
+    gl::Enable(GL_CULL_FACE);
+
+    const char *vendor = (const char *)gl::GetString(GL_VENDOR);
+    const char *renderer = (const char *)gl::GetString(GL_RENDERER);
+    const char *version = (const char *)gl::GetString(GL_VERSION);
+    const char *shader = (const char *)gl::GetString(GL_SHADING_LANGUAGE_VERSION);
+
+    printf("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\n",
+        vendor, renderer, version, shader);
+
     return neoMain(argc, argv);
 }

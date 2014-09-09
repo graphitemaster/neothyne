@@ -1,6 +1,7 @@
 #ifndef UTIL_HDR
 #define UTIL_HDR
 #include <map>       // std::map
+#include <set>       // std::set
 #include <list>      // std::list
 #include <vector>    // std::vector
 #include <memory>    // std::unique_ptr
@@ -19,6 +20,9 @@ namespace u {
     template <typename T>
     using list = std::list<T>;
 
+    template <typename T>
+    using set = std::set<T>;
+
     template <typename T, typename D = std::default_delete<T>>
     using unique_ptr = std::unique_ptr<T, D>;
 
@@ -26,6 +30,16 @@ namespace u {
     using vector = std::vector<T>;
 
     using string = std::string;
+
+    template <typename I, typename T>
+    I find(I first, I last, const T &value) {
+        while (first != last) {
+            if (*first == value)
+                return first;
+            ++first;
+        }
+        return last;
+    }
 
     // An implementation of std::move
     template <typename T>
