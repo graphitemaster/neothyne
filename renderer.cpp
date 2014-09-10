@@ -967,10 +967,9 @@ void world::render(const rendererPipeline &pipeline) {
     // Now standard forward rendering
     //m_gBuffer.bindReading();
     gl::Enable(GL_DEPTH_TEST);
-    //gl::DepthFunc(GL_LEQUAL);
-    //gl::DepthMask(GL_FALSE);
     m_skybox.render(pipeline);
 
+    gl::DepthMask(GL_TRUE);
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for (auto &it : m_billboards)
         it.render(pipeline);
