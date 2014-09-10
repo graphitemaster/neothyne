@@ -56,11 +56,103 @@ static void screenShot(const u::string &file) {
     SDL_FreeSurface(temp);
 }
 
+struct frameTimer {
+    frameTimer() :
+        m_deltaTime(0.0f),
+        m_lastFrameTicks(0),
+        m_currentTicks(0),
+        m_frameAverage(0.0f),
+        m_framesPerSecond(0)
+    {
+        reset();
+        cap(kMaxFPS);
+    }
+
+    static constexpr size_t kMaxFPS = 0; // For capping framerate (0 = disabled)
+    static constexpr float kDampenEpsilon = 0.00001f; // The dampening to remove flip-flip in frame metrics
+
+    void cap(float maxFps) {
+        m_maxFrameTicks = maxFps <= 0.0f
+            ? -1 : (1000.0f / maxFps) - kDampenEpsilon;
+    }
+
+    void reset(void) {
+        m_frameCount = 0;
+        m_minTicks = 1000;
+        m_maxTicks = 0;
+        m_averageTicks = 0;
+        m_lastSecondTicks = SDL_GetTicks();
+    }
+
+    bool update(void) {
+        m_frameCount++;
+        m_targetTicks = m_maxFrameTicks != -1 ?
+            m_lastSecondTicks + uint32_t(m_frameCount * m_maxFrameTicks) : 0;
+        m_currentTicks = SDL_GetTicks();
+        m_averageTicks += m_currentTicks - m_lastFrameTicks;
+        if (m_currentTicks - m_lastFrameTicks <= m_minTicks)
+            m_minTicks = m_currentTicks - m_lastFrameTicks;
+        if (m_currentTicks - m_lastFrameTicks >= m_maxTicks)
+            m_maxTicks = m_currentTicks - m_lastFrameTicks;
+        if (m_targetTicks && m_currentTicks < m_targetTicks) {
+            uint32_t beforeDelay = SDL_GetTicks();
+            SDL_Delay(m_targetTicks - m_currentTicks);
+            m_currentTicks = SDL_GetTicks();
+            m_averageTicks += m_currentTicks - beforeDelay;
+        }
+        m_deltaTime = 0.001f * (m_currentTicks - m_lastFrameTicks);
+        m_lastFrameTicks = m_currentTicks;
+        if (m_currentTicks - m_lastSecondTicks >= 1000) {
+            m_framesPerSecond = m_frameCount;
+            m_frameAverage = m_averageTicks / m_frameCount;
+            m_frameMin = m_minTicks;
+            m_frameMax = m_maxTicks;
+            reset();
+            return true;
+        }
+        return false;
+    }
+
+    float mspf(void) const {
+        return m_frameAverage;
+    }
+
+    int fps(void) const {
+        return m_framesPerSecond;
+    }
+
+    float delta(void) const {
+        return m_deltaTime;
+    }
+
+    uint32_t ticks(void) const {
+        return m_currentTicks;
+    }
+
+private:
+    float m_maxFrameTicks;
+    uint32_t m_lastSecondTicks;
+    int m_frameCount;
+    uint32_t m_minTicks;
+    uint32_t m_maxTicks;
+    float m_averageTicks;
+    float m_deltaTime;
+    uint32_t m_lastFrameTicks;
+    uint32_t m_currentTicks;
+    uint32_t m_targetTicks;
+    uint32_t m_frameMin;
+    uint32_t m_frameMax;
+    float m_frameAverage;
+    int m_framesPerSecond;
+};
+
 int neoMain(int argc, char **argv) {
     argc--;
     argv++;
     if (argc == 2)
         neoResize(atoi(argv[0]), atoi(argv[1]));
+
+    frameTimer gTimer;
 
     splashScreen gSplash;
     gSplash.load("textures/logo.png");
@@ -83,11 +175,12 @@ int neoMain(int argc, char **argv) {
     SDL_CreateThread((SDL_ThreadFunction)&loadThread, nullptr, (void*)&loadData);
 
     // while that thread is running render the loading screen
-    uint32_t splashTime = SDL_GetTicks();
+    gTimer.cap(30); // Loading screen at 30fps
     while (SDL_AtomicGet(&loadData.done) == kLoadInProgress) {
         glClear(GL_COLOR_BUFFER_BIT);
-        gSplash.render(0.002f * (float)(SDL_GetTicks() - splashTime), pipeline);
+        gSplash.render(gTimer.ticks() / 500.0f, pipeline);
         neoSwap();
+        gTimer.update();
     }
 
     if (SDL_AtomicGet(&loadData.done) != kLoadSucceeded)
@@ -100,29 +193,13 @@ int neoMain(int argc, char **argv) {
     // Now render the world
     client gClient;
 
-    uint32_t time;
-    uint32_t oldTime;
-    uint32_t fpsTime;
-    uint32_t fpsCounter = 0;
-
-    uint32_t curTime = SDL_GetTicks();
-    oldTime = curTime;
-    fpsTime = curTime;
-
+    gTimer.cap(0); // don't cap the world
     bool running = true;
     while (running) {
-        time = SDL_GetTicks();
-        float dt = 0.001f * (float)(time - oldTime);
-        oldTime = time;
-        fpsCounter++;
-        if (time - fpsTime > 1000.0f) {
-            u::string title = u::format("Neothyne: (%zu FPS)", fpsCounter);
-            neoSetWindowTitle(title.c_str());
-            fpsCounter = 0;
-            fpsTime = time;
-        }
+        neoSetWindowTitle(u::format("Neothyne: %d fps : %.2f mspf",
+            gTimer.fps(), gTimer.mspf()).c_str());
 
-        gClient.update(loadData.gMap, dt);
+        gClient.update(loadData.gMap, gTimer.delta());
 
         pipeline.setRotation(gClient.getRotation());
         pipeline.setPosition(gClient.getPosition());
@@ -130,6 +207,7 @@ int neoMain(int argc, char **argv) {
         loadData.gWorld.render(pipeline);
 
         neoSwap();
+        gTimer.update();
 
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
