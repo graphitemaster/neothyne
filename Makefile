@@ -1,5 +1,3 @@
-.SUFFIXES: .lo
-
 CXX ?= g++
 CXXFLAGS = \
 	-std=c++11 \
@@ -38,32 +36,17 @@ ENGINE_SOURCES = \
 	util.cpp \
 	$(RENDERER_SOURCES)
 
-RGEN_SOURCES = \
-	r_generator.cpp \
-	util.cpp
-
 GAME_OBJECTS = $(GAME_SOURCES:.cpp=.o) $(ENGINE_SOURCES:.cpp=.o)
-RGEN_OBJECTS = $(RGEN_SOURCES:.cpp=.lo)
-
 GAME_BIN = neothyne
-RGEN_BIN = rgen
 
 all: $(GAME_BIN)
 
 $(GAME_BIN): $(GAME_OBJECTS)
 	$(CXX) $(ENGINE_LDFLAGS) $(GAME_OBJECTS) -o $@
 
-$(RGEN_BIN): $(RGEN_OBJECTS)
-	$(CXX) $(RGEN_OBJECTS) -o $@
-
 .cpp.o:
 	$(CXX) -c $(ENGINE_CXXFLAGS) $< -o $@
 
-.cpp.lo:
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-
 clean:
 	rm -f $(GAME_OBJECTS)
-	rm -f $(RGEN_OBJECTS)
 	rm -f $(GAME_BIN)
-	rm -f $(RGEN_BIN)
