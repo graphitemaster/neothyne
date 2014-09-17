@@ -348,11 +348,11 @@ def main(argv):
     protos = ''
     output = ''
     for opt, arg in opts:
-        if opt in ("-h", "--help"):
+        if opt == '-h':
             usage(argv[0])
-        elif opt in ("-g", "--gl"):
+        elif opt == '-g':
             protos = arg
-        elif opt in ("-o", "--output"):
+        elif opt == '-o':
             output = arg
         else:
             usage(argv[0])

@@ -17,10 +17,6 @@ struct method {
 protected:
     bool addShader(GLenum shaderType, const char *shaderText);
 
-    void addVertexPrelude(const u::string &prelude);
-    void addFragmentPrelude(const u::string &prelude);
-    void addGeometryPrelude(const u::string &prelude);
-
     bool finalize(void);
 
     GLint getUniformLocation(const char *name);
@@ -40,11 +36,13 @@ struct geomMethod : method {
     void setWVP(const m::mat4 &wvp);
     void setWorld(const m::mat4 &wvp);
     void setColorTextureUnit(int unit);
+    void setNormalTextureUnit(int unit);
 
 private:
     GLint m_WVPLocation;
     GLint m_worldLocation;
-    GLint m_colorMapLocation;
+    GLint m_colorTextureUnitLocation;
+    GLint m_normalTextureUnitLocation;
 };
 
 ///! Light rendering method

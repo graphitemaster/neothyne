@@ -106,21 +106,6 @@ bool method::finalize(void) {
     return true;
 }
 
-void method::addVertexPrelude(const u::string &prelude) {
-    m_vertexSource += prelude;
-    m_vertexSource += "\n";
-}
-
-void method::addFragmentPrelude(const u::string &prelude) {
-    m_fragmentSource += prelude;
-    m_fragmentSource += "\n";
-}
-
-void method::addGeometryPrelude(const u::string &prelude) {
-    m_geometrySource += prelude;
-    m_geometrySource += "\n";
-}
-
 gBuffer::gBuffer() :
     m_fbo(0),
     m_width(0),
@@ -316,7 +301,8 @@ bool geomMethod::init(void) {
 
     m_WVPLocation = getUniformLocation("gWVP");
     m_worldLocation = getUniformLocation("gWorld");
-    m_colorMapLocation = getUniformLocation("gColorMap");
+    m_colorTextureUnitLocation = getUniformLocation("gColorMap");
+    m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
 
     return true;
 }
@@ -330,7 +316,11 @@ void geomMethod::setWorld(const m::mat4 &worldInverse) {
 }
 
 void geomMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorMapLocation, unit);
+    gl::Uniform1i(m_colorTextureUnitLocation, unit);
+}
+
+void geomMethod::setNormalTextureUnit(int unit) {
+    gl::Uniform1i(m_normalTextureUnitLocation, unit);
 }
 
 ///! Skybox Rendering Method
@@ -820,13 +810,13 @@ bool world::upload(const m::perspectiveProjection &project) {
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
     gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(kdBinVertex), &m_vertices[0], GL_STATIC_DRAW);
     gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), 0);                 // vertex
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
-    gl::VertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
-    //glVertexAttribPointer_(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
+    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
+    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
+    gl::VertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
     gl::EnableVertexAttribArray(2);
-    //glEnableVertexAttribArray_(3);
+    gl::EnableVertexAttribArray(3);
 
     // upload data
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
@@ -883,10 +873,11 @@ void world::geometryPass(const rendererPipeline &pipeline) {
 
     // Render the world
     m_geomMethod.setColorTextureUnit(0);
+    m_geomMethod.setNormalTextureUnit(1);
     gl::BindVertexArray(m_vao);
     for (auto &it : m_textureBatches) {
         it.diffuse->bind(GL_TEXTURE0);
-        //it.normal->bind(GL_TEXTURE1);
+        it.normal->bind(GL_TEXTURE1);
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }

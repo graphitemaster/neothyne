@@ -1,11 +1,12 @@
-in vec2 texCoord0;
 in vec3 normal0;
-in vec3 worldPosition0;
+in vec2 texCoord0;
+in vec3 tangent0;
 
 layout (location = 0) out vec3 diffuseOut;
 layout (location = 1) out vec2 normalOut;
 
 uniform sampler2D gColorMap;
+uniform sampler2D gNormalMap;
 
 #define EPSILON 0.00001f
 
@@ -28,7 +29,16 @@ vec2 encodeNormal(vec3 normal) {
     return q;
 }
 
+vec3 calcBump(void) {
+    vec3 tangent = normalize(tangent0 - dot(tangent0, normal0) * normal0);
+    vec3 bitangent = cross(tangent, normal0);
+    vec3 bumpMapNormal = 2.0f * texture(gNormalMap, texCoord0).rgb - 1.0f;
+    //bumpMapNormal = 2.0f * bumpMapNormal - vec3(1.0f, 1.0f, 1.0f);
+    mat3 tbn = mat3(tangent, bitangent, normal0);
+    return normalize(tbn * bumpMapNormal);
+}
+
 void main(void) {
-    diffuseOut = texture(gColorMap, texCoord0).xyz;
-    normalOut = encodeNormal(normalize(normal0));
+    diffuseOut = texture(gColorMap, texCoord0).rgb;
+    normalOut = encodeNormal(calcBump()); //normalize(normal0));
 }
