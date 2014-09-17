@@ -852,6 +852,10 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_directionalLightMethod.setMatSpecIntensity(2.0f);
     m_directionalLightMethod.setMatSpecPower(200.0f);
 
+    m_geomMethod.enable();
+    m_geomMethod.setColorTextureUnit(0);
+    m_geomMethod.setNormalTextureUnit(1);
+
     printf("[world] => uploaded\n");
     return true;
 }
@@ -874,8 +878,6 @@ void world::geometryPass(const rendererPipeline &pipeline) {
     m_geomMethod.setWorld(p.getWorldTransform());
 
     // Render the world
-    m_geomMethod.setColorTextureUnit(0);
-    m_geomMethod.setNormalTextureUnit(1);
     gl::BindVertexArray(m_vao);
     for (auto &it : m_textureBatches) {
         it.diffuse->bind(GL_TEXTURE0);
