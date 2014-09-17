@@ -1,3 +1,5 @@
+#include <stdarg.h>
+
 #include "engine.h"
 #include "r_common.h"
 
@@ -114,6 +116,18 @@ static SDL_Window *getContext(void) {
     SDL_GL_SetSwapInterval(0); // Disable vsync
 
     return window;
+}
+
+[[noreturn]] void neoFatal(const char *fmt, ...) {
+    char buffer[1024];
+    va_list va;
+    va_start(va, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, va);
+    va_end(va);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error", buffer, nullptr);
+    SDL_DestroyWindow(gScreen);
+    SDL_Quit();
+    abort();
 }
 
 // So we don't need to depend on SDL_main we provide our own

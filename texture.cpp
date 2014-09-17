@@ -15,7 +15,8 @@ struct decoder {
         m_error(kSuccess),
         m_width(0),
         m_height(0),
-        m_bpp(0)
+        m_bpp(0),
+        m_compressed(false)
     {
 
     }
@@ -57,6 +58,10 @@ struct decoder {
         return m_bpp;
     }
 
+    bool compressed(void) const {
+        return m_compressed;
+    }
+
     result status(void) const {
         return m_error;
     }
@@ -66,6 +71,7 @@ protected:
     size_t m_width;
     size_t m_height;
     size_t m_bpp;
+    bool m_compressed;
 };
 
 ///

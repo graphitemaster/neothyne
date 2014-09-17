@@ -1,5 +1,6 @@
 #include <string.h>
 #include "renderer.h"
+#include "engine.h"
 
 ///! A rendering method
 method::method(void) :
@@ -453,18 +454,13 @@ skybox::~skybox(void) {
 bool skybox::load(const u::string &skyboxName) {
     if(!(m_cubemap.load(skyboxName + "_ft", skyboxName + "_bk", skyboxName + "_up",
                         skyboxName + "_dn", skyboxName + "_rt", skyboxName + "_lf")))
-    {
-        fprintf(stderr, "couldn't load skybox textures\n");
-        return false;
-    }
+        neoFatal("couldn't load skybox textures");
     return true;
 }
 
 bool skybox::upload(void) {
-    if (!m_cubemap.upload()) {
-        fprintf(stderr, "failed to upload skybox cubemap\n");
-        return false;
-    }
+    if (!m_cubemap.upload())
+        neoFatal("failed to upload skybox cubemap");
 
     GLfloat vertices[] = {
         -1.0, -1.0,  1.0,
@@ -493,10 +489,8 @@ bool skybox::upload(void) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    if (!skyboxMethod::init()) {
-        fprintf(stderr, "failed initializing skybox rendering method\n");
-        return false;
-    }
+    if (!skyboxMethod::init())
+        neoFatal("failed initializing skybox rendering method");
 
     return true;
 }
@@ -530,29 +524,16 @@ void skybox::render(const rendererPipeline &pipeline) {
 
 ///! Splash Screen Renderer
 bool splashScreen::load(const u::string &splashScreen) {
-    if (!m_texture.load(splashScreen)) {
-        fprintf(stderr, "failed to load splash screen texture\n");
-        return false;
-    }
+    if (!m_texture.load(splashScreen))
+        neoFatal("failed to load splash screen");
     return true;
 }
 
 bool splashScreen::upload(void) {
-    if (!m_texture.upload()) {
-        fprintf(stderr, "failed to upload splash screen texture\n");
-        return false;
-    }
-
-    if (!m_quad.upload()) {
-        fprintf(stderr, "failed to upload quad for splash screen\n");
-        return false;
-    }
-
-    if (!splashMethod::init()) {
-        fprintf(stderr, "failed to initialize splash screen rendering method\n");
-        return false;
-    }
-
+    if (!m_texture.upload() || !m_quad.upload())
+        neoFatal("failed uploading splash screen");
+    if (!splashMethod::init())
+        neoFatal("failed to initialize splash screen rendering method");
     return true;
 }
 
@@ -736,8 +717,7 @@ bool world::load(const kdMap &map) {
         auto &billboard = billboards[i];
         if (m_billboards[billboard.type].load(billboard.file))
             continue;
-        fprintf(stderr, "failed to load billboard for `%s'\n", billboard.name);
-        return false;
+        neoFatal("failed to load billboard for `%s'", billboard.name);
     }
 
     // make rendering batches for triangles which share the same texture
@@ -777,27 +757,24 @@ bool world::load(const kdMap &map) {
 
 bool world::upload(const m::perspectiveProjection &project) {
     // upload skybox
-    if (!m_skybox.upload()) {
-        fprintf(stderr, "failed to upload skybox\n");
-        return false;
-    }
+    if (!m_skybox.upload())
+        neoFatal("failed to upload skybox");
 
     // upload billboards
     for (auto &it : m_billboards) {
-        if (!it.upload()) {
-            fprintf(stderr, "failed to upload billboard\n");
-            return false;
-        }
+        if (it.upload())
+            continue;
+        neoFatal("failed to upload billboard");
     }
 
     // upload textures
     for (auto &it : m_textureBatches) {
-        it.diffuse->upload();
-        it.normal->upload();
+        if (!it.diffuse->upload() || !it.normal->upload())
+            neoFatal("failed to upload world textures");
     }
 
     if (!m_directionalLightQuad.upload())
-        return false;
+        neoFatal("failed to upload directional light quad");
 
     gl::GenVertexArrays(1, &m_vao);
     gl::BindVertexArray(m_vao);
@@ -821,26 +798,16 @@ bool world::upload(const m::perspectiveProjection &project) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
 
-    if (!m_depthMethod.init()) {
-        fprintf(stderr, "failed to initialize depth pass method\n");
-        return false;
-    }
-
-    if (!m_geomMethod.init()) {
-        fprintf(stderr, "failed to initialize geometry rendering method\n");
-        return false;
-    }
-
-    if (!m_directionalLightMethod.init()) {
-        fprintf(stderr, "failed to initialize directional light rendering method\n");
-        return false;
-    }
+    if (!m_depthMethod.init())
+        neoFatal("failed to initialize depth pass method\n");
+    if (!m_geomMethod.init())
+        neoFatal("failed to initialize geometry rendering method\n");
+    if (!m_directionalLightMethod.init())
+        neoFatal("failed to initialize directional light rendering method");
 
     // setup g-buffer
-    if (!m_gBuffer.init(project)) {
-        fprintf(stderr, "failed to initialize G-buffer\n");
-        return false;
-    }
+    if (!m_gBuffer.init(project))
+        neoFatal("failed to initialize G-buffer");
 
     m_directionalLightMethod.enable();
     m_directionalLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
