@@ -845,13 +845,13 @@ private:
             return kInvalid;
         if (memcmp(m_position, kMagic, 3))
             return kInvalid;
+
         skip(2);
         while (!m_error) {
-            //if ((m_size < 2) || (m_position[0] != 0xFF))
-            //    return kMalformatted;
+            if (m_size < 2 || m_position[0] != 0xFF)
+                return kMalformatted;
 
             skip(2);
-
             switch (m_position[-1]) {
                 case 0xC0:
                     decodeSOF();
