@@ -813,10 +813,12 @@ bool world::upload(const m::perspectiveProjection &project) {
     gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)12); // normals
     gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)24); // texCoord
     gl::VertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)32); // tangent
+    gl::VertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), (const GLvoid*)44); // w
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
     gl::EnableVertexAttribArray(2);
     gl::EnableVertexAttribArray(3);
+    gl::EnableVertexAttribArray(4);
 
     // upload data
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
