@@ -152,6 +152,10 @@ namespace u {
         std::sort(first, last);
     }
 
+    inline bool exists(const string &file) {
+        return unique_ptr<FILE, int (*)(FILE *)>(fopen(file.c_str(), "r"), &fclose).get();
+    }
+
     inline FILE *fopen(const string& file, const char *type) {
         return ::fopen(file.c_str(), type);
     }

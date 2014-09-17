@@ -34,7 +34,7 @@ struct texture {
     const unsigned char *data(void);
 
 private:
-
+    u::optional<u::string> find(const u::string &file);
     template <typename T>
     bool decode(const u::vector<unsigned char> &data, const char *fileName);
 

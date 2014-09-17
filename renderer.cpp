@@ -451,8 +451,8 @@ skybox::~skybox(void) {
 }
 
 bool skybox::load(const u::string &skyboxName) {
-    if(!(m_cubemap.load(skyboxName + "_ft.jpg", skyboxName + "_bk.jpg", skyboxName + "_up.jpg",
-                        skyboxName + "_dn.jpg", skyboxName + "_rt.jpg", skyboxName + "_lf.jpg")))
+    if(!(m_cubemap.load(skyboxName + "_ft", skyboxName + "_bk", skyboxName + "_up",
+                        skyboxName + "_dn", skyboxName + "_rt", skyboxName + "_lf")))
     {
         fprintf(stderr, "couldn't load skybox textures\n");
         return false;
@@ -726,10 +726,10 @@ bool world::load(const kdMap &map) {
         const char *file;
         billboardType type;
     } billboards[] = {
-        { "railgun",         "textures/railgun.png",   kBillboardRail },
-        { "lightning gun",   "textures/lightgun.png",  kBillboardLightning },
-        { "rocket launcher", "textures/rocketgun.png", kBillboardRocket },
-        { "shotgun",         "textures/shotgun.png",   kBillboardShotgun }
+        { "railgun",         "textures/railgun",   kBillboardRail },
+        { "lightning gun",   "textures/lightgun",  kBillboardLightning },
+        { "rocket launcher", "textures/rocketgun", kBillboardRocket },
+        { "shotgun",         "textures/shotgun",   kBillboardShotgun }
     };
 
     for (size_t i = 0; i < sizeof(billboards)/sizeof(*billboards); i++) {
@@ -756,18 +756,15 @@ bool world::load(const kdMap &map) {
 
     // load textures
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
-        const char *name = map.textures[m_textureBatches[i].index].name;
-        const char *find = strrchr(name, '.');
-
-        u::string diffuseName = name;
-        u::string normalName = find ? u::string(name, find - name) + "_bump" + find : diffuseName + "_bump";
+        u::string diffuseName = map.textures[m_textureBatches[i].index].name;
+        u::string normalName = diffuseName + "_bump";
 
         texture2D *diffuse = m_textures2D.get(diffuseName);
         texture2D *normal = m_textures2D.get(normalName);
         if (!diffuse)
-            diffuse = m_textures2D.get("textures/notex.jpg");
+            diffuse = m_textures2D.get("textures/notex");
         if (!normal)
-            normal = m_textures2D.get("textures/nobump.jpg");
+            normal = m_textures2D.get("textures/nobump");
 
         m_textureBatches[i].diffuse = diffuse;
         m_textureBatches[i].normal = normal;

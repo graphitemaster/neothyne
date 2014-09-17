@@ -155,7 +155,7 @@ int neoMain(int argc, char **argv) {
     frameTimer gTimer;
 
     splashScreen gSplash;
-    gSplash.load("textures/logo.png");
+    gSplash.load("textures/logo");
     gSplash.upload();
 
     rendererPipeline pipeline;
