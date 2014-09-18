@@ -108,7 +108,8 @@ static SDL_Window *getContext(void) {
             "Neothyne: Initialization error",
             "OpenGL 3.3 or higher is required",
             nullptr);
-        SDL_DestroyWindow(window);
+        if (window)
+            SDL_DestroyWindow(window);
         SDL_Quit();
     }
 
