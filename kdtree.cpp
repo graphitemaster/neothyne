@@ -218,7 +218,7 @@ bool kdTree::load(const u::string &file) {
         return false;
 
     u::string texturePath;
-    while (auto getline = u::getline(fp.get())) {
+    while (auto getline = u::getline(fp)) {
         u::string& line = *getline;
         float x0, y0, z0, x1, y1, z1, w;
         int v0, v1, v2, t0, t1, t2, i;

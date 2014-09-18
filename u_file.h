@@ -32,14 +32,14 @@ namespace u {
     };
 
     // check if a file exists
-    bool exists(const string &file);
+    bool exists(const u::string &file);
     // open a file
-    file fopen(const string& infile, const char *type);
+    u::file fopen(const u::string& infile, const char *type);
     // read file line by line
-    optional<string> getline(FILE *fp);
+    u::optional<u::string> getline(u::file &fp);
     // read a file into vector
-    optional<vector<unsigned char>> read(const string &file, const char *mode = "rb");
+    u::optional<u::vector<unsigned char>> read(const u::string &file, const char *mode = "rb");
     // write a vector to file
-    bool write(const u::vector<unsigned char> &data, const string &file, const char *mode = "wb");
+    bool write(const u::vector<unsigned char> &data, const u::string &file, const char *mode = "wb");
 }
 #endif
