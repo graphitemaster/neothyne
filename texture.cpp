@@ -3,6 +3,7 @@
 
 #include "texture.h"
 #include "math.h"
+#include "u_zlib.h"
 
 #define returnResult(E) \
     do { \

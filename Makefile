@@ -33,7 +33,8 @@ ENGINE_SOURCES = \
 	kdtree.cpp \
 	math.cpp \
 	texture.cpp \
-	util.cpp \
+	u_zlib.cpp \
+	u_sha512.cpp \
 	$(RENDERER_SOURCES)
 
 GAME_OBJECTS = $(GAME_SOURCES:.cpp=.o) $(ENGINE_SOURCES:.cpp=.o)

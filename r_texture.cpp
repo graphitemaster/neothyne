@@ -1,4 +1,5 @@
 #include "r_texture.h"
+#include "u_sha512.h"
 #include "engine.h"
 
 #ifdef GL_UNSIGNED_INT_8_8_8_8_REV

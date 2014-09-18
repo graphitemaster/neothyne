@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "kdmap.h"
+#include "u_zlib.h"
 
 ///!kdMap
 kdMap::kdMap(void) {
