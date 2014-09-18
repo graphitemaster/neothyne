@@ -141,25 +141,31 @@ u::string neoPath(void) {
 // So we don't need to depend on SDL_main we provide our own
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
-    auto parseCommandLine = [](const char *src, std::vector<char *> &args) {
-            char *buf = new char[strlen(src) + 1], *dst = buf;
-            for (;;) {
-                while (isspace(*src))
-                    src++;
-                if (!*src)
-                    break;
-                args.push_back(dst);
-                for (bool quoted = false; *src && (quoted || !isspace(*src)); src++)
-                    if (*src != '"')
-                        *dst++ = *src;
-                    else if (dst > buf && src[-1] == '\\')
-                        dst[-1] = '"';
-                    else
-                        quoted = !quoted;
-                }
-                *dst++ = '\0';
+    (void)hInst;
+    (void)hPrev;
+    (void)szCmdLine;
+    (void)sw;
+
+    auto parseCommandLine = [](const char *src, u::vector<char *> &args) {
+        char *buf = new char[strlen(src) + 1];
+        char *dst = buf;
+        for (;;) {
+            while (isspace(*src))
+                src++;
+            if (!*src)
+                break;
+            args.push_back(dst);
+            for (bool quoted = false; *src && (quoted || !isspace(*src)); src++) {
+                if (*src != '"')
+                    *dst++ = *src;
+                else if (dst > buf && src[-1] == '\\')
+                    dst[-1] = '"';
+                else
+                    quoted = !quoted;
             }
-        args.push_back(NULL);
+            *dst++ = '\0';
+        }
+        args.push_back(nullptr);
         return buf;
     };
     u::vector<char *> args;
