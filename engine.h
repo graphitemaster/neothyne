@@ -12,6 +12,6 @@ void neoToggleRelativeMouseMode(void);
 void neoSetWindowTitle(const char *title);
 void neoResize(size_t width, size_t height);
 u::string neoPath(void);
-[[noreturn]] void neoFatal(const char *fmt, ...);
+void neoFatal(const char *fmt, ...);
 
 #endif

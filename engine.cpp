@@ -118,7 +118,7 @@ static SDL_Window *getContext(void) {
     return window;
 }
 
-[[noreturn]] void neoFatal(const char *fmt, ...) {
+void neoFatal(const char *fmt, ...) {
     char buffer[1024];
     va_list va;
     va_start(va, fmt);
