@@ -5,6 +5,7 @@
 #include "math.h"
 #include "u_zlib.h"
 #include "u_file.h"
+#include "u_sha512.h"
 
 #define returnResult(E) \
     do { \
@@ -1727,6 +1728,10 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name) {
     m_pitch = m_width * decode.bpp();
     m_data = u::move(decode.data());
 
+    // Hash the contents as well to generate a hash string
+    u::sha512 hash(&m_data[0], m_data.size());
+    m_hashString = hash.hex();
+
     return true;
 }
 
@@ -1765,6 +1770,10 @@ bool texture::load(const u::string &file) {
         return decode<tga>(data, fileName);
     fprintf(stderr, "no decoder found for `%s'\n", fileName);
     return false;
+}
+
+const u::string &texture::hashString(void) const {
+    return m_hashString;
 }
 
 void texture::from(const unsigned char *const data, size_t length, size_t width, size_t height, textureFormat format) {

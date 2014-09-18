@@ -40,6 +40,8 @@ struct texture {
 
     size_t size(void) const;
 
+    const u::string &hashString(void) const;
+
     void unload(void);
 
 private:
@@ -47,6 +49,7 @@ private:
     template <typename T>
     bool decode(const u::vector<unsigned char> &data, const char *fileName);
 
+    u::string m_hashString;
     u::vector<unsigned char> m_data;
     size_t m_width;
     size_t m_height;

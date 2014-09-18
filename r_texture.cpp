@@ -1,5 +1,4 @@
 #include "r_texture.h"
-#include "u_sha512.h"
 #include "u_file.h"
 #include "engine.h"
 
@@ -23,9 +22,7 @@ struct textureDXTCacheHeader {
 
 static bool readDXTCache(texture &tex) {
     // Do we even have it in cache?
-    const u::string path = neoPath() + "cache/";
-    u::sha512 hash(tex.data(), tex.size());
-    const u::string file = path + hash.hex();
+    const u::string file = neoPath() + "cache/" + tex.hashString();
     if (!u::exists(file))
         return false;
 
@@ -50,9 +47,7 @@ static bool readDXTCache(texture &tex) {
 
 static bool writeDXTCache(const texture &tex, GLuint handle) {
     // Don't bother caching if we already have it
-    const u::string path = neoPath() + "cache/";
-    u::sha512 hash(tex.data(), tex.size());
-    const u::string file = path + hash.hex();
+    const u::string file = neoPath() + "cache/" + tex.hashString();
     if (u::exists(file))
         return false;
 
