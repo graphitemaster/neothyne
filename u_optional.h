@@ -86,7 +86,9 @@ private:
     }
 
     bool m_init;
-    alignas(alignof(T)) unsigned char m_data[sizeof(T)];
+    union {
+        unsigned char m_data[sizeof(T)];
+    };
 };
 
 }
