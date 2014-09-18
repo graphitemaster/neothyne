@@ -1,7 +1,11 @@
 #include <errno.h>
 
-#include <sys/stat.h>
-#include <sys/types.h>
+#ifndef _WIN32
+#   include <sys/stat.h>
+#   include <sys/types.h>
+#else
+#   include <direct.h>
+#endif
 
 #include "u_file.h"
 
@@ -11,6 +15,14 @@ bool exists(const u::string &file) {
     return u::fopen(file, "r").get();
 }
 
+bool mkdir(const u::string &dir) {
+#ifdef _WIN32
+    return ::_mkdir(dir.c_str()) == 0;
+#else
+    return ::mkdir(dir.c_str(), 0755) == 0;
+#endif
+}
+
 u::file fopen(const u::string& infile, const char *type) {
     u::string file = infile;
     // Deal with constructing the directories if the file contains a path
@@ -18,7 +30,7 @@ u::file fopen(const u::string& infile, const char *type) {
         if (i > 0 && (file[i] == '\\' || file[i] == '/')) {
             char slash = file[i];
             file[i] = '\0';
-            if (mkdir(file.c_str(), 0777) != 0 && errno != EEXIST)
+            if (!u::mkdir(file) && errno != EEXIST)
                 return nullptr;
             file[i] = slash;
         }

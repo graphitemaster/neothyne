@@ -42,6 +42,8 @@ u::optional<u::string> getline(u::file &fp);
 u::optional<u::vector<unsigned char>> read(const u::string &file, const char *mode = "rb");
 // write a vector to file
 bool write(const u::vector<unsigned char> &data, const u::string &file, const char *mode = "wb");
+// make a directory
+bool mkdir(const u::string &dir);
 
 }
 
