@@ -33,6 +33,7 @@ ENGINE_SOURCES = \
 	kdtree.cpp \
 	math.cpp \
 	texture.cpp \
+	u_file.cpp \
 	u_zlib.cpp \
 	u_sha512.cpp \
 	$(RENDERER_SOURCES)

@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "kdtree.h"
+#include "u_file.h"
 
 ///! triangle
 m::vec3 kdTriangle::getNormal(const kdTree *const tree) {
@@ -212,7 +213,7 @@ polyPlane kdTree::testTriangle(size_t index, const m::plane &plane) const {
 bool kdTree::load(const u::string &file) {
     unload();
 
-    u::unique_ptr<FILE, int(*)(FILE*)> fp(u::fopen(file, "rt"), &fclose);
+    auto fp = u::fopen(file, "rt");
     if (!fp.get())
         return false;
 

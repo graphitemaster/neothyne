@@ -1,6 +1,7 @@
 #ifndef TEXTURE_HDR
 #define TEXTURE_HDR
 #include "util.h"
+#include "u_optional.h"
 
 enum textureFormat {
     TEX_RGB,

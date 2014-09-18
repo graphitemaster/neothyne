@@ -4,6 +4,7 @@
 #include "texture.h"
 #include "math.h"
 #include "u_zlib.h"
+#include "u_file.h"
 
 #define returnResult(E) \
     do { \

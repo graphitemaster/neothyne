@@ -6,6 +6,8 @@
 #include "renderer.h"
 #include "engine.h"
 
+#include "u_file.h"
+
 // we load assets in a different thread
 enum {
     kLoadInProgress, // loading in progress

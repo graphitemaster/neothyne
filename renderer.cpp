@@ -1,6 +1,7 @@
 #include <string.h>
 #include "renderer.h"
 #include "engine.h"
+#include "u_file.h"
 
 ///! A rendering method
 method::method(void) :
