@@ -61,8 +61,8 @@ textures if the hardware supports S3TC texture compression.
 
 ## Organization
 The source code is organized into namespaces and a file name convention.
-Anything prefixed with `u_` belongs to the *utility* namespace, which is
-also named `u` for example. The following namespaces and file prefixes exist:
+For example, anything prefixed with `u_` belongs to the *utility* namespace,
+which is also named `u`. The following namespaces and file prefixes exist:
 
 | Prefix | Namespace | Description |
 |--------|-----------|-------------|
