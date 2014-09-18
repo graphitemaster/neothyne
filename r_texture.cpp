@@ -192,7 +192,8 @@ bool texture2D::upload(void) {
     gl::GenTextures(1, &m_textureHandle);
     gl::BindTexture(GL_TEXTURE_2D, m_textureHandle);
 
-    if (!useDXTCache()) {
+    bool useCache = useDXTCache();
+    if (!useCache) {
         queryFormat format = getBestFormat(m_texture);
         gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
             m_texture.height(), 0, format.format, format.data, m_texture.data());
@@ -204,7 +205,8 @@ bool texture2D::upload(void) {
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
-    cacheDXT();
+    if (!useCache)
+        cacheDXT();
 
     return m_uploaded = true;
 }
