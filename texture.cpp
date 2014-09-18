@@ -1745,6 +1745,7 @@ u::optional<u::string> texture::find(const u::string &file) {
 }
 
 bool texture::load(const u::string &file) {
+    // Construct a texture from a file
     auto name = find(file);
     if (!name)
         return false;
@@ -1764,6 +1765,27 @@ bool texture::load(const u::string &file) {
     return false;
 }
 
+void texture::from(const unsigned char *const data, size_t length, size_t width, size_t height, textureFormat format) {
+    m_data.resize(length);
+    memcpy(&m_data[0], data, length);
+    switch (format) {
+        case TEX_RGB:
+        case TEX_BGR:
+            m_bpp = 3;
+            break;
+        case TEX_RGBA:
+        case TEX_BGRA:
+            m_bpp = 4;
+            break;
+        case TEX_LUMINANCE:
+            m_bpp = 1;
+            break;
+    }
+    m_width = width;
+    m_height = height;
+    m_pitch = m_width * m_bpp;
+}
+
 void texture::resize(size_t width, size_t height) {
     u::vector<unsigned char> data;
     data.resize(m_bpp * width * height);
@@ -1772,6 +1794,13 @@ void texture::resize(size_t width, size_t height) {
     m_width = width;
     m_height = height;
     m_pitch = m_width * m_bpp;
+}
+
+void texture::unload(void) {
+    m_data.resize(0);
+    m_width = 0;
+    m_height = 0;
+    m_pitch = 0;
 }
 
 size_t texture::width(void) const {
@@ -1786,6 +1815,10 @@ textureFormat texture::format(void) const {
     return m_format;
 }
 
-const unsigned char *texture::data(void) {
+size_t texture::size(void) const {
+    return m_data.size();
+}
+
+const unsigned char *texture::data(void) const {
     return &m_data[0];
 }

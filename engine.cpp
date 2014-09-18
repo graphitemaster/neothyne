@@ -130,6 +130,14 @@ static SDL_Window *getContext(void) {
     abort();
 }
 
+u::string neoPath(void) {
+    char *path = SDL_GetPrefPath("Neothyne", "neothyne");
+    // TODO: does this leak memory?
+    // SDL wiki says to use SDL_free on it, but SDL_free isn't exposed by
+    // SDL2 headers, only SDL1.x headers.
+    return path;
+}
+
 // So we don't need to depend on SDL_main we provide our own
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {

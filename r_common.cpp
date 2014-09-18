@@ -97,6 +97,9 @@ typedef void (APIENTRYP PFNGLGETINTEGERVPROC)(GLenum, GLint*);
 typedef const GLubyte* (APIENTRYP PFNGLGETSTRINGPROC)(GLenum);
 typedef const GLubyte* (APIENTRYP PFNGLGETSTRINGIPROC)(GLenum, GLuint);
 typedef GLenum (APIENTRYP PFNGLGETERRORPROC)();
+typedef void (APIENTRYP PFNGLGETTEXLEVELPARAMETERIVPROC)(GLenum, GLint, GLenum, GLint*);
+typedef void (APIENTRYP PFNGLGETCOMPRESSEDTEXIMAGEPROC)(GLenum, GLint, GLvoid*);
+typedef void (APIENTRYP PFNGLCOMPRESSEDTEXIMAGE2DPROC)(GLenum, GLint, GLenum, GLsizei, GLsizei, GLint, GLsizei, const GLvoid*);
 
 static PFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static PFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -160,6 +163,9 @@ static PFNGLGETINTEGERVPROC               glGetIntegerv_              = nullptr;
 static PFNGLGETSTRINGPROC                 glGetString_                = nullptr;
 static PFNGLGETSTRINGIPROC                glGetStringi_               = nullptr;
 static PFNGLGETERRORPROC                  glGetError_                 = nullptr;
+static PFNGLGETTEXLEVELPARAMETERIVPROC    glGetTexLevelParameteriv_   = nullptr;
+static PFNGLGETCOMPRESSEDTEXIMAGEPROC     glGetCompressedTexImage_    = nullptr;
+static PFNGLCOMPRESSEDTEXIMAGE2DPROC      glCompressedTexImage2D_     = nullptr;
 
 #ifdef DEBUG_GL
 template <char C, typename T>
@@ -398,6 +404,9 @@ namespace gl {
         glGetString_                = (PFNGLGETSTRINGPROC)SDL_GL_GetProcAddress("glGetString");
         glGetStringi_               = (PFNGLGETSTRINGIPROC)SDL_GL_GetProcAddress("glGetStringi");
         glGetError_                 = (PFNGLGETERRORPROC)SDL_GL_GetProcAddress("glGetError");
+        glGetTexLevelParameteriv_   = (PFNGLGETTEXLEVELPARAMETERIVPROC)SDL_GL_GetProcAddress("glGetTexLevelParameteriv");
+        glGetCompressedTexImage_    = (PFNGLGETCOMPRESSEDTEXIMAGEPROC)SDL_GL_GetProcAddress("glGetCompressedTexImage");
+        glCompressedTexImage2D_     = (PFNGLCOMPRESSEDTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glCompressedTexImage2D");
 
         GLint count = 0;
         glGetIntegerv_(GL_NUM_EXTENSIONS, &count);
@@ -724,5 +733,20 @@ namespace gl {
         GLenum result = glGetError_();
         GL_CHECK();
         return result;
+    }
+
+    void GetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint* params GL_INFOP) {
+        glGetTexLevelParameteriv_(target, level, pname, params);
+        GL_CHECK("272*7", target, level, pname, params);
+    }
+
+    void GetCompressedTexImage(GLenum target, GLint lod, GLvoid* img GL_INFOP) {
+        glGetCompressedTexImage_(target, lod, img);
+        GL_CHECK("27*0", target, lod, img);
+    }
+
+    void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid* data GL_INFOP) {
+        glCompressedTexImage2D_(target, level, internalformat, width, height, border, imageSize, data);
+        GL_CHECK("2728878*0", target, level, internalformat, width, height, border, imageSize, data);
     }
 }

@@ -77,6 +77,9 @@ namespace gl {
     const GLubyte* GetString(GLenum name GL_INFOP);
     const GLubyte* GetStringi(GLenum name, GLuint index GL_INFOP);
     GLenum GetError(GL_INFO);
+    void GetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint* params GL_INFOP);
+    void GetCompressedTexImage(GLenum target, GLint lod, GLvoid* img GL_INFOP);
+    void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid* data GL_INFOP);
 }
 
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -142,5 +145,8 @@ namespace gl {
     #define GetString(...)                GetString(__VA_ARGS__, __FILE__, __LINE__)
     #define GetStringi(...)               GetStringi(__VA_ARGS__, __FILE__, __LINE__)
     #define GetError(...)                 GetError(/* no arg */ __FILE__, __LINE__)
+    #define GetTexLevelParameteriv(...)   GetTexLevelParameteriv(__VA_ARGS__, __FILE__, __LINE__)
+    #define GetCompressedTexImage(...)    GetCompressedTexImage(__VA_ARGS__, __FILE__, __LINE__)
+    #define CompressedTexImage2D(...)     CompressedTexImage2D(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif
