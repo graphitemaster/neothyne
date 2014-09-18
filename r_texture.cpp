@@ -45,8 +45,6 @@ static bool readDXTCache(texture &tex) {
     // Now swap!
     tex.unload();
     tex.from(data, length, head.width, head.height, head.format);
-
-    printf("R DXT: %s\n", file.c_str());
     return true;
 }
 
@@ -79,7 +77,6 @@ static bool writeDXTCache(const texture &tex, GLuint handle) {
     gl::GetCompressedTexImage(GL_TEXTURE_2D, 0, &data[0] + sizeof(head));
 
     // Write it to disk!
-    printf("W DXT: %s\n", file.c_str());
     return u::write(data, file);
 }
 
