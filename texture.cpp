@@ -1683,6 +1683,23 @@ void texture::reorient(unsigned char *src, size_t sw, size_t sh, size_t bpp, siz
     }
 }
 
+template <textureFormat F>
+void texture::convert(void) {
+    if (F == m_format)
+        return;
+
+    unsigned char *data = &m_data[0];
+    const size_t length = m_data.size();
+
+    // Converts BGR -> RGB or RGB -> BGR, or
+    //          BGRA -> RGBA or RGBA -> BGRA
+    for (unsigned char *end = &data[length]; data < end; data += m_bpp)
+        u::swap(data[0], data[2]);
+}
+
+template void texture::convert<TEX_RGB>();
+template void texture::convert<TEX_RGBA>();
+
 template <typename T>
 bool texture::decode(const u::vector<unsigned char> &data, const char *name) {
     T decode(data);

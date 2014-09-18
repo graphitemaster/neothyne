@@ -14,6 +14,7 @@
 
 namespace gl {
     void init(void);
+    bool has(const char *ext);
     GLuint CreateShader(GLenum shaderType GL_INFOP);
     void ShaderSource(GLuint shader, GLsizei count, const GLchar** string, const GLint* length GL_INFOP);
     void CompileShader(GLuint shader GL_INFOP);

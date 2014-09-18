@@ -11,30 +11,65 @@
 #   define R_TEX_DATA_BGRA GL_UNSIGNED_BYTE
 #endif
 
-static void getTextureFormat(const texture &tex, GLenum &tf, GLenum &df) {
-    switch (tex.format()) {
+struct queryFormat {
+    GLenum format;
+    GLenum data;
+    GLenum internal;
+    bool cached;
+};
+
+// Given a source texture the following function finds the best way to present
+// that texture to the hardware. This function will also favor texture compression
+// if the hardware supports it by converting the texture if it needs to.
+static queryFormat getBestFormat(texture &tex) {
+    queryFormat fmt;
+    memset(&fmt, 0, sizeof(fmt));
+    textureFormat format = tex.format();
+
+    // Convert the textures to a format S3TC texture compression supports if
+    // the hardware supports S3TC compression
+    if (gl::has("GL_EXT_texture_compression_s3tc")) {
+        if (format == TEX_BGRA)
+            tex.convert<TEX_RGBA>();
+        else if (format == TEX_BGR)
+            tex.convert<TEX_RGB>();
+    }
+
+    switch (format) {
         case TEX_RGBA:
-            tf = GL_RGBA;
-            df = R_TEX_DATA_RGBA;
-            break;
-        case TEX_BGRA:
-            tf = GL_BGRA;
-            df = R_TEX_DATA_BGRA;
+            fmt.format = GL_RGBA;
+            fmt.data = R_TEX_DATA_RGBA;
+            if (gl::has("GL_EXT_texture_compression_s3tc"))
+                fmt.internal = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+            else
+                fmt.internal = GL_RGBA;
             break;
         case TEX_RGB:
-            tf = GL_RGB;
-            df = GL_UNSIGNED_BYTE;
+            fmt.format = GL_RGB;
+            fmt.data = GL_UNSIGNED_BYTE;
+            if (gl::has("GL_EXT_texture_compression_s3tc"))
+                fmt.internal = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+            else
+                fmt.internal = GL_RGBA;
+            break;
+
+        case TEX_BGRA:
+            fmt.format = GL_BGRA;
+            fmt.data = R_TEX_DATA_BGRA;
+            fmt.internal = GL_RGBA;
             break;
         case TEX_BGR:
-            tf = GL_BGR;
-            df = GL_UNSIGNED_BYTE;
+            fmt.format = GL_BGR;
+            fmt.data = GL_UNSIGNED_BYTE;
+            fmt.internal = GL_RGBA;
             break;
-        default:
-            // to silent possible uninitialized warnings
-            tf = 0;
-            df = GL_UNSIGNED_BYTE;
+        case TEX_LUMINANCE:
+            fmt.format = GL_RED;
+            fmt.data = GL_UNSIGNED_BYTE;
+            fmt.internal = GL_RED;
             break;
     }
+    return fmt;
 }
 
 texture2D::texture2D(void) :
@@ -57,11 +92,9 @@ bool texture2D::upload(void) {
     gl::GenTextures(1, &m_textureHandle);
     gl::BindTexture(GL_TEXTURE_2D, m_textureHandle);
 
-    GLenum tf;
-    GLenum df;
-    getTextureFormat(m_texture, tf, df);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texture.width(),
-        m_texture.height(), 0, tf, df, m_texture.data());
+    queryFormat format = getBestFormat(m_texture);
+    gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
+        m_texture.height(), 0, format.format, format.data, m_texture.data());
 
     gl::GenerateMipmap(GL_TEXTURE_2D);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -129,9 +162,9 @@ bool texture3D::upload(void) {
     for (size_t i = 0; i < 6; i++) {
         if (m_textures[i].width() != fw || m_textures[i].height() != fh)
             m_textures[i].resize(fw, fh);
-        GLuint tf, df;
-        getTextureFormat(m_textures[i], tf, df);
-        gl::TexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, fw, fh, 0, tf, df, m_textures[i].data());
+        queryFormat format = getBestFormat(m_textures[i]);
+        gl::TexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+            format.internal, fw, fh, 0, format.format, format.data, m_textures[i].data());
     }
 
     return m_uploaded = true;

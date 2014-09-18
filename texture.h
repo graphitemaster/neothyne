@@ -27,6 +27,9 @@ struct texture {
 
     void resize(size_t width, size_t height);
 
+    template <textureFormat F>
+    void convert(void);
+
     size_t width(void) const;
     size_t height(void) const;
     textureFormat format(void) const;

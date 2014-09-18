@@ -139,6 +139,7 @@ def genHeader(functionList, headerFile):
         header.write('namespace gl {\n')
         # Generate the function prototypes
         header.write('    void init(void);\n')
+        header.write('    bool has(const char *ext);\n');
         for function in functionList:
             header.write('    ')
             printPrototype(header, function, True, True)
@@ -300,13 +301,21 @@ def genSource(functionList, sourceFile):
         source.write('#endif\n')
         # Begin the namespace
         source.write('\nnamespace gl {\n')
+        source.write('    static u::set<u::string> extensions;\n\n');
         # Generate the init function
         source.write('    void init(void) {\n')
         for f in functionList:
             fill = largest - len(f.name)
             source.write('        gl%s_%s = (PFNGL%sPROC)SDL_GL_GetProcAddress("gl%s");\n'
                 % (f.name, ''.rjust(fill), f.name.upper(), f.name))
-        source.write('    }\n')
+        source.write('\n        GLint count = 0;\n');
+        source.write('        glGetIntegerv_(GL_NUM_EXTENSIONS, &count);\n');
+        source.write('        for (GLint i = 0; i < count; i++)\n');
+        source.write('            extensions.emplace((const char *)glGetStringi_(GL_EXTENSIONS, i));\n');
+        source.write('    }\n\n');
+        source.write('    bool has(const char *ext) {\n');
+        source.write('         return extensions.find(ext) != extensions.end();\n');
+        source.write('    }\n');
         # Generate the GL function wrappers
         for f in functionList:
             source.write('\n    %s %s' % (f.type, f.name))

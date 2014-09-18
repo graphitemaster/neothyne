@@ -333,6 +333,8 @@ static void debugCheck(const char *spec, const char *function, const char *file,
 #endif
 
 namespace gl {
+    static u::set<u::string> extensions;
+
     void init(void) {
         glCreateShader_             = (PFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader");
         glShaderSource_             = (PFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress("glShaderSource");
@@ -396,6 +398,15 @@ namespace gl {
         glGetString_                = (PFNGLGETSTRINGPROC)SDL_GL_GetProcAddress("glGetString");
         glGetStringi_               = (PFNGLGETSTRINGIPROC)SDL_GL_GetProcAddress("glGetStringi");
         glGetError_                 = (PFNGLGETERRORPROC)SDL_GL_GetProcAddress("glGetError");
+
+        GLint count = 0;
+        glGetIntegerv_(GL_NUM_EXTENSIONS, &count);
+        for (GLint i = 0; i < count; i++)
+            extensions.emplace((const char *)glGetStringi_(GL_EXTENSIONS, i));
+    }
+
+    bool has(const char *ext) {
+         return extensions.find(ext) != extensions.end();
     }
 
     GLuint CreateShader(GLenum shaderType GL_INFOP) {
