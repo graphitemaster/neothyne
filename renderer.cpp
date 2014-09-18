@@ -740,7 +740,7 @@ bool world::load(const kdMap &map) {
     // load textures
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
         u::string diffuseName = map.textures[m_textureBatches[i].index].name;
-        u::string normalName = diffuseName + "_bump";
+        u::string normalName = "<normal>" + diffuseName + "_bump";
 
         texture2D *diffuse = m_textures2D.get(diffuseName);
         texture2D *normal = m_textures2D.get(normalName);
