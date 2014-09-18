@@ -17,7 +17,7 @@ enum {
 
 struct loadThreadData {
     kdMap gMap;
-    world gWorld;
+    r::world gWorld;
     SDL_atomic_t done;
 };
 
@@ -156,11 +156,11 @@ int neoMain(int argc, char **argv) {
 
     frameTimer gTimer;
 
-    splashScreen gSplash;
+    r::splashScreen gSplash;
     gSplash.load("textures/logo");
     gSplash.upload();
 
-    rendererPipeline pipeline;
+    r::rendererPipeline pipeline;
     m::perspectiveProjection projection;
     projection.fov = 90.0f;
     projection.width = neoWidth();

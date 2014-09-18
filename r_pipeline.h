@@ -2,6 +2,8 @@
 #define R_PIPELINE_HDR
 #include "math.h"
 
+namespace r {
+
 struct rendererPipeline {
     rendererPipeline(void);
 
@@ -43,5 +45,7 @@ private:
 
     m::quat m_rotation;
 };
+
+}
 
 #endif

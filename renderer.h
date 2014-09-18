@@ -7,6 +7,8 @@
 #include "kdmap.h"
 #include "resource.h"
 
+namespace r {
+
 // gbuffer
 struct gBuffer {
     // also the texture unit order
@@ -175,5 +177,7 @@ private:
     directionalLight m_directionalLight;
     gBuffer m_gBuffer;
 };
+
+}
 
 #endif

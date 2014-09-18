@@ -3,6 +3,8 @@
 #include "engine.h"
 #include "u_file.h"
 
+namespace r {
+
 ///! A rendering method
 method::method(void) :
     m_program(0),
@@ -933,4 +935,6 @@ void world::render(const rendererPipeline &pipeline) {
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for (auto &it : m_billboards)
         it.render(pipeline);
+}
+
 }

@@ -1,5 +1,7 @@
 #include "r_pipeline.h"
 
+namespace r {
+
 rendererPipeline::rendererPipeline(void) :
     m_scale(1.0f, 1.0f, 1.0f),
     m_worldPosition(0.0f, 0.0f, 0.0f),
@@ -86,4 +88,6 @@ const m::vec3 &rendererPipeline::getPosition(void) const {
 
 const m::quat &rendererPipeline::getRotation(void) const {
     return m_rotation;
+}
+
 }

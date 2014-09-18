@@ -6,6 +6,8 @@
 
 #include "util.h"
 
+namespace r {
+
 struct method {
     method();
     ~method();
@@ -137,5 +139,7 @@ private:
     GLuint m_colorMapLocation;
     GLuint m_sizeLocation;
 };
+
+}
 
 #endif

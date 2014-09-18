@@ -4,6 +4,8 @@
 #include "texture.h"
 #include "util.h"
 
+namespace r {
+
 struct texture2D {
     texture2D();
     ~texture2D();
@@ -36,5 +38,7 @@ private:
     GLuint m_textureHandle;
     texture m_textures[6];
 };
+
+}
 
 #endif

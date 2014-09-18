@@ -1,90 +1,94 @@
 #ifndef U_OPTIONAL_HDR
 #define U_OPTIONAL_HDR
+
 namespace u {
-    // A small implementation of boost.optional
-    struct optional_none { };
 
-    typedef int optional_none::*none_t;
-    none_t const none = static_cast<none_t>(0);
+// A small implementation of boost.optional
+struct optional_none { };
 
-    template <typename T>
-    struct optional {
-        optional(void) :
-            m_init(false)
-        {
-        }
+typedef int optional_none::*none_t;
+none_t const none = static_cast<none_t>(0);
 
-        // specialization for `none'
-        optional(none_t) :
-            m_init(false)
-        {
-        }
+template <typename T>
+struct optional {
+    optional(void) :
+        m_init(false)
+    {
+    }
 
-        optional(const T &value) :
-            m_init(true)
-        {
-            construct(value);
-        }
+    // specialization for `none'
+    optional(none_t) :
+        m_init(false)
+    {
+    }
 
-        optional(const optional<T> &opt) :
-            m_init(opt.m_init)
-        {
-            if (m_init)
-                construct(opt.get());
-        }
+    optional(const T &value) :
+        m_init(true)
+    {
+        construct(value);
+    }
 
-        ~optional(void) {
-            destruct();
-        }
+    optional(const optional<T> &opt) :
+        m_init(opt.m_init)
+    {
+        if (m_init)
+            construct(opt.get());
+    }
 
-        optional &operator=(const optional<T> &opt) {
-            destruct();
-            if ((m_init = opt.m_init))
-                construct(opt.get());
-            return *this;
-        }
+    ~optional(void) {
+        destruct();
+    }
 
-        operator bool(void) const {
-            return m_init;
-        }
+    optional &operator=(const optional<T> &opt) {
+        destruct();
+        if ((m_init = opt.m_init))
+            construct(opt.get());
+        return *this;
+    }
 
-        T &operator *(void) {
-            return get();
-        }
+    operator bool(void) const {
+        return m_init;
+    }
 
-        const T &operator*(void) const {
-            return get();
-        }
+    T &operator *(void) {
+        return get();
+    }
 
-    private:
-        void *storage(void) {
-            return m_data;
-        }
+    const T &operator*(void) const {
+        return get();
+    }
 
-        const void *storage(void) const {
-            return m_data;
-        }
+private:
+    void *storage(void) {
+        return m_data;
+    }
 
-        T &get(void) {
-            return *static_cast<T*>(storage());
-        }
+    const void *storage(void) const {
+        return m_data;
+    }
 
-        const T &get(void) const {
-            return *static_cast<const T*>(storage());
-        }
+    T &get(void) {
+        return *static_cast<T*>(storage());
+    }
 
-        void destruct(void) {
-            if (m_init)
-                get().~T();
-            m_init = false;
-        }
+    const T &get(void) const {
+        return *static_cast<const T*>(storage());
+    }
 
-        void construct(const T &data) {
-            new (storage()) T(data);
-        }
+    void destruct(void) {
+        if (m_init)
+            get().~T();
+        m_init = false;
+    }
 
-        bool m_init;
-        alignas(alignof(T)) unsigned char m_data[sizeof(T)];
-    };
+    void construct(const T &data) {
+        new (storage()) T(data);
+    }
+
+    bool m_init;
+    alignas(alignof(T)) unsigned char m_data[sizeof(T)];
+};
+
 }
+
 #endif

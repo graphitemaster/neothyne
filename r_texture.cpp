@@ -2,6 +2,8 @@
 #include "u_file.h"
 #include "engine.h"
 
+namespace r {
+
 #ifdef GL_UNSIGNED_INT_8_8_8_8_REV
 #   define R_TEX_DATA_RGBA GL_UNSIGNED_INT_8_8_8_8_REV
 #else
@@ -279,4 +281,6 @@ void texture3D::bind(GLenum unit) {
 void texture3D::resize(size_t width, size_t height) {
     for (size_t i = 0; i < 6; i++)
         m_textures[i].resize(width, height);
+}
+
 }
