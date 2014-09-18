@@ -4,7 +4,6 @@ CXXFLAGS = \
 	-Wall \
 	-Wextra \
 	-ffast-math \
-	-fomit-frame-pointer \
 	-fno-exceptions \
 	-O2
 

@@ -747,7 +747,7 @@ bool world::load(const kdMap &map) {
         if (!diffuse)
             diffuse = m_textures2D.get("textures/notex");
         if (!normal)
-            normal = m_textures2D.get("textures/nobump");
+            normal = m_textures2D.get("<normal>textures/nobump");
 
         m_textureBatches[i].diffuse = diffuse;
         m_textureBatches[i].normal = normal;

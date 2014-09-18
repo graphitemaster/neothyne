@@ -93,7 +93,7 @@ static queryFormat getBestFormat(texture &tex) {
 
     // Convert the textures to a format S3TC texture compression supports if
     // the hardware supports S3TC compression
-    if (gl::has("GL_EXT_texture_compression_s3tc")) {
+    if (gl::has("GL_EXT_texture_compression_s3tc") && !tex.normal()) {
         if (format == TEX_BGRA)
             tex.convert<TEX_RGBA>();
         else if (format == TEX_BGR)
@@ -104,7 +104,7 @@ static queryFormat getBestFormat(texture &tex) {
         case TEX_RGBA:
             fmt.format = GL_RGBA;
             fmt.data = R_TEX_DATA_RGBA;
-            if (gl::has("GL_EXT_texture_compression_s3tc"))
+            if (gl::has("GL_EXT_texture_compression_s3tc") && !tex.normal())
                 fmt.internal = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
             else
                 fmt.internal = GL_RGBA;
@@ -112,7 +112,7 @@ static queryFormat getBestFormat(texture &tex) {
         case TEX_RGB:
             fmt.format = GL_RGB;
             fmt.data = GL_UNSIGNED_BYTE;
-            if (gl::has("GL_EXT_texture_compression_s3tc"))
+            if (gl::has("GL_EXT_texture_compression_s3tc") && !tex.normal())
                 fmt.internal = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
             else
                 fmt.internal = GL_RGBA;
@@ -150,6 +150,8 @@ texture2D::~texture2D(void) {
 }
 
 bool texture2D::useDXTCache(void) {
+    if (m_texture.normal())
+        return false;
     if (!gl::has("GL_EXT_texture_compression_s3tc"))
         return false;
     if (!readDXTCache(m_texture))
@@ -170,6 +172,8 @@ bool texture2D::useDXTCache(void) {
 }
 
 bool texture2D::cacheDXT(void) {
+    if (m_texture.normal())
+        return false;
     if (gl::has("GL_EXT_texture_compression_s3tc"))
         return writeDXTCache(m_texture, m_textureHandle);
     return false;

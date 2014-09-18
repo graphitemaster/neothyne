@@ -12,6 +12,11 @@ enum textureFormat {
 };
 
 struct texture {
+    texture() :
+        m_normal(false)
+    {
+    }
+
     bool load(const u::string &file);
     void from(const unsigned char *const data, size_t length, size_t width, size_t height, textureFormat format);
 
@@ -42,6 +47,11 @@ struct texture {
 
     const u::string &hashString(void) const;
 
+    // If the texture is a normal map this will return true.
+    // We need to delininate between normal map textures and diffuse textures
+    // because we don't want to represent normals with S3TC compression.
+    bool normal(void) const;
+
     void unload(void);
 
 private:
@@ -55,6 +65,7 @@ private:
     size_t m_height;
     size_t m_bpp;
     size_t m_pitch;
+    bool m_normal;
     textureFormat m_format;
 };
 

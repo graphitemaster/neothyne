@@ -18,8 +18,7 @@ struct decoder {
         m_error(kSuccess),
         m_width(0),
         m_height(0),
-        m_bpp(0),
-        m_compressed(false)
+        m_bpp(0)
     {
 
     }
@@ -61,10 +60,6 @@ struct decoder {
         return m_bpp;
     }
 
-    bool compressed(void) const {
-        return m_compressed;
-    }
-
     result status(void) const {
         return m_error;
     }
@@ -74,7 +69,6 @@ protected:
     size_t m_width;
     size_t m_height;
     size_t m_bpp;
-    bool m_compressed;
 };
 
 ///
@@ -1735,7 +1729,18 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name) {
     return true;
 }
 
-u::optional<u::string> texture::find(const u::string &file) {
+u::optional<u::string> texture::find(const u::string &infile) {
+    u::string file = infile;
+    // Check if it has a tag
+    // TODO: full tag parser
+    if (file[0] == '<') {
+        auto end = file.find('>');
+        if (end == u::string::npos)
+            return u::none;
+        if (u::string(file.begin() + 1, file.begin() + end) == "normal")
+            m_normal = true;
+        file.erase(0, end + 1);
+    }
     static const char *extensions[] = { "png", "jpg", "jpeg", "tga" };
     size_t bits = 0;
     for (size_t i = 0; i < sizeof(extensions)/sizeof(*extensions); i++)
@@ -1770,10 +1775,6 @@ bool texture::load(const u::string &file) {
         return decode<tga>(data, fileName);
     fprintf(stderr, "no decoder found for `%s'\n", fileName);
     return false;
-}
-
-const u::string &texture::hashString(void) const {
-    return m_hashString;
 }
 
 void texture::from(const unsigned char *const data, size_t length, size_t width, size_t height, textureFormat format) {
@@ -1812,6 +1813,14 @@ void texture::unload(void) {
     m_width = 0;
     m_height = 0;
     m_pitch = 0;
+}
+
+const u::string &texture::hashString(void) const {
+    return m_hashString;
+}
+
+bool texture::normal(void) const {
+    return m_normal;
 }
 
 size_t texture::width(void) const {
