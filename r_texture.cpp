@@ -78,6 +78,11 @@ static bool writeDXTCache(const texture &tex, GLuint handle) {
 }
 
 struct queryFormat {
+    constexpr queryFormat(GLenum format, GLenum data, GLenum internal) :
+        format(format),
+        data(data),
+        internal(internal)
+    { }
     GLenum format;
     GLenum data;
     GLenum internal;
@@ -86,14 +91,14 @@ struct queryFormat {
 // Given a source texture the following function finds the best way to present
 // that texture to the hardware. This function will also favor texture compression
 // if the hardware supports it by converting the texture if it needs to.
-static queryFormat getBestFormat(texture &tex) {
-    queryFormat fmt;
-    memset(&fmt, 0, sizeof(fmt));
+static u::optional<queryFormat> getBestFormat(texture &tex) {
     textureFormat format = tex.format();
+
+    const bool s3tc = gl::has("GL_EXT_texture_compression_s3tc") && !tex.normal();
 
     // Convert the textures to a format S3TC texture compression supports if
     // the hardware supports S3TC compression
-    if (gl::has("GL_EXT_texture_compression_s3tc") && !tex.normal()) {
+    if (s3tc) {
         if (format == TEX_BGRA)
             tex.convert<TEX_RGBA>();
         else if (format == TEX_BGR)
@@ -102,39 +107,17 @@ static queryFormat getBestFormat(texture &tex) {
 
     switch (format) {
         case TEX_RGBA:
-            fmt.format = GL_RGBA;
-            fmt.data = R_TEX_DATA_RGBA;
-            if (gl::has("GL_EXT_texture_compression_s3tc") && !tex.normal())
-                fmt.internal = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-            else
-                fmt.internal = GL_RGBA;
-            break;
+            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, s3tc ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : GL_RGBA);
         case TEX_RGB:
-            fmt.format = GL_RGB;
-            fmt.data = GL_UNSIGNED_BYTE;
-            if (gl::has("GL_EXT_texture_compression_s3tc") && !tex.normal())
-                fmt.internal = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
-            else
-                fmt.internal = GL_RGBA;
-            break;
-
+            return queryFormat(GL_RGB, GL_UNSIGNED_BYTE, s3tc ? GL_COMPRESSED_RGB_S3TC_DXT1_EXT : GL_RGBA);
         case TEX_BGRA:
-            fmt.format = GL_BGRA;
-            fmt.data = R_TEX_DATA_BGRA;
-            fmt.internal = GL_RGBA;
-            break;
+            return queryFormat(GL_BGRA, R_TEX_DATA_BGRA, GL_RGBA);
         case TEX_BGR:
-            fmt.format = GL_BGR;
-            fmt.data = GL_UNSIGNED_BYTE;
-            fmt.internal = GL_RGBA;
-            break;
+            return queryFormat(GL_BGR, GL_UNSIGNED_BYTE, GL_RGBA);
         case TEX_LUMINANCE:
-            fmt.format = GL_RED;
-            fmt.data = GL_UNSIGNED_BYTE;
-            fmt.internal = GL_RED;
-            break;
+            return queryFormat(GL_RED, GL_UNSIGNED_BYTE, GL_RED);
     }
-    return fmt;
+    return u::none;
 }
 
 texture2D::texture2D(void) :
@@ -192,7 +175,10 @@ bool texture2D::upload(void) {
 
     bool useCache = useDXTCache();
     if (!useCache) {
-        queryFormat format = getBestFormat(m_texture);
+        auto query = getBestFormat(m_texture);
+        if (!query)
+            return false;
+        const auto format = *query;
         gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
             m_texture.height(), 0, format.format, format.data, m_texture.data());
     }
@@ -269,7 +255,10 @@ bool texture3D::upload(void) {
     for (size_t i = 0; i < 6; i++) {
         if (m_textures[i].width() != fw || m_textures[i].height() != fh)
             m_textures[i].resize(fw, fh);
-        queryFormat format = getBestFormat(m_textures[i]);
+        auto query = getBestFormat(m_textures[i]);
+        if (!query)
+            return false;
+        const auto format = *query;
         gl::TexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
             format.internal, fw, fh, 0, format.format, format.data, m_textures[i].data());
     }
