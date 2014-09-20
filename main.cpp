@@ -159,7 +159,8 @@ int neoMain(int argc, char **argv) {
     frameTimer gTimer;
 
     r::splashScreen gSplash;
-    gSplash.load("textures/logo");
+    if (!gSplash.load("textures/logo"))
+        neoFatal("failed to load splash screen");
     gSplash.upload();
 
     r::rendererPipeline pipeline;
