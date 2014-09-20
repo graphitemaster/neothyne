@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdlib.h>
 
 #ifndef _WIN32
 #   include <sys/stat.h>
