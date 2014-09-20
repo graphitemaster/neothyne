@@ -3,8 +3,10 @@
 #include "kdmap.h"
 #include "kdtree.h"
 #include "client.h"
-#include "renderer.h"
 #include "engine.h"
+
+#include "r_world.h"
+#include "r_splash.h"
 
 #include "u_file.h"
 
@@ -180,7 +182,8 @@ int neoMain(int argc, char **argv) {
     gTimer.cap(30); // Loading screen at 30fps
     while (SDL_AtomicGet(&loadData.done) == kLoadInProgress) {
         glClear(GL_COLOR_BUFFER_BIT);
-        gSplash.render(gTimer.ticks() / 500.0f, pipeline);
+        pipeline.setTime(gTimer.ticks() / 500.0f);
+        gSplash.render(pipeline);
         neoSwap();
         gTimer.update();
     }
@@ -205,6 +208,7 @@ int neoMain(int argc, char **argv) {
 
         pipeline.setRotation(gClient.getRotation());
         pipeline.setPosition(gClient.getPosition());
+        pipeline.setTime(gTimer.ticks());
 
         loadData.gWorld.render(pipeline);
 

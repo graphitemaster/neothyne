@@ -17,6 +17,8 @@ struct rendererPipeline {
 
     void setPerspectiveProjection(const m::perspectiveProjection &projection);
 
+    void setTime(float time);
+
     const m::mat4 &getWorldTransform(void);
     const m::mat4 &getWVPTransform(void);
     const m::mat4 &getVPTransform(void);
@@ -29,6 +31,8 @@ struct rendererPipeline {
     const m::quat &getRotation(void) const;
 
     const m::perspectiveProjection &getPerspectiveProjection(void) const;
+
+    float getTime(void) const;
 
 private:
     m::perspectiveProjection m_perspectiveProjection;
@@ -44,6 +48,8 @@ private:
     m::mat4 m_inverseTransform;
 
     m::quat m_rotation;
+
+    float m_time;
 };
 
 }

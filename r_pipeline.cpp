@@ -33,6 +33,10 @@ void rendererPipeline::setPerspectiveProjection(const m::perspectiveProjection &
     m_perspectiveProjection = projection;
 }
 
+void rendererPipeline::setTime(float time) {
+    m_time = time;
+}
+
 const m::mat4 &rendererPipeline::getWorldTransform(void) {
     m::mat4 scale, rotate, translate;
     scale.setScaleTrans(m_scale.x, m_scale.y, m_scale.z);
@@ -88,6 +92,10 @@ const m::vec3 &rendererPipeline::getPosition(void) const {
 
 const m::quat &rendererPipeline::getRotation(void) const {
     return m_rotation;
+}
+
+float rendererPipeline::getTime(void) const {
+    return m_time;
 }
 
 }

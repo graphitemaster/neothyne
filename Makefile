@@ -21,10 +21,16 @@ GAME_SOURCES = \
 	main.cpp
 
 RENDERER_SOURCES = \
+	r_billboard.cpp \
 	r_common.cpp \
+	r_gbuffer.cpp \
+	r_method.cpp \
 	r_pipeline.cpp \
+	r_quad.cpp \
+	r_skybox.cpp \
+	r_splash.cpp \
 	r_texture.cpp \
-	renderer.cpp
+	r_world.cpp
 
 ENGINE_SOURCES = \
 	engine.cpp \
