@@ -5,11 +5,96 @@
 
 static constexpr size_t kDefaultScreenWidth = 1024;
 static constexpr size_t kDefaultScreenHeight = 768;
+static constexpr size_t kRefreshRate = 60;
 
+// An accurate frame rate timer and capper
+frameTimer::frameTimer() :
+    m_deltaTime(0.0f),
+    m_lastFrameTicks(0),
+    m_currentTicks(0),
+    m_frameAverage(0.0f),
+    m_framesPerSecond(0),
+    m_lock(false)
+{
+    reset();
+    cap(kMaxFPS);
+}
+
+void frameTimer::lock(void) {
+    m_lock = true;
+}
+
+void frameTimer::unlock(void) {
+    m_lock = false;
+}
+
+void frameTimer::cap(float maxFps) {
+    if (m_lock)
+        return;
+    m_maxFrameTicks = maxFps <= 0.0f
+        ? -1 : (1000.0f / maxFps) - kDampenEpsilon;
+}
+
+void frameTimer::reset(void) {
+    m_frameCount = 0;
+    m_minTicks = 1000;
+    m_maxTicks = 0;
+    m_averageTicks = 0;
+    m_lastSecondTicks = SDL_GetTicks();
+}
+
+bool frameTimer::update(void) {
+    m_frameCount++;
+    m_targetTicks = m_maxFrameTicks != -1 ?
+        m_lastSecondTicks + uint32_t(m_frameCount * m_maxFrameTicks) : 0;
+    m_currentTicks = SDL_GetTicks();
+    m_averageTicks += m_currentTicks - m_lastFrameTicks;
+    if (m_currentTicks - m_lastFrameTicks <= m_minTicks)
+        m_minTicks = m_currentTicks - m_lastFrameTicks;
+    if (m_currentTicks - m_lastFrameTicks >= m_maxTicks)
+        m_maxTicks = m_currentTicks - m_lastFrameTicks;
+    if (m_targetTicks && m_currentTicks < m_targetTicks) {
+        uint32_t beforeDelay = SDL_GetTicks();
+        SDL_Delay(m_targetTicks - m_currentTicks);
+        m_currentTicks = SDL_GetTicks();
+        m_averageTicks += m_currentTicks - beforeDelay;
+    }
+    m_deltaTime = 0.001f * (m_currentTicks - m_lastFrameTicks);
+    m_lastFrameTicks = m_currentTicks;
+    if (m_currentTicks - m_lastSecondTicks >= 1000) {
+        m_framesPerSecond = m_frameCount;
+        m_frameAverage = m_averageTicks / m_frameCount;
+        m_frameMin = m_minTicks;
+        m_frameMax = m_maxTicks;
+        reset();
+        return true;
+    }
+    return false;
+}
+
+float frameTimer::mspf(void) const {
+    return m_frameAverage;
+}
+
+int frameTimer::fps(void) const {
+    return m_framesPerSecond;
+}
+
+float frameTimer::delta(void) const {
+    return m_deltaTime;
+}
+
+uint32_t frameTimer::ticks(void) const {
+    return m_currentTicks;
+}
+
+// Engine globals
 static u::map<int, int> gKeyMap;
 static size_t gScreenWidth = 0;
 static size_t gScreenHeight = 0;
+static size_t gRefreshRate = 0;
 static SDL_Window *gScreen = nullptr;
+static frameTimer gTimer;
 
 u::map<int, int> &neoKeyState(int key, bool keyDown, bool keyUp) {
     if (keyDown)
@@ -25,6 +110,7 @@ void neoMouseDelta(int *deltaX, int *deltaY) {
 
 void neoSwap(void) {
     SDL_GL_SwapWindow(gScreen);
+    gTimer.update();
 }
 
 size_t neoWidth(void) {
@@ -50,6 +136,28 @@ void neoResize(size_t width, size_t height) {
     gScreenWidth = width;
     gScreenHeight = height;
     gl::Viewport(0, 0, width, height);
+}
+
+void neoSetVSyncOption(vSyncOption option) {
+    switch (option) {
+        case kSyncTear:
+            if (SDL_GL_SetSwapInterval(-1) == -1)
+                neoSetVSyncOption(kSyncRefresh);
+            break;
+        case kSyncNone:
+            SDL_GL_SetSwapInterval(0);
+            break;
+        case kSyncEnabled:
+            SDL_GL_SetSwapInterval(1);
+            break;
+        case kSyncRefresh:
+            SDL_GL_SetSwapInterval(0);
+            gTimer.unlock();
+            gTimer.cap(gRefreshRate);
+            gTimer.lock();
+            break;
+    }
+    gTimer.reset();
 }
 
 static SDL_Window *getContext(void) {
@@ -87,6 +195,9 @@ static SDL_Window *getContext(void) {
         gScreenHeight = kDefaultScreenHeight;
     }
 
+    gRefreshRate = (mode.refresh_rate == 0)
+        ? kRefreshRate : mode.refresh_rate;
+
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
         SDL_GL_CONTEXT_PROFILE_CORE | SDL_GL_CONTEXT_DEBUG_FLAG);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -114,7 +225,6 @@ static SDL_Window *getContext(void) {
     }
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
-    SDL_GL_SetSwapInterval(0); // Disable vsync
 
     return window;
 }
@@ -185,7 +295,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
 /// For everywhere else:
 ///     main -> neoMain
 ///
-extern int neoMain(int argc, char **argv);
+extern int neoMain(frameTimer &timer, int argc, char **argv);
 int main(int argc, char **argv) {
     gScreen = getContext();
     gl::init();
@@ -204,5 +314,5 @@ int main(int argc, char **argv) {
     printf("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\n",
         vendor, renderer, version, shader);
 
-    return neoMain(argc, argv);
+    return neoMain(gTimer, argc, argv);
 }
