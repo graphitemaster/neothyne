@@ -17,8 +17,10 @@ struct texture {
     {
     }
 
+    texture(const unsigned char *const data, size_t length, size_t width, size_t height, bool normal, textureFormat format);
+
     bool load(const u::string &file);
-    void from(const unsigned char *const data, size_t length, size_t width, size_t height, textureFormat format);
+    bool from(const unsigned char *const data, size_t length, size_t width, size_t height, bool normal, textureFormat format);
 
     template <size_t S>
     static void halve(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst);

@@ -10,6 +10,8 @@ struct texture2D {
     texture2D();
     ~texture2D();
 
+    texture2D(texture &tex);
+
     bool load(const u::string &file);
     bool upload(void);
     bool cacheDXT(void);

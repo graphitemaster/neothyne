@@ -198,6 +198,12 @@ world::world(void) {
 world::~world(void) {
     gl::DeleteBuffers(2, m_buffers);
     gl::DeleteVertexArrays(1, &m_vao);
+
+    for (auto &it : m_textures2D)
+        delete it.second;
+
+    delete m_noTexture;
+    delete m_noNormal;
 }
 
 bool world::load(const kdMap &map) {
@@ -239,20 +245,38 @@ bool world::load(const kdMap &map) {
         m_textureBatches.push_back(batch);
     }
 
+    // load the no-texture / no-normal textures
+    texture noTexture;
+    texture noNormal;
+    static const unsigned char nobump[] = { 128, 128, 255 };
+    if (!noTexture.load("textures/notex"))
+        return false;
+    if (!noNormal.from(nobump, 3, 1, 1, true, TEX_RGB))
+        return false;
+
+    m_noTexture = new texture2D(noTexture);
+    m_noNormal = new texture2D(noNormal);
+
     // load textures
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
         u::string diffuseName = map.textures[m_textureBatches[i].index].name;
         u::string normalName = "<normal>" + diffuseName + "_bump";
-
-        texture2D *diffuse = m_textures2D.get(diffuseName);
-        texture2D *normal = m_textures2D.get(normalName);
-        if (!diffuse)
-            diffuse = m_textures2D.get("textures/notex");
-        if (!normal)
-            normal = m_textures2D.get("<normal>textures/nobump");
-
-        m_textureBatches[i].diffuse = diffuse;
-        m_textureBatches[i].normal = normal;
+        auto loadTexture = [&](const u::string &ident, texture2D **store, texture2D *fallback) {
+            if (m_textures2D.find(ident) != m_textures2D.end()) {
+                *store = m_textures2D[ident];
+            } else {
+                u::unique_ptr<texture2D> tex(new texture2D);
+                if (tex->load(ident)) {
+                    auto release = tex.release();
+                    m_textures2D[ident] = release;
+                    *store = release;
+                } else {
+                    *store = fallback;
+                }
+            }
+        };
+        loadTexture(diffuseName, &m_textureBatches[i].diffuse, m_noTexture);
+        loadTexture(normalName, &m_textureBatches[i].normal, m_noNormal);
     }
 
     m_vertices = u::move(map.vertices);

@@ -1777,7 +1777,13 @@ bool texture::load(const u::string &file) {
     return false;
 }
 
-void texture::from(const unsigned char *const data, size_t length, size_t width, size_t height, textureFormat format) {
+texture::texture(const unsigned char *const data, size_t length, size_t width,
+    size_t height, bool normal, textureFormat format) :
+    m_width(width),
+    m_height(height),
+    m_normal(normal),
+    m_format(format)
+{
     m_data.resize(length);
     memcpy(&m_data[0], data, length);
     switch (format) {
@@ -1793,9 +1799,14 @@ void texture::from(const unsigned char *const data, size_t length, size_t width,
             m_bpp = 1;
             break;
     }
-    m_width = width;
-    m_height = height;
     m_pitch = m_width * m_bpp;
+}
+
+bool texture::from(const unsigned char *const data, size_t length, size_t width,
+    size_t height, bool normal, textureFormat format)
+{
+    *this = u::move(texture(data, length, width, height, normal, format));
+    return true;
 }
 
 void texture::resize(size_t width, size_t height) {

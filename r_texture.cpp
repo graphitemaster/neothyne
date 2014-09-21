@@ -43,7 +43,7 @@ static bool readDXTCache(texture &tex) {
 
     // Now swap!
     tex.unload();
-    tex.from(data, length, head.width, head.height, head.format);
+    tex.from(data, length, head.width, head.height, false, head.format);
     return true;
 }
 
@@ -125,6 +125,12 @@ texture2D::texture2D(void) :
     m_textureHandle(0)
 {
     //
+}
+
+texture2D::texture2D(texture &tex) :
+    texture2D::texture2D()
+{
+    m_texture = u::move(tex);
 }
 
 texture2D::~texture2D(void) {
@@ -209,6 +215,7 @@ texture3D::texture3D() :
     m_uploaded(false),
     m_textureHandle(0)
 {
+
 }
 
 texture3D::~texture3D(void) {

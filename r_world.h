@@ -11,8 +11,6 @@
 
 #include "kdmap.h"
 
-#include "resource.h" // TODO: remove
-
 namespace r {
 
 struct baseLight {
@@ -146,7 +144,10 @@ private:
     u::vector<uint32_t> m_indices;
     u::vector<kdBinVertex> m_vertices;
     u::vector<renderTextueBatch> m_textureBatches;
-    resourceManager<u::string, texture2D> m_textures2D;
+    u::map<u::string, texture2D*> m_textures2D;
+
+    texture2D *m_noTexture;
+    texture2D *m_noNormal;
 
     // World lights
     directionalLight m_directionalLight;
