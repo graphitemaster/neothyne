@@ -198,6 +198,8 @@ bool texture2D::upload(void) {
     if (!useCache)
         cacheDXT();
 
+    m_texture.unload();
+
     return m_uploaded = true;
 }
 

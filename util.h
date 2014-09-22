@@ -2,7 +2,6 @@
 #define UTIL_HDR
 #include <map>       // std::map
 #include <set>       // std::set
-#include <list>      // std::list
 #include <vector>    // std::vector
 #include <memory>    // std::unique_ptr
 #include <algorithm> // std::sort
@@ -15,9 +14,6 @@ namespace u {
 
 template<typename T1, typename T2>
 using map = std::map<T1, T2>;
-
-template <typename T>
-using list = std::list<T>;
 
 template <typename T>
 using set = std::set<T>;

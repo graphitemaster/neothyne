@@ -27,7 +27,7 @@ private:
     u::string m_vertexSource;
     u::string m_fragmentSource;
     u::string m_geometrySource;
-    u::list<GLuint> m_shaders;
+    u::vector<GLuint> m_shaders;
 };
 
 }
