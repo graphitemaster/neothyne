@@ -3,9 +3,8 @@
 #include <map>       // std::map
 #include <set>       // std::set
 #include <vector>    // std::vector
-#include <memory>    // std::unique_ptr
-#include <algorithm> // std::sort
 #include <string>    // std::string
+#include <memory>    // std::unique_ptr
 
 #include <stdarg.h>  // va_start, va_end, va_list
 #include <string.h>  // strcpy, strlen
@@ -18,59 +17,13 @@ using map = std::map<T1, T2>;
 template <typename T>
 using set = std::set<T>;
 
-template <typename T, typename D = std::default_delete<T>>
-using unique_ptr = std::unique_ptr<T, D>;
-
 template <typename T>
 using vector = std::vector<T>;
 
 using string = std::string;
 
-template <typename I, typename T>
-I find(I first, I last, const T &value) {
-    while (first != last) {
-        if (*first == value)
-            return first;
-        ++first;
-    }
-    return last;
-}
-
-// An implementation of std::move
 template <typename T>
-constexpr typename std::remove_reference<T>::type &&move(T &&t) {
-    return static_cast<typename std::remove_reference<T>::type&&>(t);
-}
-
-template <typename T>
-T min(const T &lhs, const T &rhs) {
-    return lhs < rhs ? lhs : rhs;
-}
-
-template <typename T>
-T max(const T &lhs, const T &rhs) {
-    return lhs > rhs ? lhs : rhs;
-}
-
-template <typename T>
-T abs(const T &lhs) {
-    return lhs < 0 ? -lhs : lhs;
-}
-
-template <typename T>
-void swap(T &lhs, T &rhs) {
-    // use std here because their swap is more efficent than what we could
-    // implement (memcpy for trivially copy assignable for instance)
-    std::swap(lhs, rhs);
-}
-
-template <typename randomAccessIterator>
-inline void sort(randomAccessIterator first, randomAccessIterator last) {
-    // use std here because their sort is more efficent than what we could
-    // implement (sorting network for small values, insertion sort, and then
-    // heap sort (for libc++ for instance))
-    std::sort(first, last);
-}
+using unique_ptr = std::unique_ptr<T, std::default_delete<T>>;
 
 inline int sscanf(const string &thing, const char *fmt, ...) {
     va_list va;

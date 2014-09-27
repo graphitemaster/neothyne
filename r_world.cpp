@@ -1,5 +1,7 @@
 #include "r_world.h"
 
+#include "u_traits.h"
+
 #include "engine.h"
 
 namespace r {

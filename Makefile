@@ -20,6 +20,11 @@ GAME_SOURCES = \
 	client.cpp \
 	main.cpp
 
+MATH_SOURCES = \
+	m_mat4.cpp \
+	m_quat.cpp \
+	m_vec3.cpp
+
 RENDERER_SOURCES = \
 	r_billboard.cpp \
 	r_common.cpp \
@@ -36,11 +41,11 @@ ENGINE_SOURCES = \
 	engine.cpp \
 	kdmap.cpp \
 	kdtree.cpp \
-	math.cpp \
 	texture.cpp \
 	u_file.cpp \
 	u_zlib.cpp \
 	u_sha512.cpp \
+	$(MATH_SOURCES) \
 	$(RENDERER_SOURCES)
 
 GAME_OBJECTS = $(GAME_SOURCES:.cpp=.o) $(ENGINE_SOURCES:.cpp=.o)

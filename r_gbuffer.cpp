@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "r_gbuffer.h"
 
 namespace r {

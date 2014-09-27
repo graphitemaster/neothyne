@@ -1,8 +1,9 @@
 #ifndef MAP_HDR
 #define MAP_HDR
-#include "math.h"
 #include "util.h"
 #include "kdtree.h"
+
+#include "m_plane.h"
 
 struct kdSphereTrace {
     m::vec3 start;

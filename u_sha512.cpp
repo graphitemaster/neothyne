@@ -1,4 +1,6 @@
 #include "u_sha512.h"
+#include "u_algorithm.h"
+
 namespace u {
 
 const uint64_t sha512::K[80] = {

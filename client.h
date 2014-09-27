@@ -1,8 +1,10 @@
 #ifndef CLIENT_HDR
 #define CLIENT_HDR
 #include "util.h"
-#include "math.h"
 #include "kdmap.h"
+
+#include "m_quat.h"
+#include "m_vec3.h"
 
 enum clientCommands {
     kCommandForward,

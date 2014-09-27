@@ -18,7 +18,6 @@ client::client() :
     m_mouseLon(0.0f),
     m_viewHeight(kClientViewHeight),
     m_origin(0.0f, 150.0f, 0.0f),
-    m_velocity(0.0f, 0.0f, 0.0f),
     m_isOnGround(false),
     m_isOnWall(false),
     m_isCrouching(false)
@@ -52,7 +51,7 @@ void client::update(const kdMap &map, float dt) {
     size_t bumpCount = 0;
     for (; bumpCount < numBumps; bumpCount++) {
         // Don't bother if we didn't move
-        if (velocity == m::vec3(0.0f, 0.0f, 0.0f))
+        if (velocity == m::vec3::origin)
             break;
 
         // Begin the movement trace
@@ -145,7 +144,7 @@ void client::update(const kdMap &map, float dt) {
                         continue;
 
                     // Stop dead for three intersections
-                    newVelocity = m::vec3(0.0f, 0.0f, 0.0f);
+                    newVelocity = m::vec3::origin;
                 }
             }
         }
@@ -186,8 +185,8 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
     m::vec3 direction;
     m::vec3 side;
     m::vec3 up;
-    m::vec3 newDirection(0.0f, 0.0f, 0.0f);
-    m::vec3 jump(0.0f, 0.0f, 0.0f);
+    m::vec3 newDirection;
+    m::vec3 jump;
     m::quat rotation = m_rotation;
     bool needSlowDown = true;
 

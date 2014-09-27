@@ -1,7 +1,9 @@
 #include <string.h>
 
 #include "kdtree.h"
+
 #include "u_file.h"
+#include "u_algorithm.h"
 
 ///! triangle
 m::vec3 kdTriangle::getNormal(const kdTree *const tree) {
@@ -137,8 +139,8 @@ m::plane kdNode::findSplittingPlane(const kdTree *tree, const u::vector<int> &tr
 
 void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
     const size_t triangleCount = tris.size();
-    m::vec3 min(0.0f, 0.0f, 0.0f);
-    m::vec3 max(0.0f, 0.0f, 0.0f);
+    m::vec3 min;
+    m::vec3 max;
     for (size_t i = 0; i < triangleCount; i++) {
         int index = tris[i];
         for (size_t j = 0; j < 3; j++) {
@@ -504,7 +506,7 @@ u::vector<unsigned char> kdTree::serialize(void) {
         emptyNode.children[0] = -1;
         emptyNode.children[1] = -1;
         emptyNode.sphereRadius = kMaxTraceDistance - 1.0f;
-        emptyNode.sphereOrigin = m::vec3(0.0f, 0.0f, 0.0f);
+        emptyNode.sphereOrigin = m::vec3::origin;
         emptyNode.plane = 0;
 
         kdBinPlane emptyPlane;

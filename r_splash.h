@@ -6,8 +6,9 @@
 #include "r_method.h"
 #include "r_quad.h"
 
+#include "m_mat4.h"
+
 #include "util.h"
-#include "math.h"
 
 namespace r {
 

@@ -9,6 +9,7 @@
 #endif
 
 #include "u_file.h"
+#include "u_traits.h"
 
 namespace u {
 

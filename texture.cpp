@@ -2,10 +2,13 @@
 #include <stdint.h>
 
 #include "texture.h"
-#include "math.h"
+
 #include "u_zlib.h"
 #include "u_file.h"
 #include "u_sha512.h"
+#include "u_algorithm.h"
+
+#include "m_const.h"
 
 #define returnResult(E) \
     do { \

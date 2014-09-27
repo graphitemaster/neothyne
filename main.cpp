@@ -80,7 +80,7 @@ int neoMain(frameTimer &timer, int argc, char **argv) {
     projection.farp = 2048.0f;
 
     pipeline.setPerspectiveProjection(projection);
-    pipeline.setWorldPosition(m::vec3(0.0f, 0.0f, 0.0f));
+    pipeline.setWorldPosition(m::vec3::origin);
 
     // create a loader thread
     loadThreadData loadData;

@@ -1,5 +1,8 @@
 #include "r_texture.h"
+
 #include "u_file.h"
+#include "u_algorithm.h"
+
 #include "engine.h"
 
 namespace r {

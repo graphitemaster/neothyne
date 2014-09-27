@@ -1,7 +1,9 @@
 #ifndef KDTREE_HDR
 #define KDTREE_HDR
-#include "math.h"
 #include "util.h"
+
+#include "m_plane.h"
+#include "m_quat.h"
 
 struct kdTree;
 
@@ -146,7 +148,6 @@ struct kdBinVertex {
 struct kdBinEnt {
     kdBinEnt() :
         id(0),
-        origin(0.0f, 0.0f, 0.0f),
         rotation(0.0f, 0.0f, 0.0f, 1.0f)
     { }
 

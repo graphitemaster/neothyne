@@ -3,9 +3,7 @@
 namespace r {
 
 rendererPipeline::rendererPipeline(void) :
-    m_scale(1.0f, 1.0f, 1.0f),
-    m_worldPosition(0.0f, 0.0f, 0.0f),
-    m_rotate(0.0f, 0.0f, 0.0f)
+    m_scale(1.0f, 1.0f, 1.0f)
 {
 }
 
