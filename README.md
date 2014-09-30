@@ -1,4 +1,4 @@
-# Neoythne
+# Neothyne
 
 Neothyne is an attempt at getting back to the roots of good old twitch shooting
 akin to that of Quake World.
