@@ -2,9 +2,19 @@
 
 #include "engine.h"
 #include "r_common.h"
+#include "c_var.h"
 
-static constexpr size_t kDefaultScreenWidth = 1024;
-static constexpr size_t kDefaultScreenHeight = 768;
+// maximum resolution is 15360x8640 (8640p) (16:9)
+// minimum resolution is 640x480 (VGA) (4:3)
+// default resolution is 1024x768 (XGA) (4:3)
+static constexpr int kDefaultScreenWidth = 1024;
+static constexpr int kDefaultScreenHeight = 768;
+
+static c::var<int> vid_vsync("vid_vsync", "vertical syncronization", -1, kSyncRefresh, kSyncNone);
+static c::var<int> vid_fullscreen("vid_fullscreen", "toggle fullscreen", 0, 1, 1);
+static c::var<int> vid_width("vid_width", "resolution width", 480, 15360, 0);
+static c::var<int> vid_height("vid_height", "resolution height", 240, 8640, 0);
+
 static constexpr size_t kRefreshRate = 60;
 
 // An accurate frame rate timer and capper
@@ -198,6 +208,12 @@ static SDL_Window *getContext(void) {
     gRefreshRate = (mode.refresh_rate == 0)
         ? kRefreshRate : mode.refresh_rate;
 
+    // Coming from a config
+    if (vid_width != 0 && vid_height != 0) {
+        gScreenWidth = static_cast<size_t>(vid_width.get());
+        gScreenHeight = static_cast<size_t>(vid_height.get());
+    }
+
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
         SDL_GL_CONTEXT_PROFILE_CORE | SDL_GL_CONTEXT_DEBUG_FLAG);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -206,12 +222,15 @@ static SDL_Window *getContext(void) {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
+    uint32_t flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+    if (vid_fullscreen)
+        flags |= SDL_WINDOW_FULLSCREEN;
     SDL_Window *window = SDL_CreateWindow("Neothyne",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         gScreenWidth,
         gScreenHeight,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
+        flags
     );
 
     if (!window || !SDL_GL_CreateContext(window)) {
@@ -297,7 +316,12 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
 ///
 extern int neoMain(frameTimer &timer, int argc, char **argv);
 int main(int argc, char **argv) {
+    c::readConfig();
+
     gScreen = getContext();
+
+    neoSetVSyncOption(static_cast<vSyncOption>(vid_vsync.get()));
+
     gl::init();
     gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 

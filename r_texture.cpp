@@ -3,7 +3,13 @@
 #include "u_file.h"
 #include "u_algorithm.h"
 
+#include "c_var.h"
+
 #include "engine.h"
+
+static c::var<int> r_texcomp("r_texcomp", "Use texture compression", 0, 1, 1);
+static c::var<int> r_texcompcache("r_texcompcache", "Cache compressed textures", 0, 1, 1);
+static c::var<int> r_aniso("r_aniso", "Anisotropic filtering", 0, 1, 1);
 
 namespace r {
 
@@ -97,11 +103,13 @@ struct queryFormat {
 static u::optional<queryFormat> getBestFormat(texture &tex) {
     textureFormat format = tex.format();
 
-    const bool s3tc = gl::has(GL_EXT_texture_compression_s3tc) && !tex.normal();
+    bool compress = false;
+    if (r_texcomp && !tex.normal())
+        compress = gl::has(GL_EXT_texture_compression_s3tc);
+    else
+        compress = false;
 
-    // Convert the textures to a format S3TC texture compression supports if
-    // the hardware supports S3TC compression
-    if (s3tc) {
+    if (compress) {
         if (format == TEX_BGRA)
             tex.convert<TEX_RGBA>();
         else if (format == TEX_BGR)
@@ -110,9 +118,9 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
 
     switch (format) {
         case TEX_RGBA:
-            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, s3tc ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : GL_RGBA);
+            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, compress ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : GL_RGBA);
         case TEX_RGB:
-            return queryFormat(GL_RGB, GL_UNSIGNED_BYTE, s3tc ? GL_COMPRESSED_RGB_S3TC_DXT1_EXT : GL_RGBA);
+            return queryFormat(GL_RGB, GL_UNSIGNED_BYTE, compress ? GL_COMPRESSED_RGB_S3TC_DXT1_EXT : GL_RGBA);
         case TEX_BGRA:
             return queryFormat(GL_BGRA, R_TEX_DATA_BGRA, GL_RGBA);
         case TEX_BGR:
@@ -164,10 +172,12 @@ bool texture2D::useDXTCache(void) {
 }
 
 bool texture2D::cacheDXT(void) {
-    if (m_texture.normal())
-        return false;
-    if (gl::has(GL_EXT_texture_compression_s3tc))
-        return writeDXTCache(m_texture, m_textureHandle);
+    if (r_texcompcache) {
+        if (m_texture.normal())
+            return false;
+        if (gl::has(GL_EXT_texture_compression_s3tc))
+            return writeDXTCache(m_texture, m_textureHandle);
+    }
     return false;
 }
 
@@ -182,7 +192,7 @@ bool texture2D::upload(void) {
     gl::GenTextures(1, &m_textureHandle);
     gl::BindTexture(GL_TEXTURE_2D, m_textureHandle);
 
-    bool useCache = useDXTCache();
+    bool useCache = r_texcomp && useDXTCache();
     if (!useCache) {
         auto query = getBestFormat(m_texture);
         if (!query)
@@ -199,7 +209,7 @@ bool texture2D::upload(void) {
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
     // Anisotropic filtering
-    if (gl::has(GL_EXT_texture_filter_anisotropic)) {
+    if (r_aniso && gl::has(GL_EXT_texture_filter_anisotropic)) {
         GLfloat largest;
         gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
         gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
@@ -261,7 +271,7 @@ bool texture3D::upload(void) {
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     // Anisotropic filtering
-    if (gl::has(GL_EXT_texture_filter_anisotropic)) {
+    if (r_aniso && gl::has(GL_EXT_texture_filter_anisotropic)) {
         GLfloat largest;
         gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
         gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);

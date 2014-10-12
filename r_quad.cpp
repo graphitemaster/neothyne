@@ -13,14 +13,14 @@ bool quad::upload(void) {
     gl::GenBuffers(2, m_buffers);
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
 
-    GLfloat vertices[] = {
+    static const GLfloat vertices[] = {
         -1.0f,-1.0f, 0.0f, 0.0f,  0.0f,
         -1.0f, 1.0f, 0.0f, 0.0f, -1.0f,
          1.0f, 1.0f, 0.0f, 1.0f, -1.0f,
          1.0f,-1.0f, 0.0f, 1.0f,  0.0f,
     };
 
-    GLubyte indices[] = { 0, 1, 2, 0, 2, 3 };
+    static const GLubyte indices[] = { 0, 1, 2, 0, 2, 3 };
 
     gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, (void *)0); // position

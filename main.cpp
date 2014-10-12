@@ -8,6 +8,8 @@
 #include "r_world.h"
 #include "r_splash.h"
 
+#include "c_var.h"
+
 #include "u_file.h"
 
 // we load assets in a different thread
@@ -60,6 +62,10 @@ static void screenShot(const u::string &file) {
     SDL_FreeSurface(temp);
 }
 
+static c::var<float> cg_fov("cg_fov", "field of view", 45.0f, 270.0f, 90.0f);
+static c::var<float> cg_nearp("cg_nearp", "near plane", 0.0f, 10.0f, 1.0f);
+static c::var<float> cg_farp("cg_farp", "far plane", 128.0f, 4096.0f, 2048.0f);
+
 int neoMain(frameTimer &timer, int argc, char **argv) {
     argc--;
     argv++;
@@ -73,11 +79,11 @@ int neoMain(frameTimer &timer, int argc, char **argv) {
 
     r::rendererPipeline pipeline;
     m::perspectiveProjection projection;
-    projection.fov = 90.0f;
+    projection.fov = cg_fov;
     projection.width = neoWidth();
     projection.height = neoHeight();
-    projection.nearp = 1.0f;
-    projection.farp = 2048.0f;
+    projection.nearp = cg_nearp;
+    projection.farp = cg_farp;
 
     pipeline.setPerspectiveProjection(projection);
     pipeline.setWorldPosition(m::vec3::origin);
@@ -86,8 +92,6 @@ int neoMain(frameTimer &timer, int argc, char **argv) {
     loadThreadData loadData;
     SDL_AtomicSet(&loadData.done, kLoadInProgress);
     SDL_CreateThread((SDL_ThreadFunction)&loadThread, nullptr, (void*)&loadData);
-
-    neoSetVSyncOption(kSyncNone);
 
     // while that thread is running render the loading screen
     timer.cap(30); // Loading screen at 30fps
@@ -128,7 +132,7 @@ int neoMain(frameTimer &timer, int argc, char **argv) {
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
                 case SDL_QUIT:
-                    SDL_Quit();
+                    running = false;
                     return 0;
                 case SDL_WINDOWEVENT:
                     switch (e.window.event) {
@@ -161,5 +165,9 @@ int neoMain(frameTimer &timer, int argc, char **argv) {
             }
         }
     }
+
+    c::writeConfig();
+
+    SDL_Quit();
     return 0;
 }

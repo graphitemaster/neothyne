@@ -8,7 +8,11 @@
 #include "u_sha512.h"
 #include "u_algorithm.h"
 
+#include "c_var.h"
+
 #include "m_const.h"
+
+static c::var<int> jpeg_chromafilter("jpeg_chromafilter", "JPEG chroma filter: 0 = bicubic, 1 = pixel repetition (fast)", 0, 1, 0);
 
 #define returnResult(E) \
     do { \
@@ -98,7 +102,7 @@ struct jpeg : decoder {
         kPixelRepetition
     };
 
-    jpeg(const u::vector<unsigned char> &data, chromaFilter filter = kBicubic) :
+    jpeg(const u::vector<unsigned char> &data) :
         m_rstinterval(0),
         m_size(0),
         m_length(0),
@@ -116,7 +120,7 @@ struct jpeg : decoder {
         memset(m_qtab, 0, sizeof(m_qtab));
         memset(m_block, 0, sizeof(m_block));
 
-        decode(data, filter);
+        decode(data, static_cast<chromaFilter>(jpeg_chromafilter.get()));
     }
 
     u::vector<unsigned char> data(void) {

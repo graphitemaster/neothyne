@@ -42,6 +42,7 @@ ENGINE_SOURCES = \
 	kdmap.cpp \
 	kdtree.cpp \
 	texture.cpp \
+	c_var.cpp \
 	u_file.cpp \
 	u_zlib.cpp \
 	u_sha512.cpp \

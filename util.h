@@ -33,6 +33,29 @@ inline int sscanf(const string &thing, const char *fmt, ...) {
     return value;
 }
 
+inline u::vector<u::string> split(const char *str, char ch = ' ') {
+    u::vector<u::string> result;
+    do {
+        const char *begin = str;
+        while (*str != ch && *str)
+            str++;
+        result.push_back(u::string(begin, str));
+    } while (*str++);
+    return result;
+}
+
+inline u::vector<u::string> split(const u::string &str, char ch = ' ') {
+    return u::split(str.c_str(), ch);
+}
+
+inline int atoi(const u::string &str) {
+    return ::atoi(str.c_str());
+}
+
+inline float atof(const u::string &str) {
+    return ::atof(str.c_str());
+}
+
 inline u::string format(const string fmt, ...) {
     int n = int(fmt.size()) * 2;
     int f = 0;

@@ -49,7 +49,7 @@ bool skybox::upload(void) {
     if (!m_method.init())
         return false;
 
-    GLfloat vertices[] = {
+    static const GLfloat vertices[] = {
         -1.0, -1.0,  1.0,
         1.0, -1.0,  1.0,
         -1.0,  1.0,  1.0,
@@ -60,7 +60,7 @@ bool skybox::upload(void) {
         1.0,  1.0, -1.0,
     };
 
-    GLubyte indices[] = { 0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1 };
+    static const GLubyte indices[] = { 0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1 };
 
     // create vao to encapsulate state
     gl::GenVertexArrays(1, &m_vao);
