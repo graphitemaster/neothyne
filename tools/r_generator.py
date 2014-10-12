@@ -62,6 +62,15 @@ def readFunctions(functionFile):
             functions.append(f)
     return functions
 
+# Read a list of extensions from an extension file and return a list of strings
+# of such extensions
+def readExtensions(extensionFile):
+    extensions = []
+    with open(extensionFile) as data:
+        for line in data.readlines():
+            extensions.append(line.strip())
+    return extensions
+
 # Prints the type and name of a GL function
 def printTypeName(stream, function, name=True):
     if name:
@@ -116,7 +125,7 @@ def printCheck(stream, function):
     else:
         stream.write('        GL_CHECK();\n')
 
-def genHeader(functionList, headerFile):
+def genHeader(functionList, extensionList, headerFile):
     with open(headerFile, 'w') as header:
         # Begin the header
         header.write(textwrap.dedent("""\
@@ -135,11 +144,18 @@ def genHeader(functionList, headerFile):
         #endif
 
         """) % (__file__))
+        # Write out the extension macros
+
+        largestExtension = max(len(x) for x in extensionList)
+        for i, e in enumerate(extensionList):
+            fill = largestExtension - len(e)
+            header.write('#define %s%s %d\n' % (e, ''.rjust(fill), i))
+        header.write('\n')
         # Begin the namespace
         header.write('namespace gl {\n')
         # Generate the function prototypes
         header.write('    void init(void);\n')
-        header.write('    bool has(const char *ext);\n');
+        header.write('    bool has(size_t ext);\n');
         for function in functionList:
             header.write('    ')
             printPrototype(header, function, True, True)
@@ -159,7 +175,7 @@ def genHeader(functionList, headerFile):
         # Finish the header
         header.write('#endif\n')
 
-def genSource(functionList, sourceFile):
+def genSource(functionList, extensionList, sourceFile):
     with open(sourceFile, 'w') as source:
         # Begin the source
         source.write(textwrap.dedent("""\
@@ -301,7 +317,12 @@ def genSource(functionList, sourceFile):
         source.write('#endif\n')
         # Begin the namespace
         source.write('\nnamespace gl {\n')
-        source.write('    static u::set<u::string> extensions;\n\n');
+        # Write out the extension area
+        source.write('    static u::set<size_t> extensionSet;\n');
+        source.write('    static const char *extensionList[] = {\n');
+        for i, e in enumerate(extensionList):
+            source.write('        "%s"%s\n' % (e, ',' if i != len(extensionList) - 1 else ''))
+        source.write('    };\n\n')
         # Generate the init function
         source.write('    void init(void) {\n')
         for f in functionList:
@@ -309,12 +330,16 @@ def genSource(functionList, sourceFile):
             source.write('        gl%s_%s = (PFNGL%sPROC)SDL_GL_GetProcAddress("gl%s");\n'
                 % (f.name, ''.rjust(fill), f.name.upper(), f.name))
         source.write('\n        GLint count = 0;\n');
-        source.write('        glGetIntegerv_(GL_NUM_EXTENSIONS, &count);\n');
-        source.write('        for (GLint i = 0; i < count; i++)\n');
-        source.write('            extensions.emplace((const char *)glGetStringi_(GL_EXTENSIONS, i));\n');
-        source.write('    }\n\n');
-        source.write('    bool has(const char *ext) {\n');
-        source.write('         return extensions.find(ext) != extensions.end();\n');
+        source.write('        glGetIntegerv_(GL_NUM_EXTENSIONS, &count);\n')
+        source.write('        for (GLint i = 0; i < count; i++) {\n')
+        source.write('            const char *extension = (const char *)glGetStringi_(GL_EXTENSIONS, i);\n')
+        source.write('            for (size_t i = 0; i < sizeof(extensionList)/sizeof(*extensionList); i++)\n')
+        source.write('                if (!strcmp(extensionList[i], extension))\n')
+        source.write('                    extensionSet.insert(i);\n')
+        source.write('        }\n')
+        source.write('    }\n\n')
+        source.write('    bool has(size_t ext) {\n')
+        source.write('         return extensionSet.find(ext) != extensionSet.end();\n')
         source.write('    }\n');
         # Generate the GL function wrappers
         for f in functionList:
@@ -341,7 +366,8 @@ def genSource(functionList, sourceFile):
 def usage(app):
     sys.stdout.write(textwrap.dedent("""\
     usage: %s -g <list> -o <output>
-        -g      - OpenGL list
+        -g      - OpenGL function list
+        -e      - OpenGL extension list
         -o      - output (suffixes with .h and .cpp)
         -h      - help
     """) % (app))
@@ -349,13 +375,14 @@ def usage(app):
 
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv[1:], "g:o:h:")
+        opts, args = getopt.getopt(argv[1:], "g:o:e:h:")
     except getopt.GetoptError:
         usage(argv[-1])
         sys.exit()
 
     protos = ''
     output = ''
+    extens = ''
     for opt, arg in opts:
         if opt == '-h':
             usage(argv[0])
@@ -363,6 +390,8 @@ def main(argv):
             protos = arg
         elif opt == '-o':
             output = arg
+        elif opt == '-e':
+            extens = arg
         else:
             usage(argv[0])
 
@@ -370,9 +399,10 @@ def main(argv):
         usage(argv[0])
 
     functionList = readFunctions(protos)
+    extensionList = readExtensions(extens)
 
-    genHeader(functionList, '%s.h' % (output))
-    genSource(functionList, '%s.cpp' % (output))
+    genHeader(functionList, extensionList, '%s.h' % (output))
+    genSource(functionList, extensionList, '%s.cpp' % (output))
 
 if __name__ == "__main__":
     main(sys.argv)

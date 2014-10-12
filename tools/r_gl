@@ -59,6 +59,7 @@ void: Viewport(GLint: x, GLint: y, GLsizei: width, GLsizei: height);
 void: GetIntegerv(GLenum: pname, GLint*: data);
 const GLubyte*: GetString(GLenum: name);
 const GLubyte*: GetStringi(GLenum: name, GLuint: index);
+void: GetFloatv(GLenum: pname, GLfloat*: params);
 GLenum: GetError(void);
 void: GetTexLevelParameteriv(GLenum: target, GLint: level, GLenum: pname, GLint*: params);
 void: GetCompressedTexImage(GLenum: target, GLint: lod, GLvoid*: img);

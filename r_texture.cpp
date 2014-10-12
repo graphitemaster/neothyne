@@ -97,7 +97,7 @@ struct queryFormat {
 static u::optional<queryFormat> getBestFormat(texture &tex) {
     textureFormat format = tex.format();
 
-    const bool s3tc = gl::has("GL_EXT_texture_compression_s3tc") && !tex.normal();
+    const bool s3tc = gl::has(GL_EXT_texture_compression_s3tc) && !tex.normal();
 
     // Convert the textures to a format S3TC texture compression supports if
     // the hardware supports S3TC compression
@@ -144,7 +144,7 @@ texture2D::~texture2D(void) {
 bool texture2D::useDXTCache(void) {
     if (m_texture.normal())
         return false;
-    if (!gl::has("GL_EXT_texture_compression_s3tc"))
+    if (!gl::has(GL_EXT_texture_compression_s3tc))
         return false;
     if (!readDXTCache(m_texture))
         return false;
@@ -166,7 +166,7 @@ bool texture2D::useDXTCache(void) {
 bool texture2D::cacheDXT(void) {
     if (m_texture.normal())
         return false;
-    if (gl::has("GL_EXT_texture_compression_s3tc"))
+    if (gl::has(GL_EXT_texture_compression_s3tc))
         return writeDXTCache(m_texture, m_textureHandle);
     return false;
 }
@@ -197,6 +197,13 @@ bool texture2D::upload(void) {
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+    // Anisotropic filtering
+    if (gl::has(GL_EXT_texture_filter_anisotropic)) {
+        GLfloat largest;
+        gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
+        gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
+    }
 
     if (!useCache)
         cacheDXT();
@@ -252,6 +259,13 @@ bool texture3D::upload(void) {
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    // Anisotropic filtering
+    if (gl::has(GL_EXT_texture_filter_anisotropic)) {
+        GLfloat largest;
+        gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
+        gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
+    }
 
     // find the largest texture in the cubemap and scale all others to it
     size_t mw = 0;
