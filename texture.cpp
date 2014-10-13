@@ -12,7 +12,7 @@
 
 #include "m_const.h"
 
-static c::var<int> jpeg_chromafilter("jpeg_chromafilter", "JPEG chroma filter: 0 = bicubic, 1 = pixel repetition (fast)", 0, 1, 0);
+static c::var<int> tex_jpeg_chroma("tex_jpeg_chroma", "chroma filtering method", 0, 1, 0);
 
 #define returnResult(E) \
     do { \
@@ -120,7 +120,7 @@ struct jpeg : decoder {
         memset(m_qtab, 0, sizeof(m_qtab));
         memset(m_block, 0, sizeof(m_block));
 
-        decode(data, static_cast<chromaFilter>(jpeg_chromafilter.get()));
+        decode(data, static_cast<chromaFilter>(tex_jpeg_chroma.get()));
     }
 
     u::vector<unsigned char> data(void) {
