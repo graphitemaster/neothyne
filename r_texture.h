@@ -20,6 +20,7 @@ struct texture2D {
 
 private:
     bool useCache(void);
+    void applyFilter(void);
     bool m_uploaded;
     GLuint m_textureHandle;
     texture m_texture;
@@ -36,6 +37,7 @@ struct texture3D {
     void resize(size_t width, size_t height);
 
 private:
+    void applyFilter(void);
     bool m_uploaded;
     GLuint m_textureHandle;
     texture m_textures[6];

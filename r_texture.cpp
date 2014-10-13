@@ -7,9 +7,12 @@
 
 #include "engine.h"
 
-static c::var<int> r_texcomp("r_texcomp", "Use texture compression", 0, 1, 1);
-static c::var<int> r_texcompcache("r_texcompcache", "Cache compressed textures", 0, 1, 1);
-static c::var<int> r_aniso("r_aniso", "Anisotropic filtering", 0, 1, 1);
+static c::var<int> r_texcomp("r_texcomp", "texture compression", 0, 1, 1);
+static c::var<int> r_texcompcache("r_texcompcache", "cache compressed textures", 0, 1, 1);
+static c::var<int> r_aniso("r_aniso", "anisotropic filtering", 0, 1, 1);
+static c::var<int> r_bilinear("r_bilinear", "bilinear filtering", 0, 1, 1);
+static c::var<int> r_trilinear("r_trilinear", "trilinear filtering", 0, 1, 1);
+static c::var<int> r_mipmaps("r_mipmaps", "mipmaps", 0, 1, 1);
 
 namespace r {
 
@@ -230,6 +233,29 @@ bool texture2D::useCache(void) {
     return true;
 }
 
+void texture2D::applyFilter(void) {
+    if (r_bilinear) {
+        GLenum min = r_mipmaps
+            ? (r_trilinear ? GL_LINEAR_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR)
+            : GL_LINEAR;
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min);
+    } else {
+        GLenum min = r_mipmaps
+            ? (r_trilinear ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST_MIPMAP_LINEAR)
+            : GL_NEAREST;
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min);
+    }
+
+    // Anisotropic filtering
+    if (r_aniso && gl::has(EXT_texture_filter_anisotropic)) {
+        GLfloat largest;
+        gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
+        gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
+    }
+}
+
 bool texture2D::cache(GLuint internal) {
     return writeCache(m_texture, internal, m_textureHandle);
 }
@@ -256,18 +282,11 @@ bool texture2D::upload(void) {
             m_texture.height(), 0, format.format, format.data, m_texture.data());
     }
 
-    gl::GenerateMipmap(GL_TEXTURE_2D);
+    if (r_mipmaps)
+        gl::GenerateMipmap(GL_TEXTURE_2D);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-    // Anisotropic filtering
-    if (r_aniso && gl::has(EXT_texture_filter_anisotropic)) {
-        GLfloat largest;
-        gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
-        gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
-    }
+    applyFilter();
 
     if (needsCache)
         cache(format.internal);
@@ -298,6 +317,18 @@ texture3D::~texture3D(void) {
         gl::DeleteTextures(1, &m_textureHandle);
 }
 
+void texture3D::applyFilter(void) {
+    gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    // Anisotropic filtering
+    if (r_aniso && gl::has(EXT_texture_filter_anisotropic)) {
+        GLfloat largest;
+        gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
+        gl::TexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
+    }
+}
+
 bool texture3D::load(const u::string &ft, const u::string &bk, const u::string &up,
                      const u::string &dn, const u::string &rt, const u::string &lf)
 {
@@ -316,19 +347,11 @@ bool texture3D::upload(void) {
 
     gl::GenTextures(1, &m_textureHandle);
     gl::BindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
-
-    gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-    // Anisotropic filtering
-    if (r_aniso && gl::has(EXT_texture_filter_anisotropic)) {
-        GLfloat largest;
-        gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
-        gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
-    }
+    applyFilter();
 
     // find the largest texture in the cubemap and scale all others to it
     size_t mw = 0;

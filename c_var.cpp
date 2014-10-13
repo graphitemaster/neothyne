@@ -54,8 +54,10 @@ void varChange(const u::string &name, const u::string &value) {
     }
 }
 
-void writeConfig(void) {
+bool writeConfig(void) {
     u::file file = u::fopen(neoPath() + "init.cfg", "w");
+    if (!file)
+        return false;
     auto writeLine = [](FILE *fp, const u::string &name, const varReference &ref) {
         if (ref.type == VAR_INT) {
             typedef var<int> type;
@@ -69,10 +71,13 @@ void writeConfig(void) {
     };
     for (auto &it : variables())
         writeLine(file, it.first, it.second);
+    return true;
 }
 
-void readConfig(void) {
+bool readConfig(void) {
     u::file file = u::fopen(neoPath() + "init.cfg", "r");
+    if (!file)
+        return false;
     while (auto getline = u::getline(file)) {
         u::string& line = *getline;
         u::vector<u::string> kv = u::split(line);
@@ -82,6 +87,7 @@ void readConfig(void) {
         const u::string &value = kv[1];
         varChange(key, value);
     }
+    return true;
 }
 
 }

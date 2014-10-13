@@ -50,8 +50,8 @@ private:
     T m_current;
 };
 
-void writeConfig(void);
-void readConfig(void);
+bool writeConfig(void);
+bool readConfig(void);
 
 }
 #endif
