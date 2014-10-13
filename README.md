@@ -39,7 +39,7 @@ below:
   * Supports standard centered chroma samples as well as EXIF cosited positioning
   * Supports restart markers
   * Supports the following chrominance upsampling filters
-    * Bicubic (looks nicer than bicubic)
+    * Bicubic (looks nicer than bilinear)
     * Fast pixel repetition (faster loads)
 
 * PNG (fully supported)
@@ -55,9 +55,9 @@ below:
   * Supports RLE compressed color (paletted)
   * Supports RLE compressed (BGRA)
 
-In addition to those supported texture formats. Neothyne also builds DXT1 and DXT5
-compressed textures at runtime and caches them to disk. It will prefer the cached
-textures if the hardware supports S3TC texture compression.
+In addition to those supported texture formats. Neothyne also builds BPTC, DXT1 and
+DXT5 compressed textures at runtime and caches them to disk. It will prefer the cached
+textures if the hardware supports BPTC or S3TC texture compression.
 
 ## Organization
 The source code is organized into namespaces and a file name convention.
