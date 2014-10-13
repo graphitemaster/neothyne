@@ -5,7 +5,7 @@ CXXFLAGS = \
 	-Wextra \
 	-ffast-math \
 	-fno-exceptions \
-	-O3
+	-O1
 
 ENGINE_CXXFLAGS = \
 	$(CXXFLAGS) \
@@ -59,7 +59,7 @@ $(GAME_BIN): $(GAME_OBJECTS)
 	$(CXX) $(ENGINE_LDFLAGS) $(GAME_OBJECTS) -o $@
 
 install: $(GAME_BIN)
-	strip $(GAME_BIN)
+	#strip $(GAME_BIN)
 	mv $(GAME_BIN) $(GAME_DIR)/$(GAME_BIN)
 
 uninstall:

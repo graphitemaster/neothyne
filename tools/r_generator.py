@@ -321,7 +321,7 @@ def genSource(functionList, extensionList, sourceFile):
         source.write('    static u::set<size_t> extensionSet;\n');
         source.write('    static const char *extensionList[] = {\n');
         for i, e in enumerate(extensionList):
-            source.write('        "%s"%s\n' % (e, ',' if i != len(extensionList) - 1 else ''))
+            source.write('        "GL_%s"%s\n' % (e, ',' if i != len(extensionList) - 1 else ''))
         source.write('    };\n\n')
         # Generate the init function
         source.write('    void init(void) {\n')

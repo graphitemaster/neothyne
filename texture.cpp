@@ -1728,6 +1728,7 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name) {
     m_height = decode.height();
     m_pitch = m_width * decode.bpp();
     m_data = u::move(decode.data());
+    m_disk = true;
 
     // Hash the contents as well to generate a hash string
     u::sha512 hash(&m_data[0], m_data.size());
@@ -1839,6 +1840,10 @@ const u::string &texture::hashString(void) const {
 
 bool texture::normal(void) const {
     return m_normal;
+}
+
+bool texture::disk(void) const {
+    return m_disk;
 }
 
 size_t texture::width(void) const {

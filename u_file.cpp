@@ -17,6 +17,10 @@ bool exists(const u::string &file) {
     return u::fopen(file, "r").get();
 }
 
+bool remove(const u::string &file) {
+    return remove(file.c_str()) == 0;
+}
+
 bool mkdir(const u::string &dir) {
 #ifdef _WIN32
     return ::_mkdir(dir.c_str()) == 0;

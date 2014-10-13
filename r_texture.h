@@ -14,12 +14,12 @@ struct texture2D {
 
     bool load(const u::string &file);
     bool upload(void);
-    bool cacheDXT(void);
+    bool cache(GLuint internal);
     void bind(GLenum unit);
     void resize(size_t width, size_t height);
 
 private:
-    bool useDXTCache(void);
+    bool useCache(void);
     bool m_uploaded;
     GLuint m_textureHandle;
     texture m_texture;

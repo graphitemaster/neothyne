@@ -12,8 +12,9 @@
 #   define GL_INFOP
 #endif
 
-#define GL_EXT_texture_compression_s3tc   0
-#define GL_EXT_texture_filter_anisotropic 1
+#define EXT_texture_compression_s3tc   0
+#define EXT_texture_filter_anisotropic 1
+#define ARB_texture_compression_bptc   2
 
 namespace gl {
     void init(void);

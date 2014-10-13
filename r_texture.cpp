@@ -23,17 +23,27 @@ namespace r {
 #else
 #   define R_TEX_DATA_BGRA GL_UNSIGNED_BYTE
 #endif
+#define R_TEX_DATA_RGB       GL_UNSIGNED_BYTE
+#define R_TEX_DATA_BGR       GL_UNSIGNED_BYTE
+#define R_TEX_DATA_LUMINANCE GL_UNSIGNED_BYTE
 
-struct textureDXTCacheHeader {
+static const unsigned char kTextureCacheVersion = 0xFA;
+
+struct textureCacheHeader {
+    unsigned char version;
     size_t width;
     size_t height;
-    // Original format (RGB or RGBA) == (DXT1 or DXT5)
+    GLuint internal;
     textureFormat format;
 };
 
-static bool readDXTCache(texture &tex) {
+static bool readCache(texture &tex, GLuint &internal) {
+    if (!r_texcomp || !tex.disk())
+        return false;
+
     // Do we even have it in cache?
-    const u::string file = neoPath() + "cache/" + tex.hashString();
+    const u::string cacheString = "cache/" + tex.hashString();
+    const u::string file = neoPath() + cacheString;
     if (!u::exists(file))
         return false;
 
@@ -44,28 +54,64 @@ static bool readDXTCache(texture &tex) {
 
     // Parse header
     auto vec = *load;
-    textureDXTCacheHeader head;
+    textureCacheHeader head;
     memcpy(&head, &vec[0], sizeof(head));
+    if (head.version != kTextureCacheVersion) {
+        u::remove(file);
+        return false;
+    }
+
+    // Make sure we even support the format before using it
+    switch (head.internal) {
+        case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
+        case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
+            if (!gl::has(ARB_texture_compression_bptc))
+                return false;
+        case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+        case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+            if (!gl::has(EXT_texture_compression_s3tc))
+                return false;
+    }
 
     const unsigned char *data = &vec[0] + sizeof(head);
     const size_t length = vec.size() - sizeof(head);
 
+    internal = head.internal;
+
     // Now swap!
     tex.unload();
     tex.from(data, length, head.width, head.height, false, head.format);
+    printf("[cache] => read %.50s...\n", cacheString.c_str());
     return true;
 }
 
-static bool writeDXTCache(const texture &tex, GLuint handle) {
+static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
+    if (!r_texcompcache)
+        return false;
+
+    // Only cache compressed textures
+    switch (internal) {
+        case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+        case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+        case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
+        case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
+            break;
+        default:
+            return false;
+    }
+
     // Don't bother caching if we already have it
-    const u::string file = neoPath() + "cache/" + tex.hashString();
+    const u::string cacheString =  "cache/" + tex.hashString();
+    const u::string file = neoPath() + cacheString;
     if (u::exists(file))
         return false;
 
     // Build the header
-    textureDXTCacheHeader head;
+    textureCacheHeader head;
+    head.version = kTextureCacheVersion;
     head.width = tex.width();
     head.height = tex.height();
+    head.internal = internal;
     head.format = tex.format();
 
     // Query the compressed texture size
@@ -83,10 +129,17 @@ static bool writeDXTCache(const texture &tex, GLuint handle) {
     gl::GetCompressedTexImage(GL_TEXTURE_2D, 0, &data[0] + sizeof(head));
 
     // Write it to disk!
+    printf("[cache] => wrote %.50s...\n", cacheString.c_str());
     return u::write(data, file);
 }
 
 struct queryFormat {
+    constexpr queryFormat() :
+        format(0),
+        data(0),
+        internal(0)
+    { }
+
     constexpr queryFormat(GLenum format, GLenum data, GLenum internal) :
         format(format),
         data(data),
@@ -103,30 +156,49 @@ struct queryFormat {
 static u::optional<queryFormat> getBestFormat(texture &tex) {
     textureFormat format = tex.format();
 
+    // Texture compression?
     bool compress = false;
-    if (r_texcomp && !tex.normal())
-        compress = gl::has(GL_EXT_texture_compression_s3tc);
-    else
-        compress = false;
-
-    if (compress) {
-        if (format == TEX_BGRA)
-            tex.convert<TEX_RGBA>();
-        else if (format == TEX_BGR)
-            tex.convert<TEX_RGB>();
+    if (r_texcomp) {
+        const bool bptc = gl::has(ARB_texture_compression_bptc);
+        const bool s3tc = gl::has(EXT_texture_compression_s3tc);
+        // Can compress normals with bptc but not s3tc
+        if (bptc)
+            compress = true;
+        else if (s3tc && !tex.normal())
+            compress = true;
+        // Deal with conversion from BGR[A] space to RGB[A] space for compression
+        // While falling through to the correct internal format for the compression
+        if (compress) {
+            switch (format) {
+                case TEX_BGRA:
+                    tex.convert<TEX_RGBA>();
+                case TEX_RGBA:
+                    return queryFormat(GL_RGBA, R_TEX_DATA_RGBA,
+                        bptc ? GL_COMPRESSED_RGBA_BPTC_UNORM_ARB : GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
+                case TEX_BGR:
+                    tex.convert<TEX_RGB>();
+                case TEX_RGB:
+                    return queryFormat(GL_RGB, R_TEX_DATA_RGB,
+                        bptc ? GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB : GL_COMPRESSED_RGB_S3TC_DXT1_EXT);
+                default:
+                    break;
+            }
+        }
     }
 
+    // If we made it here then no compression is possible so use a raw internal
+    // format.
     switch (format) {
         case TEX_RGBA:
-            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, compress ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : GL_RGBA);
+            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA,      GL_RGBA);
         case TEX_RGB:
-            return queryFormat(GL_RGB, GL_UNSIGNED_BYTE, compress ? GL_COMPRESSED_RGB_S3TC_DXT1_EXT : GL_RGBA);
+            return queryFormat(GL_RGB,  R_TEX_DATA_RGB,       GL_RGBA);
         case TEX_BGRA:
-            return queryFormat(GL_BGRA, R_TEX_DATA_BGRA, GL_RGBA);
+            return queryFormat(GL_BGRA, R_TEX_DATA_BGRA,      GL_RGBA);
         case TEX_BGR:
-            return queryFormat(GL_BGR, GL_UNSIGNED_BYTE, GL_RGBA);
+            return queryFormat(GL_BGR,  R_TEX_DATA_BGR,       GL_RGBA);
         case TEX_LUMINANCE:
-            return queryFormat(GL_RED, GL_UNSIGNED_BYTE, GL_RED);
+            return queryFormat(GL_RED,  R_TEX_DATA_LUMINANCE, GL_RED);
     }
     return u::none;
 }
@@ -149,36 +221,17 @@ texture2D::~texture2D(void) {
         gl::DeleteTextures(1, &m_textureHandle);
 }
 
-bool texture2D::useDXTCache(void) {
-    if (m_texture.normal())
+bool texture2D::useCache(void) {
+    GLuint internalFormat = 0;
+    if (!readCache(m_texture, internalFormat))
         return false;
-    if (!gl::has(GL_EXT_texture_compression_s3tc))
-        return false;
-    if (!readDXTCache(m_texture))
-        return false;
-    switch (m_texture.format()) {
-        case TEX_RGB:
-            gl::CompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
-                m_texture.width(), m_texture.height(), 0, m_texture.size(), m_texture.data());
-            break;
-        case TEX_RGBA:
-            gl::CompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
-                m_texture.width(), m_texture.height(), 0, m_texture.size(), m_texture.data());
-            break;
-        default:
-            neoFatal("malformatted DXT cache");
-    }
+    gl::CompressedTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
+        m_texture.width(), m_texture.height(), 0, m_texture.size(), m_texture.data());
     return true;
 }
 
-bool texture2D::cacheDXT(void) {
-    if (r_texcompcache) {
-        if (m_texture.normal())
-            return false;
-        if (gl::has(GL_EXT_texture_compression_s3tc))
-            return writeDXTCache(m_texture, m_textureHandle);
-    }
-    return false;
+bool texture2D::cache(GLuint internal) {
+    return writeCache(m_texture, internal, m_textureHandle);
 }
 
 bool texture2D::load(const u::string &file) {
@@ -192,12 +245,13 @@ bool texture2D::upload(void) {
     gl::GenTextures(1, &m_textureHandle);
     gl::BindTexture(GL_TEXTURE_2D, m_textureHandle);
 
-    bool useCache = r_texcomp && useDXTCache();
-    if (!useCache) {
+    queryFormat format;
+    bool needsCache = !useCache();
+    if (needsCache) {
         auto query = getBestFormat(m_texture);
         if (!query)
             return false;
-        const auto format = *query;
+        format = *query;
         gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
             m_texture.height(), 0, format.format, format.data, m_texture.data());
     }
@@ -209,17 +263,16 @@ bool texture2D::upload(void) {
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
     // Anisotropic filtering
-    if (r_aniso && gl::has(GL_EXT_texture_filter_anisotropic)) {
+    if (r_aniso && gl::has(EXT_texture_filter_anisotropic)) {
         GLfloat largest;
         gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
         gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
     }
 
-    if (!useCache)
-        cacheDXT();
+    if (needsCache)
+        cache(format.internal);
 
     m_texture.unload();
-
     return m_uploaded = true;
 }
 
@@ -271,7 +324,7 @@ bool texture3D::upload(void) {
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
     // Anisotropic filtering
-    if (r_aniso && gl::has(GL_EXT_texture_filter_anisotropic)) {
+    if (r_aniso && gl::has(EXT_texture_filter_anisotropic)) {
         GLfloat largest;
         gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
         gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);

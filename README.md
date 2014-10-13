@@ -69,6 +69,7 @@ which is also named `u`. The following namespaces and file prefixes exist:
 | u_     | u         | utility     |
 | m_     | m         | math        |
 | r_     | r         | renderer    |
+| c_     | c         | console     |
 
 ## Goals
 

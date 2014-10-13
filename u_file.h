@@ -34,6 +34,8 @@ private:
 
 // check if a file exists
 bool exists(const u::string &file);
+// remove a file
+bool remove(const u::string &file);
 // open a file
 u::file fopen(const u::string& infile, const char *type);
 // read file line by line
