@@ -1,5 +1,9 @@
 #include "client.h"
 #include "engine.h"
+#include "c_var.h"
+
+static c::var<float> cl_mouse_sens("cl_mouse_sens", "mouse sensitivity", 0.01f, 1.0f, 0.1f);
+static c::var<int> cl_mouse_invert("cl_mouse_invert", "invert mouse", 0, 1, 0);
 
 static constexpr float kClientMaxVelocity = 120.0f;
 static constexpr m::vec3 kClientGravity(0.0f, -98.0f, 0.0f);
@@ -259,18 +263,16 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
 }
 
 void client::inputMouseMove(void) {
-    static const float kSensitivity = 0.50f / 6.0f;
-    static const bool kInvert = true;
-    const float invert = kInvert ? -1.0f : 1.0f;
+    float invert = cl_mouse_invert ? 1.0f : -1.0f;
 
     int deltaX = 0;
     int deltaY = 0;
     neoMouseDelta(&deltaX, &deltaY);
 
-    m_mouseLat -= (float)deltaY * kSensitivity * invert;
+    m_mouseLat -= (float)deltaY * cl_mouse_sens * invert;
     m_mouseLat = m::clamp(m_mouseLat, -89.0f, 89.0f);
 
-    m_mouseLon -= (float)deltaX * kSensitivity * invert;
+    m_mouseLon -= (float)deltaX * cl_mouse_sens * invert;
     m_mouseLon = m::angleMod(m_mouseLon);
 
     m::quat qlat(m::vec3::xAxis, m::toRadian(m_mouseLat));

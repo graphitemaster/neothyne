@@ -19,14 +19,23 @@ void varRegister(const char *name, const char *desc, void *what, varType type);
 
 template <typename T>
 struct var {
-    var(const char *name, const char *desc, const T &min, const T &max, const T &def) :
+    var(const char *name, const char *desc, const T &min, const T &max,
+        const T &def) :
         m_min(min),
         m_max(max),
         m_default(def),
-        m_current(def)
+        m_current(def),
+        m_callback(nullptr)
     {
         void *self = reinterpret_cast<void *>(this);
         varRegister(name, desc, self, varTypeTraits<T>::type);
+    }
+
+    var(const char *name, const char *desc, const T &min, const T &max,
+        const T &def, void (*callback)(T value)) :
+        var(name, desc, min, max, def)
+    {
+        m_callback = callback;
     }
 
     operator T&(void) {
@@ -43,11 +52,17 @@ struct var {
         m_current = value;
     }
 
+    void operator()(T value) {
+        if (m_callback)
+            m_callback(value);
+    }
+
 private:
     const T m_min;
     const T m_max;
     const T m_default;
     T m_current;
+    void (*m_callback)(T value);
 };
 
 bool writeConfig(void);

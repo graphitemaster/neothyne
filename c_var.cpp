@@ -31,27 +31,26 @@ void varRegister(const char *name, const char *desc, void *self, varType type) {
 }
 
 template <typename T>
-static inline void varSet(const u::string &name, const T &value) {
+static inline void varSet(const u::string &name, const T &value, bool callback) {
     if (variables().find(name) == variables().end())
         return;
     auto &ref = variables()[name];
     if (ref.type != varTypeTraits<T>::type)
         return;
-
-    typedef var<T> type;
-    type *var = reinterpret_cast<type*>(ref.self);
-    var->set(value);
+    auto &val = *reinterpret_cast<var<T>*>(ref.self);
+    val.set(value);
+    if (callback)
+        val(value);
 }
 
-void varChange(const u::string &name, const u::string &value) {
+void varChange(const u::string &name, const u::string &value, bool callback = false) {
     if (variables().find(name) == variables().end())
         return;
     auto &ref = variables()[name];
-    if (ref.type == VAR_INT) {
-        varSet<int>(name, u::atoi(value));
-    } else if (ref.type == VAR_FLOAT) {
-        varSet<float>(name, u::atof(value));
-    }
+    if (ref.type == VAR_INT)
+        varSet<int>(name, u::atoi(value), callback);
+    else if (ref.type == VAR_FLOAT)
+        varSet<float>(name, u::atof(value), callback);
 }
 
 bool writeConfig(void) {
@@ -60,12 +59,10 @@ bool writeConfig(void) {
         return false;
     auto writeLine = [](FILE *fp, const u::string &name, const varReference &ref) {
         if (ref.type == VAR_INT) {
-            typedef var<int> type;
-            type &v = *reinterpret_cast<type*>(ref.self);
+            auto &v = *reinterpret_cast<var<int>*>(ref.self);
             fprintf(fp, "%s %d\n", name.c_str(), v.get());
         } else if (ref.type == VAR_FLOAT) {
-            typedef var<float> type;
-            type &v = *reinterpret_cast<type*>(ref.self);
+            auto &v = *reinterpret_cast<var<float>*>(ref.self);
             fprintf(fp, "%s %.2f\n", name.c_str(), v.get());
         }
     };

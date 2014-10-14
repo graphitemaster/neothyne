@@ -1,6 +1,7 @@
 #ifndef ENGINE_HDR
 #define ENGINE_HDR
 #include <SDL2/SDL.h>
+
 #include <stdint.h>
 #include "util.h"
 

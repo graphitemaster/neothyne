@@ -1,21 +1,31 @@
 #include <stdarg.h>
 
+#include <SDL2/SDL_stdinc.h>
+
 #include "engine.h"
 #include "r_common.h"
 #include "c_var.h"
+
+// Engine globals
+static u::map<int, int> gKeyMap;
+static size_t gScreenWidth = 0;
+static size_t gScreenHeight = 0;
+static size_t gRefreshRate = 0;
+static SDL_Window *gScreen = nullptr;
+static frameTimer gTimer;
 
 // maximum resolution is 15360x8640 (8640p) (16:9)
 // minimum resolution is 640x480 (VGA) (4:3)
 // default resolution is 1024x768 (XGA) (4:3)
 static constexpr int kDefaultScreenWidth = 1024;
 static constexpr int kDefaultScreenHeight = 768;
+static constexpr size_t kRefreshRate = 60;
 
 static c::var<int> vid_vsync("vid_vsync", "vertical syncronization", -1, kSyncRefresh, kSyncNone);
 static c::var<int> vid_fullscreen("vid_fullscreen", "toggle fullscreen", 0, 1, 1);
 static c::var<int> vid_width("vid_width", "resolution width", 480, 15360, 0);
 static c::var<int> vid_height("vid_height", "resolution height", 240, 8640, 0);
-
-static constexpr size_t kRefreshRate = 60;
+static c::var<int> vid_maxfps("vid_maxfps", "cap framerate", 24, 3600, 0);
 
 // An accurate frame rate timer and capper
 frameTimer::frameTimer() :
@@ -97,14 +107,6 @@ float frameTimer::delta(void) const {
 uint32_t frameTimer::ticks(void) const {
     return m_currentTicks;
 }
-
-// Engine globals
-static u::map<int, int> gKeyMap;
-static size_t gScreenWidth = 0;
-static size_t gScreenHeight = 0;
-static size_t gRefreshRate = 0;
-static SDL_Window *gScreen = nullptr;
-static frameTimer gTimer;
 
 u::map<int, int> &neoKeyState(int key, bool keyDown, bool keyUp) {
     if (keyDown)
@@ -261,10 +263,10 @@ void neoFatal(const char *fmt, ...) {
 }
 
 u::string neoPath(void) {
-    char *path = SDL_GetPrefPath("Neothyne", "neothyne");
-    // TODO: does this leak memory?
-    // SDL wiki says to use SDL_free on it, but SDL_free isn't exposed by
-    // SDL2 headers, only SDL1.x headers.
+    u::string path;
+    char *get = SDL_GetPrefPath("Neothyne", "");
+    path = get;
+    SDL_free(get);
     return path;
 }
 
@@ -321,6 +323,7 @@ int main(int argc, char **argv) {
     gScreen = getContext();
 
     neoSetVSyncOption(static_cast<vSyncOption>(vid_vsync.get()));
+    gTimer.cap(vid_maxfps.get());
 
     gl::init();
     gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
