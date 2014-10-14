@@ -1705,7 +1705,7 @@ template void texture::convert<TEX_RGB>();
 template void texture::convert<TEX_RGBA>();
 
 template <typename T>
-bool texture::decode(const u::vector<unsigned char> &data, const char *name) {
+bool texture::decode(const u::vector<unsigned char> &data, const char *name, float quality) {
     T decode(data);
     if (decode.status() != decoder::kSuccess) {
         fprintf(stderr, "failed to decode `%s' %s\n", name, decode.error());
@@ -1726,9 +1726,26 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name) {
 
     m_width = decode.width();
     m_height = decode.height();
-    m_pitch = m_width * decode.bpp();
+    m_bpp = decode.bpp();
+    m_pitch = m_width * m_bpp;
     m_data = u::move(decode.data());
     m_disk = true;
+
+    // Quality will resize the texture accordingly
+    if (quality != 1.0f) {
+        // Add 0.5 to the mantissa then zero it. If the mantissa overflows, let
+        // the carry bit carry into the exponent; thus increasing the exponent.
+        // If the carry happens then the value is rounded up, otherwise it rounds
+        // down. This also works +/- INF as well since INF has zero mantissa.
+        union { float f; uint32_t i; } u = { quality };
+        u.i += 0x00400000;
+        u.i &= 0xFF800000;
+        size_t w = m_width * u.f;
+        size_t h = m_height * u.f;
+        if (w == 0) w = 1;
+        if (h == 0) h = 1;
+        resize(w, h);
+    }
 
     // Hash the contents as well to generate a hash string
     u::sha512 hash(&m_data[0], m_data.size());
@@ -1764,7 +1781,7 @@ u::optional<u::string> texture::find(const u::string &infile) {
     return u::format("%s.%s", file.c_str(), extensions[index]);
 }
 
-bool texture::load(const u::string &file) {
+bool texture::load(const u::string &file, float quality) {
     // Construct a texture from a file
     auto name = find(file);
     if (!name)
@@ -1776,11 +1793,11 @@ bool texture::load(const u::string &file) {
         return false;
     u::vector<unsigned char> data = *load;
     if (jpeg::test(data))
-        return decode<jpeg>(data, fileName);
+        return decode<jpeg>(data, fileName, quality);
     else if (png::test(data))
-        return decode<png>(data, fileName);
+        return decode<png>(data, fileName, quality);
     else if (tga::test(data))
-        return decode<tga>(data, fileName);
+        return decode<tga>(data, fileName, quality);
     fprintf(stderr, "no decoder found for `%s'\n", fileName);
     return false;
 }

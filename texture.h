@@ -20,7 +20,7 @@ struct texture {
 
     texture(const unsigned char *const data, size_t length, size_t width, size_t height, bool normal, textureFormat format);
 
-    bool load(const u::string &file);
+    bool load(const u::string &file, float quality = 1.0f);
     bool from(const unsigned char *const data, size_t length, size_t width, size_t height, bool normal, textureFormat format);
 
     template <size_t S>
@@ -65,7 +65,7 @@ struct texture {
 private:
     u::optional<u::string> find(const u::string &file);
     template <typename T>
-    bool decode(const u::vector<unsigned char> &data, const char *fileName);
+    bool decode(const u::vector<unsigned char> &data, const char *fileName, float quality = 1.0f);
 
     u::string m_hashString;
     u::vector<unsigned char> m_data;

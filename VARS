@@ -66,6 +66,10 @@ RENDERER
         0 = disable
         1 = enable
 
+    r_texquality
+    Adjust texture quality
+        any value in the range [0.0, 1.0]
+
 CLIENT
     cl_farp
     Far clipping plane distance

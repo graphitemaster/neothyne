@@ -13,6 +13,7 @@ static c::var<int> r_aniso("r_aniso", "anisotropic filtering", 0, 1, 1);
 static c::var<int> r_bilinear("r_bilinear", "bilinear filtering", 0, 1, 1);
 static c::var<int> r_trilinear("r_trilinear", "trilinear filtering", 0, 1, 1);
 static c::var<int> r_mipmaps("r_mipmaps", "mipmaps", 0, 1, 1);
+static c::var<float> r_texquality("r_texquality", "texture quality", 0.0f, 1.0f, 1.0f);
 
 namespace r {
 
@@ -261,7 +262,7 @@ bool texture2D::cache(GLuint internal) {
 }
 
 bool texture2D::load(const u::string &file) {
-    return m_texture.load(file);
+    return m_texture.load(file, r_texquality);
 }
 
 bool texture2D::upload(void) {
@@ -332,12 +333,12 @@ void texture3D::applyFilter(void) {
 bool texture3D::load(const u::string &ft, const u::string &bk, const u::string &up,
                      const u::string &dn, const u::string &rt, const u::string &lf)
 {
-    if (!m_textures[0].load(ft)) return false;
-    if (!m_textures[1].load(bk)) return false;
-    if (!m_textures[2].load(up)) return false;
-    if (!m_textures[3].load(dn)) return false;
-    if (!m_textures[4].load(rt)) return false;
-    if (!m_textures[5].load(lf)) return false;
+    if (!m_textures[0].load(ft, r_texquality)) return false;
+    if (!m_textures[1].load(bk, r_texquality)) return false;
+    if (!m_textures[2].load(up, r_texquality)) return false;
+    if (!m_textures[3].load(dn, r_texquality)) return false;
+    if (!m_textures[4].load(rt, r_texquality)) return false;
+    if (!m_textures[5].load(lf, r_texquality)) return false;
     return true;
 }
 
