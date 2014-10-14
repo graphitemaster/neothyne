@@ -62,9 +62,9 @@ static void screenShot(const u::string &file) {
     SDL_FreeSurface(temp);
 }
 
-static c::var<float> cg_fov("cg_fov", "field of view", 45.0f, 270.0f, 90.0f);
-static c::var<float> cg_nearp("cg_nearp", "near plane", 0.0f, 10.0f, 1.0f);
-static c::var<float> cg_farp("cg_farp", "far plane", 128.0f, 4096.0f, 2048.0f);
+static c::var<float> cl_fov("cl_fov", "field of view", 45.0f, 270.0f, 90.0f);
+static c::var<float> cl_nearp("cl_nearp", "near plane", 0.0f, 10.0f, 1.0f);
+static c::var<float> cl_farp("cl_farp", "far plane", 128.0f, 4096.0f, 2048.0f);
 
 int neoMain(frameTimer &timer, int argc, char **argv) {
     argc--;
@@ -79,11 +79,11 @@ int neoMain(frameTimer &timer, int argc, char **argv) {
 
     r::rendererPipeline pipeline;
     m::perspectiveProjection projection;
-    projection.fov = cg_fov;
+    projection.fov = cl_fov;
     projection.width = neoWidth();
     projection.height = neoHeight();
-    projection.nearp = cg_nearp;
-    projection.farp = cg_farp;
+    projection.nearp = cl_nearp;
+    projection.farp = cl_farp;
 
     pipeline.setPerspectiveProjection(projection);
     pipeline.setWorldPosition(m::vec3::origin);

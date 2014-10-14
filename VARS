@@ -1,82 +1,96 @@
-vid_fullscreen
-    0 = windowed mode
-    1 = fullscreen
+The following console variables can be set via init.cfg.
 
-vid_height
-    resolution in height or if 0 and vid_width is also 0 engine uses desktop resolution
+The init.cfg file can be found in one of the following places depending on your
+operating system
 
-vid_width
-    resolution in width or if 0 and vid_height is also 0 engine uses desktop resolution
+    Linux
+        * $XDG_DATA_HOME/Neothyne
+        * $HOME/.local/share/Neothyne
 
-vid_vsync
-    -1 = late swap tearing (instant buffer swap if vertical retrace is missed)
-    0 = disabled
-    1 = enabled
-    2 = cap framerate to refresh rate
+    Windows
+        * %CSIDL_APPDATA%\\Neothyne
 
-vid_maxfps
-    value to cap framerate to or 0 for no framerate capping
+    Mac OS X
+        * ~/Library/Application Support/Neothyne
 
 
+VIDEO
+    vid_fullscreen
+        0 = windowed mode
+        1 = fullscreen
 
-r_aniso
-Anisotropic texture filtering
-    0 = disable
-    1 = enable (if the hardware supports it)
+    vid_height
+        resolution in height or if 0 and vid_width is also 0 engine uses desktop resolution
 
-r_bilinear
-Bilinear texture filtering
-    0 = disable
-    1 = enable
+    vid_width
+        resolution in width or if 0 and vid_height is also 0 engine uses desktop resolution
 
-r_trilinear
-Trilinear texture mipmap filtering
-    0 = disable
-    1 = enable
+    vid_vsync
+        -1 = late swap tearing (instant buffer swap if vertical retrace is missed)
+        0 = disabled
+        1 = enabled
+        2 = cap framerate to refresh rate
 
-r_mipmaps
-Generate mipmaps for textures
-    0 = disable
-    1 = enable
-
-r_texcomp
-Use texture compression if the hardware supports it
-    0 = disable
-    1 = enable
-
-r_texcompcache
-Cache compressed textures to disk for use later
-    0 = disable
-    1 = enable
+    vid_maxfps
+        value to cap framerate to or 0 for no framerate capping
 
 
+RENDERER
+    r_aniso
+    Anisotropic texture filtering
+        0 = disable
+        1 = enable (if the hardware supports it)
 
-cg_farp
-Far clipping plane distance
-    any value in the range [128.0, 4096.0]
+    r_bilinear
+    Bilinear texture filtering
+        0 = disable
+        1 = enable
 
-cg_nearp
-Near clipping plane distance
-    any value in the range [0.0, 10.0]
+    r_trilinear
+    Trilinear texture mipmap filtering
+        0 = disable
+        1 = enable
 
-cg_fov
-Field of view
-    any value in the range [45.0, 270.0]
+    r_mipmaps
+    Generate mipmaps for textures
+        0 = disable
+        1 = enable
+
+    r_texcomp
+    Use texture compression if the hardware supports it
+        0 = disable
+        1 = enable
+
+    r_texcompcache
+    Cache compressed textures to disk for use later
+        0 = disable
+        1 = enable
+
+CLIENT
+    cl_farp
+    Far clipping plane distance
+        any value in the range [128.0, 4096.0]
+
+    cl_nearp
+    Near clipping plane distance
+        any value in the range [0.0, 10.0]
+
+    cl_fov
+    Field of view
+        any value in the range [45.0, 270.0]
+
+    cl_mouse_invert
+    Invert mouse movements
+        0 = disable
+        1 = enabled
+
+    cl_mouse_sens
+    Sensitivity of mouse
+        any value in range [0.01, 1.0]
 
 
-
-cl_mouse_invert
-Invert mouse movements
-    0 = disable
-    1 = enabled
-
-cl_mouse_sens
-Sensitivity of mouse
-    any value in range [0.01, 1.0]
-
-
-
-tex_jpeg_chroma
-Chroma upsampling filter for decoding JPEGs
-    0 = bicubic (slow)
-    1 = pixel repetition (fast)
+TEXTURE
+    tex_jpeg_chroma
+    Chroma upsampling filter for decoding JPEGs
+        0 = bicubic (slow)
+        1 = pixel repetition (fast)
