@@ -143,6 +143,8 @@ def genHeader(functionList, extensionList, headerFile):
         #   define GL_INFOP
         #endif
 
+        #define GL_OFFSET(X) ((const GLvoid *)(sizeof(GLfloat) * (X)))
+
         """) % (__file__))
         # Write out the extension macros
 

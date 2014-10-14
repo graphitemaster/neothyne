@@ -69,7 +69,7 @@ bool billboard::upload(void) {
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
     gl::BufferData(GL_ARRAY_BUFFER, sizeof(m::vec3) * m_positions.size(), &m_positions[0], GL_STATIC_DRAW);
 
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, GL_OFFSET(0));
     gl::EnableVertexAttribArray(0);
 
     m_method.enable();

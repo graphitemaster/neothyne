@@ -70,7 +70,7 @@ bool skybox::upload(void) {
 
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
     gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, GL_OFFSET(0));
     gl::EnableVertexAttribArray(0);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
