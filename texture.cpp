@@ -2,7 +2,17 @@
 #include <stdint.h>
 
 #include "texture.h"
-#include "math.h"
+
+#include "u_zlib.h"
+#include "u_file.h"
+#include "u_sha512.h"
+#include "u_algorithm.h"
+
+#include "c_var.h"
+
+#include "m_const.h"
+
+static c::var<int> tex_jpeg_chroma("tex_jpeg_chroma", "chroma filtering method", 0, 1, 0);
 
 #define returnResult(E) \
     do { \
@@ -81,12 +91,18 @@ protected:
 ///  or 24-bit RGB compatible with GL_RGB8.
 ///
 struct jpeg : decoder {
+    static constexpr const char *kMagic = "\xFF\xD8\xFF";
+
+    static bool test(const u::vector<unsigned char> &data) {
+        return memcmp(&data[0], kMagic, 3) == 0;
+    }
+
     enum chromaFilter {
         kBicubic,
         kPixelRepetition
     };
 
-    jpeg(const u::vector<unsigned char> &data, chromaFilter filter = kBicubic) :
+    jpeg(const u::vector<unsigned char> &data) :
         m_rstinterval(0),
         m_size(0),
         m_length(0),
@@ -104,7 +120,7 @@ struct jpeg : decoder {
         memset(m_qtab, 0, sizeof(m_qtab));
         memset(m_block, 0, sizeof(m_block));
 
-        decode(data, filter);
+        decode(data, static_cast<chromaFilter>(tex_jpeg_chroma.get()));
     }
 
     u::vector<unsigned char> data(void) {
@@ -410,7 +426,7 @@ private:
                 if (remain < 0)
                     returnResult(kMalformatted);
                 for (i = 0; i < currcnt; ++i) {
-                    register unsigned char code = m_position[i];
+                    unsigned char code = m_position[i];
                     for (int j = spread; j; --j) {
                         vlc->bits = (unsigned char) codelen;
                         vlc->code = code;
@@ -807,9 +823,9 @@ private:
             const unsigned char *pcr = &m_comp[2].pixels[0];
             for (size_t yy = m_height; yy; --yy) {
                 for (size_t x = 0; x < m_width; ++x) {
-                    register int y = py[x] << 8;
-                    register int cb = pcb[x] - 128;
-                    register int cr = pcr[x] - 128;
+                    int y = py[x] << 8;
+                    int cb = pcb[x] - 128;
+                    int cr = pcr[x] - 128;
                     *prgb++ = clip((y            + 359 * cr + 128) >> 8);
                     *prgb++ = clip((y -  88 * cb - 183 * cr + 128) >> 8);
                     *prgb++ = clip((y + 454 * cb            + 128) >> 8);
@@ -837,15 +853,15 @@ private:
 
         if (m_size < 2)
             return kInvalid;
-        if ((m_position[0] ^ 0xFF) | (m_position[1] ^ 0xD8))
+        if (memcmp(m_position, kMagic, 3))
             return kInvalid;
+
         skip(2);
         while (!m_error) {
-            if ((m_size < 2) || (m_position[0] != 0xFF))
+            if (m_size < 2 || m_position[0] != 0xFF)
                 return kMalformatted;
 
             skip(2);
-
             switch (m_position[-1]) {
                 case 0xC0:
                     decodeSOF();
@@ -930,6 +946,12 @@ const unsigned char jpeg::m_zz[64] = {
 /// |       16 |         6 | RGBA64                  |
 ///
 struct png : decoder {
+    static constexpr const char *kMagic = "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A";
+
+    static bool test(const u::vector<unsigned char> &data) {
+        return memcmp(&data[0], kMagic, 8) == 0;
+    }
+
     png(const u::vector<unsigned char> &data) {
         decode(m_decoded, data);
     }
@@ -1090,7 +1112,7 @@ private:
     void readHeader(const unsigned char* in, size_t inlength) {
         if (inlength < 29)
             returnResult(kInvalid);
-        if (memcmp(in, "\x89\x50\x4E\x47\xD\xA\x1A\xA", 8))
+        if (memcmp(in, kMagic, 8))
             returnResult(kInvalid);
         if (memcmp(in + 12, "IHDR", 4))
             returnResult(kInvalid);
@@ -1286,6 +1308,36 @@ const size_t png::m_adam7Pattern[28]  = {
 /// TGA decoder
 ///
 struct tga : decoder {
+    static constexpr const char *kMagic = "TRUEVISION-XFILE";
+
+    static bool test(const u::vector<unsigned char> &data) {
+        // The TGA file format has no magic number. It has an `optional' trailer
+        // section which could contain kMagic. It's always the last 26 bytes of
+        // the file. We test for that as an early optimization, otherwise we have
+        // to do a more involved test.
+        const unsigned char *trailer = &data[data.size() - 26];
+        trailer += 4; // Skip `extensions offset' field
+        trailer += 4; // Skip `developer area offset' field
+        if (!memcmp(trailer, kMagic, 16))
+            return true;
+
+        // We've made it here, time for a more involved process
+        header h;
+        memcpy(&h, &data[0], sizeof(header));
+        // Color type (0, or 1)
+        if (h.colorMapType > 1)
+            return false;
+        // Image type RGB/grey +/- RLE only
+        if (!memchr("\x1\x2\x3\xA\xB\xC", h.imageType, 6))
+            return false;
+        // Verify dimensions
+        if ((h.width[0] | (h.width[1] << 8)) == 0)
+            return false;
+        if ((h.height[0] | (h.height[1] << 8)) == 0)
+            return false;
+        return true;
+    }
+
     tga(const u::vector<unsigned char> &data) {
         decode(data);
     }
@@ -1310,17 +1362,17 @@ private:
 
     result decode(const u::vector<unsigned char> &data) {
         m_position = &data[0];
-        read((unsigned char *)&header, sizeof(header));
-        seek(header.identSize);
+        read((unsigned char *)&m_header, sizeof(m_header));
+        seek(m_header.identSize);
 
-        if (!memchr("\x8\x18\x20", header.pixelSize, 3))
+        if (!memchr("\x8\x18\x20", m_header.pixelSize, 3))
             return kUnsupported;
 
-        m_bpp = header.pixelSize / 8;
-        m_width = header.width[0] | (header.width[1] << 8);
-        m_height = header.height[0] | (header.height[1] << 8);
+        m_bpp = m_header.pixelSize / 8;
+        m_width = m_header.width[0] | (m_header.width[1] << 8);
+        m_height = m_header.height[0] | (m_header.height[1] << 8);
 
-        switch (header.imageType) {
+        switch (m_header.imageType) {
             case 1:
                 decodeColor();
                 break;
@@ -1341,11 +1393,11 @@ private:
     }
 
     void decodeColor(void) {
-        size_t colorMapSize = header.colorMapSize[0] | (header.colorMapSize[1] << 8);
-        if (!memchr("\x8\x18\x20", header.colorMapEntrySize, 3))
+        size_t colorMapSize = m_header.colorMapSize[0] | (m_header.colorMapSize[1] << 8);
+        if (!memchr("\x8\x18\x20", m_header.colorMapEntrySize, 3))
             returnResult(kUnsupported);
 
-        m_bpp = header.colorMapEntrySize / 8;
+        m_bpp = m_header.colorMapEntrySize / 8;
         u::vector<unsigned char> colorMap;
         colorMap.resize(m_bpp * colorMapSize);
         read(&colorMap[0], m_bpp * colorMapSize);
@@ -1381,11 +1433,11 @@ private:
     }
 
     void decodeColorRLE(void) {
-        size_t colorMapSize = header.colorMapSize[0] | (header.colorMapSize[1] << 8);
-        if (!memchr("\x8\x18\x20", header.colorMapEntrySize, 3))
+        size_t colorMapSize = m_header.colorMapSize[0] | (m_header.colorMapSize[1] << 8);
+        if (!memchr("\x8\x18\x20", m_header.colorMapEntrySize, 3))
             returnResult(kUnsupported);
 
-        m_bpp = header.colorMapEntrySize / 8;
+        m_bpp = m_header.colorMapEntrySize / 8;
         u::vector<unsigned char> colorMap;
         colorMap.resize(m_bpp * colorMapSize);
         read(&colorMap[0], m_bpp * colorMapSize);
@@ -1481,7 +1533,7 @@ private:
             u::swap(data[0], data[2]);
     }
 
-    struct {
+    struct header {
         unsigned char identSize;
         unsigned char colorMapType;
         unsigned char imageType;
@@ -1494,7 +1546,7 @@ private:
         unsigned char height[2];
         unsigned char pixelSize;
         unsigned char description;
-    } header;
+    } m_header;
 
     const unsigned char *m_position;
     u::vector<unsigned char> m_data;
@@ -1635,22 +1687,22 @@ void texture::reorient(unsigned char *src, size_t sw, size_t sh, size_t bpp, siz
     }
 }
 
-enum decoderType  {
-    kDecoderNone,
-    kDecoderPNG,
-    kDecoderJPEG,
-    kDecoderTGA
-    // TODO DXTn
-};
+template <textureFormat F>
+void texture::convert(void) {
+    if (F == m_format)
+        return;
 
-static const struct {
-    u::vector<const char *> extensions;
-    decoderType decoder;
-} decoders[] = {
-    { {{"jpg", "jpeg", "jpe", "jif", "jfif", "jfi"}}, kDecoderJPEG },
-    { {{"png"}},                                      kDecoderPNG  },
-    { {{"tga"}},                                      kDecoderTGA  }
-};
+    unsigned char *data = &m_data[0];
+    const size_t length = m_data.size();
+
+    // Converts BGR -> RGB or RGB -> BGR, or
+    //          BGRA -> RGBA or RGBA -> BGRA
+    for (unsigned char *end = &data[length]; data < end; data += m_bpp)
+        u::swap(data[0], data[2]);
+}
+
+template void texture::convert<TEX_RGB>();
+template void texture::convert<TEX_RGBA>();
 
 template <typename T>
 bool texture::decode(const u::vector<unsigned char> &data, const char *name) {
@@ -1676,53 +1728,92 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name) {
     m_height = decode.height();
     m_pitch = m_width * decode.bpp();
     m_data = u::move(decode.data());
+    m_disk = true;
+
+    // Hash the contents as well to generate a hash string
+    u::sha512 hash(&m_data[0], m_data.size());
+    m_hashString = hash.hex();
 
     return true;
 }
 
-bool texture::load(const u::string &file) {
-    const char *fileName = file.c_str();
+u::optional<u::string> texture::find(const u::string &infile) {
+    u::string file = infile;
+    // Check if it has a tag
+    // TODO: full tag parser
+    if (file[0] == '<') {
+        auto end = file.find('>');
+        if (end == u::string::npos)
+            return u::none;
+        if (u::string(file.begin() + 1, file.begin() + end) == "normal")
+            m_normal = true;
+        file.erase(0, end + 1);
+    }
+    static const char *extensions[] = { "png", "jpg", "jpeg", "tga" };
+    size_t bits = 0;
+    for (size_t i = 0; i < sizeof(extensions)/sizeof(*extensions); i++)
+        if (u::exists(u::format("%s.%s", file.c_str(), extensions[i])))
+            bits |= (1 << i);
+    if (bits == 0)
+        return u::none;
+    size_t index = 0;
+    while (!(bits & 1)) {
+        bits >>= 1;
+        ++index;
+    }
+    return u::format("%s.%s", file.c_str(), extensions[index]);
+}
 
-    // load into vector
-    auto load = u::read(file, "r");
+bool texture::load(const u::string &file) {
+    // Construct a texture from a file
+    auto name = find(file);
+    if (!name)
+        return false;
+
+    const char *fileName = (*name).c_str();
+    auto load = u::read(fileName, "r");
     if (!load)
         return false;
     u::vector<unsigned char> data = *load;
+    if (jpeg::test(data))
+        return decode<jpeg>(data, fileName);
+    else if (png::test(data))
+        return decode<png>(data, fileName);
+    else if (tga::test(data))
+        return decode<tga>(data, fileName);
+    fprintf(stderr, "no decoder found for `%s'\n", fileName);
+    return false;
+}
 
-    // find the appropriate decoder
-    const char *extension = strrchr(fileName, '.');
-    if (!extension)
-        return false;
-
-    decoderType decodeMethod = kDecoderNone;
-    for (size_t i = 0; i < sizeof(decoders)/sizeof(*decoders); i++) {
-        for (auto &it : decoders[i].extensions) {
-            if (strcmp(it, extension + 1))
-                continue;
-            decodeMethod = decoders[i].decoder;
+texture::texture(const unsigned char *const data, size_t length, size_t width,
+    size_t height, bool normal, textureFormat format) :
+    m_width(width),
+    m_height(height),
+    m_normal(normal),
+    m_format(format)
+{
+    m_data.resize(length);
+    memcpy(&m_data[0], data, length);
+    switch (format) {
+        case TEX_RGB:
+        case TEX_BGR:
+            m_bpp = 3;
             break;
-        }
+        case TEX_RGBA:
+        case TEX_BGRA:
+            m_bpp = 4;
+            break;
+        case TEX_LUMINANCE:
+            m_bpp = 1;
+            break;
     }
+    m_pitch = m_width * m_bpp;
+}
 
-    // decode it
-    switch (decodeMethod) {
-        case kDecoderJPEG:
-            if (!decode<jpeg>(data, fileName))
-                return false;
-            break;
-        case kDecoderPNG:
-            if (!decode<png>(data, fileName))
-                return false;
-            break;
-        case kDecoderTGA:
-            if (!decode<tga>(data, fileName))
-                return false;
-            break;
-        case kDecoderNone:
-            fprintf(stderr, "no decoder found for `%s'\n", fileName);
-            return false;
-    }
-
+bool texture::from(const unsigned char *const data, size_t length, size_t width,
+    size_t height, bool normal, textureFormat format)
+{
+    *this = u::move(texture(data, length, width, height, normal, format));
     return true;
 }
 
@@ -1734,6 +1825,25 @@ void texture::resize(size_t width, size_t height) {
     m_width = width;
     m_height = height;
     m_pitch = m_width * m_bpp;
+}
+
+void texture::unload(void) {
+    m_data.resize(0);
+    m_width = 0;
+    m_height = 0;
+    m_pitch = 0;
+}
+
+const u::string &texture::hashString(void) const {
+    return m_hashString;
+}
+
+bool texture::normal(void) const {
+    return m_normal;
+}
+
+bool texture::disk(void) const {
+    return m_disk;
 }
 
 size_t texture::width(void) const {
@@ -1748,6 +1858,10 @@ textureFormat texture::format(void) const {
     return m_format;
 }
 
-const unsigned char *texture::data(void) {
+size_t texture::size(void) const {
+    return m_data.size();
+}
+
+const unsigned char *texture::data(void) const {
     return &m_data[0];
 }

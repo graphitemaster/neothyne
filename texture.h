@@ -1,6 +1,7 @@
 #ifndef TEXTURE_HDR
 #define TEXTURE_HDR
 #include "util.h"
+#include "u_optional.h"
 
 enum textureFormat {
     TEX_RGB,
@@ -11,7 +12,16 @@ enum textureFormat {
 };
 
 struct texture {
+    texture() :
+        m_normal(false),
+        m_disk(false)
+    {
+    }
+
+    texture(const unsigned char *const data, size_t length, size_t width, size_t height, bool normal, textureFormat format);
+
     bool load(const u::string &file);
+    bool from(const unsigned char *const data, size_t length, size_t width, size_t height, bool normal, textureFormat format);
 
     template <size_t S>
     static void halve(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst);
@@ -27,22 +37,44 @@ struct texture {
 
     void resize(size_t width, size_t height);
 
+    template <textureFormat F>
+    void convert(void);
+
     size_t width(void) const;
     size_t height(void) const;
     textureFormat format(void) const;
 
-    const unsigned char *data(void);
+    const unsigned char *data(void) const;
+
+    size_t size(void) const;
+
+    const u::string &hashString(void) const;
+
+    // If the texture is a normal map this will return true.
+    // We need to deliniate between normal map textures and diffuse textures
+    // because we don't want to represent normals with S3TC compression.
+    bool normal(void) const;
+
+    // If the texture was loaded from disk this will return true.
+    // We need to deliniate between loaded-from-disk textures and textures built
+    // from other means.
+    bool disk(void) const;
+
+    void unload(void);
 
 private:
-
+    u::optional<u::string> find(const u::string &file);
     template <typename T>
     bool decode(const u::vector<unsigned char> &data, const char *fileName);
 
+    u::string m_hashString;
     u::vector<unsigned char> m_data;
     size_t m_width;
     size_t m_height;
     size_t m_bpp;
     size_t m_pitch;
+    bool m_normal;
+    bool m_disk;
     textureFormat m_format;
 };
 

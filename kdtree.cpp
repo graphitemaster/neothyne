@@ -2,6 +2,9 @@
 
 #include "kdtree.h"
 
+#include "u_file.h"
+#include "u_algorithm.h"
+
 ///! triangle
 m::vec3 kdTriangle::getNormal(const kdTree *const tree) {
     if (plane.n.isNull())
@@ -136,8 +139,8 @@ m::plane kdNode::findSplittingPlane(const kdTree *tree, const u::vector<int> &tr
 
 void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
     const size_t triangleCount = tris.size();
-    m::vec3 min(0.0f, 0.0f, 0.0f);
-    m::vec3 max(0.0f, 0.0f, 0.0f);
+    m::vec3 min;
+    m::vec3 max;
     for (size_t i = 0; i < triangleCount; i++) {
         int index = tris[i];
         for (size_t j = 0; j < 3; j++) {
@@ -212,12 +215,12 @@ polyPlane kdTree::testTriangle(size_t index, const m::plane &plane) const {
 bool kdTree::load(const u::string &file) {
     unload();
 
-    u::unique_ptr<FILE, int(*)(FILE*)> fp(u::fopen(file, "rt"), &fclose);
+    auto fp = u::fopen(file, "rt");
     if (!fp.get())
         return false;
 
     u::string texturePath;
-    while (auto getline = u::getline(fp.get())) {
+    while (auto getline = u::getline(fp)) {
         u::string& line = *getline;
         float x0, y0, z0, x1, y1, z1, w;
         int v0, v1, v2, t0, t1, t2, i;
@@ -503,7 +506,7 @@ u::vector<unsigned char> kdTree::serialize(void) {
         emptyNode.children[0] = -1;
         emptyNode.children[1] = -1;
         emptyNode.sphereRadius = kMaxTraceDistance - 1.0f;
-        emptyNode.sphereOrigin = m::vec3(0.0f, 0.0f, 0.0f);
+        emptyNode.sphereOrigin = m::vec3::origin;
         emptyNode.plane = 0;
 
         kdBinPlane emptyPlane;

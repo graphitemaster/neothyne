@@ -1,8 +1,10 @@
 #ifndef CLIENT_HDR
 #define CLIENT_HDR
 #include "util.h"
-#include "math.h"
 #include "kdmap.h"
+
+#include "m_quat.h"
+#include "m_vec3.h"
 
 enum clientCommands {
     kCommandForward,
@@ -26,8 +28,6 @@ private:
     void inputMouseMove(void);
     void inputGetCommands(u::vector<clientCommands> &commands);
     void move(float dt, const u::vector<clientCommands> &commands);
-
-    bool tryUnstick(const kdMap &map, float radius);
 
     float m_mouseLat;
     float m_mouseLon;

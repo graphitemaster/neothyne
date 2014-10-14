@@ -1,19 +1,76 @@
 CXX ?= g++
-CFLAGS=-c -std=c++11 `sdl2-config --cflags` -Wall -Wextra -ffast-math -fomit-frame-pointer -fno-exceptions -O2
-LDFLAGS= `sdl2-config --libs` -lGL
+CXXFLAGS = \
+	-std=c++11 \
+	-Wall \
+	-Wextra \
+	-ffast-math \
+	-fno-exceptions \
+	-O1
 
-SOURCES=kdmap.cpp kdtree.cpp main.cpp math.cpp renderer.cpp texture.cpp client.cpp util.cpp
-OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=neothyne
+ENGINE_CXXFLAGS = \
+	$(CXXFLAGS) \
+	`sdl2-config --cflags` \
+	-DDEBUG_GL
 
-all: $(SOURCES) $(EXECUTABLE)
+ENGINE_LDFLAGS = \
+	`sdl2-config --libs` \
+	-lGL
 
-$(EXECUTABLE): $(OBJECTS)
-	$(CXX) $(LDFLAGS) $(OBJECTS) -o $@
+GAME_SOURCES = \
+	client.cpp \
+	main.cpp
+
+MATH_SOURCES = \
+	m_mat4.cpp \
+	m_quat.cpp \
+	m_vec3.cpp
+
+RENDERER_SOURCES = \
+	r_billboard.cpp \
+	r_common.cpp \
+	r_gbuffer.cpp \
+	r_method.cpp \
+	r_pipeline.cpp \
+	r_quad.cpp \
+	r_skybox.cpp \
+	r_splash.cpp \
+	r_texture.cpp \
+	r_world.cpp
+
+ENGINE_SOURCES = \
+	engine.cpp \
+	kdmap.cpp \
+	kdtree.cpp \
+	texture.cpp \
+	c_var.cpp \
+	u_file.cpp \
+	u_zlib.cpp \
+	u_sha512.cpp \
+	$(MATH_SOURCES) \
+	$(RENDERER_SOURCES)
+
+GAME_OBJECTS = $(GAME_SOURCES:.cpp=.o) $(ENGINE_SOURCES:.cpp=.o)
+GAME_BIN = neothyne
+GAME_DIR = game
+
+all: $(GAME_BIN)
+
+$(GAME_BIN): $(GAME_OBJECTS)
+	$(CXX) $(ENGINE_LDFLAGS) $(GAME_OBJECTS) -o $@
+
+install: $(GAME_BIN)
+	#strip $(GAME_BIN)
+	mv $(GAME_BIN) $(GAME_DIR)/$(GAME_BIN)
+
+uninstall:
+	rm -f $(GAME_DIR)/$(GAME_BIN)
+
+run: install
+	cd $(GAME_DIR) && ./$(GAME_BIN)
 
 .cpp.o:
-	$(CXX) $(CFLAGS) $< -o $@
+	$(CXX) -c $(ENGINE_CXXFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJECTS)
-	rm -f $(EXECUTABLE)
+	rm -f $(GAME_OBJECTS)
+	rm -f $(GAME_BIN)
