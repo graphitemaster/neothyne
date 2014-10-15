@@ -132,7 +132,7 @@ int neoMain(frameTimer &timer, int argc, char **argv) {
             switch (e.type) {
                 case SDL_QUIT:
                     running = false;
-                    return 0;
+                    break;
                 case SDL_WINDOWEVENT:
                     switch (e.window.event) {
                         case SDL_WINDOWEVENT_RESIZED:
