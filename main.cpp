@@ -96,7 +96,7 @@ int neoMain(frameTimer &timer, int argc, char **argv) {
 
     // while that thread is running render the loading screen
     while (SDL_AtomicGet(&loadData.done) == kLoadInProgress) {
-        glClear(GL_COLOR_BUFFER_BIT);
+        gl::Clear(GL_COLOR_BUFFER_BIT);
         pipeline.setTime(timer.ticks() / 500.0f);
         gSplash.render(pipeline);
         neoSwap();

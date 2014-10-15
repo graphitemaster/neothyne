@@ -10,12 +10,10 @@ CXXFLAGS = \
 
 ENGINE_CXXFLAGS = \
 	$(CXXFLAGS) \
-	`sdl2-config --cflags` \
-	-DDEBUG_GL
+	`sdl2-config --cflags`
 
 ENGINE_LDFLAGS = \
-	`sdl2-config --libs` \
-	-lGL
+	`sdl2-config --libs`
 
 GAME_SOURCES = \
 	client.cpp \

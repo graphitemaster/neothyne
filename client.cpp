@@ -49,7 +49,7 @@ void client::update(const kdMap &map, float dt) {
     size_t numPlanes = 0;
 
     // Never turn against original velocity
-    planes[numPlanes++] = m_velocity.normalized();
+    planes[numPlanes++] = velocity.normalized();
 
     size_t collide = 0;
     size_t bumpCount = 0;
