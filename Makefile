@@ -5,6 +5,7 @@ CXXFLAGS = \
 	-Wextra \
 	-ffast-math \
 	-fno-exceptions \
+	-fno-rtti \
 	-O3
 
 ENGINE_CXXFLAGS = \

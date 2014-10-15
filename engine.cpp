@@ -266,6 +266,7 @@ u::string neoPath() {
     u::string path;
     char *get = SDL_GetPrefPath("Neothyne", "");
     path = get;
+    path.pop_back();
     SDL_free(get);
     return path;
 }
