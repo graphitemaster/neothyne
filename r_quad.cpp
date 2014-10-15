@@ -2,11 +2,11 @@
 
 namespace r {
 
-quad::~quad(void) {
+quad::~quad() {
     gl::DeleteBuffers(2, m_buffers);
 }
 
-bool quad::upload(void) {
+bool quad::upload() {
     gl::GenVertexArrays(1, &m_vao);
     gl::BindVertexArray(m_vao);
 
@@ -34,7 +34,7 @@ bool quad::upload(void) {
     return true;
 }
 
-void quad::render(void) {
+void quad::render() {
     gl::BindVertexArray(m_vao);
     gl::DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
     gl::BindVertexArray(0);

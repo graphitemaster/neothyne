@@ -207,7 +207,7 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     return u::none;
 }
 
-texture2D::texture2D(void) :
+texture2D::texture2D() :
     m_uploaded(false),
     m_textureHandle(0)
 {
@@ -220,12 +220,12 @@ texture2D::texture2D(texture &tex) :
     m_texture = u::move(tex);
 }
 
-texture2D::~texture2D(void) {
+texture2D::~texture2D() {
     if (m_uploaded)
         gl::DeleteTextures(1, &m_textureHandle);
 }
 
-bool texture2D::useCache(void) {
+bool texture2D::useCache() {
     GLuint internalFormat = 0;
     if (!readCache(m_texture, internalFormat))
         return false;
@@ -234,7 +234,7 @@ bool texture2D::useCache(void) {
     return true;
 }
 
-void texture2D::applyFilter(void) {
+void texture2D::applyFilter() {
     if (r_bilinear) {
         GLenum min = r_mipmaps
             ? (r_trilinear ? GL_LINEAR_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR)
@@ -265,7 +265,7 @@ bool texture2D::load(const u::string &file) {
     return m_texture.load(file, r_texquality);
 }
 
-bool texture2D::upload(void) {
+bool texture2D::upload() {
     if (m_uploaded)
         return true;
 
@@ -313,12 +313,12 @@ texture3D::texture3D() :
 
 }
 
-texture3D::~texture3D(void) {
+texture3D::~texture3D() {
     if (m_uploaded)
         gl::DeleteTextures(1, &m_textureHandle);
 }
 
-void texture3D::applyFilter(void) {
+void texture3D::applyFilter() {
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
@@ -342,7 +342,7 @@ bool texture3D::load(const u::string &ft, const u::string &bk, const u::string &
     return true;
 }
 
-bool texture3D::upload(void) {
+bool texture3D::upload() {
     if (m_uploaded)
         return true;
 

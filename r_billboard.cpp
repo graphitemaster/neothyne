@@ -3,7 +3,7 @@
 namespace r {
 
 ///! method
-bool billboardMethod::init(void) {
+bool billboardMethod::init() {
     if (!method::init())
         return false;
 
@@ -56,7 +56,7 @@ bool billboard::load(const u::string &billboardTexture) {
     return true;
 }
 
-bool billboard::upload(void) {
+bool billboard::upload() {
     if (!m_texture.upload())
         return false;
     if (!m_method.init())

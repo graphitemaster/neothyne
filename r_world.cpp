@@ -1,6 +1,7 @@
 #include "r_world.h"
 
 #include "u_algorithm.h"
+#include "u_memory.h"
 
 #include "engine.h"
 
@@ -78,7 +79,7 @@ void lightMethod::setDepthTextureUnit(int unit) {
 }
 
 ///! Directional Light Rendering Method
-bool directionalLightMethod::init(void) {
+bool directionalLightMethod::init() {
     if (!lightMethod::init("shaders/dlight.vs", "shaders/dlight.fs"))
         return false;
 
@@ -99,7 +100,7 @@ void directionalLightMethod::setDirectionalLight(const directionalLight &light) 
 }
 
 ///! Geomety Rendering Method
-bool geomMethod::init(void) {
+bool geomMethod::init() {
     if (!method::init())
         return false;
 
@@ -135,7 +136,7 @@ void geomMethod::setNormalTextureUnit(int unit) {
 }
 
 ///! Depth Pass Method
-bool depthMethod::init(void) {
+bool depthMethod::init() {
     if (!method::init())
         return false;
     if (!addShader(GL_VERTEX_SHADER, "shaders/depthpass.vs"))
@@ -154,7 +155,7 @@ void depthMethod::setWVP(const m::mat4 &wvp) {
 }
 
 ///! renderer
-world::world(void) {
+world::world() {
     m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
     m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
     m_directionalLight.ambient = 0.90f;
@@ -197,7 +198,7 @@ world::world(void) {
     }
 }
 
-world::~world(void) {
+world::~world() {
     gl::DeleteBuffers(2, m_buffers);
     gl::DeleteVertexArrays(1, &m_vao);
 
@@ -329,6 +330,7 @@ bool world::upload(const m::perspectiveProjection &project) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
 
+
     if (!m_depthMethod.init())
         neoFatal("failed to initialize depth pass method\n");
     if (!m_geomMethod.init())
@@ -387,7 +389,7 @@ void world::geometryPass(const rendererPipeline &pipeline) {
     gl::Disable(GL_DEPTH_TEST);
 }
 
-void world::beginLightPass(void) {
+void world::beginLightPass() {
     gl::Enable(GL_BLEND);
     gl::BlendEquation(GL_FUNC_ADD);
     gl::BlendFunc(GL_ONE, GL_ONE);

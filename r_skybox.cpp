@@ -2,7 +2,7 @@
 
 namespace r {
 ///! method
-bool skyboxMethod::init(void) {
+bool skyboxMethod::init() {
     if (!method::init())
         return false;
 
@@ -33,7 +33,7 @@ void skyboxMethod::setWorld(const m::mat4 &worldInverse) {
 }
 
 ///! renderer
-skybox::~skybox(void) {
+skybox::~skybox() {
     gl::DeleteBuffers(2, m_buffers);
     gl::DeleteVertexArrays(1, &m_vao);
 }
@@ -43,7 +43,7 @@ bool skybox::load(const u::string &skyboxName) {
                           skyboxName + "_dn", skyboxName + "_rt", skyboxName + "_lf");
 }
 
-bool skybox::upload(void) {
+bool skybox::upload() {
     if (!m_cubemap.upload())
         return false;
     if (!m_method.init())

@@ -5,12 +5,13 @@
 #include "r_texture.h"
 #include "r_method.h"
 
-#include "util.h"
+#include "u_vector.h"
+#include "u_string.h"
 
 namespace r {
 
 struct billboardMethod : method {
-    virtual bool init(void);
+    virtual bool init();
 
     void setVP(const m::mat4 &vp);
     void setCamera(const m::vec3 &position);
@@ -29,7 +30,7 @@ struct billboard {
     ~billboard();
 
     bool load(const u::string &billboardTexture);
-    bool upload(void);
+    bool upload();
 
     void render(const rendererPipeline &pipeline);
 

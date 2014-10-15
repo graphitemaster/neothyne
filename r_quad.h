@@ -7,8 +7,8 @@ namespace r {
 struct quad {
     ~quad();
 
-    bool upload(void);
-    void render(void);
+    bool upload();
+    void render();
 
 private:
     union {

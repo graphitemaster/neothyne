@@ -6,7 +6,7 @@ out vec4 fragColor;
 uniform float gTime;
 uniform vec2 gScreenSize;
 
-void main(void) {
+void main() {
     vec2 pixelCoord = (gl_FragCoord.xy / gScreenSize);
     vec3 pixelColor = vec3(0.0f, 0.0f, 0.0f);
 

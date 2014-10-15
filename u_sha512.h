@@ -1,18 +1,18 @@
 #ifndef U_SHA512_HDR
 #define U_SHA512_HDR
-#include "util.h"
+#include "u_string.h"
 
 namespace u {
 
 struct sha512 {
-    sha512(void);
+    sha512();
     sha512(const unsigned char *buf, size_t length);
 
-    void init(void);
+    void init();
     void process(const unsigned char *src, size_t length);
-    void done(void);
+    void done();
 
-    u::string hex(void);
+    u::string hex();
 
 private:
     void compress(const unsigned char *buf);

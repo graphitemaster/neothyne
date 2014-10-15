@@ -19,7 +19,7 @@
 #define ARB_texture_compression_bptc   2
 
 namespace gl {
-    void init(void);
+    void init();
     bool has(size_t ext);
     GLuint CreateShader(GLenum shaderType GL_INFOP);
     void ShaderSource(GLuint shader, GLsizei count, const GLchar** string, const GLint* length GL_INFOP);

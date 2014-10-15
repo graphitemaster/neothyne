@@ -1,5 +1,8 @@
+#include <string.h>
+
 #include "u_sha512.h"
 #include "u_algorithm.h"
+#include "u_misc.h"
 
 namespace u {
 
@@ -22,7 +25,7 @@ const uint64_t sha512::K[80] = {
     0x431d67c49c100d4cULL, 0x4cc5d4becb3e42b6ULL, 0x597f299cfc657e2aULL, 0x5fcb6fab3ad6faecULL, 0x6c44198c4a475817ULL
 };
 
-void sha512::init(void) {
+void sha512::init() {
     m_length = 0;
     m_currentLength = 0;
 
@@ -36,7 +39,7 @@ void sha512::init(void) {
     m_state[7] = 0x5be0cd19137e2179ULL;
 }
 
-sha512::sha512(void) {
+sha512::sha512() {
     init();
 }
 
@@ -109,7 +112,7 @@ void sha512::process(const unsigned char *in, size_t length) {
     }
 }
 
-void sha512::done(void) {
+void sha512::done() {
     m_length += m_currentLength * 8ULL;
     m_buffer[m_currentLength++] = 0x80;
 
@@ -132,7 +135,7 @@ void sha512::done(void) {
         store64(m_state[i], m_out + (8*i));
 }
 
-u::string sha512::hex(void) {
+u::string sha512::hex() {
     u::string thing;
     for (size_t i = 0; i != 512 / 8; ++i)
         thing += u::format("%02x", m_out[i]);

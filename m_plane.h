@@ -13,7 +13,7 @@ enum pointPlane {
 };
 
 struct plane {
-    constexpr plane(void) :
+    constexpr plane() :
         d(0.0f)
     { }
 

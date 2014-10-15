@@ -3,7 +3,7 @@
 
 namespace r {
 
-method::method(void) :
+method::method() :
     m_program(0),
     m_vertexSource("#version 330 core\n"),
     m_fragmentSource("#version 330 core\n"),
@@ -12,7 +12,7 @@ method::method(void) :
 
 }
 
-method::~method(void) {
+method::~method() {
     for (auto &it : m_shaders)
         gl::DeleteShader(it);
 
@@ -20,7 +20,7 @@ method::~method(void) {
         gl::DeleteProgram(m_program);
 }
 
-bool method::init(void) {
+bool method::init() {
     m_program = gl::CreateProgram();
     return !!m_program;
 }
@@ -76,7 +76,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
     return true;
 }
 
-void method::enable(void) {
+void method::enable() {
     gl::UseProgram(m_program);
 }
 
@@ -88,7 +88,7 @@ GLint method::getUniformLocation(const u::string &name) {
     return gl::GetUniformLocation(m_program, name.c_str());
 }
 
-bool method::finalize(void) {
+bool method::finalize() {
     GLint success = 0;
     gl::LinkProgram(m_program);
     gl::GetProgramiv(m_program, GL_LINK_STATUS, &success);

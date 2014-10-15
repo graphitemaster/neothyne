@@ -7,7 +7,7 @@
 namespace r {
 
 struct rendererPipeline {
-    rendererPipeline(void);
+    rendererPipeline();
 
     void setScale(const m::vec3 &scale);
     void setWorldPosition(const m::vec3 &worldPosition);
@@ -21,20 +21,20 @@ struct rendererPipeline {
 
     void setTime(float time);
 
-    const m::mat4 &getWorldTransform(void);
-    const m::mat4 &getWVPTransform(void);
-    const m::mat4 &getVPTransform(void);
-    const m::mat4 &getInverseTransform(void);
+    const m::mat4 &getWorldTransform();
+    const m::mat4 &getWVPTransform();
+    const m::mat4 &getVPTransform();
+    const m::mat4 &getInverseTransform();
 
     // camera accessors.
-    const m::vec3 &getPosition(void) const;
-    const m::vec3 getTarget(void) const;
-    const m::vec3 getUp(void) const;
-    const m::quat &getRotation(void) const;
+    const m::vec3 &getPosition() const;
+    const m::vec3 getTarget() const;
+    const m::vec3 getUp() const;
+    const m::quat &getRotation() const;
 
-    const m::perspectiveProjection &getPerspectiveProjection(void) const;
+    const m::perspectiveProjection &getPerspectiveProjection() const;
 
-    float getTime(void) const;
+    float getTime() const;
 
 private:
     m::perspectiveProjection m_perspectiveProjection;

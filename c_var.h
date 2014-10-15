@@ -38,11 +38,11 @@ struct var {
         m_callback = callback;
     }
 
-    operator T&(void) {
+    operator T&() {
         return m_current;
     }
 
-    const T get(void) const {
+    const T get() const {
         return m_current;
     }
 
@@ -65,8 +65,8 @@ private:
     void (*m_callback)(T value);
 };
 
-bool writeConfig(void);
-bool readConfig(void);
+bool writeConfig();
+bool readConfig();
 
 }
 #endif

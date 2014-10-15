@@ -262,7 +262,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
     m_velocity = newDirection;
 }
 
-void client::inputMouseMove(void) {
+void client::inputMouseMove() {
     float invert = cl_mouse_invert ? 1.0f : -1.0f;
 
     int deltaX = 0;
@@ -300,11 +300,11 @@ void client::getDirection(m::vec3 *direction, m::vec3 *up, m::vec3 *side) const 
     return m_rotation.getOrient(direction, up, side);
 }
 
-const m::quat &client::getRotation(void) const {
+const m::quat &client::getRotation() const {
     return m_rotation;
 }
 
-m::vec3 client::getPosition(void) const {
+m::vec3 client::getPosition() const {
     // adjust for eye height
     return m::vec3(m_origin.x, m_origin.y + m_viewHeight, m_origin.z);
 }

@@ -1,5 +1,6 @@
 #define __STDC_LIMIT_MACROS
 #include <stdint.h>
+#include <string.h>
 
 #include "texture.h"
 
@@ -7,6 +8,7 @@
 #include "u_file.h"
 #include "u_sha512.h"
 #include "u_algorithm.h"
+#include "u_misc.h"
 
 #include "c_var.h"
 
@@ -39,7 +41,7 @@ struct decoder {
         kFinished,
     };
 
-    const char *error(void) const {
+    const char *error() const {
         switch (m_error) {
             case kSuccess:
                 return "success";
@@ -55,19 +57,19 @@ struct decoder {
         return "internal error";
     }
 
-    size_t width(void) const {
+    size_t width() const {
         return m_width;
     }
 
-    size_t height(void) const {
+    size_t height() const {
         return m_height;
     }
 
-    size_t bpp(void) const {
+    size_t bpp() const {
         return m_bpp;
     }
 
-    result status(void) const {
+    result status() const {
         return m_error;
     }
 
@@ -123,7 +125,7 @@ struct jpeg : decoder {
         decode(data, static_cast<chromaFilter>(tex_jpeg_chroma.get()));
     }
 
-    u::vector<unsigned char> data(void) {
+    u::vector<unsigned char> data() {
         if (m_bpp == 1)
             return u::move(m_comp[0].pixels);
         return u::move(m_rgb);
@@ -294,7 +296,7 @@ private:
 
     void skipBits(int bits) {
         if (m_bufbits < bits)
-            (void)viewBits(bits);
+            viewBits(bits);
         m_bufbits -= bits;
     }
 
@@ -304,7 +306,7 @@ private:
         return res;
     }
 
-    void alignBits(void) {
+    void alignBits() {
         m_bufbits &= 0xF8;
     }
 
@@ -320,7 +322,7 @@ private:
         return (m_position[0] << 8) | m_position[1];
     }
 
-    void decodeLength(void) {
+    void decodeLength() {
         if (m_size < 2)
             returnResult(kMalformatted);
         m_length = decode16(m_position);
@@ -329,12 +331,12 @@ private:
         skip(2);
     }
 
-    void skipMarker(void) {
+    void skipMarker() {
         decodeLength();
         skip(m_length);
     }
 
-    void decodeSOF(void) {
+    void decodeSOF() {
         int ssxmax = 0;
         int ssymax = 0;
         component* c;
@@ -399,7 +401,7 @@ private:
         skip(m_length);
     }
 
-    void decodeDHT(void) {
+    void decodeDHT() {
         unsigned char counts[16];
         decodeLength();
         while (m_length >= 17) {
@@ -444,7 +446,7 @@ private:
             returnResult(kMalformatted);
     }
 
-    void decodeDQT(void) {
+    void decodeDQT() {
         unsigned char *t;
         decodeLength();
         while (m_length >= 65) {
@@ -460,7 +462,7 @@ private:
             returnResult(kMalformatted);
     }
 
-    void decodeDRI(void) {
+    void decodeDRI() {
         decodeLength();
         if (m_length < 2)
             returnResult(kMalformatted);
@@ -509,7 +511,7 @@ private:
             columnIDCT(&m_block[coef], &out[coef], c->stride);
     }
 
-    void decodeScanlines(void) {
+    void decodeScanlines() {
         size_t i;
         size_t rstcount = m_rstinterval;
         size_t nextrst = 0;
@@ -571,7 +573,7 @@ private:
         return (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
     }
 
-    void decodeExif(void) {
+    void decodeExif() {
         decodeLength();
         const unsigned char *pos = m_position;
         if (m_length < 18)
@@ -956,7 +958,7 @@ struct png : decoder {
         decode(m_decoded, data);
     }
 
-    u::vector<unsigned char> data(void) {
+    u::vector<unsigned char> data() {
         return u::move(m_decoded);
     }
 
@@ -1266,7 +1268,7 @@ private:
         return kMalformatted;
     }
 
-    size_t calculateBitsPerPixel(void) const {
+    size_t calculateBitsPerPixel() const {
         if (m_colorType == 2)
             return (3 * m_bitDepth);
         else if (m_colorType >= 4)
@@ -1342,7 +1344,7 @@ struct tga : decoder {
         decode(data);
     }
 
-    u::vector<unsigned char> data(void) {
+    u::vector<unsigned char> data() {
         return u::move(m_data);
     }
 
@@ -1352,7 +1354,7 @@ private:
         seek(size);
     }
 
-    int get(void) {
+    int get() {
         return *m_position++;
     }
 
@@ -1392,7 +1394,7 @@ private:
         return m_error ? m_error : kSuccess;
     }
 
-    void decodeColor(void) {
+    void decodeColor() {
         size_t colorMapSize = m_header.colorMapSize[0] | (m_header.colorMapSize[1] << 8);
         if (!memchr("\x8\x18\x20", m_header.colorMapEntrySize, 3))
             returnResult(kUnsupported);
@@ -1421,7 +1423,7 @@ private:
         }
     }
 
-    void decodeImage(void) {
+    void decodeImage() {
         m_data.resize(m_bpp * m_width * m_height);
         unsigned char *dst = &m_data[m_bpp * m_width * m_height];
         for (size_t i = 0; i < m_height; i++) {
@@ -1432,7 +1434,7 @@ private:
             convert(&m_data[0], m_bpp * m_width * m_height, m_bpp);
     }
 
-    void decodeColorRLE(void) {
+    void decodeColorRLE() {
         size_t colorMapSize = m_header.colorMapSize[0] | (m_header.colorMapSize[1] << 8);
         if (!memchr("\x8\x18\x20", m_header.colorMapEntrySize, 3))
             returnResult(kUnsupported);
@@ -1483,7 +1485,7 @@ private:
         }
     }
 
-    void decodeImageRLE(void) {
+    void decodeImageRLE() {
         m_data.resize(m_bpp * m_width * m_height);
         unsigned char buffer[4];
         for (unsigned char *end = &m_data[m_bpp * m_width * m_height], *dst = end - m_bpp * m_width; dst >= &m_data[0]; ) {
@@ -1688,7 +1690,7 @@ void texture::reorient(unsigned char *src, size_t sw, size_t sh, size_t bpp, siz
 }
 
 template <textureFormat F>
-void texture::convert(void) {
+void texture::convert() {
     if (F == m_format)
         return;
 
@@ -1807,6 +1809,7 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
     m_width(width),
     m_height(height),
     m_normal(normal),
+    m_disk(false),
     m_format(format)
 {
     m_data.resize(length);
@@ -1844,41 +1847,41 @@ void texture::resize(size_t width, size_t height) {
     m_pitch = m_width * m_bpp;
 }
 
-void texture::unload(void) {
+void texture::unload() {
     m_data.resize(0);
     m_width = 0;
     m_height = 0;
     m_pitch = 0;
 }
 
-const u::string &texture::hashString(void) const {
+const u::string &texture::hashString() const {
     return m_hashString;
 }
 
-bool texture::normal(void) const {
+bool texture::normal() const {
     return m_normal;
 }
 
-bool texture::disk(void) const {
+bool texture::disk() const {
     return m_disk;
 }
 
-size_t texture::width(void) const {
+size_t texture::width() const {
     return m_width;
 }
 
-size_t texture::height(void) const {
+size_t texture::height() const {
     return m_height;
 }
 
-textureFormat texture::format(void) const {
+textureFormat texture::format() const {
     return m_format;
 }
 
-size_t texture::size(void) const {
+size_t texture::size() const {
     return m_data.size();
 }
 
-const unsigned char *texture::data(void) const {
+const unsigned char *texture::data() const {
     return &m_data[0];
 }

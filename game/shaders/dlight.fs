@@ -26,7 +26,7 @@ uniform directionalLight gDirectionalLight;
 
 out vec4 fragColor;
 
-vec2 calcTexCoord(void) {
+vec2 calcTexCoord() {
     return gl_FragCoord.xy / gScreenSize;
 }
 
@@ -91,7 +91,7 @@ vec3 calcPosition(vec2 texCoord) {
     return pos.xyz / pos.w;
 }
 
-void main(void) {
+void main() {
     vec2 texCoord = calcTexCoord();
     vec3 worldPosition = calcPosition(texCoord);
 

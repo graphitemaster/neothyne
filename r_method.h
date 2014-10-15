@@ -2,7 +2,8 @@
 #define R_METHOD_HDR
 #include "r_common.h"
 
-#include "util.h"
+#include "u_string.h"
+#include "u_vector.h"
 
 namespace r {
 
@@ -10,14 +11,14 @@ struct method {
     method();
     ~method();
 
-    void enable(void);
+    void enable();
 
-    bool init(void);
+    bool init();
 
 protected:
     bool addShader(GLenum shaderType, const char *shaderText);
 
-    bool finalize(void);
+    bool finalize();
 
     GLint getUniformLocation(const char *name);
     GLint getUniformLocation(const u::string &name);

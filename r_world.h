@@ -9,6 +9,8 @@
 #include "r_method.h"
 #include "r_quad.h"
 
+#include "u_map.h"
+
 #include "kdmap.h"
 
 namespace r {
@@ -25,7 +27,7 @@ struct directionalLight : baseLight {
 };
 
 struct geomMethod : method {
-    bool init(void);
+    bool init();
 
     void setWVP(const m::mat4 &wvp);
     void setWorld(const m::mat4 &wvp);
@@ -66,7 +68,7 @@ private:
 };
 
 struct directionalLightMethod : lightMethod {
-    bool init(void);
+    bool init();
 
     void setDirectionalLight(const directionalLight &light);
 
@@ -80,7 +82,7 @@ private:
 };
 
 struct depthMethod : method {
-    virtual bool init(void);
+    virtual bool init();
 
     void setWVP(const m::mat4 &wvp);
 
@@ -117,7 +119,7 @@ private:
     void depthPass(const rendererPipeline &pipeline);
     void depthPrePass(const rendererPipeline &pipeline);
     void geometryPass(const rendererPipeline &pipeline);
-    void beginLightPass(void);
+    void beginLightPass();
     void pointLightPass(const rendererPipeline &pipeline);
     void directionalLightPass(const rendererPipeline &pipeline);
 

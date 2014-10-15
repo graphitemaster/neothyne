@@ -2,7 +2,7 @@
 
 namespace r {
 ///! method
-bool splashMethod::init(void) {
+bool splashMethod::init() {
     if (!method::init())
         return false;
 
@@ -37,7 +37,7 @@ bool splashScreen::load(const u::string &splashScreen) {
     return m_texture.load(splashScreen);
 }
 
-bool splashScreen::upload(void) {
+bool splashScreen::upload() {
     if (!m_texture.upload() || !m_quad.upload())
         return false;
     if (!m_method.init())

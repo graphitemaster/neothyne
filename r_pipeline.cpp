@@ -2,7 +2,7 @@
 
 namespace r {
 
-rendererPipeline::rendererPipeline(void) :
+rendererPipeline::rendererPipeline() :
     m_scale(1.0f, 1.0f, 1.0f)
 {
 }
@@ -35,7 +35,7 @@ void rendererPipeline::setTime(float time) {
     m_time = time;
 }
 
-const m::mat4 &rendererPipeline::getWorldTransform(void) {
+const m::mat4 &rendererPipeline::getWorldTransform() {
     m::mat4 scale, rotate, translate;
     scale.setScaleTrans(m_scale.x, m_scale.y, m_scale.z);
     rotate.setRotateTrans(m_rotate.x, m_rotate.y, m_rotate.z);
@@ -45,7 +45,7 @@ const m::mat4 &rendererPipeline::getWorldTransform(void) {
     return m_worldTransform;
 }
 
-const m::mat4 &rendererPipeline::getVPTransform(void) {
+const m::mat4 &rendererPipeline::getVPTransform() {
     m::mat4 translate, rotate, perspective;
     translate.setTranslateTrans(-m_position.x, -m_position.y, -m_position.z);
     rotate.setCameraTrans(getTarget(), getUp());
@@ -54,7 +54,7 @@ const m::mat4 &rendererPipeline::getVPTransform(void) {
     return m_VPTransform;
 }
 
-const m::mat4 &rendererPipeline::getWVPTransform(void) {
+const m::mat4 &rendererPipeline::getWVPTransform() {
     getWorldTransform();
     getVPTransform();
 
@@ -62,37 +62,37 @@ const m::mat4 &rendererPipeline::getWVPTransform(void) {
     return m_WVPTransform;
 }
 
-const m::mat4 &rendererPipeline::getInverseTransform(void) {
+const m::mat4 &rendererPipeline::getInverseTransform() {
     getVPTransform();
     m_inverseTransform = m_VPTransform.inverse();
     return m_inverseTransform;
 }
 
-const m::perspectiveProjection &rendererPipeline::getPerspectiveProjection(void) const {
+const m::perspectiveProjection &rendererPipeline::getPerspectiveProjection() const {
     return m_perspectiveProjection;
 }
 
-const m::vec3 rendererPipeline::getTarget(void) const {
+const m::vec3 rendererPipeline::getTarget() const {
     m::vec3 target;
     m_rotation.getOrient(&target, nullptr, nullptr);
     return target;
 }
 
-const m::vec3 rendererPipeline::getUp(void) const {
+const m::vec3 rendererPipeline::getUp() const {
     m::vec3 up;
     m_rotation.getOrient(nullptr, &up, nullptr);
     return up;
 }
 
-const m::vec3 &rendererPipeline::getPosition(void) const {
+const m::vec3 &rendererPipeline::getPosition() const {
     return m_position;
 }
 
-const m::quat &rendererPipeline::getRotation(void) const {
+const m::quat &rendererPipeline::getRotation() const {
     return m_rotation;
 }
 
-float rendererPipeline::getTime(void) const {
+float rendererPipeline::getTime() const {
     return m_time;
 }
 

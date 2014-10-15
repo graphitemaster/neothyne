@@ -5,7 +5,7 @@ out vec4 fragColor;
 
 uniform samplerCube gCubemap;
 
-void main(void) {
+void main() {
     vec3 color = texture(gCubemap, texCoord0).rgb;
 
     // vertical fog gradiant

@@ -12,7 +12,7 @@ struct vec3 {
     float y;
     float z;
 
-    constexpr vec3(void) :
+    constexpr vec3() :
         x(0.0f),
         y(0.0f),
         z(0.0f)
@@ -32,27 +32,27 @@ struct vec3 {
 
     void rotate(float angle, const vec3 &axe);
 
-    float absSquared(void) const {
+    float absSquared() const {
         return x * x + y * y + z * z;
     }
 
-    float abs(void) const {
+    float abs() const {
         return sqrtf(x * x + y * y + z * z);
     }
 
-    void normalize(void) {
+    void normalize() {
         const float length = 1.0f / abs();
         x *= length;
         y *= length;
         z *= length;
     }
 
-    vec3 normalized(void) const {
+    vec3 normalized() const {
         const float scale = 1.0f / abs();
         return vec3(x * scale, y * scale, z * scale);
     }
 
-    bool isNormalized(void) const {
+    bool isNormalized() const {
         return fabsf(abs() - 1.0f) < kEpsilon;
     }
 
@@ -120,7 +120,7 @@ struct vec3 {
         return *this;
     }
 
-    vec3 operator -(void) const {
+    vec3 operator -() const {
         return vec3(-x, -y, -z);
     }
 

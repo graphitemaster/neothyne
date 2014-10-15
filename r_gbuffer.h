@@ -20,11 +20,11 @@ struct gBuffer {
     bool init(const m::perspectiveProjection &project);
 
     void update(const m::perspectiveProjection &project);
-    void bindReading(void);
-    void bindWriting(void);
+    void bindReading();
+    void bindWriting();
 
 private:
-    void destroy(void);
+    void destroy();
 
     GLuint m_fbo;
     GLuint m_textures[kMax];

@@ -1,6 +1,6 @@
 #ifndef U_ALGORITHM_HDR
 #define U_ALGORITHM_HDR
-#include <algorithm> // std::sort
+#include <algorithm> // TODO: remove (std::sort)
 
 namespace u {
 

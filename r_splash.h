@@ -8,12 +8,12 @@
 
 #include "m_mat4.h"
 
-#include "util.h"
+#include "u_string.h"
 
 namespace r {
 
 struct splashMethod : method {
-    virtual bool init(void);
+    virtual bool init();
 
     void setTextureUnit(int unit);
     void setScreenSize(const m::perspectiveProjection &project);
@@ -27,7 +27,7 @@ private:
 
 struct splashScreen {
     bool load(const u::string &splashScreen);
-    bool upload(void);
+    bool upload();
     void render(const rendererPipeline &pipeline);
 
 private:

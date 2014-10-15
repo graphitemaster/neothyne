@@ -1,7 +1,8 @@
 #ifndef CLIENT_HDR
 #define CLIENT_HDR
-#include "util.h"
 #include "kdmap.h"
+
+#include "u_vector.h"
 
 #include "m_quat.h"
 #include "m_vec3.h"
@@ -20,12 +21,12 @@ struct client {
 
     void update(const kdMap &map, float dt);
     void getDirection(m::vec3 *direction, m::vec3 *up, m::vec3 *side) const;
-    m::vec3 getPosition(void) const;
+    m::vec3 getPosition() const;
     void setRotation(const m::quat &rotation);
-    const m::quat &getRotation(void) const;
+    const m::quat &getRotation() const;
 
 private:
-    void inputMouseMove(void);
+    void inputMouseMove();
     void inputGetCommands(u::vector<clientCommands> &commands);
     void move(float dt, const u::vector<clientCommands> &commands);
 

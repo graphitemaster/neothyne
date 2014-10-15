@@ -4,6 +4,7 @@
 
 #include "u_file.h"
 #include "u_algorithm.h"
+#include "u_misc.h"
 
 ///! triangle
 m::vec3 kdTriangle::getNormal(const kdTree *const tree) {
@@ -19,7 +20,7 @@ void kdTriangle::generatePlane(const kdTree *const tree) {
 }
 
 ///! node
-kdNode::~kdNode(void) {
+kdNode::~kdNode() {
     delete front;
     delete back;
 }
@@ -87,7 +88,7 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth) 
     back = new kdNode(tree, *backList[best], recursionDepth + 1);
 }
 
-bool kdNode::isLeaf(void) const {
+bool kdNode::isLeaf() const {
     return !front && !back;
 }
 
@@ -164,7 +165,7 @@ void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
 }
 
 ///! kdTree
-kdTree::kdTree(void) :
+kdTree::kdTree() :
     root(nullptr),
     nodeCount(0),
     leafCount(0),
@@ -172,17 +173,17 @@ kdTree::kdTree(void) :
     depth(0)
 { }
 
-kdTree::~kdTree(void) {
+kdTree::~kdTree() {
     unload();
 }
 
-void kdTree::unload(void) {
+void kdTree::unload() {
     delete root;
     root = nullptr;
-    entities.clear();
-    vertices.clear();
-    texCoords.clear();
-    triangles.clear();
+    entities.destroy();
+    vertices.destroy();
+    texCoords.destroy();
+    triangles.destroy();
     nodeCount = 0;
     leafCount = 0;
     textureCount = 0;
@@ -445,7 +446,7 @@ static void kdSerializeLump(u::vector<unsigned char> &buffer, const u::vector<T>
         kdSerialize(buffer, &it, sizeof(T));
 }
 
-u::vector<unsigned char> kdTree::serialize(void) {
+u::vector<unsigned char> kdTree::serialize() {
     u::vector<kdBinPlane>    compiledPlanes;
     u::vector<kdBinTexture>  compiledTextures;
     u::vector<kdBinNode>     compiledNodes;

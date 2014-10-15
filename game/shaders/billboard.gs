@@ -8,7 +8,7 @@ uniform vec2 gSize;
 
 out vec2 texCoord0;
 
-void main(void) {
+void main() {
     vec3 position = gl_in[0].gl_Position.xyz;
     vec3 toCamera = normalize(gCameraPosition - position);
     vec3 up = vec3(0.0f, 1.0f, 0.0f);

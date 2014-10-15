@@ -1,8 +1,7 @@
 #ifndef MAP_HDR
 #define MAP_HDR
-#include "util.h"
 #include "kdtree.h"
-
+#include "u_vector.h"
 #include "m_plane.h"
 
 struct kdSphereTrace {
@@ -14,16 +13,16 @@ struct kdSphereTrace {
 };
 
 struct kdMap {
-    kdMap(void);
-    ~kdMap(void);
+    kdMap();
+    ~kdMap();
 
     bool load(const u::vector<unsigned char> &data);
-    void unload(void);
+    void unload();
 
     void traceSphere(kdSphereTrace *trace) const;
     bool isSphereStuck(const m::vec3 &position, float radius) const;
 
-    bool isLoaded(void) const;
+    bool isLoaded() const;
 
     u::vector<m::plane>      planes;
     u::vector<kdBinTexture>  textures;

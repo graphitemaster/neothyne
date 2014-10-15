@@ -4,7 +4,7 @@
 
 namespace m {
 
-void mat4::loadIdentity(void) {
+void mat4::loadIdentity() {
     m[0][0] = 1.0f; m[0][1] = 0.0f; m[0][2] = 0.0f; m[0][3] = 0.0f;
     m[1][0] = 0.0f; m[1][1] = 1.0f; m[1][2] = 0.0f; m[1][3] = 0.0f;
     m[2][0] = 0.0f; m[2][1] = 0.0f; m[2][2] = 1.0f; m[2][3] = 0.0f;
@@ -141,7 +141,7 @@ void mat4::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
     }
 }
 
-mat4 mat4::inverse(void) {
+mat4 mat4::inverse() {
     mat4 r;
     const float *const mat = &m[0][0];
     float *dest = &r.m[0][0];

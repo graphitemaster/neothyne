@@ -156,7 +156,7 @@ def genHeader(functionList, extensionList, headerFile):
         # Begin the namespace
         header.write('namespace gl {\n')
         # Generate the function prototypes
-        header.write('    void init(void);\n')
+        header.write('    void init();\n')
         header.write('    bool has(size_t ext);\n');
         for function in functionList:
             header.write('    ')
@@ -186,7 +186,10 @@ def genSource(functionList, extensionList, sourceFile):
         #include <stdarg.h>
         #define R_COMMON_NO_DEFINES
         #include "r_common.h"
-        #include "util.h"
+
+        #include "u_string.h"
+        #include "u_set.h"
+        #include "u_misc.h"
 
         #ifndef APIENTRY
         #   define APIENTRY
@@ -326,7 +329,7 @@ def genSource(functionList, extensionList, sourceFile):
             source.write('        "GL_%s"%s\n' % (e, ',' if i != len(extensionList) - 1 else ''))
         source.write('    };\n\n')
         # Generate the init function
-        source.write('    void init(void) {\n')
+        source.write('    void init() {\n')
         for f in functionList:
             fill = largest - len(f.name)
             source.write('        gl%s_%s = (PFNGL%sPROC)SDL_GL_GetProcAddress("gl%s");\n'

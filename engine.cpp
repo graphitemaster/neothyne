@@ -40,11 +40,11 @@ frameTimer::frameTimer() :
     cap(kMaxFPS);
 }
 
-void frameTimer::lock(void) {
+void frameTimer::lock() {
     m_lock = true;
 }
 
-void frameTimer::unlock(void) {
+void frameTimer::unlock() {
     m_lock = false;
 }
 
@@ -55,7 +55,7 @@ void frameTimer::cap(float maxFps) {
         ? -1 : (1000.0f / maxFps) - kDampenEpsilon;
 }
 
-void frameTimer::reset(void) {
+void frameTimer::reset() {
     m_frameCount = 0;
     m_minTicks = 1000;
     m_maxTicks = 0;
@@ -63,7 +63,7 @@ void frameTimer::reset(void) {
     m_lastSecondTicks = SDL_GetTicks();
 }
 
-bool frameTimer::update(void) {
+bool frameTimer::update() {
     m_frameCount++;
     m_targetTicks = m_maxFrameTicks != -1 ?
         m_lastSecondTicks + uint32_t(m_frameCount * m_maxFrameTicks) : 0;
@@ -92,19 +92,19 @@ bool frameTimer::update(void) {
     return false;
 }
 
-float frameTimer::mspf(void) const {
+float frameTimer::mspf() const {
     return m_frameAverage;
 }
 
-int frameTimer::fps(void) const {
+int frameTimer::fps() const {
     return m_framesPerSecond;
 }
 
-float frameTimer::delta(void) const {
+float frameTimer::delta() const {
     return m_deltaTime;
 }
 
-uint32_t frameTimer::ticks(void) const {
+uint32_t frameTimer::ticks() const {
     return m_currentTicks;
 }
 
@@ -120,20 +120,20 @@ void neoMouseDelta(int *deltaX, int *deltaY) {
     SDL_GetRelativeMouseState(deltaX, deltaY);
 }
 
-void neoSwap(void) {
+void neoSwap() {
     SDL_GL_SwapWindow(gScreen);
     gTimer.update();
 }
 
-size_t neoWidth(void) {
+size_t neoWidth() {
     return gScreenWidth;
 }
 
-size_t neoHeight(void) {
+size_t neoHeight() {
     return gScreenHeight;
 }
 
-void neoToggleRelativeMouseMode(void) {
+void neoToggleRelativeMouseMode() {
     SDL_SetRelativeMouseMode(
         SDL_GetRelativeMouseMode() == SDL_TRUE
             ? SDL_FALSE : SDL_TRUE);
@@ -172,7 +172,7 @@ void neoSetVSyncOption(vSyncOption option) {
     gTimer.reset();
 }
 
-static SDL_Window *getContext(void) {
+static SDL_Window *getContext() {
     SDL_Init(SDL_INIT_VIDEO);
 
     // Get the display mode resolution
@@ -262,7 +262,7 @@ void neoFatal(const char *fmt, ...) {
     abort();
 }
 
-u::string neoPath(void) {
+u::string neoPath() {
     u::string path;
     char *get = SDL_GetPrefPath("Neothyne", "");
     path = get;
@@ -273,10 +273,10 @@ u::string neoPath(void) {
 // So we don't need to depend on SDL_main we provide our own
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
-    (void)hInst;
-    (void)hPrev;
-    (void)szCmdLine;
-    (void)sw;
+    ()hInst;
+    ()hPrev;
+    ()szCmdLine;
+    ()sw;
 
     auto parseCommandLine = [](const char *src, u::vector<char *> &args) {
         char *buf = new char[strlen(src) + 1];

@@ -16,7 +16,7 @@ gBuffer::~gBuffer() {
     destroy();
 }
 
-void gBuffer::destroy(void) {
+void gBuffer::destroy() {
     gl::DeleteFramebuffers(1, &m_fbo);
     gl::DeleteTextures(kMax, m_textures);
 }
@@ -80,7 +80,7 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
     return true;
 }
 
-void gBuffer::bindReading(void) {
+void gBuffer::bindReading() {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     for (size_t i = 0; i < kMax; i++) {
         gl::ActiveTexture(GL_TEXTURE0 + i);
@@ -88,7 +88,7 @@ void gBuffer::bindReading(void) {
     }
 }
 
-void gBuffer::bindWriting(void) {
+void gBuffer::bindWriting() {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
 }
 

@@ -1,12 +1,17 @@
-#include "c_var.h"
-#include "u_file.h"
-#include "util.h"
+#include <stdlib.h>
+
 #include "engine.h"
+
+#include "c_var.h"
+
+#include "u_file.h"
+#include "u_vector.h"
+#include "u_misc.h"
 
 namespace c {
 
 struct varReference {
-    varReference(void) { }
+    varReference() { }
     varReference(const char *desc, void *self, varType type) :
         desc(desc),
         self(self),
@@ -18,7 +23,7 @@ struct varReference {
     varType type;
 };
 
-static u::map<u::string, varReference> &variables(void) {
+static u::map<u::string, varReference> &variables() {
     static u::map<u::string, varReference> *vars = new u::map<u::string, varReference>();
     return *vars;
 }
@@ -53,7 +58,7 @@ void varChange(const u::string &name, const u::string &value, bool callback = fa
         varSet<float>(name, u::atof(value), callback);
 }
 
-bool writeConfig(void) {
+bool writeConfig() {
     u::file file = u::fopen(neoPath() + "init.cfg", "w");
     if (!file)
         return false;
@@ -71,7 +76,7 @@ bool writeConfig(void) {
     return true;
 }
 
-bool readConfig(void) {
+bool readConfig() {
     u::file file = u::fopen(neoPath() + "init.cfg", "r");
     if (!file)
         return false;

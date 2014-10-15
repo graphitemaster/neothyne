@@ -1,9 +1,10 @@
 #ifndef ENGINE_HDR
 #define ENGINE_HDR
 #include <SDL2/SDL.h>
-
 #include <stdint.h>
-#include "util.h"
+
+#include "u_map.h"
+#include "u_string.h"
 
 struct frameTimer {
     static constexpr size_t kMaxFPS = 0; // For capping framerate (0 = disabled)
@@ -12,15 +13,15 @@ struct frameTimer {
     frameTimer();
 
     void cap(float maxFps); ///< Cap framerate to `maxFps' 0 to disable
-    float mspf(void) const; ///< Milliseconds per frame
-    int fps(void) const; ///< Frames per second
-    float delta(void) const; ///< Frame delta
-    uint32_t ticks(void) const; ///< Ticks
-    void reset(void);
-    bool update(void);
+    float mspf() const; ///< Milliseconds per frame
+    int fps() const; ///< Frames per second
+    float delta() const; ///< Frame delta
+    uint32_t ticks() const; ///< Ticks
+    void reset();
+    bool update();
 
-    void lock(void);
-    void unlock(void);
+    void lock();
+    void unlock();
 
 private:
     float m_maxFrameTicks;
@@ -49,13 +50,13 @@ enum vSyncOption {
 
 u::map<int, int> &neoKeyState(int key = 0, bool keyDown = false, bool keyUp = false);
 void neoMouseDelta(int *deltaX, int *deltaY);
-void neoSwap(void);
-size_t neoWidth(void);
-size_t neoHeight(void);
-void neoToggleRelativeMouseMode(void);
+void neoSwap();
+size_t neoWidth();
+size_t neoHeight();
+void neoToggleRelativeMouseMode();
 void neoSetWindowTitle(const char *title);
 void neoResize(size_t width, size_t height);
-u::string neoPath(void);
+u::string neoPath();
 void neoFatal(const char *fmt, ...);
 
 void neoSetVSyncOption(vSyncOption option);

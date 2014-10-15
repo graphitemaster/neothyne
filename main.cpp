@@ -11,6 +11,7 @@
 #include "c_var.h"
 
 #include "u_file.h"
+#include "u_misc.h"
 
 // we load assets in a different thread
 enum {

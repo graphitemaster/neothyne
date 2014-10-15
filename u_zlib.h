@@ -1,6 +1,8 @@
 #ifndef U_ZLIB_HDR
 #define U_ZLIB_HDR
-#include "util.h"
+#include <stddef.h>
+#include "u_vector.h"
+
 namespace u {
     struct zlib {
         bool decompress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in);

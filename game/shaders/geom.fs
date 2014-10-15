@@ -30,13 +30,13 @@ vec2 encodeNormal(vec3 normal) {
     return q;
 }
 
-vec3 calcBump(void) {
+vec3 calcBump() {
     vec3 bn = 2.0f * texture(gNormalMap, texCoord0).rgb - 1.0f;
     mat3 tbn = mat3(tangent0, bitangent0, normal0);
     return normalize(tbn * bn);
 }
 
-void main(void) {
+void main() {
     diffuseOut = texture(gColorMap, texCoord0).rgb;
     normalOut = encodeNormal(calcBump()); //normalize(normal0));
 }

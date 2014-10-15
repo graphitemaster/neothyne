@@ -4,22 +4,22 @@
 #include "u_zlib.h"
 
 ///!kdMap
-kdMap::kdMap(void) {
+kdMap::kdMap() {
     // nothing
 }
 
-kdMap::~kdMap(void) {
+kdMap::~kdMap() {
     unload();
 }
 
-void kdMap::unload(void) {
-    planes.clear();
-    textures.clear();
-    nodes.clear();
-    leafs.clear();
-    triangles.clear();
-    vertices.clear();
-    entities.clear();
+void kdMap::unload() {
+    planes.destroy();
+    textures.destroy();
+    nodes.destroy();
+    leafs.destroy();
+    triangles.destroy();
+    vertices.destroy();
+    entities.destroy();
 }
 
 template <typename T>
@@ -29,7 +29,7 @@ static size_t mapUnserialize(T *dest, const u::vector<unsigned char> &data, size
     return offset + sizeof(T);
 }
 
-bool kdMap::isLoaded(void) const {
+bool kdMap::isLoaded() const {
     return nodes.size();
 }
 

@@ -1,8 +1,10 @@
 #ifndef U_FILE_HDR
 #define U_FILE_HDR
 #include <stdio.h>
+
 #include "u_optional.h"
-#include "util.h"
+#include "u_string.h"
+#include "u_vector.h"
 
 namespace u {
 
@@ -15,17 +17,18 @@ struct file {
     file(FILE *fp) :
         m_handle(fp) { }
 
+    ~file() {
+        if (m_handle)
+            fclose(m_handle);
+    }
+
+
     operator FILE*() {
         return m_handle;
     }
 
     FILE *get() {
         return m_handle;
-    }
-
-    ~file() {
-        if (m_handle)
-            fclose(m_handle);
     }
 
 private:

@@ -3,7 +3,10 @@
 #include <stdarg.h>
 #define R_COMMON_NO_DEFINES
 #include "r_common.h"
-#include "util.h"
+
+#include "u_string.h"
+#include "u_set.h"
+#include "u_misc.h"
 
 #ifndef APIENTRY
 #   define APIENTRY
@@ -348,7 +351,7 @@ namespace gl {
         "GL_ARB_texture_compression_bptc"
     };
 
-    void init(void) {
+    void init() {
         glCreateShader_             = (PFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader");
         glShaderSource_             = (PFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress("glShaderSource");
         glCompileShader_            = (PFNGLCOMPILESHADERPROC)SDL_GL_GetProcAddress("glCompileShader");

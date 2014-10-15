@@ -6,12 +6,12 @@
 #include "r_texture.h"
 #include "r_method.h"
 
-#include "util.h"
+#include "u_string.h"
 
 namespace r {
 
 struct skyboxMethod : method {
-    virtual bool init(void);
+    virtual bool init();
 
     void setWVP(const m::mat4 &wvp);
     void setTextureUnit(int unit);
@@ -27,7 +27,7 @@ struct skybox {
     ~skybox();
 
     bool load(const u::string &skyboxName);
-    bool upload(void);
+    bool upload();
 
     void render(const rendererPipeline &pipeline);
 

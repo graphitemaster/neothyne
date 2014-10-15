@@ -1,6 +1,9 @@
 #ifndef KDTREE_HDR
 #define KDTREE_HDR
-#include "util.h"
+#include <stdint.h>
+
+#include "u_string.h"
+#include "u_vector.h"
 
 #include "m_plane.h"
 #include "m_quat.h"
@@ -42,7 +45,7 @@ struct kdNode {
     void calculateSphere(const kdTree *tree, const u::vector<int> &triangles);
 
     // Is the node a leaf?
-    bool isLeaf(void) const;
+    bool isLeaf() const;
 
     // Find the best plane to split on
     m::plane findSplittingPlane(const kdTree *tree, const u::vector<int> &triangles, m::axis axis) const;
@@ -52,7 +55,7 @@ struct kdNode {
         u::vector<int> &front, u::vector<int> &back, u::vector<int> &splitlist, m::plane &splitplane) const;
 
     // Flatten tree representation into a disk-writable medium.
-    u::vector<unsigned char> serialize(void);
+    u::vector<unsigned char> serialize();
 
     kdNode        *front;
     kdNode        *back;
@@ -63,8 +66,8 @@ struct kdNode {
 };
 
 struct kdTree {
-    kdTree(void);
-    ~kdTree(void);
+    kdTree();
+    ~kdTree();
 
     static constexpr float kMaxTraceDistance = 99999.999f;
     static constexpr float kEpsilon = 0.01f; // Plane offset for point classification
@@ -73,8 +76,8 @@ struct kdTree {
 
     bool load(const u::string &file);
     polyPlane testTriangle(size_t index, const m::plane &plane) const;
-    void unload(void);
-    u::vector<unsigned char> serialize(void);
+    void unload();
+    u::vector<unsigned char> serialize();
 
 private:
     friend struct kdNode;
