@@ -273,10 +273,10 @@ u::string neoPath() {
 // So we don't need to depend on SDL_main we provide our own
 #ifdef _WIN32
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
-    ()hInst;
-    ()hPrev;
-    ()szCmdLine;
-    ()sw;
+    (void)hInst;
+    (void)hPrev;
+    (void)szCmdLine;
+    (void)sw;
 
     auto parseCommandLine = [](const char *src, u::vector<char *> &args) {
         char *buf = new char[strlen(src) + 1];
