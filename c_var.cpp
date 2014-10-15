@@ -7,6 +7,7 @@
 #include "u_file.h"
 #include "u_vector.h"
 #include "u_misc.h"
+#include "u_string.h"
 
 namespace c {
 
@@ -32,7 +33,7 @@ static u::map<u::string, varReference> &variables() {
 void varRegister(const char *name, const char *desc, void *self, varType type) {
     if (variables().find(name) != variables().end())
         return;
-    variables().emplace(name, varReference(desc, self, type));
+    variables()[name] = varReference(desc, self, type);
 }
 
 template <typename T>

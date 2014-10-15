@@ -14,6 +14,32 @@
 
 namespace u {
 
+file::file()
+    : m_handle(nullptr)
+{
+}
+
+file::file(FILE *fp)
+    : m_handle(fp)
+{
+}
+
+file::~file() {
+    if (m_handle)
+        fclose(m_handle);
+}
+
+
+file::operator FILE*() {
+    return m_handle;
+}
+
+FILE *file::get() {
+    return m_handle;
+}
+
+
+// file system stuff
 bool exists(const u::string &file) {
     return u::fopen(file, "r").get();
 }

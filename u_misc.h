@@ -9,6 +9,27 @@
 
 namespace u {
 
+// Simple hash function via SDBM
+namespace detail {
+    static inline size_t sdbm(const void *data, size_t length) {
+        size_t hash = 0;
+        unsigned char *as = (unsigned char *)data;
+        for (unsigned char *it = as, *end = as + length; it != end; ++it)
+            hash = *it + (hash << 6) + (hash << 16) - hash;
+        return hash;
+    }
+}
+
+template <typename T>
+inline size_t hash(const T &value) {
+    const size_t rep = size_t(value);
+    return detail::sdbm((const void *)&rep, sizeof(rep));
+}
+
+static inline size_t hash(const string &value) {
+    return detail::sdbm(value.c_str(), value.size());
+}
+
 inline int sscanf(const u::string &thing, const char *fmt, ...) {
     va_list va;
     va_start(va, fmt);

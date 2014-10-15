@@ -69,10 +69,10 @@ private:
 };
 
 template <typename T>
-inline buffer<T>::buffer() :
-    first(nullptr),
-    last(nullptr),
-    capacity(nullptr)
+inline buffer<T>::buffer()
+    :first(nullptr)
+    ,last(nullptr)
+    ,capacity(nullptr)
 {
 }
 

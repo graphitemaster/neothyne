@@ -11,25 +11,12 @@ namespace u {
 // A little unique_ptr like file wrapper to achieve RAII. We can't use
 // unique_ptr here because unique_ptr doesn't allow null default delters
 struct file {
-    file() :
-        m_handle(nullptr) { }
+    file();
+    file(FILE *fp);
+    ~file();
 
-    file(FILE *fp) :
-        m_handle(fp) { }
-
-    ~file() {
-        if (m_handle)
-            fclose(m_handle);
-    }
-
-
-    operator FILE*() {
-        return m_handle;
-    }
-
-    FILE *get() {
-        return m_handle;
-    }
+    operator FILE*();
+    FILE *get();
 
 private:
     FILE *m_handle;

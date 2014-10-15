@@ -272,6 +272,7 @@ u::string neoPath() {
 
 // So we don't need to depend on SDL_main we provide our own
 #ifdef _WIN32
+#include "u_vector.h"
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
     (void)hInst;
     (void)hPrev;

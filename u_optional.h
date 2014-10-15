@@ -37,20 +37,28 @@ private:
 };
 
 template <typename T>
-optional<T>::optional() : m_init(false) {
+optional<T>::optional()
+    : m_init(false)
+{
 }
 
 template <typename T>
-optional<T>::optional(none_t) : m_init(false) {
+optional<T>::optional(none_t)
+    : m_init(false)
+{
 }
 
 template <typename T>
-optional<T>::optional(const T &value) : m_init(true) {
+optional<T>::optional(const T &value)
+    : m_init(true)
+{
     construct(value);
 }
 
 template <typename T>
-optional<T>::optional(const optional<T> &opt) : m_init(opt.m_init) {
+optional<T>::optional(const optional<T> &opt)
+    : m_init(opt.m_init)
+{
     if (m_init)
         construct(opt.get());
 }

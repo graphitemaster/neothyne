@@ -11,42 +11,42 @@ struct vector {
     typedef const T* const_iterator;
 
     vector();
-    vector(const vector& other);
+    vector(const vector &other);
     vector(size_t size);
-    vector(size_t size, const T& value);
-    vector(const T* first, const T* last);
+    vector(size_t size, const T &value);
+    vector(const T *first, const T *last);
     ~vector();
 
-    vector& operator=(const vector& other);
+    vector& operator=(const vector &other);
 
-    void assign(const T* first, const T* last);
+    void assign(const T *first, const T *last);
 
-    const T* data() const;
-    T* data();
+    const T *data() const;
+    T *data();
     size_t size() const;
     bool empty() const;
 
-    T& operator[](size_t idx);
-    const T& operator[](size_t idx) const;
+    T &operator[](size_t idx);
+    const T &operator[](size_t idx) const;
 
-    const T& back() const;
-    T& back();
+    const T &back() const;
+    T &back();
 
     void resize(size_t size);
-    void resize(size_t size, const T& value);
+    void resize(size_t size, const T &value);
     void clear();
     void reserve(size_t capacity);
 
-    void push_back(const T& t);
+    void push_back(const T &t);
     void pop_back();
 
     void swap(vector& other);
     void destroy();
 
-    void insert(iterator where, const T& value);
+    void insert(iterator where, const T &value);
 
     template <typename I>
-    void insert(iterator where, const I* first, const I* last);
+    void insert(iterator where, const I *first, const I *last);
 
     iterator begin();
     iterator end();
@@ -63,7 +63,7 @@ inline vector<T>::vector() {
 }
 
 template <typename T>
-inline vector<T>::vector(const vector& other) {
+inline vector<T>::vector(const vector &other) {
     m_buffer.reserve(other.size());
     m_buffer.insert(m_buffer.last, other.m_buffer.first, other.m_buffer.last);
 }
@@ -74,12 +74,12 @@ inline vector<T>::vector(size_t size) {
 }
 
 template <typename T>
-inline vector<T>::vector(size_t size, const T& value) {
+inline vector<T>::vector(size_t size, const T &value) {
     m_buffer.resize(size, value);
 }
 
 template <typename T>
-inline vector<T>::vector(const T* first, const T* last) {
+inline vector<T>::vector(const T *first, const T *last) {
     m_buffer.insert(m_buffer.last, first, last);
 }
 
@@ -88,13 +88,13 @@ inline vector<T>::~vector() {
 }
 
 template <typename T>
-inline vector<T>& vector<T>::operator=(const vector& other) {
+inline vector<T> &vector<T>::operator=(const vector &other) {
     vector(other).swap(*this);
     return *this;
 }
 
 template <typename T>
-inline void vector<T>::assign(const T* first, const T* last) {
+inline void vector<T>::assign(const T *first, const T *last) {
     m_buffer.clear();
     m_buffer.insert(m_buffer.last, first, last);
 }
@@ -120,22 +120,22 @@ inline bool vector<T>::empty() const {
 }
 
 template <typename T>
-inline T& vector<T>::operator[](size_t idx) {
+inline T &vector<T>::operator[](size_t idx) {
     return m_buffer.first[idx];
 }
 
 template <typename T>
-inline const T& vector<T>::operator[](size_t idx) const {
+inline const T &vector<T>::operator[](size_t idx) const {
     return m_buffer.first[idx];
 }
 
 template <typename T>
-inline const T& vector<T>::back() const {
+inline const T &vector<T>::back() const {
     return m_buffer.last[-1];
 }
 
 template <typename T>
-inline T& vector<T>::back() {
+inline T &vector<T>::back() {
     return m_buffer.last[-1];
 }
 
@@ -145,7 +145,7 @@ inline void vector<T>::resize(size_t size) {
 }
 
 template <typename T>
-inline void vector<T>::resize(size_t size, const T& value) {
+inline void vector<T>::resize(size_t size, const T &value) {
     m_buffer.resize(size, value);
 }
 
@@ -160,8 +160,8 @@ inline void vector<T>::reserve(size_t capacity) {
 }
 
 template <typename T>
-inline void vector<T>::push_back(const T& t) {
-    m_buffer.insert(m_buffer.last, &t, &t + 1);
+inline void vector<T>::push_back(const T &value) {
+    m_buffer.insert(m_buffer.last, &value, &value + 1);
 }
 
 template <typename T>
@@ -170,7 +170,7 @@ inline void vector<T>::pop_back() {
 }
 
 template <typename T>
-inline void vector<T>::swap(vector& other) {
+inline void vector<T>::swap(vector<T> &other) {
     m_buffer.swap(other.m_buffer);
 }
 
@@ -200,13 +200,13 @@ inline typename vector<T>::const_iterator vector<T>::end() const {
 }
 
 template <typename T>
-inline void vector<T>::insert(iterator where, const T& value) {
+inline void vector<T>::insert(iterator where, const T &value) {
     m_buffer.insert(where, &value, &value + 1);
 }
 
 template <typename T>
 template <typename I>
-inline void vector<T>::insert(iterator where, const I* first, const I* last) {
+inline void vector<T>::insert(iterator where, const I *first, const I *last) {
     m_buffer.insert(where, first, last);
 }
 
