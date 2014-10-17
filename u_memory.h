@@ -14,8 +14,6 @@ struct default_delete {
     template<typename O>
     default_delete(const default_delete<O>&);
     void operator()(T *data);
-    template<typename O>
-    void operator()(O *data);
 };
 
 /// default_delete<T[]>
@@ -26,7 +24,7 @@ struct default_delete<T[]> {
     default_delete(const default_delete<O>&);
     void operator()(T *data);
     template<typename O>
-    void operator()(O *data);
+    void operator()(O *data) = delete;
 };
 
 /// unique_ptr<T>
@@ -125,10 +123,6 @@ inline void default_delete<T>::operator()(T *data) {
     delete data;
 }
 
-template <typename T>
-template <typename O>
-inline void default_delete<T>::operator()(O *data) = delete;
-
 /// default_delete<T[]>
 template <typename T>
 inline constexpr default_delete<T[]>::default_delete() = default;
@@ -143,10 +137,6 @@ template <typename T>
 inline void default_delete<T[]>::operator()(T *data) {
     delete[] data;
 }
-
-template <typename T>
-template <typename O>
-inline void default_delete<T[]>::operator()(O *data) = delete;
 
 /// unique_ptr<T, D>
 template <typename T, typename D>
