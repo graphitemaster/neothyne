@@ -7,7 +7,7 @@ CXXFLAGS = \
 	-fno-exceptions \
 	-fno-rtti \
 	-DDEBUG_GL \
-	-O1
+	-O3
 
 ENGINE_CXXFLAGS = \
 	$(CXXFLAGS) \
