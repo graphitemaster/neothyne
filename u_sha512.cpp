@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdint.h>
 
 #include "u_sha512.h"
 #include "u_algorithm.h"

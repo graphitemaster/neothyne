@@ -26,7 +26,7 @@ bool method::init() {
 }
 
 bool method::addShader(GLenum shaderType, const char *shaderFile) {
-    u::string *shaderSource;
+    u::string *shaderSource = nullptr;
     switch (shaderType) {
         case GL_VERTEX_SHADER:
             shaderSource = &m_vertexSource;
@@ -36,6 +36,8 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
             break;
         case GL_GEOMETRY_SHADER:
             shaderSource = &m_geometrySource;
+            break;
+        default:
             break;
     }
 

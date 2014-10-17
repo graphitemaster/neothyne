@@ -45,6 +45,7 @@ ENGINE_SOURCES = \
 	u_file.cpp \
 	u_zlib.cpp \
 	u_sha512.cpp \
+	u_string.cpp \
 	$(MATH_SOURCES) \
 	$(RENDERER_SOURCES)
 
