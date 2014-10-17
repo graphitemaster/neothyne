@@ -41,13 +41,17 @@ void billboardMethod::setSize(float width, float height) {
 }
 
 ///! renderer
-billboard::billboard() {
-
+billboard::billboard()
+    : m_vbo(0)
+    , m_vao(0)
+{
 }
 
 billboard::~billboard() {
-    gl::DeleteBuffers(1, &m_vbo);
-    gl::DeleteVertexArrays(1, &m_vao);
+    if (m_vbo)
+        gl::DeleteBuffers(1, &m_vbo);
+    if (m_vbo)
+        gl::DeleteVertexArrays(1, &m_vao);
 }
 
 bool billboard::load(const u::string &billboardTexture) {

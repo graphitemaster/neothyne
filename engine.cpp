@@ -174,6 +174,7 @@ void neoSetVSyncOption(vSyncOption option) {
 
 static SDL_Window *getContext() {
     SDL_Init(SDL_INIT_VIDEO);
+    SDL_GL_LoadLibrary(NULL);
 
     // Get the display mode resolution
     SDL_DisplayMode mode;
