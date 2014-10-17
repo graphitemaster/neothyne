@@ -17,8 +17,10 @@ gBuffer::~gBuffer() {
 }
 
 void gBuffer::destroy() {
-    gl::DeleteFramebuffers(1, &m_fbo);
-    gl::DeleteTextures(kMax, m_textures);
+    if (m_fbo)
+        gl::DeleteFramebuffers(1, &m_fbo);
+    if (m_textures[0])
+        gl::DeleteTextures(kMax, m_textures);
 }
 
 void gBuffer::update(const m::perspectiveProjection &project) {
@@ -70,7 +72,7 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
         GL_COLOR_ATTACHMENT1  // normal
     };
 
-    gl::DrawBuffers(kMax, drawBuffers);
+    gl::DrawBuffers(sizeof(drawBuffers)/sizeof(*drawBuffers), drawBuffers);
 
     GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)
