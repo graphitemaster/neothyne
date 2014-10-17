@@ -101,7 +101,7 @@ void skybox::render(const rendererPipeline &pipeline) {
     m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
 
     gl::BindVertexArray(m_vao);
-    gl::DrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_BYTE, (void *)0);
+    gl::DrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_BYTE, 0);
     gl::BindVertexArray(0);
     gl::CullFace(GL_BACK);
 }

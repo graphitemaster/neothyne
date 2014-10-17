@@ -2,6 +2,7 @@
 #define U_MISC_HDR
 #include <stdarg.h>  // va_start, va_end, va_list
 #include <string.h>  // strcpy
+#include <stdio.h>
 
 #include "u_string.h" // u::string
 #include "u_vector.h" // u::vector

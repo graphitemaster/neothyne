@@ -1,4 +1,4 @@
-CXX ?= g++
+CXX = $(CC)
 CXXFLAGS = \
 	-std=c++11 \
 	-Wall \
@@ -14,6 +14,7 @@ ENGINE_CXXFLAGS = \
 	`sdl2-config --cflags`
 
 ENGINE_LDFLAGS = \
+	-lm \
 	`sdl2-config --libs`
 
 GAME_SOURCES = \
@@ -43,6 +44,7 @@ ENGINE_SOURCES = \
 	kdtree.cpp \
 	texture.cpp \
 	c_var.cpp \
+	u_new.cpp \
 	u_file.cpp \
 	u_zlib.cpp \
 	u_sha512.cpp \
