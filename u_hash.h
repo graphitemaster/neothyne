@@ -56,8 +56,8 @@ hash_node<K, void>::hash_node(const K& key)
 }
 
 template <typename K, typename V>
-static void hash_node_insert(hash_node<K, V>* node, size_t hash,
-                             hash_node<K, V>** buckets, size_t nbuckets)
+static void hash_node_insert(hash_node<K, V> *node, size_t hash,
+                             hash_node<K, V> **buckets, size_t nbuckets)
 {
     size_t bucket = hash & (nbuckets - 1);
     hash_node<K, V>* it = buckets[bucket + 1];

@@ -1,7 +1,8 @@
 #ifndef U_BUFFER_HDR
 #define U_BUFFER_HDR
 #include <stdlib.h>
-#include <new>
+
+#include "u_new.h"
 namespace u {
 
 namespace detail {
