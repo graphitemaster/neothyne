@@ -1,3 +1,4 @@
+#include <time.h>
 #include <SDL2/SDL.h>
 
 #include "kdmap.h"
@@ -43,7 +44,7 @@ error:
     return false;
 }
 
-static void screenShot(const u::string &file) {
+static void screenShot() {
     const size_t screenWidth = neoWidth();
     const size_t screenHeight = neoHeight();
     const size_t screenSize = screenWidth * screenHeight;
@@ -59,7 +60,16 @@ static void screenShot(const u::string &file) {
         (unsigned char *)temp->pixels, false, true, false);
     SDL_UnlockSurface(temp);
     delete[] pixels;
-    SDL_SaveBMP(temp, file.c_str());
+
+    // timestamp them and put them in screenshots directory
+    time_t t = time(nullptr);
+    struct tm tm = *localtime(&t);
+    u::mkdir(neoPath() + "screenshots");
+    u::string file = u::format("%sscreenshots/%d-%d-%d-%d%d%d.bmp",
+        neoPath().c_str(), tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+        tm.tm_hour, tm.tm_min, tm.tm_sec);
+    if (SDL_SaveBMP(temp, file.c_str()) == 0)
+        printf("[screenshot] => %s\n", file.c_str());
     SDL_FreeSurface(temp);
 }
 
@@ -150,7 +160,7 @@ int neoMain(frameTimer &timer, int argc, char **argv) {
                             running = false;
                             break;
                         case SDLK_F8:
-                            screenShot("screenshot.bmp");
+                            screenShot();
                             break;
                         case SDLK_F12:
                             neoToggleRelativeMouseMode();

@@ -354,5 +354,6 @@ int main(int argc, char **argv) {
     printf("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\n",
         vendor, renderer, version, shader);
 
+    printf("Configuration: %s\n", neoPath().c_str());
     return neoMain(gTimer, argc, argv);
 }
