@@ -34,6 +34,8 @@ VIDEO
     vid_maxfps
         value to cap framerate to or 0 for no framerate capping
 
+    vid_driver
+        the driver to use for rendering enclosed in quotes
 
 RENDERER
     r_aniso
