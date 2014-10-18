@@ -30,7 +30,7 @@ struct loadThreadData {
 static bool loadThread(void *threadData) {
     loadThreadData *data = (loadThreadData*)threadData;
 
-    auto read = u::read("maps/garden.kdgz", "rb");
+    auto read = u::read(neoGamePath() + "maps/garden.kdgz", "rb");
     if (read) {
         if (!data->gMap.load(*read))
             goto error;
@@ -64,9 +64,9 @@ static void screenShot() {
     // timestamp them and put them in screenshots directory
     time_t t = time(nullptr);
     struct tm tm = *localtime(&t);
-    u::mkdir(neoPath() + "screenshots");
+    u::mkdir(neoUserPath() + "screenshots");
     u::string file = u::format("%sscreenshots/%d-%d-%d-%d%d%d.bmp",
-        neoPath().c_str(), tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+        neoUserPath().c_str(), tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
         tm.tm_hour, tm.tm_min, tm.tm_sec);
     if (SDL_SaveBMP(temp, file.c_str()) == 0)
         printf("[screenshot] => %s\n", file.c_str());
@@ -77,12 +77,7 @@ static c::var<float> cl_fov("cl_fov", "field of view", 45.0f, 270.0f, 90.0f);
 static c::var<float> cl_nearp("cl_nearp", "near plane", 0.0f, 10.0f, 1.0f);
 static c::var<float> cl_farp("cl_farp", "far plane", 128.0f, 4096.0f, 2048.0f);
 
-int neoMain(frameTimer &timer, int argc, char **argv) {
-    argc--;
-    argv++;
-    if (argc == 2)
-        neoResize(atoi(argv[0]), atoi(argv[1]));
-
+int neoMain(frameTimer &timer, int, char **) {
     r::splashScreen gSplash;
     if (!gSplash.load("textures/logo"))
         neoFatal("failed to load splash screen");

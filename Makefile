@@ -62,16 +62,6 @@ all: $(GAME_BIN)
 $(GAME_BIN): $(GAME_OBJECTS)
 	$(CXX) $(ENGINE_LDFLAGS) $(GAME_OBJECTS) -o $@
 
-install: $(GAME_BIN)
-	#strip $(GAME_BIN)
-	mv $(GAME_BIN) $(GAME_DIR)/$(GAME_BIN)
-
-uninstall:
-	rm -f $(GAME_DIR)/$(GAME_BIN)
-
-run: install
-	cd $(GAME_DIR) && ./$(GAME_BIN)
-
 .cpp.o:
 	$(CXX) -c $(ENGINE_CXXFLAGS) $< -o $@
 

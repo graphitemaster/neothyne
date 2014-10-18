@@ -100,7 +100,8 @@ string &string::append(const char *str, size_t len) {
 void string::pop_back() {
     if (m_last == m_first)
         return;
-    *m_last-- = '\0';
+    m_last--;
+    *m_last = '\0';
 }
 
 void string::pop_front() {
@@ -127,7 +128,7 @@ char &string::operator[](size_t index) {
     return m_first[index];
 }
 
-size_t string::find(char ch) {
+size_t string::find(char ch) const {
     char *search = strchr(m_first, ch);
     return search ? m_last - search : npos;
 }

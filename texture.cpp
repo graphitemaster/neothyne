@@ -1,7 +1,5 @@
 #define __STDC_LIMIT_MACROS
-#include <stdint.h>
-#include <string.h>
-
+#include "engine.h"
 #include "texture.h"
 
 #include "u_zlib.h"
@@ -1785,7 +1783,7 @@ u::optional<u::string> texture::find(const u::string &infile) {
 
 bool texture::load(const u::string &file, float quality) {
     // Construct a texture from a file
-    auto name = find(file);
+    auto name = find(neoGamePath() + file);
     if (!name)
         return false;
 

@@ -71,7 +71,7 @@ void varChange(const u::string &name, const u::string &value, bool callback = fa
 }
 
 bool writeConfig() {
-    u::file file = u::fopen(neoPath() + "init.cfg", "w");
+    u::file file = u::fopen(neoUserPath() + "init.cfg", "w");
     if (!file)
         return false;
     auto writeLine = [](FILE *fp, const u::string &name, const varReference &ref) {
@@ -94,7 +94,7 @@ bool writeConfig() {
 }
 
 bool readConfig() {
-    u::file file = u::fopen(neoPath() + "init.cfg", "r");
+    u::file file = u::fopen(neoUserPath() + "init.cfg", "r");
     if (!file)
         return false;
     while (auto getline = u::getline(file)) {

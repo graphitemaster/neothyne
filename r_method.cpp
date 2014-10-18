@@ -1,3 +1,4 @@
+#include "engine.h"
 #include "r_method.h"
 #include "u_file.h"
 
@@ -41,7 +42,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
             break;
     }
 
-    auto source = u::read(shaderFile, "r");
+    auto source = u::read(neoGamePath() + shaderFile, "r");
     if (source)
         *shaderSource += u::string((*source).begin(), (*source).end());
     else

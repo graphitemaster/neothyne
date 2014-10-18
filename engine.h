@@ -56,7 +56,8 @@ size_t neoHeight();
 void neoToggleRelativeMouseMode();
 void neoSetWindowTitle(const char *title);
 void neoResize(size_t width, size_t height);
-u::string neoPath();
+const u::string &neoUserPath();
+const u::string &neoGamePath();
 void neoFatal(const char *fmt, ...);
 
 void neoSetVSyncOption(vSyncOption option);

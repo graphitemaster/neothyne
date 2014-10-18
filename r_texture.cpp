@@ -47,7 +47,7 @@ static bool readCache(texture &tex, GLuint &internal) {
 
     // Do we even have it in cache?
     const u::string cacheString = "cache/" + tex.hashString();
-    const u::string file = neoPath() + cacheString;
+    const u::string file = neoUserPath() + cacheString;
     if (!u::exists(file))
         return false;
 
@@ -106,7 +106,7 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
 
     // Don't bother caching if we already have it
     const u::string cacheString =  "cache/" + tex.hashString();
-    const u::string file = neoPath() + cacheString;
+    const u::string file = neoUserPath() + cacheString;
     if (u::exists(file))
         return false;
 

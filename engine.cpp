@@ -5,9 +5,12 @@
 #include "engine.h"
 #include "r_common.h"
 #include "c_var.h"
+#include "u_file.h"
 
 // Engine globals
 static u::map<int, int> gKeyMap;
+static u::string gUserPath;
+static u::string gGamePath;
 static size_t gScreenWidth = 0;
 static size_t gScreenHeight = 0;
 static size_t gRefreshRate = 0;
@@ -273,15 +276,8 @@ void neoFatal(const char *fmt, ...) {
     abort();
 }
 
-u::string neoPath() {
-    u::string path;
-    char *get = SDL_GetPrefPath("Neothyne", "");
-    path = get;
-    path.pop_back();
-    path.pop_back();
-    SDL_free(get);
-    return path;
-}
+const u::string &neoUserPath() { return gUserPath; }
+const u::string &neoGamePath() { return gGamePath; }
 
 // So we don't need to depend on SDL_main we provide our own
 #ifdef _WIN32
@@ -324,6 +320,27 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
 }
 #endif
 
+static void neoVerifyPaths(int argc, char **argv) {
+    // Check for command line '-gamedir'
+    --argc;
+    const char *directory = nullptr;
+    for (int i = 0; i < argc - 1; i++) {
+        if (!strcmp(argv[i + 1], "-gamedir") && argv[i + 2]) {
+            directory = argv[i + 2];
+            break;
+        }
+    }
+    gGamePath = directory ? directory : "game";
+    if (gGamePath.find('/') == u::string::npos)
+        gGamePath += "/";
+
+    // Get a path for the user
+    char *get = SDL_GetPrefPath("Neothyne", "");
+    gUserPath = get;
+    gUserPath.pop_back(); // Remove additional path separator
+    SDL_free(get);
+}
+
 ///
 /// On Window the entry point is entered as such:
 ///     WinMain -> SDL_main -> main -> neoMain
@@ -332,6 +349,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
 ///
 extern int neoMain(frameTimer &timer, int argc, char **argv);
 int main(int argc, char **argv) {
+    neoVerifyPaths(argc, argv);
+
     c::readConfig();
 
     gScreen = getContext();
@@ -354,7 +373,7 @@ int main(int argc, char **argv) {
 
     printf("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\n",
         vendor, renderer, version, shader);
-
-    printf("Configuration: %s\n", neoPath().c_str());
+    printf("Game: %s\nUser: %s\n",
+        neoGamePath().c_str(), neoUserPath().c_str());
     return neoMain(gTimer, argc, argv);
 }

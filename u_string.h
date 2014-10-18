@@ -42,7 +42,7 @@ struct string {
     void pop_front();
 
     char &operator[](size_t index);
-    size_t find(char ch);
+    size_t find(char ch) const;
 
     void erase(size_t beg, size_t end);
 
