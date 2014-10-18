@@ -51,7 +51,7 @@ static inline void varSet(const u::string &name, const T &value, bool callback) 
     auto &val = *reinterpret_cast<var<T>*>(ref.self);
     val.set(value);
     if (callback)
-        val(value);
+        val();
 }
 
 void varChange(const u::string &name, const u::string &value, bool callback = false) {

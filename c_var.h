@@ -23,7 +23,7 @@ void varRegister(const char *name, const char *desc, void *what, varType type);
 
 template <typename T>
 struct var {
-    typedef void (*command)(T);
+    typedef void (*command)(T&);
 
     var(const char *name, const char *desc, const T &min, const T &max, const T &def)
         : m_min(min)
@@ -61,9 +61,9 @@ struct var {
         m_current = value;
     }
 
-    void operator()(T value) {
+    void operator()() {
         if (m_callback)
-            m_callback(value);
+            m_callback(m_current);
     }
 
 private:
@@ -76,7 +76,7 @@ private:
 
 template <>
 struct var<u::string> {
-    typedef void (*command)(u::string value);
+    typedef void (*command)(u::string &value);
 
     var(const char *name, const char *desc, const u::string &def)
         : m_default(def)
@@ -108,9 +108,9 @@ struct var<u::string> {
         m_current = value;
     }
 
-    void operator()(const u::string &value) {
+    void operator()() {
         if (m_callback)
-            m_callback(value);
+            m_callback(m_current);
     }
 
 private:
