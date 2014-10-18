@@ -103,6 +103,10 @@ void string::pop_back() {
     *m_last-- = '\0';
 }
 
+void string::pop_front() {
+    erase(0, 1);
+}
+
 string::iterator string::begin() {
     return m_first;
 }

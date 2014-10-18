@@ -39,6 +39,7 @@ struct string {
     string &append(const char *str, size_t len);
 
     void pop_back();
+    void pop_front();
 
     char &operator[](size_t index);
     size_t find(char ch);

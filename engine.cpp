@@ -26,6 +26,7 @@ static c::var<int> vid_fullscreen("vid_fullscreen", "toggle fullscreen", 0, 1, 1
 static c::var<int> vid_width("vid_width", "resolution width", 480, 15360, 0);
 static c::var<int> vid_height("vid_height", "resolution height", 240, 8640, 0);
 static c::var<int> vid_maxfps("vid_maxfps", "cap framerate", 24, 3600, 0);
+static c::var<u::string> vid_driver("vid_driver", "video driver", "");
 
 // An accurate frame rate timer and capper
 frameTimer::frameTimer() :
@@ -174,7 +175,16 @@ void neoSetVSyncOption(vSyncOption option) {
 
 static SDL_Window *getContext() {
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_GL_LoadLibrary(NULL);
+
+    const u::string &videoDriver = vid_driver.get();
+    if (videoDriver.size()) {
+        if (SDL_GL_LoadLibrary(videoDriver.c_str()) != 0) {
+            fprintf(stderr, "Failed to load video driver: %s\n", SDL_GetError());
+            return NULL;
+        } else {
+            printf("Loaded video driver: %s\n", videoDriver.c_str());
+        }
+    }
 
     // Get the display mode resolution
     SDL_DisplayMode mode;
