@@ -15,11 +15,16 @@ struct varReference;
 static u::map<u::string, varReference> *vars = nullptr;
 
 struct varReference {
-    varReference() { }
-    varReference(const char *desc, void *self, varType type) :
-        desc(desc),
-        self(self),
-        type(type)
+    varReference()
+        : desc(nullptr)
+        , self(nullptr)
+    {
+    }
+
+    varReference(const char *desc, void *self, varType type)
+        : desc(desc)
+        , self(self)
+        , type(type)
     {
     }
 
@@ -42,32 +47,34 @@ void varRegister(const char *name, const char *desc, void *self, varType type) {
 }
 
 template <typename T>
-static inline void varSet(const u::string &name, const T &value, bool callback) {
+static inline varStatus varSet(const u::string &name, const T &value, bool callback) {
     if (variables().find(name) == variables().end())
-        return;
+        return kVarNotFoundError;
     auto &ref = variables()[name];
     if (ref.type != varTypeTraits<T>::type)
-        return;
+        return kVarTypeError;
     auto &val = *reinterpret_cast<var<T>*>(ref.self);
-    val.set(value);
-    if (callback)
+    varStatus status = val.set(value);
+    if (status == kVarSuccess && callback)
         val();
+    return status;
 }
 
-void varChange(const u::string &name, const u::string &value, bool callback = false) {
+varStatus varChange(const u::string &name, const u::string &value, bool callback = false) {
     if (variables().find(name) == variables().end())
-        return;
+        return kVarNotFoundError;
     auto &ref = variables()[name];
-    if (ref.type == VAR_INT)
-        varSet<int>(name, u::atoi(value), callback);
-    else if (ref.type == VAR_FLOAT)
-        varSet<float>(name, u::atof(value), callback);
-    else if (ref.type == VAR_STRING) {
+    if (ref.type == kVarInt)
+        return varSet<int>(name, u::atoi(value), callback);
+    else if (ref.type == kVarFloat)
+        return varSet<float>(name, u::atof(value), callback);
+    else if (ref.type == kVarString) {
         u::string copy(value);
         copy.pop_front();
         copy.pop_back();
-        varSet<u::string>(name, copy, callback);
+        return varSet<u::string>(name, copy, callback);
     }
+    return kVarTypeError;
 }
 
 bool writeConfig() {
@@ -75,17 +82,24 @@ bool writeConfig() {
     if (!file)
         return false;
     auto writeLine = [](FILE *fp, const u::string &name, const varReference &ref) {
-        if (ref.type == VAR_INT) {
-            auto v = reinterpret_cast<var<int>*>(ref.self)->get();
-            fprintf(fp, "%s %d\n", name.c_str(), v);
-        } else if (ref.type == VAR_FLOAT) {
-            auto v = reinterpret_cast<var<float>*>(ref.self)->get();
-            fprintf(fp, "%s %.2f\n", name.c_str(), v);
-        } else if (ref.type == VAR_STRING) {
-            auto &v = reinterpret_cast<var<u::string>*>(ref.self)->get();
-            if (v.empty())
-                return;
-            fprintf(fp, "%s \"%s\"\n", name.c_str(), v.c_str());
+        if (ref.type == kVarInt) {
+            auto handle = reinterpret_cast<var<int>*>(ref.self);
+            auto v = handle->get();
+            if (handle->flags() & kVarPersist)
+                fprintf(fp, "%s %d\n", name.c_str(), v);
+        } else if (ref.type == kVarFloat) {
+            auto handle = reinterpret_cast<var<float>*>(ref.self);
+            auto v = handle->get();
+            if (handle->flags() & kVarPersist)
+                fprintf(fp, "%s %.2f\n", name.c_str(), v);
+        } else if (ref.type == kVarString) {
+            auto handle = reinterpret_cast<var<u::string>*>(ref.self);
+            auto v = handle->get();
+            if (handle->flags() & kVarPersist) {
+                if (v.empty())
+                    return;
+                fprintf(fp, "%s \"%s\"\n", name.c_str(), v.c_str());
+            }
         }
     };
     for (auto &it : variables())
@@ -104,7 +118,8 @@ bool readConfig() {
             continue;
         const u::string &key = kv[0];
         const u::string &value = kv[1];
-        varChange(key, value);
+        if (varChange(key, value) != kVarSuccess)
+            return false;
     }
     return true;
 }

@@ -2,8 +2,8 @@
 #include "engine.h"
 #include "c_var.h"
 
-static c::var<float> cl_mouse_sens("cl_mouse_sens", "mouse sensitivity", 0.01f, 1.0f, 0.1f);
-static c::var<int> cl_mouse_invert("cl_mouse_invert", "invert mouse", 0, 1, 0);
+VAR(float, cl_mouse_sens, "mouse sensitivity", 0.01f, 1.0f, 0.1f);
+VAR(int, cl_mouse_invert, "invert mouse", 0, 1, 0);
 
 static constexpr float kClientMaxVelocity = 120.0f;
 static constexpr m::vec3 kClientGravity(0.0f, -98.0f, 0.0f);

@@ -24,12 +24,12 @@ static constexpr int kDefaultScreenWidth = 1024;
 static constexpr int kDefaultScreenHeight = 768;
 static constexpr size_t kRefreshRate = 60;
 
-static c::var<int> vid_vsync("vid_vsync", "vertical syncronization", -1, kSyncRefresh, kSyncNone);
-static c::var<int> vid_fullscreen("vid_fullscreen", "toggle fullscreen", 0, 1, 1);
-static c::var<int> vid_width("vid_width", "resolution width", 480, 15360, 0);
-static c::var<int> vid_height("vid_height", "resolution height", 240, 8640, 0);
-static c::var<int> vid_maxfps("vid_maxfps", "cap framerate", 24, 3600, 0);
-static c::var<u::string> vid_driver("vid_driver", "video driver", "");
+VAR(int, vid_vsync, "vertical syncronization", -1, kSyncRefresh, kSyncNone);
+VAR(int, vid_fullscreen, "toggle fullscreen", 0, 1, 1);
+VAR(int, vid_width, "resolution width", 480, 15360, 0);
+VAR(int, vid_height, "resolution height", 240, 8640, 0);
+VAR(int, vid_maxfps, "cap framerate", 24, 3600, 0);
+VAR(u::string, vid_driver, "video driver");
 
 // An accurate frame rate timer and capper
 frameTimer::frameTimer() :

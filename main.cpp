@@ -73,9 +73,9 @@ static void screenShot() {
     SDL_FreeSurface(temp);
 }
 
-static c::var<float> cl_fov("cl_fov", "field of view", 45.0f, 270.0f, 90.0f);
-static c::var<float> cl_nearp("cl_nearp", "near plane", 0.0f, 10.0f, 1.0f);
-static c::var<float> cl_farp("cl_farp", "far plane", 128.0f, 4096.0f, 2048.0f);
+VAR(float, cl_fov, "field of view", 45.0f, 270.0f, 90.0f);
+VAR(float, cl_nearp, "near plane", 0.0f, 10.0f, 1.0f);
+VAR(float, cl_farp, "far plane", 128.0f, 4096.0f, 2048.0f);
 
 int neoMain(frameTimer &timer, int, char **) {
     r::splashScreen gSplash;

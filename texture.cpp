@@ -12,7 +12,7 @@
 
 #include "m_const.h"
 
-static c::var<int> tex_jpeg_chroma("tex_jpeg_chroma", "chroma filtering method", 0, 1, 0);
+VAR(int, tex_jpeg_chroma, "chroma filtering method", 0, 1, 0);
 
 #define returnResult(E) \
     do { \

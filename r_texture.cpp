@@ -7,13 +7,13 @@
 
 #include "engine.h"
 
-static c::var<int> r_texcomp("r_texcomp", "texture compression", 0, 1, 1);
-static c::var<int> r_texcompcache("r_texcompcache", "cache compressed textures", 0, 1, 1);
-static c::var<int> r_aniso("r_aniso", "anisotropic filtering", 0, 1, 1);
-static c::var<int> r_bilinear("r_bilinear", "bilinear filtering", 0, 1, 1);
-static c::var<int> r_trilinear("r_trilinear", "trilinear filtering", 0, 1, 1);
-static c::var<int> r_mipmaps("r_mipmaps", "mipmaps", 0, 1, 1);
-static c::var<float> r_texquality("r_texquality", "texture quality", 0.0f, 1.0f, 1.0f);
+VAR(int, r_texcomp, "texture compression", 0, 1, 1);
+VAR(int, r_texcompcache, "cache compressed textures", 0, 1, 1);
+VAR(int, r_aniso, "anisotropic filtering", 0, 1, 1);
+VAR(int, r_bilinear, "bilinear filtering", 0, 1, 1);
+VAR(int, r_trilinear, "trilinear filtering", 0, 1, 1);
+VAR(int, r_mipmaps, "mipmaps", 0, 1, 1);
+VAR(float, r_texquality, "texture quality", 0.0f, 1.0f, 1.0f);
 
 namespace r {
 
