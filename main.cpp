@@ -44,33 +44,116 @@ error:
     return false;
 }
 
-static void screenShot() {
-    const size_t screenWidth = neoWidth();
-    const size_t screenHeight = neoHeight();
-    const size_t screenSize = screenWidth * screenHeight;
-    SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, screenWidth, screenHeight,
-        8*3, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
-    SDL_LockSurface(temp);
-    unsigned char *pixels = new unsigned char[screenSize * 3];
-    // make sure we're reading from the final framebuffer when obtaining the pixels
-    // for the screenshot.
-    gl::BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-    gl::ReadPixels(0, 0, screenWidth, screenHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-    texture::reorient(pixels, screenWidth, screenHeight, 3, screenWidth * 3,
-        (unsigned char *)temp->pixels, false, true, false);
-    SDL_UnlockSurface(temp);
-    delete[] pixels;
+bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) {
+    struct {
+        char bfType[2];
+        int32_t bfSize;
+        int32_t bfReserved;
+        int32_t bfOffBits;
+        int32_t biSize;
+        int32_t biWidth;
+        int32_t biHeight;
+        int16_t biPlanes;
+        int16_t biBitCount;
+        int32_t biCompression;
+        int32_t biSizeImage;
+        int32_t biXPelsPerMeter;
+        int32_t biYPelsPerMeter;
+        int32_t biClrUsed;
+        int32_t biClrImportant;
+    } bmph;
 
-    // timestamp them and put them in screenshots directory
+    const size_t bytesPerLine = (3 * (width + 1) / 4) * 4;
+
+    // Populate header
+    strncpy(bmph.bfType, "BM", 2);
+    bmph.bfOffBits = 54;
+    bmph.bfSize = bmph.bfOffBits + bytesPerLine * height;
+    bmph.bfReserved = 0;
+    bmph.biSize = 40;
+    bmph.biWidth = width;
+    bmph.biHeight = height;
+    bmph.biPlanes = 1;
+    bmph.biBitCount = 24;
+    bmph.biCompression = 0;
+    bmph.biSizeImage = bytesPerLine * height;
+    bmph.biXPelsPerMeter = 0;
+    bmph.biYPelsPerMeter = 0;
+    bmph.biClrUsed = 0;
+    bmph.biClrImportant = 0;
+
+    // Calculate how much memory we need for the buffer
+    size_t calcSize = 0;
+    for (int i = height - 1; i >= 0; i--)
+        calcSize += bytesPerLine;
+
+    // line and data buffer
+    u::vector<unsigned char> line;
+    line.resize(bytesPerLine);
+    u::vector<unsigned char> data;
+    data.resize(sizeof(bmph) + calcSize);
+
+    unsigned char *store = &data[0];
+    memcpy(store, &bmph.bfType, 2);          store += 2;
+    memcpy(store, &bmph.bfSize, 4);          store += 4;
+    memcpy(store, &bmph.bfReserved, 4);      store += 4;
+    memcpy(store, &bmph.bfOffBits, 4);       store += 4;
+    memcpy(store, &bmph.biSize, 4);          store += 4;
+    memcpy(store, &bmph.biWidth, 4);         store += 4;
+    memcpy(store, &bmph.biHeight, 4);        store += 4;
+    memcpy(store, &bmph.biPlanes, 2);        store += 2;
+    memcpy(store, &bmph.biBitCount, 2);      store += 2;
+    memcpy(store, &bmph.biCompression, 4);   store += 4;
+    memcpy(store, &bmph.biSizeImage, 4);     store += 4;
+    memcpy(store, &bmph.biXPelsPerMeter, 4); store += 4;
+    memcpy(store, &bmph.biYPelsPerMeter, 4); store += 4;
+    memcpy(store, &bmph.biClrUsed, 4);       store += 4;
+    memcpy(store, &bmph.biClrImportant, 4);  store += 4;
+
+    // Write the bitmap
+    for (int i = height - 1; i >= 0; i--) {
+        for (int j = 0; j < width; j++) {
+            int ipos = 3 * (width * i + j);
+            line[3*j] = rgb[ipos + 2];
+            line[3*j+1] = rgb[ipos + 1];
+            line[3*j+2] = rgb[ipos];
+        }
+        memcpy(store, &line[0], bytesPerLine);
+        store += bytesPerLine;
+    }
+
+    return u::write(data, file, "w");
+}
+
+static void screenShot() {
+    // Generate a unique filename from the time
     time_t t = time(nullptr);
     struct tm tm = *localtime(&t);
     u::mkdir(neoUserPath() + "screenshots");
     u::string file = u::format("%sscreenshots/%d-%d-%d-%d%d%d.bmp",
         neoUserPath().c_str(), tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
         tm.tm_hour, tm.tm_min, tm.tm_sec);
-    if (SDL_SaveBMP(temp, file.c_str()) == 0)
+
+    // Get metrics for reading the final composite from GL
+    const int screenWidth = static_cast<int>(neoWidth());
+    const int screenHeight = static_cast<int>(neoHeight());
+    const int screenSize = screenWidth * screenHeight;
+    auto pixels = u::unique_ptr<unsigned char>(new unsigned char[screenSize * 3]);
+
+    // make sure we're reading from the final framebuffer when obtaining the pixels
+    // for the screenshot.
+    gl::BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    gl::ReadPixels(0, 0, screenWidth, screenHeight, GL_RGB, GL_UNSIGNED_BYTE,
+        (GLvoid *)pixels.get());
+
+    // Reorient because it will be upside down
+    auto temp = u::unique_ptr<unsigned char>(new unsigned char[screenSize * 3]);
+    texture::reorient(pixels.get(), screenWidth, screenHeight, 3, screenWidth * 3,
+        temp.get(), false, true, false);
+
+    // Write the data
+    if (bmpWrite(file, screenWidth, screenHeight, temp.get()))
         printf("[screenshot] => %s\n", file.c_str());
-    SDL_FreeSurface(temp);
 }
 
 VAR(float, cl_fov, "field of view", 45.0f, 270.0f, 90.0f);

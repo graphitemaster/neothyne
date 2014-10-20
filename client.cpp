@@ -17,14 +17,14 @@ static constexpr float kClientCrouchHeight = 3.0f; // ft
 static constexpr float kClientCrouchTransitionSpeed = 24.0f; // -m/s
 static constexpr float kClientViewHeight = 6.0f; // ft
 
-client::client() :
-    m_mouseLat(0.0f),
-    m_mouseLon(0.0f),
-    m_viewHeight(kClientViewHeight),
-    m_origin(0.0f, 150.0f, 0.0f),
-    m_isOnGround(false),
-    m_isOnWall(false),
-    m_isCrouching(false)
+client::client()
+    : m_mouseLat(0.0f)
+    , m_mouseLon(0.0f)
+    , m_viewHeight(kClientViewHeight)
+    , m_origin(0.0f, 150.0f, 0.0f)
+    , m_isOnGround(false)
+    , m_isOnWall(false)
+    , m_isCrouching(false)
 {
 }
 
