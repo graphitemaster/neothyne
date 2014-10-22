@@ -109,6 +109,12 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
             return false;
     }
 
+    // Some drivers just don't do online compression
+    GLint compressed = 0;
+    gl::GetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_COMPRESSED, &compressed);
+    if (compressed == 0)
+        return false;
+
     // Don't bother caching if we already have it
     const u::string cacheString =  "cache/" + tex.hashString();
     const u::string file = neoUserPath() + cacheString;

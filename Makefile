@@ -6,7 +6,6 @@ CXXFLAGS = \
 	-ffast-math \
 	-fno-exceptions \
 	-fno-rtti \
-	-nodefaultlibs \
 	-DDEBUG_GL \
 	-O3
 
