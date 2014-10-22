@@ -38,37 +38,41 @@ FILE *file::get() {
     return m_handle;
 }
 
+static inline u::string fixPath(const u::string &path) {
+#ifdef _WIN32
+    u::string fix(path);
+    const size_t size = fix.size();
+    for (size_t i = 0; i < size; i++) {
+        if (fix[i] != '/')
+            continue;
+        fix[i] = PATH_SEP;
+    }
+    return fix;
+#endif
+    return path;
+}
 
 // file system stuff
 bool exists(const u::string &file) {
-    return u::fopen(file, "r").get();
+    // fixPath not called since fopen calls it
+    return u::fopen(file, "rb").get();
 }
 
 bool remove(const u::string &file) {
-    return remove(file.c_str()) == 0;
+    return remove(fixPath(file).c_str()) == 0;
 }
 
 bool mkdir(const u::string &dir) {
+    const char *path = fixPath(dir).c_str();
 #ifdef _WIN32
-    return ::_mkdir(dir.c_str()) == 0;
+    return ::_mkdir(path) == 0;
 #else
-    return ::mkdir(dir.c_str(), 0755) == 0;
+    return ::mkdir(path, 0755) == 0;
 #endif
 }
 
 u::file fopen(const u::string& infile, const char *type) {
-    u::string file = infile;
-    // Deal with constructing the directories if the file contains a path
-    for (size_t i = 0; file[i]; i++) {
-        if (i > 0 && (file[i] == '\\' || file[i] == '/')) {
-            char slash = file[i];
-            file[i] = '\0';
-            if (!u::mkdir(file) && errno != EEXIST)
-                return nullptr;
-            file[i] = slash;
-        }
-    }
-    return ::fopen(infile.c_str(), type);
+    return ::fopen(fixPath(infile).c_str(), type);
 }
 
 u::optional<u::string> getline(u::file &fp) {
@@ -112,7 +116,8 @@ bool write(const u::vector<unsigned char> &data, const u::string &file, const ch
     auto fp = u::fopen(file, mode);
     if (!fp)
         return false;
-    fwrite(&data[0], data.size(), 1, fp.get());
+    if (fwrite(&data[0], data.size(), 1, fp.get()) != 1)
+        return false;
     return true;
 }
 

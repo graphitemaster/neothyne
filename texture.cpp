@@ -1788,7 +1788,7 @@ bool texture::load(const u::string &file, float quality) {
         return false;
 
     const char *fileName = (*name).c_str();
-    auto load = u::read(fileName, "r");
+    auto load = u::read(fileName, "rb");
     if (!load)
         return false;
     u::vector<unsigned char> data = *load;

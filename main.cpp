@@ -94,6 +94,22 @@ bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) 
     data.resize(sizeof(bmph) + calcSize);
 
     unsigned char *store = &data[0];
+
+    bmph.bfSize = u::endianSwap(bmph.bfSize);
+    bmph.bfReserved = u::endianSwap(bmph.bfReserved);
+    bmph.bfOffBits = u::endianSwap(bmph.bfOffBits);
+    bmph.biSize = u::endianSwap(bmph.biSize);
+    bmph.biWidth = u::endianSwap(bmph.biWidth);
+    bmph.biHeight = u::endianSwap(bmph.biHeight);
+    bmph.biPlanes = u::endianSwap(bmph.biPlanes);
+    bmph.biBitCount = u::endianSwap(bmph.biBitCount);
+    bmph.biCompression = u::endianSwap(bmph.biCompression);
+    bmph.biSizeImage = u::endianSwap(bmph.biSizeImage);
+    bmph.biXPelsPerMeter = u::endianSwap(bmph.biXPelsPerMeter);
+    bmph.biYPelsPerMeter = u::endianSwap(bmph.biYPelsPerMeter);
+    bmph.biClrUsed = u::endianSwap(bmph.biClrUsed);
+    bmph.biClrImportant = u::endianSwap(bmph.biClrImportant);
+
     memcpy(store, &bmph.bfType, 2);          store += 2;
     memcpy(store, &bmph.bfSize, 4);          store += 4;
     memcpy(store, &bmph.bfReserved, 4);      store += 4;
@@ -122,7 +138,7 @@ bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) 
         store += bytesPerLine;
     }
 
-    return u::write(data, file, "w");
+    return u::write(data, file, "wb");
 }
 
 static void screenShot() {

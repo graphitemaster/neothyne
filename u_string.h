@@ -42,6 +42,7 @@ struct string {
     void pop_front();
 
     char &operator[](size_t index);
+    const char &operator[](size_t index) const;
     size_t find(char ch) const;
 
     void erase(size_t beg, size_t end);
@@ -89,6 +90,10 @@ inline void operator+=(string &lhs, const char *rhs) {
 
 inline void operator+=(string &lhs, const string &rhs) {
     operator+=(lhs, rhs.c_str());
+}
+
+inline void operator+=(string &lhs, char rhs) {
+    lhs.append(&rhs, 1);
 }
 
 inline size_t hash(const string &str) {

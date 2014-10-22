@@ -10,6 +10,24 @@
 
 namespace u {
 
+template <typename T>
+T endianSwap(T value) {
+    union {
+        int i;
+        char data[sizeof(int)];
+    } x = { 1 };
+    if (x.data[0] != 1) {
+        union {
+            T value;
+            unsigned char data[sizeof(T)];
+        } src = { value }, dst;
+        for (size_t i = 0; i < sizeof(T); i++)
+            dst.data[i] = src.data[sizeof(T) - i - 1];
+        return dst.value;
+    }
+    return value;
+}
+
 inline int sscanf(const u::string &thing, const char *fmt, ...) {
     va_list va;
     va_start(va, fmt);

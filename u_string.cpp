@@ -128,6 +128,10 @@ char &string::operator[](size_t index) {
     return m_first[index];
 }
 
+const char &string::operator[](size_t index) const {
+    return m_first[index];
+}
+
 size_t string::find(char ch) const {
     char *search = strchr(m_first, ch);
     return search ? m_last - search : npos;

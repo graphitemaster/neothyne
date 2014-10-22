@@ -3,9 +3,13 @@
 #include <SDL2/SDL_stdinc.h>
 
 #include "engine.h"
+
 #include "r_common.h"
+
 #include "c_var.h"
+
 #include "u_file.h"
+#include "u_misc.h"
 
 // Engine globals
 static u::map<int, int> gKeyMap;
@@ -281,6 +285,7 @@ const u::string &neoGamePath() { return gGamePath; }
 
 // So we don't need to depend on SDL_main we provide our own
 #ifdef _WIN32
+#include <ctype.h>
 #include "u_vector.h"
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
     (void)hInst;
@@ -330,9 +335,10 @@ static void neoVerifyPaths(int argc, char **argv) {
             break;
         }
     }
-    gGamePath = directory ? directory : "game";
-    if (gGamePath.find('/') == u::string::npos)
-        gGamePath += "/";
+
+    gGamePath = directory ? directory : u::format(".%cgame%c", PATH_SEP, PATH_SEP);
+    if (gGamePath.find(PATH_SEP) == u::string::npos)
+        gGamePath += PATH_SEP;
 
     // Get a path for the user
     char *get = SDL_GetPrefPath("Neothyne", "");

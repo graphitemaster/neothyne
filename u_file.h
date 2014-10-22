@@ -6,6 +6,12 @@
 #include "u_string.h"
 #include "u_vector.h"
 
+#ifdef _WIN32
+#   define PATH_SEP '\\'
+#else
+#   define PATH_SEP '/'
+#endif
+
 namespace u {
 
 // A little unique_ptr like file wrapper to achieve RAII. We can't use

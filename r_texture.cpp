@@ -2,6 +2,7 @@
 
 #include "u_file.h"
 #include "u_algorithm.h"
+#include "u_misc.h"
 
 #include "c_var.h"
 
@@ -64,6 +65,10 @@ static bool readCache(texture &tex, GLuint &internal) {
         u::remove(file);
         return false;
     }
+    head.width = u::endianSwap(head.width);
+    head.height = u::endianSwap(head.height);
+    head.internal = u::endianSwap(head.internal);
+    head.format = u::endianSwap(head.format);
 
     // Make sure we even support the format before using it
     switch (head.internal) {
@@ -113,10 +118,10 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     // Build the header
     textureCacheHeader head;
     head.version = kTextureCacheVersion;
-    head.width = tex.width();
-    head.height = tex.height();
-    head.internal = internal;
-    head.format = tex.format();
+    head.width = u::endianSwap(tex.width());
+    head.height = u::endianSwap(tex.height());
+    head.internal = u::endianSwap(internal);
+    head.format = u::endianSwap(tex.format());
 
     // Query the compressed texture size
     gl::BindTexture(GL_TEXTURE_2D, handle);
