@@ -44,6 +44,8 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
     size_t seek;
     kdBinHeader header;
     seek = mapUnserialize(&header, data);
+    header.endianSwap();
+
     if (header.magic != kdBinHeader::kMagic)
         return false;
     if (header.version != kdBinHeader::kVersion)
