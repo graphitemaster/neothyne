@@ -1,3 +1,5 @@
+#include "u_misc.h"
+
 #include "m_vec3.h"
 #include "m_quat.h"
 
@@ -19,6 +21,12 @@ void vec3::rotate(float angle, const vec3 &axe) {
     quat conjugateQ = rotateQ.conjugate();
     quat W = rotateQ * (*this) * conjugateQ;
     x = W.x, y = W.y, z = W.z;
+}
+
+void vec3::endianSwap() {
+    x = u::endianSwap(x);
+    y = u::endianSwap(y);
+    z = u::endianSwap(z);
 }
 
 bool vec3::rayCylinderIntersect(const vec3 &start, const vec3 &direction,

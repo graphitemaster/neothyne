@@ -1,3 +1,5 @@
+#include "u_misc.h"
+
 #include "m_quat.h"
 #include "m_vec3.h"
 
@@ -30,6 +32,13 @@ void quat::rotationAxis(const vec3 &vec, float angle) {
     y = s * normal.y;
     z = s * normal.z;
     w = c;
+}
+
+void quat::endianSwap() {
+    x = u::endianSwap(x);
+    y = u::endianSwap(y);
+    z = u::endianSwap(z);
+    w = u::endianSwap(w);
 }
 
 quat operator*(const quat &q, const vec3 &v) {

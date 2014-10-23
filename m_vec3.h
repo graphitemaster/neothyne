@@ -33,6 +33,8 @@ struct vec3 {
     {
     }
 
+    void endianSwap();
+
     void rotate(float angle, const vec3 &axe);
 
     float absSquared() const {

@@ -35,6 +35,8 @@ struct quat {
         return quat(-x, -y, -z, w);
     }
 
+    void endianSwap();
+
     // get all 3 axis of the quaternion
     void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
 

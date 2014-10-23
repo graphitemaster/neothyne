@@ -108,19 +108,26 @@ struct kdBinHeader {
         kMagic   = 0x66551133,
         kVersion = 1
     };
+
     uint32_t magic;
     uint32_t version;
     uint8_t padding;
+
+    void endianSwap();
 };
 
 struct kdBinEntry {
     uint32_t offset;
     uint32_t length;
+
+    void endianSwap();
 };
 
 struct kdBinPlane {
     uint8_t type;
     float d;
+
+    void endianSwap();
 };
 
 struct kdBinTexture {
@@ -132,11 +139,15 @@ struct kdBinNode {
     int32_t children[2]; // Leaf indices are stored with negitive index
     float sphereRadius;
     m::vec3 sphereOrigin;
+
+    void endianSwap();
 };
 
 struct kdBinTriangle {
     uint32_t texture;
     uint32_t v[3];
+
+    void endianSwap();
 };
 
 struct kdBinVertex {
@@ -147,6 +158,8 @@ struct kdBinVertex {
     m::vec3 tangent;
     float w; // bitangent = w * (normal x tangent)
     float padding[2];
+
+    void endianSwap();
 };
 
 struct kdBinEnt {
@@ -159,6 +172,8 @@ struct kdBinEnt {
     uint32_t id;
     m::vec3 origin;
     m::quat rotation;
+
+    void endianSwap();
 };
 #pragma pack(pop)
 

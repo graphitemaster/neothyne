@@ -1,7 +1,9 @@
 #include <string.h>
 
 #include "kdmap.h"
+
 #include "u_zlib.h"
+#include "u_misc.h"
 
 ///!kdMap
 kdMap::kdMap() {
@@ -67,6 +69,14 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
     if (seek != sizeof(kdBinHeader) + 7*sizeof(kdBinEntry))
         return false;
 
+    planeEntry.endianSwap();
+    textureEntry.endianSwap();
+    nodeEntry.endianSwap();
+    triangleEntry.endianSwap();
+    vertexEntry.endianSwap();
+    entEntry.endianSwap();
+    leafEntry.endianSwap();
+
     planes.resize(planeEntry.length / sizeof(kdBinPlane));
     textures.resize(textureEntry.length / sizeof(kdBinTexture));
     nodes.resize(nodeEntry.length / sizeof(kdBinNode));
@@ -80,6 +90,7 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
     seek = planeEntry.offset;
     for (size_t i = 0; i < planes.size(); i++) {
         seek = mapUnserialize(&plane, data, seek);
+        plane.endianSwap();
         if (plane.type > 2) {
             // The only valid planes are 0, 1, 2 (x, y, z)
             unload();
@@ -95,15 +106,23 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
     mapUnserialize(&vertices[0], data, vertexEntry.offset, vertices.size());
     mapUnserialize(&entities[0], data, entEntry.offset, entities.size());
 
+    //for (auto &it : textures)  it.endianSwap();
+    for (auto &it : nodes)     it.endianSwap();
+    for (auto &it : triangles) it.endianSwap();
+    for (auto &it : vertices)  it.endianSwap();
+    for (auto &it : entities)  it.endianSwap();
+
     // triangle indices of the leafs
     seek = leafEntry.offset;
     uint32_t triangleCount;
     uint32_t triangleIndex;
     for (size_t i = 0; i < leafEntry.length; i++) {
         seek = mapUnserialize(&triangleCount, data, seek);
+        triangleCount = u::endianSwap(triangleCount);
         leafs[i].triangles.reserve(triangleCount);
         for (size_t j = 0; j < triangleCount; j++) {
             seek = mapUnserialize(&triangleIndex, data, seek);
+            triangleIndex = u::endianSwap(triangleIndex);
             leafs[i].triangles.push_back(triangleIndex);
         }
     }
@@ -111,6 +130,7 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
     // integrity check
     uint32_t endMark;
     mapUnserialize(&endMark, data, seek);
+    endMark = u::endianSwap(endMark);
     if (endMark != kdBinHeader::kMagic)
         return false;
 
