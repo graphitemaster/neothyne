@@ -4,10 +4,10 @@
 
 namespace r {
 
-gBuffer::gBuffer() :
-    m_fbo(0),
-    m_width(0),
-    m_height(0)
+gBuffer::gBuffer()
+    : m_fbo(0)
+    , m_width(0)
+    , m_height(0)
 {
     memset(m_textures, 0, sizeof(m_textures));
 }

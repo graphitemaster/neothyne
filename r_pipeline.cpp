@@ -2,8 +2,8 @@
 
 namespace r {
 
-rendererPipeline::rendererPipeline() :
-    m_scale(1.0f, 1.0f, 1.0f)
+rendererPipeline::rendererPipeline()
+    : m_scale(1.0f, 1.0f, 1.0f)
 {
 }
 

@@ -12,23 +12,26 @@ struct vec3 {
     float y;
     float z;
 
-    constexpr vec3() :
-        x(0.0f),
-        y(0.0f),
-        z(0.0f)
-    { }
+    constexpr vec3()
+        : x(0.0f)
+        , y(0.0f)
+        , z(0.0f)
+    {
+    }
 
-    constexpr vec3(float nx, float ny, float nz) :
-        x(nx),
-        y(ny),
-        z(nz)
-    { }
+    constexpr vec3(float nx, float ny, float nz)
+        : x(nx)
+        , y(ny)
+        , z(nz)
+    {
+    }
 
-    constexpr vec3(float a) :
-        x(a),
-        y(a),
-        z(a)
-    { }
+    constexpr vec3(float a)
+        : x(a)
+        , y(a)
+        , z(a)
+    {
+    }
 
     void rotate(float angle, const vec3 &axe);
 

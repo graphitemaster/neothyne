@@ -11,7 +11,7 @@
 namespace r {
 
 struct skyboxMethod : method {
-    virtual bool init();
+    bool init();
 
     void setWVP(const m::mat4 &wvp);
     void setTextureUnit(int unit);

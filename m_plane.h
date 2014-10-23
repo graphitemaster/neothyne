@@ -13,9 +13,10 @@ enum pointPlane {
 };
 
 struct plane {
-    constexpr plane() :
-        d(0.0f)
-    { }
+    constexpr plane()
+        : d(0.0f)
+    {
+    }
 
     plane(vec3 p1, vec3 p2, vec3 p3) {
         setupPlane(p1, p2, p3);
@@ -29,10 +30,11 @@ struct plane {
         setupPlane(a, b, c, d);
     }
 
-    constexpr plane(const vec3 &nn, float dd) :
-        n(nn),
-        d(dd)
-    { }
+    constexpr plane(const vec3 &nn, float dd)
+        : n(nn)
+        , d(dd)
+    {
+    }
 
     void setupPlane(const vec3 &p1, const vec3 &p2, const vec3 &p3) {
         n = (p2 - p1) ^ (p3 - p1);

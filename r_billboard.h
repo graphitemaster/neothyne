@@ -11,7 +11,7 @@
 namespace r {
 
 struct billboardMethod : method {
-    virtual bool init();
+    bool init();
 
     void setVP(const m::mat4 &vp);
     void setCamera(const m::vec3 &position);

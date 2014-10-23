@@ -13,7 +13,7 @@
 namespace r {
 
 struct splashMethod : method {
-    virtual bool init();
+    bool init();
 
     void setTextureUnit(int unit);
     void setScreenSize(const m::perspectiveProjection &project);

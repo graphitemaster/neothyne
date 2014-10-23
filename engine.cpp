@@ -35,13 +35,13 @@ VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
 
 // An accurate frame rate timer and capper
-frameTimer::frameTimer() :
-    m_deltaTime(0.0f),
-    m_lastFrameTicks(0),
-    m_currentTicks(0),
-    m_frameAverage(0.0f),
-    m_framesPerSecond(0),
-    m_lock(false)
+frameTimer::frameTimer()
+    : m_deltaTime(0.0f)
+    , m_lastFrameTicks(0)
+    , m_currentTicks(0)
+    , m_frameAverage(0.0f)
+    , m_framesPerSecond(0)
+    , m_lock(false)
 {
     reset();
     cap(kMaxFPS);

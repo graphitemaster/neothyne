@@ -14,9 +14,9 @@ enum textureFormat {
 };
 
 struct texture {
-    texture() :
-        m_normal(false),
-        m_disk(false)
+    texture()
+        : m_normal(false)
+        , m_disk(false)
     {
     }
 

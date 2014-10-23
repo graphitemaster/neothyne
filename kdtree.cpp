@@ -166,12 +166,12 @@ void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
 }
 
 ///! kdTree
-kdTree::kdTree() :
-    root(nullptr),
-    nodeCount(0),
-    leafCount(0),
-    textureCount(0),
-    depth(0)
+kdTree::kdTree()
+    : root(nullptr)
+    , nodeCount(0)
+    , leafCount(0)
+    , textureCount(0)
+    , depth(0)
 { }
 
 kdTree::~kdTree() {

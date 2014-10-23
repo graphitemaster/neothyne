@@ -8,8 +8,7 @@
 namespace u {
 
 template <typename K>
-class set {
-public:
+struct set {
     set();
     set(const set &other);
     ~set();
@@ -34,7 +33,6 @@ public:
     void swap(set &other);
 
 private:
-
     typedef hash_node<K, void> *pointer;
 
     size_t m_size;

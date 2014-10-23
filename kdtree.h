@@ -97,11 +97,12 @@ private:
 // Serialized version for storing on disk
 #pragma pack(push, 1)
 struct kdBinHeader {
-    kdBinHeader() :
-        magic(kMagic),
-        version(kVersion),
-        padding(0)
-    { }
+    kdBinHeader()
+        : magic(kMagic)
+        , version(kVersion)
+        , padding(0)
+    {
+    }
 
     enum : uint32_t {
         kMagic   = 0x66551133,
@@ -149,10 +150,11 @@ struct kdBinVertex {
 };
 
 struct kdBinEnt {
-    kdBinEnt() :
-        id(0),
-        rotation(0.0f, 0.0f, 0.0f, 1.0f)
-    { }
+    kdBinEnt()
+        : id(0)
+        , rotation(0.0f, 0.0f, 0.0f, 1.0f)
+    {
+    }
 
     uint32_t id;
     m::vec3 origin;

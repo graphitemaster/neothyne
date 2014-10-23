@@ -82,7 +82,7 @@ private:
 };
 
 struct depthMethod : method {
-    virtual bool init();
+    bool init();
 
     void setWVP(const m::mat4 &wvp);
 

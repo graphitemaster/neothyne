@@ -11,19 +11,21 @@ struct quat {
     float z;
     float w;
 
-    constexpr quat() :
-        x(0.0f),
-        y(0.0f),
-        z(0.0f),
-        w(1.0f)
-    { }
+    constexpr quat()
+        : x(0.0f)
+        , y(0.0f)
+        , z(0.0f)
+        , w(1.0f)
+    {
+    }
 
-    constexpr quat(float x, float y, float z, float w) :
-        x(x),
-        y(y),
-        z(z),
-        w(w)
-    { }
+    constexpr quat(float x, float y, float z, float w)
+        : x(x)
+        , y(y)
+        , z(z)
+        , w(w)
+    {
+    }
 
     quat(const vec3 &vec, float angle) {
         rotationAxis(vec, angle);
