@@ -28,10 +28,16 @@ private:
     FILE *m_handle;
 };
 
-// check if a file exists
-bool exists(const u::string &file);
-// remove a file
-bool remove(const u::string &file);
+enum pathType {
+    kFile,
+    kDirectory
+};
+
+// check if a file or directory exists
+bool exists(const u::string &path, pathType type = kFile);
+// remove a file or directory
+bool remove(const u::string &file, pathType type = kFile);
+
 // open a file
 u::file fopen(const u::string& infile, const char *type);
 // read file line by line
@@ -42,7 +48,6 @@ u::optional<u::vector<unsigned char>> read(const u::string &file, const char *mo
 bool write(const u::vector<unsigned char> &data, const u::string &file, const char *mode = "wb");
 // make a directory
 bool mkdir(const u::string &dir);
-
 }
 
 #endif

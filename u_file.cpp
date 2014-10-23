@@ -2,11 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef _WIN32
-#   include <sys/stat.h>
-#   include <sys/types.h>
-#else
+// These exist on Windows too
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#ifdef _WIN32
 #   include <direct.h>
+#else
+#   include <unistd.h> // rmdir
 #endif
 
 #include "u_file.h"
@@ -53,21 +56,41 @@ static inline u::string fixPath(const u::string &path) {
 }
 
 // file system stuff
-bool exists(const u::string &file) {
-    // fixPath not called since fopen calls it
-    return u::fopen(file, "rb").get();
+bool exists(const u::string &path, pathType type) {
+    if (type == kFile) {
+        // fixPath not called since u::fopen fixes the path
+        return u::fopen(path, "rb").get();
+    }
+
+    // type == kDirectory
+    struct stat info;
+    if (stat(fixPath(path).c_str(), &info) != 0)
+        return false; // Couldn't stat directory
+    if (!(info.st_mode & S_IFDIR)) // S_ISDIR not suported everywhere
+        return false; // Not a directory
+    return true;
 }
 
-bool remove(const u::string &file) {
-    return remove(fixPath(file).c_str()) == 0;
+bool remove(const u::string &path, pathType type) {
+    u::string fix = fixPath(path);
+    if (type == kFile)
+        return ::remove(fix.c_str()) == 0;
+
+    // type == kDirectory
+#ifdef _WIN32
+    return ::_rmdir(fix.c_str()) == 0;
+#else
+    return ::rmdir(fix.c_str()) == 0;
+#endif
 }
 
 bool mkdir(const u::string &dir) {
-    const char *path = fixPath(dir).c_str();
+    u::string fix = fixPath(dir);
+    const char *path = fix.c_str();
 #ifdef _WIN32
     return ::_mkdir(path) == 0;
 #else
-    return ::mkdir(path, 0755) == 0;
+    return ::mkdir(path, 0775);
 #endif
 }
 

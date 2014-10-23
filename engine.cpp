@@ -344,6 +344,19 @@ static void neoVerifyPaths(int argc, char **argv) {
     gUserPath = get;
     gUserPath.pop_back(); // Remove additional path separator
     SDL_free(get);
+
+    // Verify all the paths exist for the user directory. If they don't exist
+    // create them.
+    static const char *paths[] = {
+        "screenshots", "cache"
+    };
+
+    for (size_t i = 0; i < sizeof(paths)/sizeof(*paths); i++) {
+        u::string path = gUserPath + paths[i];
+        if (u::exists(path, u::kDirectory))
+            continue;
+        u::mkdir(path);
+    }
 }
 
 ///
