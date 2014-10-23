@@ -22,7 +22,6 @@ static SDL_Window *gScreen = nullptr;
 static frameTimer gTimer;
 
 // maximum resolution is 15360x8640 (8640p) (16:9)
-// minimum resolution is 640x480 (VGA) (4:3)
 // default resolution is 1024x768 (XGA) (4:3)
 static constexpr int kDefaultScreenWidth = 1024;
 static constexpr int kDefaultScreenHeight = 768;
@@ -30,9 +29,9 @@ static constexpr size_t kRefreshRate = 60;
 
 VAR(int, vid_vsync, "vertical syncronization", -1, kSyncRefresh, kSyncNone);
 VAR(int, vid_fullscreen, "toggle fullscreen", 0, 1, 1);
-VAR(int, vid_width, "resolution width", 480, 15360, 0);
-VAR(int, vid_height, "resolution height", 240, 8640, 0);
-VAR(int, vid_maxfps, "cap framerate", 24, 3600, 0);
+VAR(int, vid_width, "resolution width", 0, 15360, 0);
+VAR(int, vid_height, "resolution height", 0, 8640, 0);
+VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
 
 // An accurate frame rate timer and capper
