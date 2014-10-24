@@ -61,15 +61,15 @@ inline float atof(const u::string &str) {
 
 // argument normalization for format
 template <typename T>
-inline typename u::enable_if<u::is_integral<T>::value, long>::type
+inline constexpr typename u::enable_if<u::is_integral<T>::value, long>::type
 formatNormalize(T argument) { return argument; }
 
 template <typename T>
-inline typename u::enable_if<u::is_floating_point<T>::value, double>::type
+inline constexpr typename u::enable_if<u::is_floating_point<T>::value, double>::type
 formatNormalize(T argument) { return argument; }
 
 template <typename T>
-inline typename u::enable_if<u::is_pointer<T>::value, T>::type
+inline constexpr typename u::enable_if<u::is_pointer<T>::value, T>::type
 formatNormalize(T argument) { return argument; }
 
 inline const char * formatNormalize(const u::string &argument) {
