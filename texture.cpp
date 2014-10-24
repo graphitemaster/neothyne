@@ -21,13 +21,12 @@ VAR(int, tex_jpeg_chroma, "chroma filtering method", 0, 1, 0);
     } while (0)
 
 struct decoder {
-    decoder() :
-        m_error(kSuccess),
-        m_width(0),
-        m_height(0),
-        m_bpp(0)
+    decoder()
+        : m_error(kSuccess)
+        , m_width(0)
+        , m_height(0)
+        , m_bpp(0)
     {
-
     }
 
     enum result {
@@ -102,18 +101,18 @@ struct jpeg : decoder {
         kPixelRepetition
     };
 
-    jpeg(const u::vector<unsigned char> &data) :
-        m_rstinterval(0),
-        m_size(0),
-        m_length(0),
-        m_mbwidth(0),
-        m_mbheight(0),
-        m_mbsizex(0),
-        m_mbsizey(0),
-        m_buf(0),
-        m_bufbits(0),
-        m_exifLittleEndian(false),
-        m_coSitedChroma(false)
+    jpeg(const u::vector<unsigned char> &data)
+        : m_rstinterval(0)
+        , m_size(0)
+        , m_length(0)
+        , m_mbwidth(0)
+        , m_mbheight(0)
+        , m_mbsizex(0)
+        , m_mbsizey(0)
+        , m_buf(0)
+        , m_bufbits(0)
+        , m_exifLittleEndian(false)
+        , m_coSitedChroma(false)
     {
         memset(m_comp, 0, sizeof(m_comp));
         memset(m_vlctab, 0, sizeof(m_vlctab));
@@ -1803,12 +1802,12 @@ bool texture::load(const u::string &file, float quality) {
 }
 
 texture::texture(const unsigned char *const data, size_t length, size_t width,
-    size_t height, bool normal, textureFormat format) :
-    m_width(width),
-    m_height(height),
-    m_normal(normal),
-    m_disk(false),
-    m_format(format)
+    size_t height, bool normal, textureFormat format)
+    : m_width(width)
+    , m_height(height)
+    , m_normal(normal)
+    , m_disk(false)
+    , m_format(format)
 {
     m_data.resize(length);
     memcpy(&m_data[0], data, length);
