@@ -86,19 +86,19 @@ bool writeConfig() {
             auto handle = reinterpret_cast<var<int>*>(ref.self);
             auto v = handle->get();
             if (handle->flags() & kVarPersist)
-                fprintf(fp, "%s %d\n", name.c_str(), v);
+                u::fprint(fp, "%s %d\n", name, v);
         } else if (ref.type == kVarFloat) {
             auto handle = reinterpret_cast<var<float>*>(ref.self);
             auto v = handle->get();
             if (handle->flags() & kVarPersist)
-                fprintf(fp, "%s %.2f\n", name.c_str(), v);
+                u::fprint(fp, "%s %.2f\n", name, v);
         } else if (ref.type == kVarString) {
             auto handle = reinterpret_cast<var<u::string>*>(ref.self);
             auto v = handle->get();
             if (handle->flags() & kVarPersist) {
                 if (v.empty())
                     return;
-                fprintf(fp, "%s \"%s\"\n", name.c_str(), v.c_str());
+                u::fprint(fp, "%s \"%s\"\n", name, v.c_str());
             }
         }
     };

@@ -102,8 +102,13 @@ inline u::string format(const char *fmt, const Ts&... ts) {
 }
 
 template <typename... Ts>
+inline void fprint(FILE *fp, const char *fmt, const Ts&... ts) {
+    fprintf(fp, "%s", format(fmt, ts...).c_str());
+}
+
+template <typename... Ts>
 inline void print(const char *fmt, const Ts&... ts) {
-    printf("%s", formatProcess(fmt, formatNormalize(ts)...).c_str());
+    fprint(stdout, fmt, ts...);
 }
 
 }
