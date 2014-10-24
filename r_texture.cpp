@@ -90,7 +90,7 @@ static bool readCache(texture &tex, GLuint &internal) {
     // Now swap!
     tex.unload();
     tex.from(data, length, head.width, head.height, false, head.format);
-    printf("[cache] => read %.50s...\n", cacheString.c_str());
+    u::print("[cache] => read %.50s...\n", cacheString);
     return true;
 }
 
@@ -144,7 +144,7 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     gl::GetCompressedTexImage(GL_TEXTURE_2D, 0, &data[0] + sizeof(head));
 
     // Write it to disk!
-    printf("[cache] => wrote %.50s...\n", cacheString.c_str());
+    u::print("[cache] => wrote %.50s...\n", cacheString);
     return u::write(data, file);
 }
 

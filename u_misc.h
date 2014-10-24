@@ -59,17 +59,34 @@ inline float atof(const u::string &str) {
     return ::atof(str.c_str());
 }
 
-inline u::string format(const u::string fmt, ...) {
-    int n = int(fmt.size()) * 2;
+// argument normalization for format
+template <typename T>
+inline typename u::enable_if<u::is_integral<T>::value, long>::type
+formatNormalize(T argument) { return argument; }
+
+template <typename T>
+inline typename u::enable_if<u::is_floating_point<T>::value, double>::type
+formatNormalize(T argument) { return argument; }
+
+template <typename T>
+inline typename u::enable_if<u::is_pointer<T>::value, T>::type
+formatNormalize(T argument) { return argument; }
+
+inline const char * formatNormalize(const u::string &argument) {
+    return argument.c_str();
+}
+
+static inline u::string formatProcess(const char *fmt, ...) {
+    int n = strlen(fmt) * 2;
     int f = 0;
     u::string str;
     u::unique_ptr<char[]> formatted;
     va_list ap;
     for (;;) {
         formatted.reset(new char[n]);
-        strcpy(&formatted[0], fmt.c_str());
+        strcpy(&formatted[0], fmt);
         va_start(ap, fmt);
-        f = vsnprintf(&formatted[0], n, fmt.c_str(), ap);
+        f = vsnprintf(&formatted[0], n, fmt, ap);
         va_end(ap);
         if (f < 0 || f >= n)
             n += abs(f - n + 1);
@@ -79,6 +96,15 @@ inline u::string format(const u::string fmt, ...) {
     return string(formatted.get());
 }
 
+template <typename... Ts>
+inline u::string format(const char *fmt, const Ts&... ts) {
+    return formatProcess(fmt, formatNormalize(ts)...);
 }
 
+template <typename... Ts>
+inline void print(const char *fmt, const Ts&... ts) {
+    printf("%s", formatProcess(fmt, formatNormalize(ts)...).c_str());
+}
+
+}
 #endif

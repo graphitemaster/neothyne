@@ -2,6 +2,7 @@
 
 #include "u_algorithm.h"
 #include "u_memory.h"
+#include "u_misc.h"
 
 #include "engine.h"
 
@@ -211,10 +212,8 @@ world::~world() {
 
 bool world::load(const kdMap &map) {
     // load skybox
-    if (!m_skybox.load("textures/sky01")) {
-        fprintf(stderr, "failed to load skybox\n");
+    if (!m_skybox.load("textures/sky01"))
         return false;
-    }
 
     static const struct {
         const char *name;
@@ -283,7 +282,7 @@ bool world::load(const kdMap &map) {
     }
 
     m_vertices = u::move(map.vertices);
-    printf("[world] => loaded\n");
+    u::print("[world] => loaded\n");
     return true;
 }
 
@@ -353,7 +352,7 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_geomMethod.setColorTextureUnit(0);
     m_geomMethod.setNormalTextureUnit(1);
 
-    printf("[world] => uploaded\n");
+    u::print("[world] => uploaded\n");
     return true;
 }
 

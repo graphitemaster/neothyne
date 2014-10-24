@@ -146,7 +146,7 @@ static void screenShot() {
     time_t t = time(nullptr);
     struct tm tm = *localtime(&t);
     u::string file = u::format("%sscreenshots/%d-%d-%d-%d%d%d.bmp",
-        neoUserPath().c_str(), tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+        neoUserPath(), tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
         tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     // Get metrics for reading the final composite from GL
@@ -168,7 +168,7 @@ static void screenShot() {
 
     // Write the data
     if (bmpWrite(file, screenWidth, screenHeight, temp.get()))
-        printf("[screenshot] => %s\n", file.c_str());
+        u::print("[screenshot] => %s\n", file);
 }
 
 VAR(float, cl_fov, "field of view", 45.0f, 270.0f, 90.0f);

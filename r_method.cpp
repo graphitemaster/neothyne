@@ -1,6 +1,7 @@
 #include "engine.h"
 #include "r_method.h"
 #include "u_file.h"
+#include "u_misc.h"
 
 namespace r {
 
@@ -69,7 +70,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
         gl::GetShaderiv(shaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
         infoLog.resize(infoLogLength);
         gl::GetShaderInfoLog(shaderObject, infoLogLength, nullptr, &infoLog[0]);
-        printf("Shader error:\n%s\n", infoLog.c_str());
+        u::print("Shader error:\n%s\n", infoLog);
         return false;
     }
 

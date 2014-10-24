@@ -60,6 +60,10 @@ bool string::empty() const {
     return m_last - m_first == 0;
 }
 
+char *string::copy() const {
+    return strdup(m_first);
+}
+
 void string::reserve(size_t capacity) {
     if (m_first ? m_first + capacity + 1 <= m_capacity : false)
         return;

@@ -1708,7 +1708,7 @@ template <typename T>
 bool texture::decode(const u::vector<unsigned char> &data, const char *name, float quality) {
     T decode(data);
     if (decode.status() != decoder::kSuccess) {
-        fprintf(stderr, "failed to decode `%s' %s\n", name, decode.error());
+        u::print("failed to decode `%s' %s\n", name, decode.error());
         return false;
     }
 
@@ -1798,7 +1798,7 @@ bool texture::load(const u::string &file, float quality) {
         return decode<png>(data, fileName, quality);
     else if (tga::test(data))
         return decode<tga>(data, fileName, quality);
-    fprintf(stderr, "no decoder found for `%s'\n", fileName);
+    u::print("no decoder found for `%s'\n", fileName);
     return false;
 }
 

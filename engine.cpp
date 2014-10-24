@@ -185,10 +185,10 @@ static SDL_Window *getContext() {
     const u::string &videoDriver = vid_driver.get();
     if (videoDriver.size()) {
         if (SDL_GL_LoadLibrary(videoDriver.c_str()) != 0) {
-            fprintf(stderr, "Failed to load video driver: %s\n", SDL_GetError());
+            u::print("Failed to load video driver: %s\n", SDL_GetError());
             return NULL;
         } else {
-            printf("Loaded video driver: %s\n", videoDriver.c_str());
+            u::print("Loaded video driver: %s\n", videoDriver);
         }
     }
 
@@ -389,9 +389,8 @@ int main(int argc, char **argv) {
     const char *version = (const char *)gl::GetString(GL_VERSION);
     const char *shader = (const char *)gl::GetString(GL_SHADING_LANGUAGE_VERSION);
 
-    printf("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\n",
+    u::print("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\n",
         vendor, renderer, version, shader);
-    printf("Game: %s\nUser: %s\n",
-        neoGamePath().c_str(), neoUserPath().c_str());
+    u::print("Game: %s\nUser: %s\n", neoGamePath(), neoUserPath());
     return neoMain(gTimer, argc, argv);
 }
