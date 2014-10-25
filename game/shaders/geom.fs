@@ -38,5 +38,5 @@ vec3 calcBump() {
 
 void main() {
     diffuseOut = texture(gColorMap, texCoord0).rgb;
-    normalOut = encodeNormal(calcBump()); //normalize(normal0));
+    normalOut = encodeNormal(calcBump());
 }

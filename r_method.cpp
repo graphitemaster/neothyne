@@ -25,6 +25,13 @@ bool method::init() {
     return !!m_program;
 }
 
+void method::define(const u::string &macro) {
+    u::string prelude = "#define " + macro + "\n";
+    m_vertexSource += prelude;
+    m_fragmentSource += prelude;
+    m_geometrySource += prelude;
+}
+
 bool method::addShader(GLenum shaderType, const char *shaderFile) {
     u::string *shaderSource = nullptr;
     switch (shaderType) {

@@ -350,7 +350,8 @@ namespace gl {
     static const char *extensionList[] = {
         "GL_EXT_texture_compression_s3tc",
         "GL_EXT_texture_filter_anisotropic",
-        "GL_ARB_texture_compression_bptc"
+        "GL_ARB_texture_compression_bptc",
+        "GL_ARB_texture_rectangle"
     };
 
     void init() {

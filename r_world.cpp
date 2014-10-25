@@ -14,6 +14,9 @@ bool lightMethod::init(const char *vs, const char *fs) {
     if (!method::init())
         return false;
 
+    if (gl::has(ARB_texture_rectangle))
+        method::define("HAS_TEXTURE_RECTANGLE");
+
     if (!addShader(GL_VERTEX_SHADER, vs))
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, fs))

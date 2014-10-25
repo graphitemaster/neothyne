@@ -15,6 +15,8 @@ struct method {
 
     bool init();
 
+    void define(const u::string &string);
+
 protected:
     bool addShader(GLenum shaderType, const char *shaderText);
 

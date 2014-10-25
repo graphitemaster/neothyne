@@ -42,30 +42,37 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
 
     gl::GenTextures(kMax, m_textures);
 
-    // diffuse RGBA
-    gl::BindTexture(GL_TEXTURE_2D, m_textures[kDiffuse]);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, GL_FLOAT, nullptr);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textures[kDiffuse], 0);
+    GLenum format = gl::has(ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+
+    // diffuse
+    gl::BindTexture(format, m_textures[kDiffuse]);
+    gl::TexImage2D(format, 0, GL_RGB, m_width, m_height, 0, GL_RGB, GL_FLOAT, nullptr);
+    gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format, m_textures[kDiffuse], 0);
 
     // normals
-    gl::BindTexture(GL_TEXTURE_2D, m_textures[kNormal]);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, m_width, m_height, 0, GL_RG, GL_FLOAT, nullptr);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_textures[kNormal], 0);
+    gl::BindTexture(format, m_textures[kNormal]);
+    gl::TexImage2D(format, 0, GL_RG16F, m_width, m_height, 0, GL_RG, GL_FLOAT, nullptr);
+    gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, format, m_textures[kNormal], 0);
 
     // depth
-    gl::BindTexture(GL_TEXTURE_2D, m_textures[kDepth]);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+    gl::BindTexture(format, m_textures[kDepth]);
+    gl::TexImage2D(format, 0, GL_DEPTH_COMPONENT,
         m_width, m_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-        GL_TEXTURE_2D, m_textures[kDepth], 0);
+        format, m_textures[kDepth], 0);
 
     static GLenum drawBuffers[] = {
         GL_COLOR_ATTACHMENT0, // diffuse
@@ -84,9 +91,11 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
 
 void gBuffer::bindReading() {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    GLenum format = gl::has(ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
     for (size_t i = 0; i < kMax; i++) {
         gl::ActiveTexture(GL_TEXTURE0 + i);
-        gl::BindTexture(GL_TEXTURE_2D, m_textures[i]);
+        gl::BindTexture(format, m_textures[i]);
     }
 }
 
