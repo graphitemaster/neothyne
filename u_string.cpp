@@ -61,7 +61,8 @@ bool string::empty() const {
 }
 
 char *string::copy() const {
-    return strdup(m_first);
+    const size_t length = size() + 1;
+    return (char *)memcpy(malloc(length), m_first, length);
 }
 
 void string::reserve(size_t capacity) {

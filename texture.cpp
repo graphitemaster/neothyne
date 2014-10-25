@@ -119,7 +119,7 @@ struct jpeg : decoder {
         memset(m_qtab, 0, sizeof(m_qtab));
         memset(m_block, 0, sizeof(m_block));
 
-        decode(data, static_cast<chromaFilter>(tex_jpeg_chroma.get()));
+        decode(data, chromaFilter(tex_jpeg_chroma.get()));
     }
 
     u::vector<unsigned char> data() {

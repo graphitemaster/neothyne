@@ -7,7 +7,7 @@ namespace u {
 struct optional_none { };
 
 typedef int optional_none::*none_t;
-none_t const none = static_cast<none_t>(0);
+none_t const none = none_t(0);
 
 template <typename T>
 struct optional {
@@ -103,12 +103,12 @@ const void *optional<T>::storage() const {
 
 template <typename T>
 T &optional<T>::get() {
-    return *static_cast<T*>(storage());
+    return *(T*)(storage());
 }
 
 template <typename T>
 const T &optional<T>::get() const {
-    return *static_cast<const T*>(storage());
+    return *(const T*)(storage());
 }
 
 template <typename T>

@@ -150,8 +150,8 @@ static void screenShot() {
         tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     // Get metrics for reading the final composite from GL
-    const int screenWidth = static_cast<int>(neoWidth());
-    const int screenHeight = static_cast<int>(neoHeight());
+    const int screenWidth = int(neoWidth());
+    const int screenHeight = int(neoHeight());
     const int screenSize = screenWidth * screenHeight;
     auto pixels = u::unique_ptr<unsigned char>(new unsigned char[screenSize * 3]);
 

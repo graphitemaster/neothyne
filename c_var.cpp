@@ -53,7 +53,7 @@ static inline varStatus varSet(const u::string &name, const T &value, bool callb
     auto &ref = variables()[name];
     if (ref.type != varTypeTraits<T>::type)
         return kVarTypeError;
-    auto &val = *reinterpret_cast<var<T>*>(ref.self);
+    auto &val = *(var<T>*)(ref.self);
     varStatus status = val.set(value);
     if (status == kVarSuccess && callback)
         val();
@@ -83,17 +83,17 @@ bool writeConfig() {
         return false;
     auto writeLine = [](FILE *fp, const u::string &name, const varReference &ref) {
         if (ref.type == kVarInt) {
-            auto handle = reinterpret_cast<var<int>*>(ref.self);
+            auto handle = (var<int>*)ref.self;
             auto v = handle->get();
             if (handle->flags() & kVarPersist)
                 u::fprint(fp, "%s %d\n", name, v);
         } else if (ref.type == kVarFloat) {
-            auto handle = reinterpret_cast<var<float>*>(ref.self);
+            auto handle = (var<float>*)ref.self;
             auto v = handle->get();
             if (handle->flags() & kVarPersist)
                 u::fprint(fp, "%s %.2f\n", name, v);
         } else if (ref.type == kVarString) {
-            auto handle = reinterpret_cast<var<u::string>*>(ref.self);
+            auto handle = (var<u::string>*)ref.self;
             auto v = handle->get();
             if (handle->flags() & kVarPersist) {
                 if (v.empty())

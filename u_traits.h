@@ -110,6 +110,7 @@ struct remove_reference<T&&> {
 
 template <typename T>
 constexpr typename remove_reference<T>::type &&move(T &&t) {
+    // static_cast is required here
     return static_cast<typename remove_reference<T>::type&&>(t);
 }
 

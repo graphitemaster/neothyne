@@ -44,7 +44,13 @@ struct varTypeTraits<u::string> {
 void varRegister(const char *name, const char *desc, void *what, varType type);
 
 template <typename T>
+inline void varDefine(const char *name, const char *desc, T *self) {
+    varRegister(name, desc, (void *)self, varTypeTraits<typename T::type>::type);
+}
+
+template <typename T>
 struct var {
+    typedef T type;
     typedef void (*command)(T&);
 
     var(varFlags flags, const char *name, const char *desc, const T &min, const T &max);
@@ -68,6 +74,7 @@ private:
 
 template <>
 struct var<u::string> {
+    typedef u::string type;
     typedef void (*command)(u::string &value);
 
     var(varFlags flags, const char *name, const char *desc);
@@ -99,8 +106,7 @@ inline var<T>::var(varFlags flags,
     , m_callback(nullptr)
     , m_flags(flags)
 {
-    void *self = reinterpret_cast<void *>(this);
-    varRegister(name, desc, self, varTypeTraits<T>::type);
+    varDefine(name, desc, this);
 }
 
 template <typename T>
@@ -117,8 +123,7 @@ inline var<T>::var(varFlags flags,
     , m_callback(nullptr)
     , m_flags(flags)
 {
-    void *self = reinterpret_cast<void *>(this);
-    varRegister(name, desc, self, varTypeTraits<T>::type);
+    varDefine(name, desc, this);
 }
 
 template <typename T>
@@ -136,8 +141,7 @@ inline var<T>::var(varFlags flags,
     , m_callback(cb)
     , m_flags(flags)
 {
-    void *self = reinterpret_cast<void *>(this);
-    varRegister(name, desc, self, varTypeTraits<T>::type);
+    varDefine(name, desc, this);
 }
 
 template <typename T>
@@ -183,8 +187,7 @@ inline var<u::string>::var(varFlags flags,
     , m_callback(nullptr)
     , m_flags(flags)
 {
-    void *self = reinterpret_cast<void *>(this);
-    varRegister(name, desc, self, varTypeTraits<u::string>::type);
+    varDefine(name, desc, this);
 }
 
 inline var<u::string>::var(varFlags flags,
@@ -193,8 +196,7 @@ inline var<u::string>::var(varFlags flags,
     : m_callback(nullptr)
     , m_flags(flags)
 {
-    void *self = reinterpret_cast<void *>(this);
-    varRegister(name, desc, self, varTypeTraits<u::string>::type);
+    varDefine(name, desc, this);
 }
 
 inline var<u::string>::var(varFlags flags,
@@ -207,8 +209,7 @@ inline var<u::string>::var(varFlags flags,
     , m_callback(cb)
     , m_flags(flags)
 {
-    void *self = reinterpret_cast<void *>(this);
-    varRegister(name, desc, self, varTypeTraits<u::string>::type);
+    varDefine(name, desc, this);
 }
 
 inline var<u::string>::operator u::string&() {

@@ -229,8 +229,8 @@ static SDL_Window *getContext() {
 
     // Coming from a config
     if (vid_width != 0 && vid_height != 0) {
-        gScreenWidth = static_cast<size_t>(vid_width.get());
-        gScreenHeight = static_cast<size_t>(vid_height.get());
+        gScreenWidth = size_t(vid_width.get());
+        gScreenHeight = size_t(vid_height.get());
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
@@ -373,7 +373,7 @@ int main(int argc, char **argv) {
 
     gScreen = getContext();
 
-    neoSetVSyncOption(static_cast<vSyncOption>(vid_vsync.get()));
+    neoSetVSyncOption(vSyncOption(vid_vsync.get()));
     gTimer.cap(vid_maxfps.get());
 
     gl::init();
