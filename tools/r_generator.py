@@ -185,6 +185,8 @@ def genSource(functionList, extensionList, sourceFile):
         #include <SDL2/SDL.h> // SDL_GL_GetProcAddress
         #include <stdarg.h>
         #define R_COMMON_NO_DEFINES
+        #include "engine.h"
+
         #include "r_common.h"
 
         #include "u_string.h"
@@ -334,9 +336,14 @@ def genSource(functionList, extensionList, sourceFile):
         source.write('    void init() {\n')
         for f in functionList:
             fill = largest - len(f.name)
-            source.write('        gl%s_%s = (PFNGL%sPROC)SDL_GL_GetProcAddress("gl%s");\n'
+            source.write('        if (!(gl%s_%s = (PFNGL%sPROC)SDL_GL_GetProcAddress("gl%s")))\n            goto loadError;\n'
                 % (f.name, ''.rjust(fill), f.name.upper(), f.name))
-        source.write('\n        GLint count = 0;\n');
+        source.write('\n');
+        source.write('        goto loadExtensions;\n\n')
+        source.write('loadError:\n')
+        source.write('        neoFatal("Failed to initialize OpenGL\\n");\n\n')
+        source.write('loadExtensions:\n')
+        source.write('        GLint count = 0;\n');
         source.write('        glGetIntegerv_(GL_NUM_EXTENSIONS, &count);\n')
         source.write('        for (GLint i = 0; i < count; i++) {\n')
         source.write('            const char *extension = (const char *)glGetStringi_(GL_EXTENSIONS, i);\n')
@@ -347,7 +354,7 @@ def genSource(functionList, extensionList, sourceFile):
         source.write('    }\n\n')
         source.write('    bool has(size_t ext) {\n')
         source.write('         return extensionSet.find(ext) != extensionSet.end();\n')
-        source.write('    }\n');
+        source.write('    }\n')
         # Generate the GL function wrappers
         for f in functionList:
             source.write('\n    %s %s' % (f.type, f.name))
@@ -370,40 +377,10 @@ def genSource(functionList, extensionList, sourceFile):
         # End the namespace
         source.write('}\n')
 
-def usage(app):
-    sys.stdout.write(textwrap.dedent("""\
-    usage: %s -g <list> -o <output>
-        -g      - OpenGL function list
-        -e      - OpenGL extension list
-        -o      - output (suffixes with .h and .cpp)
-        -h      - help
-    """) % (app))
-    sys.exit(1)
-
 def main(argv):
-    try:
-        opts, args = getopt.getopt(argv[1:], "g:o:e:h:")
-    except getopt.GetoptError:
-        usage(argv[-1])
-        sys.exit()
-
-    protos = ''
-    output = ''
-    extens = ''
-    for opt, arg in opts:
-        if opt == '-h':
-            usage(argv[0])
-        elif opt == '-g':
-            protos = arg
-        elif opt == '-o':
-            output = arg
-        elif opt == '-e':
-            extens = arg
-        else:
-            usage(argv[0])
-
-    if not protos or not output:
-        usage(argv[0])
+    protos = 'tools/r_gl'
+    output = 'r_common'
+    extens = 'tools/r_ext'
 
     functionList = readFunctions(protos)
     extensionList = readExtensions(extens)

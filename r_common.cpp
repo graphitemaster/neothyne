@@ -2,6 +2,8 @@
 #include <SDL2/SDL.h> // SDL_GL_GetProcAddress
 #include <stdarg.h>
 #define R_COMMON_NO_DEFINES
+#include "engine.h"
+
 #include "r_common.h"
 
 #include "u_string.h"
@@ -358,74 +360,147 @@ namespace gl {
     };
 
     void init() {
-        glCreateShader_             = (PFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader");
-        glShaderSource_             = (PFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress("glShaderSource");
-        glCompileShader_            = (PFNGLCOMPILESHADERPROC)SDL_GL_GetProcAddress("glCompileShader");
-        glAttachShader_             = (PFNGLATTACHSHADERPROC)SDL_GL_GetProcAddress("glAttachShader");
-        glCreateProgram_            = (PFNGLCREATEPROGRAMPROC)SDL_GL_GetProcAddress("glCreateProgram");
-        glLinkProgram_              = (PFNGLLINKPROGRAMPROC)SDL_GL_GetProcAddress("glLinkProgram");
-        glUseProgram_               = (PFNGLUSEPROGRAMPROC)SDL_GL_GetProcAddress("glUseProgram");
-        glGetUniformLocation_       = (PFNGLGETUNIFORMLOCATIONPROC)SDL_GL_GetProcAddress("glGetUniformLocation");
-        glEnableVertexAttribArray_  = (PFNGLENABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glEnableVertexAttribArray");
-        glDisableVertexAttribArray_ = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glDisableVertexAttribArray");
-        glUniformMatrix4fv_         = (PFNGLUNIFORMMATRIX4FVPROC)SDL_GL_GetProcAddress("glUniformMatrix4fv");
-        glBindBuffer_               = (PFNGLBINDBUFFERPROC)SDL_GL_GetProcAddress("glBindBuffer");
-        glGenBuffers_               = (PFNGLGENBUFFERSPROC)SDL_GL_GetProcAddress("glGenBuffers");
-        glVertexAttribPointer_      = (PFNGLVERTEXATTRIBPOINTERPROC)SDL_GL_GetProcAddress("glVertexAttribPointer");
-        glBufferData_               = (PFNGLBUFFERDATAPROC)SDL_GL_GetProcAddress("glBufferData");
-        glValidateProgram_          = (PFNGLVALIDATEPROGRAMPROC)SDL_GL_GetProcAddress("glValidateProgram");
-        glGenVertexArrays_          = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays");
-        glBindVertexArray_          = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray");
-        glDeleteProgram_            = (PFNGLDELETEPROGRAMPROC)SDL_GL_GetProcAddress("glDeleteProgram");
-        glDeleteBuffers_            = (PFNGLDELETEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteBuffers");
-        glDeleteVertexArrays_       = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays");
-        glUniform1i_                = (PFNGLUNIFORM1IPROC)SDL_GL_GetProcAddress("glUniform1i");
-        glUniform1f_                = (PFNGLUNIFORM1FPROC)SDL_GL_GetProcAddress("glUniform1f");
-        glUniform2f_                = (PFNGLUNIFORM2FPROC)SDL_GL_GetProcAddress("glUniform2f");
-        glUniform3fv_               = (PFNGLUNIFORM3FVPROC)SDL_GL_GetProcAddress("glUniform3fv");
-        glGenerateMipmap_           = (PFNGLGENERATEMIPMAPPROC)SDL_GL_GetProcAddress("glGenerateMipmap");
-        glDeleteShader_             = (PFNGLDELETESHADERPROC)SDL_GL_GetProcAddress("glDeleteShader");
-        glGetShaderiv_              = (PFNGLGETSHADERIVPROC)SDL_GL_GetProcAddress("glGetShaderiv");
-        glGetProgramiv_             = (PFNGLGETPROGRAMIVPROC)SDL_GL_GetProcAddress("glGetProgramiv");
-        glGetShaderInfoLog_         = (PFNGLGETSHADERINFOLOGPROC)SDL_GL_GetProcAddress("glGetShaderInfoLog");
-        glActiveTexture_            = (PFNGLACTIVETEXTUREPROC)SDL_GL_GetProcAddress("glActiveTexture");
-        glGenFramebuffers_          = (PFNGLGENFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glGenFramebuffers");
-        glBindFramebuffer_          = (PFNGLBINDFRAMEBUFFERPROC)SDL_GL_GetProcAddress("glBindFramebuffer");
-        glFramebufferTexture2D_     = (PFNGLFRAMEBUFFERTEXTURE2DPROC)SDL_GL_GetProcAddress("glFramebufferTexture2D");
-        glDrawBuffers_              = (PFNGLDRAWBUFFERSPROC)SDL_GL_GetProcAddress("glDrawBuffers");
-        glCheckFramebufferStatus_   = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)SDL_GL_GetProcAddress("glCheckFramebufferStatus");
-        glDeleteFramebuffers_       = (PFNGLDELETEFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteFramebuffers");
-        glClear_                    = (PFNGLCLEARPROC)SDL_GL_GetProcAddress("glClear");
-        glClearColor_               = (PFNGLCLEARCOLORPROC)SDL_GL_GetProcAddress("glClearColor");
-        glFrontFace_                = (PFNGLFRONTFACEPROC)SDL_GL_GetProcAddress("glFrontFace");
-        glCullFace_                 = (PFNGLCULLFACEPROC)SDL_GL_GetProcAddress("glCullFace");
-        glEnable_                   = (PFNGLENABLEPROC)SDL_GL_GetProcAddress("glEnable");
-        glDisable_                  = (PFNGLDISABLEPROC)SDL_GL_GetProcAddress("glDisable");
-        glDrawElements_             = (PFNGLDRAWELEMENTSPROC)SDL_GL_GetProcAddress("glDrawElements");
-        glDepthMask_                = (PFNGLDEPTHMASKPROC)SDL_GL_GetProcAddress("glDepthMask");
-        glBindTexture_              = (PFNGLBINDTEXTUREPROC)SDL_GL_GetProcAddress("glBindTexture");
-        glTexImage2D_               = (PFNGLTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glTexImage2D");
-        glDeleteTextures_           = (PFNGLDELETETEXTURESPROC)SDL_GL_GetProcAddress("glDeleteTextures");
-        glGenTextures_              = (PFNGLGENTEXTURESPROC)SDL_GL_GetProcAddress("glGenTextures");
-        glTexParameterf_            = (PFNGLTEXPARAMETERFPROC)SDL_GL_GetProcAddress("glTexParameterf");
-        glTexParameteri_            = (PFNGLTEXPARAMETERIPROC)SDL_GL_GetProcAddress("glTexParameteri");
-        glDrawArrays_               = (PFNGLDRAWARRAYSPROC)SDL_GL_GetProcAddress("glDrawArrays");
-        glBlendEquation_            = (PFNGLBLENDEQUATIONPROC)SDL_GL_GetProcAddress("glBlendEquation");
-        glBlendFunc_                = (PFNGLBLENDFUNCPROC)SDL_GL_GetProcAddress("glBlendFunc");
-        glDepthFunc_                = (PFNGLDEPTHFUNCPROC)SDL_GL_GetProcAddress("glDepthFunc");
-        glColorMask_                = (PFNGLCOLORMASKPROC)SDL_GL_GetProcAddress("glColorMask");
-        glReadPixels_               = (PFNGLREADPIXELSPROC)SDL_GL_GetProcAddress("glReadPixels");
-        glViewport_                 = (PFNGLVIEWPORTPROC)SDL_GL_GetProcAddress("glViewport");
-        glGetIntegerv_              = (PFNGLGETINTEGERVPROC)SDL_GL_GetProcAddress("glGetIntegerv");
-        glGetString_                = (PFNGLGETSTRINGPROC)SDL_GL_GetProcAddress("glGetString");
-        glGetStringi_               = (PFNGLGETSTRINGIPROC)SDL_GL_GetProcAddress("glGetStringi");
-        glGetFloatv_                = (PFNGLGETFLOATVPROC)SDL_GL_GetProcAddress("glGetFloatv");
-        glGetError_                 = (PFNGLGETERRORPROC)SDL_GL_GetProcAddress("glGetError");
-        glGetTexLevelParameteriv_   = (PFNGLGETTEXLEVELPARAMETERIVPROC)SDL_GL_GetProcAddress("glGetTexLevelParameteriv");
-        glGetCompressedTexImage_    = (PFNGLGETCOMPRESSEDTEXIMAGEPROC)SDL_GL_GetProcAddress("glGetCompressedTexImage");
-        glCompressedTexImage2D_     = (PFNGLCOMPRESSEDTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glCompressedTexImage2D");
-        glPixelStorei_              = (PFNGLPIXELSTOREIPROC)SDL_GL_GetProcAddress("glPixelStorei");
+        if (!(glCreateShader_             = (PFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader")))
+            goto loadError;
+        if (!(glShaderSource_             = (PFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress("glShaderSource")))
+            goto loadError;
+        if (!(glCompileShader_            = (PFNGLCOMPILESHADERPROC)SDL_GL_GetProcAddress("glCompileShader")))
+            goto loadError;
+        if (!(glAttachShader_             = (PFNGLATTACHSHADERPROC)SDL_GL_GetProcAddress("glAttachShader")))
+            goto loadError;
+        if (!(glCreateProgram_            = (PFNGLCREATEPROGRAMPROC)SDL_GL_GetProcAddress("glCreateProgram")))
+            goto loadError;
+        if (!(glLinkProgram_              = (PFNGLLINKPROGRAMPROC)SDL_GL_GetProcAddress("glLinkProgram")))
+            goto loadError;
+        if (!(glUseProgram_               = (PFNGLUSEPROGRAMPROC)SDL_GL_GetProcAddress("glUseProgram")))
+            goto loadError;
+        if (!(glGetUniformLocation_       = (PFNGLGETUNIFORMLOCATIONPROC)SDL_GL_GetProcAddress("glGetUniformLocation")))
+            goto loadError;
+        if (!(glEnableVertexAttribArray_  = (PFNGLENABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glEnableVertexAttribArray")))
+            goto loadError;
+        if (!(glDisableVertexAttribArray_ = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glDisableVertexAttribArray")))
+            goto loadError;
+        if (!(glUniformMatrix4fv_         = (PFNGLUNIFORMMATRIX4FVPROC)SDL_GL_GetProcAddress("glUniformMatrix4fv")))
+            goto loadError;
+        if (!(glBindBuffer_               = (PFNGLBINDBUFFERPROC)SDL_GL_GetProcAddress("glBindBuffer")))
+            goto loadError;
+        if (!(glGenBuffers_               = (PFNGLGENBUFFERSPROC)SDL_GL_GetProcAddress("glGenBuffers")))
+            goto loadError;
+        if (!(glVertexAttribPointer_      = (PFNGLVERTEXATTRIBPOINTERPROC)SDL_GL_GetProcAddress("glVertexAttribPointer")))
+            goto loadError;
+        if (!(glBufferData_               = (PFNGLBUFFERDATAPROC)SDL_GL_GetProcAddress("glBufferData")))
+            goto loadError;
+        if (!(glValidateProgram_          = (PFNGLVALIDATEPROGRAMPROC)SDL_GL_GetProcAddress("glValidateProgram")))
+            goto loadError;
+        if (!(glGenVertexArrays_          = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays")))
+            goto loadError;
+        if (!(glBindVertexArray_          = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray")))
+            goto loadError;
+        if (!(glDeleteProgram_            = (PFNGLDELETEPROGRAMPROC)SDL_GL_GetProcAddress("glDeleteProgram")))
+            goto loadError;
+        if (!(glDeleteBuffers_            = (PFNGLDELETEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteBuffers")))
+            goto loadError;
+        if (!(glDeleteVertexArrays_       = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays")))
+            goto loadError;
+        if (!(glUniform1i_                = (PFNGLUNIFORM1IPROC)SDL_GL_GetProcAddress("glUniform1i")))
+            goto loadError;
+        if (!(glUniform1f_                = (PFNGLUNIFORM1FPROC)SDL_GL_GetProcAddress("glUniform1f")))
+            goto loadError;
+        if (!(glUniform2f_                = (PFNGLUNIFORM2FPROC)SDL_GL_GetProcAddress("glUniform2f")))
+            goto loadError;
+        if (!(glUniform3fv_               = (PFNGLUNIFORM3FVPROC)SDL_GL_GetProcAddress("glUniform3fv")))
+            goto loadError;
+        if (!(glGenerateMipmap_           = (PFNGLGENERATEMIPMAPPROC)SDL_GL_GetProcAddress("glGenerateMipmap")))
+            goto loadError;
+        if (!(glDeleteShader_             = (PFNGLDELETESHADERPROC)SDL_GL_GetProcAddress("glDeleteShader")))
+            goto loadError;
+        if (!(glGetShaderiv_              = (PFNGLGETSHADERIVPROC)SDL_GL_GetProcAddress("glGetShaderiv")))
+            goto loadError;
+        if (!(glGetProgramiv_             = (PFNGLGETPROGRAMIVPROC)SDL_GL_GetProcAddress("glGetProgramiv")))
+            goto loadError;
+        if (!(glGetShaderInfoLog_         = (PFNGLGETSHADERINFOLOGPROC)SDL_GL_GetProcAddress("glGetShaderInfoLog")))
+            goto loadError;
+        if (!(glActiveTexture_            = (PFNGLACTIVETEXTUREPROC)SDL_GL_GetProcAddress("glActiveTexture")))
+            goto loadError;
+        if (!(glGenFramebuffers_          = (PFNGLGENFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glGenFramebuffers")))
+            goto loadError;
+        if (!(glBindFramebuffer_          = (PFNGLBINDFRAMEBUFFERPROC)SDL_GL_GetProcAddress("glBindFramebuffer")))
+            goto loadError;
+        if (!(glFramebufferTexture2D_     = (PFNGLFRAMEBUFFERTEXTURE2DPROC)SDL_GL_GetProcAddress("glFramebufferTexture2D")))
+            goto loadError;
+        if (!(glDrawBuffers_              = (PFNGLDRAWBUFFERSPROC)SDL_GL_GetProcAddress("glDrawBuffers")))
+            goto loadError;
+        if (!(glCheckFramebufferStatus_   = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)SDL_GL_GetProcAddress("glCheckFramebufferStatus")))
+            goto loadError;
+        if (!(glDeleteFramebuffers_       = (PFNGLDELETEFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteFramebuffers")))
+            goto loadError;
+        if (!(glClear_                    = (PFNGLCLEARPROC)SDL_GL_GetProcAddress("glClear")))
+            goto loadError;
+        if (!(glClearColor_               = (PFNGLCLEARCOLORPROC)SDL_GL_GetProcAddress("glClearColor")))
+            goto loadError;
+        if (!(glFrontFace_                = (PFNGLFRONTFACEPROC)SDL_GL_GetProcAddress("glFrontFace")))
+            goto loadError;
+        if (!(glCullFace_                 = (PFNGLCULLFACEPROC)SDL_GL_GetProcAddress("glCullFace")))
+            goto loadError;
+        if (!(glEnable_                   = (PFNGLENABLEPROC)SDL_GL_GetProcAddress("glEnable")))
+            goto loadError;
+        if (!(glDisable_                  = (PFNGLDISABLEPROC)SDL_GL_GetProcAddress("glDisable")))
+            goto loadError;
+        if (!(glDrawElements_             = (PFNGLDRAWELEMENTSPROC)SDL_GL_GetProcAddress("glDrawElements")))
+            goto loadError;
+        if (!(glDepthMask_                = (PFNGLDEPTHMASKPROC)SDL_GL_GetProcAddress("glDepthMask")))
+            goto loadError;
+        if (!(glBindTexture_              = (PFNGLBINDTEXTUREPROC)SDL_GL_GetProcAddress("glBindTexture")))
+            goto loadError;
+        if (!(glTexImage2D_               = (PFNGLTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glTexImage2D")))
+            goto loadError;
+        if (!(glDeleteTextures_           = (PFNGLDELETETEXTURESPROC)SDL_GL_GetProcAddress("glDeleteTextures")))
+            goto loadError;
+        if (!(glGenTextures_              = (PFNGLGENTEXTURESPROC)SDL_GL_GetProcAddress("glGenTextures")))
+            goto loadError;
+        if (!(glTexParameterf_            = (PFNGLTEXPARAMETERFPROC)SDL_GL_GetProcAddress("glTexParameterf")))
+            goto loadError;
+        if (!(glTexParameteri_            = (PFNGLTEXPARAMETERIPROC)SDL_GL_GetProcAddress("glTexParameteri")))
+            goto loadError;
+        if (!(glDrawArrays_               = (PFNGLDRAWARRAYSPROC)SDL_GL_GetProcAddress("glDrawArrays")))
+            goto loadError;
+        if (!(glBlendEquation_            = (PFNGLBLENDEQUATIONPROC)SDL_GL_GetProcAddress("glBlendEquation")))
+            goto loadError;
+        if (!(glBlendFunc_                = (PFNGLBLENDFUNCPROC)SDL_GL_GetProcAddress("glBlendFunc")))
+            goto loadError;
+        if (!(glDepthFunc_                = (PFNGLDEPTHFUNCPROC)SDL_GL_GetProcAddress("glDepthFunc")))
+            goto loadError;
+        if (!(glColorMask_                = (PFNGLCOLORMASKPROC)SDL_GL_GetProcAddress("glColorMask")))
+            goto loadError;
+        if (!(glReadPixels_               = (PFNGLREADPIXELSPROC)SDL_GL_GetProcAddress("glReadPixels")))
+            goto loadError;
+        if (!(glViewport_                 = (PFNGLVIEWPORTPROC)SDL_GL_GetProcAddress("glViewport")))
+            goto loadError;
+        if (!(glGetIntegerv_              = (PFNGLGETINTEGERVPROC)SDL_GL_GetProcAddress("glGetIntegerv")))
+            goto loadError;
+        if (!(glGetString_                = (PFNGLGETSTRINGPROC)SDL_GL_GetProcAddress("glGetString")))
+            goto loadError;
+        if (!(glGetStringi_               = (PFNGLGETSTRINGIPROC)SDL_GL_GetProcAddress("glGetStringi")))
+            goto loadError;
+        if (!(glGetFloatv_                = (PFNGLGETFLOATVPROC)SDL_GL_GetProcAddress("glGetFloatv")))
+            goto loadError;
+        if (!(glGetError_                 = (PFNGLGETERRORPROC)SDL_GL_GetProcAddress("glGetError")))
+            goto loadError;
+        if (!(glGetTexLevelParameteriv_   = (PFNGLGETTEXLEVELPARAMETERIVPROC)SDL_GL_GetProcAddress("glGetTexLevelParameteriv")))
+            goto loadError;
+        if (!(glGetCompressedTexImage_    = (PFNGLGETCOMPRESSEDTEXIMAGEPROC)SDL_GL_GetProcAddress("glGetCompressedTexImage")))
+            goto loadError;
+        if (!(glCompressedTexImage2D_     = (PFNGLCOMPRESSEDTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glCompressedTexImage2D")))
+            goto loadError;
+        if (!(glPixelStorei_              = (PFNGLPIXELSTOREIPROC)SDL_GL_GetProcAddress("glPixelStorei")))
+            goto loadError;
 
+        goto loadExtensions;
+
+loadError:
+        neoFatal("Failed to initialize OpenGL\n");
+
+loadExtensions:
         GLint count = 0;
         glGetIntegerv_(GL_NUM_EXTENSIONS, &count);
         for (GLint i = 0; i < count; i++) {
