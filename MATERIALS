@@ -1,7 +1,6 @@
-Material files contain space-delimited key-value lines which represent the
-a material. The easiest material contains just a diffuse texture. More
-sophistopcated materials are possible with the use of the appropriate
-key-value associations.
+Material files contain space-delimited key-value lines which represent a material.
+The easiest material contains just a diffuse texture. More sophistopcated materials
+are possible with the use of the appropriate key-value associations.
 
 The following keys exist
 
