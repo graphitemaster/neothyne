@@ -44,8 +44,8 @@ error:
     return false;
 }
 
-template<typename T>
-static inline void memput(unsigned char*& store, const T& data) {
+template <typename T>
+static inline void memput(unsigned char *&store, const T &data) {
   memcpy(store, &data, sizeof(T));
   store += sizeof(T);
 }
