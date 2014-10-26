@@ -1909,6 +1909,14 @@ size_t texture::size() const {
     return m_data.size();
 }
 
+size_t texture::bpp() const {
+    return m_bpp;
+}
+
+size_t texture::pitch() const {
+    return m_pitch;
+}
+
 const unsigned char *texture::data() const {
     return &m_data[0];
 }

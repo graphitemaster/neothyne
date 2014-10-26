@@ -104,6 +104,7 @@ typedef GLenum (APIENTRYP PFNGLGETERRORPROC)();
 typedef void (APIENTRYP PFNGLGETTEXLEVELPARAMETERIVPROC)(GLenum, GLint, GLenum, GLint*);
 typedef void (APIENTRYP PFNGLGETCOMPRESSEDTEXIMAGEPROC)(GLenum, GLint, GLvoid*);
 typedef void (APIENTRYP PFNGLCOMPRESSEDTEXIMAGE2DPROC)(GLenum, GLint, GLenum, GLsizei, GLsizei, GLint, GLsizei, const GLvoid*);
+typedef void (APIENTRYP PFNGLPIXELSTOREIPROC)(GLenum, GLint);
 
 static PFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static PFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -171,6 +172,7 @@ static PFNGLGETERRORPROC                  glGetError_                 = nullptr;
 static PFNGLGETTEXLEVELPARAMETERIVPROC    glGetTexLevelParameteriv_   = nullptr;
 static PFNGLGETCOMPRESSEDTEXIMAGEPROC     glGetCompressedTexImage_    = nullptr;
 static PFNGLCOMPRESSEDTEXIMAGE2DPROC      glCompressedTexImage2D_     = nullptr;
+static PFNGLPIXELSTOREIPROC               glPixelStorei_              = nullptr;
 
 #ifdef DEBUG_GL
 template <char C, typename T>
@@ -422,6 +424,7 @@ namespace gl {
         glGetTexLevelParameteriv_   = (PFNGLGETTEXLEVELPARAMETERIVPROC)SDL_GL_GetProcAddress("glGetTexLevelParameteriv");
         glGetCompressedTexImage_    = (PFNGLGETCOMPRESSEDTEXIMAGEPROC)SDL_GL_GetProcAddress("glGetCompressedTexImage");
         glCompressedTexImage2D_     = (PFNGLCOMPRESSEDTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glCompressedTexImage2D");
+        glPixelStorei_              = (PFNGLPIXELSTOREIPROC)SDL_GL_GetProcAddress("glPixelStorei");
 
         GLint count = 0;
         glGetIntegerv_(GL_NUM_EXTENSIONS, &count);
@@ -772,5 +775,10 @@ namespace gl {
     void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid* data GL_INFOP) {
         glCompressedTexImage2D_(target, level, internalformat, width, height, border, imageSize, data);
         GL_CHECK("2728878*0", target, level, internalformat, width, height, border, imageSize, data);
+    }
+
+    void PixelStorei(GLenum pname, GLint param GL_INFOP) {
+        glPixelStorei_(pname, param);
+        GL_CHECK("27", pname, param);
     }
 }

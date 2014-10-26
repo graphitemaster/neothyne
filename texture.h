@@ -57,6 +57,8 @@ struct texture {
     const unsigned char *data() const;
 
     size_t size() const;
+    size_t bpp() const;
+    size_t pitch() const;
 
     const u::string &hashString() const;
 

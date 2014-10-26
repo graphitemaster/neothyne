@@ -64,3 +64,4 @@ GLenum: GetError();
 void: GetTexLevelParameteriv(GLenum: target, GLint: level, GLenum: pname, GLint*: params);
 void: GetCompressedTexImage(GLenum: target, GLint: lod, GLvoid*: img);
 void: CompressedTexImage2D(GLenum: target, GLint: level, GLenum: internalformat, GLsizei: width, GLsizei: height, GLint: border, GLsizei: imageSize, const GLvoid*: data);
+void: PixelStorei(GLenum: pname, GLint: param);

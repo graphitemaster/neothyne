@@ -89,6 +89,7 @@ namespace gl {
     void GetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint* params GL_INFOP);
     void GetCompressedTexImage(GLenum target, GLint lod, GLvoid* img GL_INFOP);
     void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid* data GL_INFOP);
+    void PixelStorei(GLenum pname, GLint param GL_INFOP);
 }
 
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -158,5 +159,6 @@ namespace gl {
     #define GetTexLevelParameteriv(...)   GetTexLevelParameteriv(__VA_ARGS__, __FILE__, __LINE__)
     #define GetCompressedTexImage(...)    GetCompressedTexImage(__VA_ARGS__, __FILE__, __LINE__)
     #define CompressedTexImage2D(...)     CompressedTexImage2D(__VA_ARGS__, __FILE__, __LINE__)
+    #define PixelStorei(...)              PixelStorei(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif
