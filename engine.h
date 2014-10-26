@@ -5,6 +5,7 @@
 
 #include "u_map.h"
 #include "u_string.h"
+#include "u_misc.h"
 
 struct frameTimer {
     static constexpr size_t kMaxFPS = 0; // For capping framerate (0 = disabled)
@@ -58,7 +59,13 @@ void neoSetWindowTitle(const char *title);
 void neoResize(size_t width, size_t height);
 const u::string &neoUserPath();
 const u::string &neoGamePath();
-void neoFatal(const char *fmt, ...);
+
+template <typename... Ts>
+inline void neoFatal(const char *fmt, const Ts&... ts) {
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error",
+        u::format(fmt, ts...).c_str(), nullptr);
+    abort();
+}
 
 void neoSetVSyncOption(vSyncOption option);
 

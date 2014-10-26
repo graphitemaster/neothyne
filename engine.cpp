@@ -267,19 +267,6 @@ static SDL_Window *getContext() {
     return window;
 }
 
-void neoFatal(const char *fmt, ...) {
-    char buffer[1024];
-    va_list va;
-    va_start(va, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, va);
-    va_end(va);
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error", buffer, nullptr);
-    if (gScreen)
-        SDL_DestroyWindow(gScreen);
-    SDL_Quit();
-    abort();
-}
-
 const u::string &neoUserPath() { return gUserPath; }
 const u::string &neoGamePath() { return gGamePath; }
 
