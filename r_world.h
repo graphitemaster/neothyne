@@ -90,7 +90,7 @@ private:
     GLint m_WVPLocation;
 };
 
-struct renderTextueBatch {
+struct renderTextureBatch {
     size_t start;
     size_t count;
     size_t index;
@@ -123,6 +123,8 @@ private:
     void pointLightPass(const rendererPipeline &pipeline);
     void directionalLightPass(const rendererPipeline &pipeline);
 
+    bool loadMaterial(const kdMap &map, renderTextureBatch *batch);
+
     union {
         struct {
             GLuint m_vbo;
@@ -150,7 +152,7 @@ private:
     // The world itself
     u::vector<uint32_t> m_indices;
     u::vector<kdBinVertex> m_vertices;
-    u::vector<renderTextueBatch> m_textureBatches;
+    u::vector<renderTextureBatch> m_textureBatches;
     u::map<u::string, texture2D*> m_textures2D;
 
     // World lights

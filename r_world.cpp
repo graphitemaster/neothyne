@@ -3,6 +3,7 @@
 #include "u_algorithm.h"
 #include "u_memory.h"
 #include "u_misc.h"
+#include "u_file.h"
 
 #include "engine.h"
 
@@ -214,6 +215,49 @@ world::~world() {
         delete it.second;
 }
 
+bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
+    u::string materialName = map.textures[batch->index].name;
+    u::string diffuseName;
+    u::string normalName = "<normal>";
+
+    // Read the material
+    auto fp = u::fopen(neoGamePath() + materialName + ".cfg", "r");
+    if (!fp) {
+        u::print("Failed to load material: %s\n", materialName);
+        return false;
+    }
+
+    while (auto line = u::getline(fp)) {
+        auto get = *line;
+        auto split = u::split(get);
+        auto key = split[0];
+        auto value = split[1];
+        if (key == "diffuse")
+            diffuseName = "textures/" + value;
+        else if (key == "normal")
+            normalName += "textures/" + value;
+    }
+
+    auto loadTexture = [&](const u::string &ident, texture2D **store) {
+        if (m_textures2D.find(ident) != m_textures2D.end()) {
+            *store = m_textures2D[ident];
+        } else {
+            u::unique_ptr<texture2D> tex(new texture2D);
+            if (tex->load(ident)) {
+                auto release = tex.release();
+                m_textures2D[ident] = release;
+                *store = release;
+            } else {
+                *store = nullptr;
+            }
+        }
+    };
+
+    loadTexture(diffuseName, &batch->diffuse);
+    loadTexture(normalName, &batch->normal);
+    return true;
+}
+
 bool world::load(const kdMap &map) {
     // load skybox
     if (!m_skybox.load("textures/sky01"))
@@ -239,7 +283,7 @@ bool world::load(const kdMap &map) {
 
     // make rendering batches for triangles which share the same texture
     for (size_t i = 0; i < map.textures.size(); i++) {
-        renderTextueBatch batch;
+        renderTextureBatch batch;
         batch.start = m_indices.size();
         batch.index = i;
         for (size_t j = 0; j < map.triangles.size(); j++) {
@@ -251,27 +295,9 @@ bool world::load(const kdMap &map) {
         m_textureBatches.push_back(batch);
     }
 
-    // load textures
-    for (size_t i = 0; i < m_textureBatches.size(); i++) {
-        u::string diffuseName = map.textures[m_textureBatches[i].index].name;
-        u::string normalName = "<normal>" + diffuseName + "_bump";
-        auto loadTexture = [&](const u::string &ident, texture2D **store) {
-            if (m_textures2D.find(ident) != m_textures2D.end()) {
-                *store = m_textures2D[ident];
-            } else {
-                u::unique_ptr<texture2D> tex(new texture2D);
-                if (tex->load(ident)) {
-                    auto release = tex.release();
-                    m_textures2D[ident] = release;
-                    *store = release;
-                } else {
-                    *store = nullptr;
-                }
-            }
-        };
-        loadTexture(diffuseName, &m_textureBatches[i].diffuse);
-        loadTexture(normalName, &m_textureBatches[i].normal);
-    }
+    // load materials
+    for (size_t i = 0; i < m_textureBatches.size(); i++)
+        loadMaterial(map, &m_textureBatches[i]);
 
     m_vertices = u::move(map.vertices);
     u::print("[world] => loaded\n");
