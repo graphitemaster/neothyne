@@ -1755,16 +1755,17 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
 
 u::optional<u::string> texture::find(const u::string &infile) {
     u::string file = infile;
-    // Check if it has a tag
-    // TODO: full tag parser
-    if (file[0] == '<') {
+
+    auto beg = file.find('<');
+    if (beg != u::string::npos) {
         auto end = file.find('>');
         if (end == u::string::npos)
             return u::none;
-        if (u::string(file.begin() + 1, file.begin() + end) == "normal")
+        if (u::string(file.begin() + beg + 1, file.begin() + end) == "normal")
             m_normal = true;
-        file.erase(0, end + 1);
+        file.erase(beg, end + 1);
     }
+
     static const char *extensions[] = { "png", "jpg", "jpeg", "tga" };
     size_t bits = 0;
     for (size_t i = 0; i < sizeof(extensions)/sizeof(*extensions); i++)

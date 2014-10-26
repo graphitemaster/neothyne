@@ -139,7 +139,7 @@ const char &string::operator[](size_t index) const {
 
 size_t string::find(char ch) const {
     char *search = strchr(m_first, ch);
-    return search ? m_last - search : npos;
+    return search ? search - m_first : npos;
 }
 
 void string::erase(size_t beg, size_t end) {
