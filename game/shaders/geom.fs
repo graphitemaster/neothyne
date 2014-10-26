@@ -5,12 +5,21 @@ in vec3 bitangent0;
 
 layout (location = 0) out vec3 diffuseOut;
 layout (location = 1) out vec2 normalOut;
+layout (location = 2) out vec2 specularOut;
 
 #ifdef USE_DIFFUSE
 uniform sampler2D gColorMap;
 #endif
 #ifdef USE_NORMALMAP
 uniform sampler2D gNormalMap;
+#endif
+#ifdef USE_SPECMAP
+uniform sampler2D gSpecMap;
+#endif
+
+#ifdef USE_SPECPARAMS
+uniform float gSpecPower;
+uniform float gSpecIntensity;
 #endif
 
 #define EPSILON 0.00001f
@@ -52,5 +61,14 @@ void main() {
     normalOut = encodeNormal(calcBump());
 #else
     normalOut = encodeNormal(normal0);
+#endif
+#ifdef USE_SPECMAP
+    // red channel contains intensity while green contains power
+    specularOut = texture(gSpecMap, texCoord0).rg;
+#elif defined(USE_SPECPARAMS)
+    specularOut.x = gSpecIntensity;
+    specularOut.y = gSpecPower;
+#else
+    specularOut = vec2(0.0f, 0.0f);
 #endif
 }

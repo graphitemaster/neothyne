@@ -10,6 +10,7 @@ struct gBuffer {
     enum textureType {
         kDiffuse,
         kNormal,
+        kSpec,
         kDepth,
         kMax
     };

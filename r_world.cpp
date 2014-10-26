@@ -32,12 +32,11 @@ bool lightMethod::init(const char *vs, const char *fs) {
     // samplers
     m_colorTextureUnitLocation = getUniformLocation("gColorMap");
     m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
+    m_specTextureUnitLocation = getUniformLocation("gSpecMap");
     m_depthTextureUnitLocation = getUniformLocation("gDepthMap");
 
     // specular lighting
     m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
-    m_matSpecularIntensityLocation = getUniformLocation("gMatSpecularIntensity");
-    m_matSpecularPowerLocation = getUniformLocation("gMatSpecularPower");
 
     // device uniforms
     m_screenSizeLocation = getUniformLocation("gScreenSize");
@@ -62,16 +61,12 @@ void lightMethod::setNormalTextureUnit(int unit) {
     gl::Uniform1i(m_normalTextureUnitLocation, unit);
 }
 
+void lightMethod::setSpecTextureUnit(int unit) {
+    gl::Uniform1i(m_specTextureUnitLocation, unit);
+}
+
 void lightMethod::setEyeWorldPos(const m::vec3 &position) {
     gl::Uniform3fv(m_eyeWorldPositionLocation, 1, &position.x);
-}
-
-void lightMethod::setMatSpecIntensity(float intensity) {
-    gl::Uniform1f(m_matSpecularIntensityLocation, intensity);
-}
-
-void lightMethod::setMatSpecPower(float power) {
-    gl::Uniform1f(m_matSpecularPowerLocation, power);
 }
 
 void lightMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
@@ -124,6 +119,9 @@ bool geomMethod::init(const u::vector<const char *> &defines) {
     m_worldLocation = getUniformLocation("gWorld");
     m_colorTextureUnitLocation = getUniformLocation("gColorMap");
     m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
+    m_specTextureUnitLocation = getUniformLocation("gSpecMap");
+    m_specPowerLocation = getUniformLocation("gSpecPower");
+    m_specIntensityLocation = getUniformLocation("gSpecIntensity");
 
     return true;
 }
@@ -142,6 +140,18 @@ void geomMethod::setColorTextureUnit(int unit) {
 
 void geomMethod::setNormalTextureUnit(int unit) {
     gl::Uniform1i(m_normalTextureUnitLocation, unit);
+}
+
+void geomMethod::setSpecTextureUnit(int unit) {
+    gl::Uniform1i(m_specTextureUnitLocation, unit);
+}
+
+void geomMethod::setSpecIntensity(float intensity) {
+    gl::Uniform1f(m_specIntensityLocation, intensity);
+}
+
+void geomMethod::setSpecPower(float power) {
+    gl::Uniform1f(m_specPowerLocation, power);
 }
 
 ///! Depth Pass Method
@@ -218,6 +228,7 @@ world::~world() {
 bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
     u::string materialName = map.textures[batch->index].name;
     u::string diffuseName;
+    u::string specName;
     u::string normalName = "<normal>";
 
     // Read the material
@@ -226,6 +237,10 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
         u::print("Failed to load material: %s\n", materialName);
         return false;
     }
+
+    bool specParams = false;
+    float specIntensity = 0;
+    float specPower = 0;
 
     while (auto line = u::getline(fp)) {
         auto get = *line;
@@ -236,6 +251,15 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
             diffuseName = "textures/" + value;
         else if (key == "normal")
             normalName += "textures/" + value;
+        else if (key == "spec")
+            specName = "textures/" + value;
+        else if (key == "spec_power") {
+            specPower = u::atof(value);
+            specParams = true;
+        } else if (key == "spec_intensity") {
+            specIntensity = u::atof(value);
+            specParams = true;
+        }
     }
 
     auto loadTexture = [&](const u::string &ident, texture2D **store) {
@@ -255,6 +279,16 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
 
     loadTexture(diffuseName, &batch->diffuse);
     loadTexture(normalName, &batch->normal);
+    loadTexture(specName, &batch->spec);
+
+    // If there is a specular map, silently drop the specular parameters
+    if (batch->spec && specParams)
+        specParams = false;
+
+    batch->specParams = specParams;
+    batch->specIntensity = specIntensity;
+    batch->specPower = specPower;
+
     return true;
 }
 
@@ -351,12 +385,30 @@ bool world::upload(const m::perspectiveProjection &project) {
 
     if (!m_depthMethod.init())
         neoFatal("failed to initialize depth pass method\n");
+
+    // Init the shader permutations
+    // 0 = pass-through shader (vertex normals)
+    // 1 = diffuse only permutation
+    // 2 = diffuse and normal permutation
+    // 3 = diffuse and spec permutation
+    // 4 = diffuse and spec param permutation
+    // 5 = diffuse and normal and spec permutation
+    // 6 = diffuse and normal and spec param permutation
     if (!m_geomMethods[0].init())
         neoFatal("failed to initialize geometry rendering method\n");
     if (!m_geomMethods[1].init({"USE_DIFFUSE"}))
         neoFatal("failed to initialize geometry rendering method\n");
     if (!m_geomMethods[2].init({"USE_DIFFUSE", "USE_NORMALMAP"}))
         neoFatal("failed to initialize geometry rendering method\n");
+    if (!m_geomMethods[3].init({"USE_DIFFUSE", "USE_SPECMAP"}))
+        neoFatal("failed to initialize geometry rendering method\n");
+    if (!m_geomMethods[4].init({"USE_DIFFUSE", "USE_SPECPARAMS"}))
+        neoFatal("failed to initialize geometry rendering method\n");
+    if (!m_geomMethods[5].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_SPECMAP"}))
+        neoFatal("failed to initialize geometry rendering method\n");
+    if (!m_geomMethods[6].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_SPECPARAMS"}))
+        neoFatal("failed to initialize geometry rendering method\n");
+
     if (!m_directionalLightMethod.init())
         neoFatal("failed to initialize directional light rendering method");
 
@@ -367,11 +419,17 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_directionalLightMethod.enable();
     m_directionalLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
     m_directionalLightMethod.setNormalTextureUnit(gBuffer::kNormal);
+    m_directionalLightMethod.setSpecTextureUnit(gBuffer::kSpec);
     m_directionalLightMethod.setDepthTextureUnit(gBuffer::kDepth);
-    m_directionalLightMethod.setMatSpecIntensity(2.0f);
-    m_directionalLightMethod.setMatSpecPower(200.0f);
 
     // Setup the shader permutations
+    // 0 = pass-through shader (vertex normals)
+    // 1 = diffuse only permutation
+    // 2 = diffuse and normal permutation
+    // 3 = diffuse and spec permutation
+    // 4 = diffuse and spec param permutation
+    // 5 = diffuse and normal and spec permutation
+    // 6 = diffuse and normal and spec param permutation
     m_geomMethods[0].enable();
 
     m_geomMethods[1].enable();
@@ -380,6 +438,22 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_geomMethods[2].enable();
     m_geomMethods[2].setColorTextureUnit(0);
     m_geomMethods[2].setNormalTextureUnit(1);
+
+    m_geomMethods[3].enable();
+    m_geomMethods[3].setColorTextureUnit(0);
+    m_geomMethods[3].setSpecTextureUnit(1);
+
+    m_geomMethods[4].enable();
+    m_geomMethods[4].setColorTextureUnit(0);
+
+    m_geomMethods[5].enable();
+    m_geomMethods[5].setColorTextureUnit(0);
+    m_geomMethods[5].setNormalTextureUnit(1);
+    m_geomMethods[5].setSpecTextureUnit(2);
+
+    m_geomMethods[6].enable();
+    m_geomMethods[6].setColorTextureUnit(0);
+    m_geomMethods[6].setNormalTextureUnit(1);
 
     u::print("[world] => uploaded\n");
     return true;
@@ -408,15 +482,51 @@ void world::geometryPass(const rendererPipeline &pipeline) {
     // Render the world
     gl::BindVertexArray(m_vao);
     for (auto &it : m_textureBatches) {
-        if (it.diffuse && it.normal) {
-            m_geomMethods[2].enable();
-            it.diffuse->bind(GL_TEXTURE0);
-            it.normal->bind(GL_TEXTURE1);
-        } else if (it.diffuse) {
-            m_geomMethods[1].enable();
-            it.diffuse->bind(GL_TEXTURE0);
+        if (it.specParams) {
+            // Specularity parameter permutation (global spec map)
+            if (it.normal) {
+                // diffuse + normal + specparams
+                m_geomMethods[6].enable();
+                it.diffuse->bind(GL_TEXTURE0);
+                it.normal->bind(GL_TEXTURE1);
+            } else {
+                // diffuse + specparams
+                m_geomMethods[4].enable();
+                it.diffuse->bind(GL_TEXTURE0);
+                m_geomMethods[4].setSpecIntensity(it.specIntensity);
+                m_geomMethods[4].setSpecPower(it.specPower);
+            }
         } else {
-            m_geomMethods[0].enable();
+            if (it.diffuse) {
+                if (it.normal) {
+                    if (it.spec) {
+                        // diffuse + normal + spec
+                        m_geomMethods[5].enable();
+                        it.diffuse->bind(GL_TEXTURE0);
+                        it.normal->bind(GL_TEXTURE1);
+                        it.spec->bind(GL_TEXTURE2);
+                    } else {
+                        // diffuse + normal
+                        m_geomMethods[2].enable();
+                        it.diffuse->bind(GL_TEXTURE0);
+                        it.normal->bind(GL_TEXTURE1);
+                    }
+                } else {
+                    if (it.spec) {
+                        // diffuse + spec
+                        m_geomMethods[3].enable();
+                        it.diffuse->bind(GL_TEXTURE0);
+                        it.spec->bind(GL_TEXTURE1);
+                    } else {
+                        // diffuse
+                        m_geomMethods[1].enable();
+                        it.diffuse->bind(GL_TEXTURE0);
+                    }
+                }
+            } else {
+                // null
+                m_geomMethods[0].enable();
+            }
         }
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));

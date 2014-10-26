@@ -63,6 +63,15 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
     gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, format, m_textures[kNormal], 0);
 
+    // specularity
+    gl::BindTexture(format, m_textures[kSpec]);
+    gl::TexImage2D(format, 0, GL_RG16F, m_width, m_height, 0, GL_RG, GL_FLOAT, nullptr);
+    gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, format, m_textures[kSpec], 0);
+
     // depth
     gl::BindTexture(format, m_textures[kDepth]);
     gl::TexImage2D(format, 0, GL_DEPTH_COMPONENT,
@@ -76,7 +85,8 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
 
     static GLenum drawBuffers[] = {
         GL_COLOR_ATTACHMENT0, // diffuse
-        GL_COLOR_ATTACHMENT1  // normal
+        GL_COLOR_ATTACHMENT1, // normal
+        GL_COLOR_ATTACHMENT2  // speclarity
     };
 
     gl::DrawBuffers(sizeof(drawBuffers)/sizeof(*drawBuffers), drawBuffers);

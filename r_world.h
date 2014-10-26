@@ -33,12 +33,18 @@ struct geomMethod : method {
     void setWorld(const m::mat4 &wvp);
     void setColorTextureUnit(int unit);
     void setNormalTextureUnit(int unit);
+    void setSpecTextureUnit(int unit);
+    void setSpecPower(float power);
+    void setSpecIntensity(float intensity);
 
 private:
     GLint m_WVPLocation;
     GLint m_worldLocation;
     GLint m_colorTextureUnitLocation;
     GLint m_normalTextureUnitLocation;
+    GLint m_specTextureUnitLocation;
+    GLint m_specPowerLocation;
+    GLint m_specIntensityLocation;
 };
 
 struct lightMethod : method {
@@ -48,9 +54,8 @@ struct lightMethod : method {
     void setInverse(const m::mat4 &inverse);
     void setColorTextureUnit(int unit);
     void setNormalTextureUnit(int unit);
+    void setSpecTextureUnit(int unit);
     void setEyeWorldPos(const m::vec3 &position);
-    void setMatSpecIntensity(float intensity);
-    void setMatSpecPower(float power);
     void setPerspectiveProjection(const m::perspectiveProjection &project);
     void setDepthTextureUnit(int unit);
 
@@ -58,10 +63,9 @@ private:
     GLint m_WVPLocation;
     GLint m_inverseLocation;
     GLint m_normalTextureUnitLocation;
+    GLint m_specTextureUnitLocation;
     GLint m_colorTextureUnitLocation;
     GLint m_eyeWorldPositionLocation;
-    GLint m_matSpecularIntensityLocation;
-    GLint m_matSpecularPowerLocation;
     GLint m_screenSizeLocation;
     GLint m_screenFrustumLocation;
     GLint m_depthTextureUnitLocation;
@@ -96,6 +100,10 @@ struct renderTextureBatch {
     size_t index;
     texture2D *diffuse;
     texture2D *normal;
+    texture2D *spec;
+    bool specParams;
+    float specPower;
+    float specIntensity;
 };
 
 struct world {
@@ -140,7 +148,11 @@ private:
     // 0 = pass-through shader (vertex normals)
     // 1 = diffuse only permutation
     // 2 = diffuse and normal permutation
-    geomMethod m_geomMethods[3];
+    // 3 = diffuse and spec permutation
+    // 4 = diffuse and spec param permutation
+    // 5 = diffuse and normal and spec permutation
+    // 6 = diffuse and normal and spec param permutation
+    geomMethod m_geomMethods[7];
 
     directionalLightMethod m_directionalLightMethod;
 

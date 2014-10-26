@@ -20,12 +20,10 @@ struct directionalLight {
 
 uniform neoSampler2D gColorMap;
 uniform neoSampler2D gNormalMap;
+uniform neoSampler2D gSpecMap;
 uniform neoSampler2D gDepthMap;
 
 uniform vec3 gEyeWorldPosition;
-uniform float gMatSpecularIntensity;
-uniform float gMatSpecularPower;
-
 uniform vec2 gScreenSize;
 uniform vec2 gScreenFrustum;
 
@@ -43,7 +41,7 @@ vec2 calcTexCoord() {
 #endif
 }
 
-vec4 calcLightGeneric(baseLight light, vec3 lightDirection, vec3 worldPosition, vec3 normal) {
+vec4 calcLightGeneric(baseLight light, vec3 lightDirection, vec3 worldPosition, vec3 normal, vec2 spec) {
     vec4 ambientColor = vec4(light.color, 1.0f) * light.ambient;
     float diffuseFactor = dot(normal, -lightDirection);
 
@@ -57,17 +55,17 @@ vec4 calcLightGeneric(baseLight light, vec3 lightDirection, vec3 worldPosition, 
 
         vec3 lightReflect = normalize(reflect(lightDirection, normal));
         float specularFactor = dot(vertexToEye, lightReflect);
-        specularFactor = pow(specularFactor, gMatSpecularPower);
+        specularFactor = pow(specularFactor, spec.y);
         if (specularFactor > 0.0f)
-            specularColor = vec4(light.color, 1.0f) * gMatSpecularIntensity * specularFactor;
+            specularColor = vec4(light.color, 1.0f) * spec.x * specularFactor;
     }
 
     return ambientColor + diffuseColor + specularColor;
 }
 
-vec4 calcDirectionalLight(vec3 worldPosition, vec3 normal) {
+vec4 calcDirectionalLight(vec3 worldPosition, vec3 normal, vec2 spec) {
     return calcLightGeneric(gDirectionalLight.base, gDirectionalLight.direction,
-        worldPosition, normal);
+        worldPosition, normal, spec);
 }
 
 #define EPSILON 0.00001f
@@ -109,9 +107,14 @@ vec3 calcPosition(vec2 texCoord) {
     return pos.xyz / pos.w;
 }
 
+vec2 calcSpec(vec2 texCoord) {
+    return neoTexture2D(gSpecMap, texCoord).rg;
+}
+
 void main() {
     vec2 texCoord = calcTexCoord();
     vec3 worldPosition = calcPosition(texCoord);
+    vec2 spec = calcSpec(texCoord);
 
     // Uncomment to visualize depth buffer
     //float z = neoTexture2D(gDepthMap, texCoord).r;
@@ -123,5 +126,5 @@ void main() {
     vec3 color = neoTexture2D(gColorMap, texCoord).xyz;
     vec3 normal = decodeNormal(neoTexture2D(gNormalMap, texCoord).xy);
 
-    fragColor = vec4(color, 1.0f) * calcDirectionalLight(worldPosition, normal);
+    fragColor = vec4(color, 1.0f) * calcDirectionalLight(worldPosition, normal, spec);
 }
