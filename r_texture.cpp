@@ -31,7 +31,7 @@ namespace r {
 #define R_TEX_DATA_RGB       GL_UNSIGNED_BYTE
 #define R_TEX_DATA_BGR       GL_UNSIGNED_BYTE
 #define R_TEX_DATA_LUMINANCE GL_UNSIGNED_BYTE
-#define R_TEX_DATA_RG        GL_UNSIGNED_SHORT
+#define R_TEX_DATA_RG        GL_UNSIGNED_BYTE
 
 static const unsigned char kTextureCacheVersion = 0xFA;
 
