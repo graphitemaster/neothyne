@@ -274,7 +274,8 @@ void neoFatal(const char *fmt, ...) {
     vsnprintf(buffer, sizeof(buffer), fmt, va);
     va_end(va);
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error", buffer, nullptr);
-    SDL_DestroyWindow(gScreen);
+    if (gScreen)
+        SDL_DestroyWindow(gScreen);
     SDL_Quit();
     abort();
 }
