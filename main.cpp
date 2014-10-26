@@ -44,12 +44,18 @@ error:
     return false;
 }
 
+template<typename T>
+static inline void memput(unsigned char*& store, const T& data) {
+  memcpy(store, &data, sizeof(T));
+  store += sizeof(T);
+}
+
 bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) {
     struct {
         char bfType[2];
         int32_t bfSize;
         int32_t bfReserved;
-        int32_t bfOffBits;
+        int32_t bfDataOffset;
         int32_t biSize;
         int32_t biWidth;
         int32_t biHeight;
@@ -63,41 +69,37 @@ bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) 
         int32_t biClrImportant;
     } bmph;
 
-    const size_t bytesPerLine = (3 * (width + 1) / 4) * 4;
+    const size_t bytesPerLine = 3 * width;
+    const size_t headerSize = 54;
+    const size_t imageSize = bytesPerLine * height;
+    const size_t dataSize = headerSize + imageSize;
 
     // Populate header
     strncpy(bmph.bfType, "BM", 2);
-    bmph.bfOffBits = 54;
-    bmph.bfSize = bmph.bfOffBits + bytesPerLine * height;
+    bmph.bfSize = dataSize;
     bmph.bfReserved = 0;
+    bmph.bfDataOffset = headerSize;
     bmph.biSize = 40;
     bmph.biWidth = width;
     bmph.biHeight = height;
     bmph.biPlanes = 1;
     bmph.biBitCount = 24;
     bmph.biCompression = 0;
-    bmph.biSizeImage = bytesPerLine * height;
+    bmph.biSizeImage = imageSize;
     bmph.biXPelsPerMeter = 0;
     bmph.biYPelsPerMeter = 0;
     bmph.biClrUsed = 0;
     bmph.biClrImportant = 0;
 
-    // Calculate how much memory we need for the buffer
-    size_t calcSize = 0;
-    for (int i = height - 1; i >= 0; i--)
-        calcSize += bytesPerLine;
-
     // line and data buffer
     u::vector<unsigned char> line;
     line.resize(bytesPerLine);
     u::vector<unsigned char> data;
-    data.resize(sizeof(bmph) + calcSize);
-
-    unsigned char *store = &data[0];
+    data.resize(dataSize);
 
     bmph.bfSize = u::endianSwap(bmph.bfSize);
     bmph.bfReserved = u::endianSwap(bmph.bfReserved);
-    bmph.bfOffBits = u::endianSwap(bmph.bfOffBits);
+    bmph.bfDataOffset = u::endianSwap(bmph.bfDataOffset);
     bmph.biSize = u::endianSwap(bmph.biSize);
     bmph.biWidth = u::endianSwap(bmph.biWidth);
     bmph.biHeight = u::endianSwap(bmph.biHeight);
@@ -110,32 +112,33 @@ bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) 
     bmph.biClrUsed = u::endianSwap(bmph.biClrUsed);
     bmph.biClrImportant = u::endianSwap(bmph.biClrImportant);
 
-    memcpy(store, &bmph.bfType, 2);          store += 2;
-    memcpy(store, &bmph.bfSize, 4);          store += 4;
-    memcpy(store, &bmph.bfReserved, 4);      store += 4;
-    memcpy(store, &bmph.bfOffBits, 4);       store += 4;
-    memcpy(store, &bmph.biSize, 4);          store += 4;
-    memcpy(store, &bmph.biWidth, 4);         store += 4;
-    memcpy(store, &bmph.biHeight, 4);        store += 4;
-    memcpy(store, &bmph.biPlanes, 2);        store += 2;
-    memcpy(store, &bmph.biBitCount, 2);      store += 2;
-    memcpy(store, &bmph.biCompression, 4);   store += 4;
-    memcpy(store, &bmph.biSizeImage, 4);     store += 4;
-    memcpy(store, &bmph.biXPelsPerMeter, 4); store += 4;
-    memcpy(store, &bmph.biYPelsPerMeter, 4); store += 4;
-    memcpy(store, &bmph.biClrUsed, 4);       store += 4;
-    memcpy(store, &bmph.biClrImportant, 4);  store += 4;
+    unsigned char *store = &data[0];
+    memput(store, bmph.bfType);
+    memput(store, bmph.bfSize);
+    memput(store, bmph.bfReserved);
+    memput(store, bmph.bfDataOffset);
+    memput(store, bmph.biSize);
+    memput(store, bmph.biWidth);
+    memput(store, bmph.biHeight);
+    memput(store, bmph.biPlanes);
+    memput(store, bmph.biBitCount);
+    memput(store, bmph.biCompression);
+    memput(store, bmph.biSizeImage);
+    memput(store, bmph.biXPelsPerMeter);
+    memput(store, bmph.biYPelsPerMeter);
+    memput(store, bmph.biClrUsed);
+    memput(store, bmph.biClrImportant);
 
     // Write the bitmap
     for (int i = height - 1; i >= 0; i--) {
         for (int j = 0; j < width; j++) {
             int ipos = 3 * (width * i + j);
-            line[3*j] = rgb[ipos + 2];
+            line[3*j]   = rgb[ipos + 2];
             line[3*j+1] = rgb[ipos + 1];
             line[3*j+2] = rgb[ipos];
         }
-        memcpy(store, &line[0], bytesPerLine);
-        store += bytesPerLine;
+        memcpy(store, &line[0], line.size());
+        store += line.size();
     }
 
     return u::write(data, file, "wb");
