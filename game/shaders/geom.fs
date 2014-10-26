@@ -6,8 +6,12 @@ in vec3 bitangent0;
 layout (location = 0) out vec3 diffuseOut;
 layout (location = 1) out vec2 normalOut;
 
+#ifdef USE_DIFFUSE
 uniform sampler2D gColorMap;
+#endif
+#ifdef USE_NORMALMAP
 uniform sampler2D gNormalMap;
+#endif
 
 #define EPSILON 0.00001f
 
@@ -30,6 +34,7 @@ vec2 encodeNormal(vec3 normal) {
     return q;
 }
 
+#ifdef USE_NORMALMAP
 vec3 calcBump() {
     vec3 normal;
     normal.xy = texture(gNormalMap, texCoord0).rg * 2.0f - vec2(1.0f, 1.0f);
@@ -37,8 +42,15 @@ vec3 calcBump() {
     mat3 tbn = mat3(tangent0, bitangent0, normal0);
     return normalize(tbn * normal);
 }
+#endif
 
 void main() {
+#ifdef USE_DIFFUSE
     diffuseOut = texture(gColorMap, texCoord0).rgb;
+#endif
+#ifdef USE_NORMALMAP
     normalOut = encodeNormal(calcBump());
+#else
+    normalOut = encodeNormal(normal0);
+#endif
 }

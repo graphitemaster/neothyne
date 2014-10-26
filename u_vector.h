@@ -2,7 +2,65 @@
 #define U_VECTOR_HDR
 #include "u_buffer.h"
 
+// Must be in namespace std for the compiler to proxy it
+namespace std {
+
+template <typename T>
+struct initializer_list {
+    typedef T value_type;
+    typedef const T& reference;
+    typedef const T& const_reference;
+    typedef size_t size_type;
+    typedef const T* iterator;
+    typedef const T* const_iterator;
+
+    initializer_list();
+
+    size_t size() const;
+    const T* begin() const;
+    const T* end() const;
+
+private:
+    initializer_list(const T* data, size_t size);
+    const T *m_begin;
+    size_t m_size;
+};
+
+template <typename T>
+inline initializer_list<T>::initializer_list()
+    : m_begin(nullptr)
+    , m_size(0)
+{
+}
+
+template <typename T>
+inline size_t initializer_list<T>::size() const {
+    return m_size;
+}
+
+template <typename T>
+inline const T* initializer_list<T>::begin() const {
+    return m_begin;
+}
+
+template <typename T>
+inline const T* initializer_list<T>::end() const {
+    return m_begin + m_size;
+}
+
+template <typename T>
+inline initializer_list<T>::initializer_list(const T* data, size_t size)
+    : m_begin(data)
+    , m_size(size)
+{
+}
+
+}
+
 namespace u {
+
+template <typename T>
+using initializer_list = std::initializer_list<T>;
 
 template <typename T>
 struct vector {
@@ -15,6 +73,7 @@ struct vector {
     vector(size_t size);
     vector(size_t size, const T &value);
     vector(const T *first, const T *last);
+    vector(initializer_list<T> data);
     ~vector();
 
     vector& operator=(const vector &other);
@@ -81,6 +140,11 @@ inline vector<T>::vector(size_t size, const T &value) {
 template <typename T>
 inline vector<T>::vector(const T *first, const T *last) {
     m_buffer.insert(m_buffer.last, first, last);
+}
+
+template <typename T>
+inline vector<T>::vector(initializer_list<T> data) {
+    m_buffer.insert(m_buffer.last, data.begin(), data.end());
 }
 
 template <typename T>

@@ -27,7 +27,7 @@ struct directionalLight : baseLight {
 };
 
 struct geomMethod : method {
-    bool init();
+    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setWVP(const m::mat4 &wvp);
     void setWorld(const m::mat4 &wvp);
@@ -134,7 +134,12 @@ private:
 
     // The following rendering methods / passes for the world
     depthMethod m_depthMethod;
-    geomMethod m_geomMethod;
+
+    // 0 = pass-through shader (vertex normals)
+    // 1 = diffuse only permutation
+    // 2 = diffuse and normal permutation
+    geomMethod m_geomMethods[3];
+
     directionalLightMethod m_directionalLightMethod;
 
     // Other things in the world to render
@@ -147,9 +152,6 @@ private:
     u::vector<kdBinVertex> m_vertices;
     u::vector<renderTextueBatch> m_textureBatches;
     u::map<u::string, texture2D*> m_textures2D;
-
-    texture2D *m_noTexture;
-    texture2D *m_noNormal;
 
     // World lights
     directionalLight m_directionalLight;

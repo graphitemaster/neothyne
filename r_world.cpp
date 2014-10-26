@@ -104,14 +104,18 @@ void directionalLightMethod::setDirectionalLight(const directionalLight &light) 
 }
 
 ///! Geomety Rendering Method
-bool geomMethod::init() {
+bool geomMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
+
+    for (auto &it : defines)
+        method::define(it);
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/geom.vs"))
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/geom.fs"))
         return false;
+
     if (!finalize())
         return false;
 
@@ -208,9 +212,6 @@ world::~world() {
 
     for (auto &it : m_textures2D)
         delete it.second;
-
-    delete m_noTexture;
-    delete m_noNormal;
 }
 
 bool world::load(const kdMap &map) {
@@ -250,23 +251,11 @@ bool world::load(const kdMap &map) {
         m_textureBatches.push_back(batch);
     }
 
-    // load the no-texture / no-normal textures
-    texture noTexture;
-    texture noNormal;
-    static const unsigned char nobump[] = { 128, 128 };
-    if (!noTexture.load("textures/notex"))
-        return false;
-    if (!noNormal.from(nobump, 2, 1, 1, true, TEX_RG))
-        return false;
-
-    m_noTexture = new texture2D(noTexture);
-    m_noNormal = new texture2D(noNormal);
-
     // load textures
     for (size_t i = 0; i < m_textureBatches.size(); i++) {
         u::string diffuseName = map.textures[m_textureBatches[i].index].name;
         u::string normalName = "<normal>" + diffuseName + "_bump";
-        auto loadTexture = [&](const u::string &ident, texture2D **store, texture2D *fallback) {
+        auto loadTexture = [&](const u::string &ident, texture2D **store) {
             if (m_textures2D.find(ident) != m_textures2D.end()) {
                 *store = m_textures2D[ident];
             } else {
@@ -276,12 +265,12 @@ bool world::load(const kdMap &map) {
                     m_textures2D[ident] = release;
                     *store = release;
                 } else {
-                    *store = fallback;
+                    *store = nullptr;
                 }
             }
         };
-        loadTexture(diffuseName, &m_textureBatches[i].diffuse, m_noTexture);
-        loadTexture(normalName, &m_textureBatches[i].normal, m_noNormal);
+        loadTexture(diffuseName, &m_textureBatches[i].diffuse);
+        loadTexture(normalName, &m_textureBatches[i].normal);
     }
 
     m_vertices = u::move(map.vertices);
@@ -303,7 +292,9 @@ bool world::upload(const m::perspectiveProjection &project) {
 
     // upload textures
     for (auto &it : m_textureBatches) {
-        if (!it.diffuse->upload() || !it.normal->upload())
+        if (it.diffuse && !it.diffuse->upload())
+            neoFatal("failed to upload world textures");
+        if (it.normal && !it.normal->upload())
             neoFatal("failed to upload world textures");
     }
 
@@ -332,10 +323,13 @@ bool world::upload(const m::perspectiveProjection &project) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
 
-
     if (!m_depthMethod.init())
         neoFatal("failed to initialize depth pass method\n");
-    if (!m_geomMethod.init())
+    if (!m_geomMethods[0].init())
+        neoFatal("failed to initialize geometry rendering method\n");
+    if (!m_geomMethods[1].init({"USE_DIFFUSE"}))
+        neoFatal("failed to initialize geometry rendering method\n");
+    if (!m_geomMethods[2].init({"USE_DIFFUSE", "USE_NORMALMAP"}))
         neoFatal("failed to initialize geometry rendering method\n");
     if (!m_directionalLightMethod.init())
         neoFatal("failed to initialize directional light rendering method");
@@ -351,9 +345,15 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_directionalLightMethod.setMatSpecIntensity(2.0f);
     m_directionalLightMethod.setMatSpecPower(200.0f);
 
-    m_geomMethod.enable();
-    m_geomMethod.setColorTextureUnit(0);
-    m_geomMethod.setNormalTextureUnit(1);
+    // Setup the shader permutations
+    m_geomMethods[0].enable();
+
+    m_geomMethods[1].enable();
+    m_geomMethods[1].setColorTextureUnit(0);
+
+    m_geomMethods[2].enable();
+    m_geomMethods[2].setColorTextureUnit(0);
+    m_geomMethods[2].setNormalTextureUnit(1);
 
     u::print("[world] => uploaded\n");
     return true;
@@ -362,7 +362,6 @@ bool world::upload(const m::perspectiveProjection &project) {
 void world::geometryPass(const rendererPipeline &pipeline) {
     rendererPipeline p = pipeline;
 
-    m_geomMethod.enable();
     m_gBuffer.bindWriting();
 
     // Only the geometry pass should update the depth buffer
@@ -373,14 +372,26 @@ void world::geometryPass(const rendererPipeline &pipeline) {
     gl::Enable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
 
-    m_geomMethod.setWVP(p.getWVPTransform());
-    m_geomMethod.setWorld(p.getWorldTransform());
+    // Update the shader permuations
+    for (size_t i = 0; i < sizeof(m_geomMethods)/sizeof(*m_geomMethods); i++) {
+        m_geomMethods[i].enable();
+        m_geomMethods[i].setWVP(p.getWVPTransform());
+        m_geomMethods[i].setWorld(p.getWorldTransform());
+    }
 
     // Render the world
     gl::BindVertexArray(m_vao);
     for (auto &it : m_textureBatches) {
-        it.diffuse->bind(GL_TEXTURE0);
-        it.normal->bind(GL_TEXTURE1);
+        if (it.diffuse && it.normal) {
+            m_geomMethods[2].enable();
+            it.diffuse->bind(GL_TEXTURE0);
+            it.normal->bind(GL_TEXTURE1);
+        } else if (it.diffuse) {
+            m_geomMethods[1].enable();
+            it.diffuse->bind(GL_TEXTURE0);
+        } else {
+            m_geomMethods[0].enable();
+        }
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }
