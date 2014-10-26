@@ -15,9 +15,10 @@
 #define GL_OFFSET(X) ((const GLvoid *)(sizeof(GLfloat) * (X)))
 
 #define EXT_texture_compression_s3tc   0
-#define EXT_texture_filter_anisotropic 1
-#define ARB_texture_compression_bptc   2
-#define ARB_texture_rectangle          3
+#define EXT_texture_compression_rgtc   1
+#define EXT_texture_filter_anisotropic 2
+#define ARB_texture_compression_bptc   3
+#define ARB_texture_rectangle          4
 
 namespace gl {
     void init();

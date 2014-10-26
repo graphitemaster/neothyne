@@ -30,6 +30,7 @@ namespace r {
 #endif
 #define R_TEX_DATA_RGB       GL_UNSIGNED_BYTE
 #define R_TEX_DATA_BGR       GL_UNSIGNED_BYTE
+#define R_TEX_DATA_RG        GL_UNSIGNED_BYTE
 #define R_TEX_DATA_LUMINANCE GL_UNSIGNED_BYTE
 
 static const unsigned char kTextureCacheVersion = 0xFA;
@@ -41,6 +42,22 @@ struct textureCacheHeader {
     GLuint internal;
     textureFormat format;
 };
+
+static const char *cacheFormat(GLuint internal) {
+    switch (internal) {
+        case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
+            return "RGBA_BPTC_UNORM";
+        case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
+            return "RGB_BPTC_SIGNED_FLOAT";
+        case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+            return "RGBA_S3TC_DXT5";
+        case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+            return "RGB_S3TC_DXT1";
+        case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
+            return "RED_GREEN_RGTC2";
+    }
+    return "";
+}
 
 static bool readCache(texture &tex, GLuint &internal) {
     if (!r_texcomp || !tex.disk())
@@ -80,6 +97,9 @@ static bool readCache(texture &tex, GLuint &internal) {
         case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
             if (!gl::has(EXT_texture_compression_s3tc))
                 return false;
+        case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
+            if (!gl::has(EXT_texture_compression_rgtc))
+                return false;
     }
 
     const unsigned char *data = &vec[0] + sizeof(head);
@@ -90,7 +110,7 @@ static bool readCache(texture &tex, GLuint &internal) {
     // Now swap!
     tex.unload();
     tex.from(data, length, head.width, head.height, false, head.format);
-    u::print("[cache] => read %.50s...\n", cacheString);
+    u::print("[cache] => read %.50s... %s\n", cacheString, cacheFormat(head.internal));
     return true;
 }
 
@@ -104,6 +124,7 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
         case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
         case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
         case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
+        case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
             break;
         default:
             return false;
@@ -144,22 +165,25 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     gl::GetCompressedTexImage(GL_TEXTURE_2D, 0, &data[0] + sizeof(head));
 
     // Write it to disk!
-    u::print("[cache] => wrote %.50s...\n", cacheString);
+    u::print("[cache] => wrote %.50s... %s\n", cacheString, cacheFormat(head.internal));
     return u::write(data, file);
 }
 
 struct queryFormat {
-    constexpr queryFormat() :
-        format(0),
-        data(0),
-        internal(0)
-    { }
+    constexpr queryFormat()
+        : format(0)
+        , data(0)
+        , internal(0)
+    {
+    }
 
-    constexpr queryFormat(GLenum format, GLenum data, GLenum internal) :
-        format(format),
-        data(data),
-        internal(internal)
-    { }
+    constexpr queryFormat(GLenum format, GLenum data, GLenum internal)
+        : format(format)
+        , data(data)
+        , internal(internal)
+    {
+    }
+
     GLenum format;
     GLenum data;
     GLenum internal;
@@ -169,22 +193,18 @@ struct queryFormat {
 // that texture to the hardware. This function will also favor texture compression
 // if the hardware supports it by converting the texture if it needs to.
 static u::optional<queryFormat> getBestFormat(texture &tex) {
-    textureFormat format = tex.format();
+    if (tex.normal())
+        tex.convert<TEX_RG>();
 
     // Texture compression?
-    bool compress = false;
     if (r_texcomp) {
         const bool bptc = gl::has(ARB_texture_compression_bptc);
         const bool s3tc = gl::has(EXT_texture_compression_s3tc);
-        // Can compress normals with bptc but not s3tc
-        if (bptc)
-            compress = true;
-        else if (s3tc && !tex.normal())
-            compress = true;
+        const bool rgtc = gl::has(EXT_texture_compression_rgtc);
         // Deal with conversion from BGR[A] space to RGB[A] space for compression
         // While falling through to the correct internal format for the compression
-        if (compress) {
-            switch (format) {
+        if (bptc || s3tc || rgtc) {
+            switch (tex.format()) {
                 case TEX_BGRA:
                     tex.convert<TEX_RGBA>();
                 case TEX_RGBA:
@@ -195,6 +215,8 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
                 case TEX_RGB:
                     return queryFormat(GL_RGB, R_TEX_DATA_RGB,
                         bptc ? GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB : GL_COMPRESSED_RGB_S3TC_DXT1_EXT);
+                case TEX_RG:
+                    return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
                 default:
                     break;
             }
@@ -203,7 +225,7 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
 
     // If we made it here then no compression is possible so use a raw internal
     // format.
-    switch (format) {
+    switch (tex.format()) {
         case TEX_RGBA:
             return queryFormat(GL_RGBA, R_TEX_DATA_RGBA,      GL_RGBA);
         case TEX_RGB:
@@ -212,6 +234,8 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
             return queryFormat(GL_BGRA, R_TEX_DATA_BGRA,      GL_RGBA);
         case TEX_BGR:
             return queryFormat(GL_BGR,  R_TEX_DATA_BGR,       GL_RGBA);
+        case TEX_RG:
+            return queryFormat(GL_RG,   R_TEX_DATA_RG,        GL_RG8);
         case TEX_LUMINANCE:
             return queryFormat(GL_RED,  R_TEX_DATA_LUMINANCE, GL_RED);
     }

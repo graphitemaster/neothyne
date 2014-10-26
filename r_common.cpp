@@ -349,6 +349,7 @@ namespace gl {
     static u::set<size_t> extensionSet;
     static const char *extensionList[] = {
         "GL_EXT_texture_compression_s3tc",
+        "GL_EXT_texture_compression_rgtc",
         "GL_EXT_texture_filter_anisotropic",
         "GL_ARB_texture_compression_bptc",
         "GL_ARB_texture_rectangle"

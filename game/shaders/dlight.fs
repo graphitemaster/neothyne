@@ -119,6 +119,7 @@ void main() {
     //    gScreenFrustum.x - z * (gScreenFrustum.y - gScreenFrustum.x));
     //fragColor.rgb = vec3(c);
 
+    //fragColor.rgb = decodeNormal(neoTexture2D(gNormalMap, texCoord).xy) *0.5+0.5;
     vec3 color = neoTexture2D(gColorMap, texCoord).xyz;
     vec3 normal = decodeNormal(neoTexture2D(gNormalMap, texCoord).xy);
 

@@ -31,9 +31,11 @@ vec2 encodeNormal(vec3 normal) {
 }
 
 vec3 calcBump() {
-    vec3 bn = 2.0f * texture(gNormalMap, texCoord0).rgb - 1.0f;
+    vec3 normal;
+    normal.xy = texture(gNormalMap, texCoord0).rg * 2.0f - vec2(1.0f, 1.0f);
+    normal.z = sqrt(1.0f - dot(normal.xy, normal.xy));
     mat3 tbn = mat3(tangent0, bitangent0, normal0);
-    return normalize(tbn * bn);
+    return normalize(tbn * normal);
 }
 
 void main() {

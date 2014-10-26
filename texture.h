@@ -10,6 +10,7 @@ enum textureFormat {
     TEX_RGBA,
     TEX_BGR,
     TEX_BGRA,
+    TEX_RG,
     TEX_LUMINANCE
 };
 

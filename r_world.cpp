@@ -253,10 +253,10 @@ bool world::load(const kdMap &map) {
     // load the no-texture / no-normal textures
     texture noTexture;
     texture noNormal;
-    static const unsigned char nobump[] = { 128, 128, 255 };
+    static const unsigned char nobump[] = { 128, 128 };
     if (!noTexture.load("textures/notex"))
         return false;
-    if (!noNormal.from(nobump, 3, 1, 1, true, TEX_RGB))
+    if (!noNormal.from(nobump, 2, 1, 1, true, TEX_RG))
         return false;
 
     m_noTexture = new texture2D(noTexture);

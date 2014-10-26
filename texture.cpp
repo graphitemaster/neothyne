@@ -1691,15 +1691,42 @@ void texture::convert() {
     if (F == m_format)
         return;
 
-    unsigned char *data = &m_data[0];
-    const size_t length = m_data.size();
+    if (F != TEX_RG) {
+        unsigned char *data = &m_data[0];
+        const size_t length = m_data.size();
 
-    // Converts BGR -> RGB or RGB -> BGR, or
-    //          BGRA -> RGBA or RGBA -> BGRA
-    for (unsigned char *end = &data[length]; data < end; data += m_bpp)
-        u::swap(data[0], data[2]);
+        // Converts BGR -> RGB or RGB -> BGR, or
+        //          BGRA -> RGBA or RGBA -> BGRA
+        for (unsigned char *end = &data[length]; data < end; data += m_bpp)
+            u::swap(data[0], data[2]);
+    } else {
+        // Get the data into the right order
+        // RGB -> RGB
+        // BGRA -> RGBA
+        if (m_format == TEX_BGR)
+            convert<TEX_RGB>();
+        else if (m_format == TEX_BGRA)
+            convert<TEX_RGBA>();
+
+        // Eliminate blue and alpha
+        u::vector<unsigned char> rework;
+        //rework.resize(m_width * m_height * 2);
+        for (size_t i = 0; i < m_data.size(); i += m_bpp) {
+            rework.push_back(m_data[i]); // R
+            rework.push_back(m_data[i + 1]); // G
+            //rework.push_back(0); // B
+        }
+        // Eliminate the memory of the original texture and swap in the new one
+        m_data.destroy();
+        m_data.swap(rework);
+        m_bpp = 2;
+    }
+
+    // Update the format
+    m_format = F;
 }
 
+template void texture::convert<TEX_RG>();
 template void texture::convert<TEX_RGB>();
 template void texture::convert<TEX_RGBA>();
 
@@ -1820,6 +1847,9 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
         case TEX_RGBA:
         case TEX_BGRA:
             m_bpp = 4;
+            break;
+        case TEX_RG:
+            m_bpp = 2;
             break;
         case TEX_LUMINANCE:
             m_bpp = 1;
