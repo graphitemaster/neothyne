@@ -59,6 +59,17 @@ static const char *cacheFormat(GLuint internal) {
     return "";
 }
 
+static u::string sizeMetric(size_t size) {
+    static const char *sizes[] = { "B", "kB", "MB", "GB" };
+    size_t r = 0;
+    size_t i = 0;
+    for (; size >= 1024 && i < sizeof(sizes)/sizeof(*sizes); i++) {
+        r = size % 1024;
+        size /= 1024;
+    }
+    return u::format("%.2f %s", float(size) + float(r) / 1024.0f, sizes[i]);
+}
+
 static bool readCache(texture &tex, GLuint &internal) {
     if (!r_texcomp || !tex.disk())
         return false;
@@ -110,7 +121,8 @@ static bool readCache(texture &tex, GLuint &internal) {
     // Now swap!
     tex.unload();
     tex.from(data, length, head.width, head.height, false, head.format);
-    u::print("[cache] => read %.50s... %s\n", cacheString, cacheFormat(head.internal));
+    u::print("[cache] => read %.50s... %s (%s)\n", cacheString,
+        cacheFormat(head.internal), sizeMetric(length));
     return true;
 }
 
@@ -165,7 +177,12 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     gl::GetCompressedTexImage(GL_TEXTURE_2D, 0, &data[0] + sizeof(head));
 
     // Write it to disk!
-    u::print("[cache] => wrote %.50s... %s\n", cacheString, cacheFormat(head.internal));
+    u::print("[cache] => wrote %.50s... %s (compressed %s to %s)\n",
+        cacheString,
+        cacheFormat(head.internal),
+        sizeMetric(tex.size()),
+        sizeMetric(compressedSize)
+    );
     return u::write(data, file);
 }
 
