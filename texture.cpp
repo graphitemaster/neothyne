@@ -1710,11 +1710,10 @@ void texture::convert() {
 
         // Eliminate blue and alpha
         u::vector<unsigned char> rework;
-        //rework.resize(m_width * m_height * 2);
+        rework.reserve(m_width * m_height * 2);
         for (size_t i = 0; i < m_data.size(); i += m_bpp) {
             rework.push_back(m_data[i]); // R
             rework.push_back(m_data[i + 1]); // G
-            //rework.push_back(0); // B
         }
         // Eliminate the memory of the original texture and swap in the new one
         m_data.destroy();
