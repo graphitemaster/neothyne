@@ -258,6 +258,9 @@ int neoMain(frameTimer &timer, int, char **) {
                         case SDLK_F8:
                             screenShot();
                             break;
+                        case SDLK_F9:
+                            u::print("%d fps : %.2f mspf\n", timer.fps(), timer.mspf());
+                            break;
                         case SDLK_F12:
                             neoToggleRelativeMouseMode();
                             break;
