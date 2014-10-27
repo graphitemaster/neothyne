@@ -1719,6 +1719,7 @@ void texture::convert() {
         m_data.destroy();
         m_data.swap(rework);
         m_bpp = 2;
+        m_pitch = m_width * m_bpp;
     }
 
     // Update the format
