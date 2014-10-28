@@ -3,9 +3,8 @@ in vec2 texCoord0;
 in vec3 tangent0;
 in vec3 bitangent0;
 
-layout (location = 0) out vec3 diffuseOut;
-layout (location = 1) out vec2 normalOut;
-layout (location = 2) out vec2 specularOut;
+layout (location = 0) out vec4 diffuseOut;
+layout (location = 1) out vec4 normalOut;
 
 #ifdef USE_DIFFUSE
 uniform sampler2D gColorMap;
@@ -24,25 +23,6 @@ uniform float gSpecIntensity;
 
 #define EPSILON 0.00001f
 
-vec2 encodeNormal(vec3 normal) {
-    // Project normal positive hemisphere to unit circle
-    vec2 p = normal.xy / (abs(normal.z) + 1.0f);
-
-    // Convert unit circle to square
-    float d = abs(p.x) + abs(p.y) + EPSILON;
-    float r = length (p);
-    vec2 q = p * r / d;
-
-    // Mirror triangles to outer edge if z is negative
-    float z_is_negative = max (-sign (normal.z), 0.0f);
-    vec2 q_sign = sign (q);
-    q_sign = sign(q_sign + vec2(0.5f, 0.5f));
-
-    // Reflection
-    q -= z_is_negative * (dot(q, q_sign) - 1.0f) * q_sign;
-    return q;
-}
-
 #ifdef USE_NORMALMAP
 vec3 calcBump() {
     vec3 normal;
@@ -55,20 +35,24 @@ vec3 calcBump() {
 
 void main() {
 #ifdef USE_DIFFUSE
-    diffuseOut = texture(gColorMap, texCoord0).rgb;
+    diffuseOut.rgb = texture(gColorMap, texCoord0).rgb;
 #endif
 #ifdef USE_NORMALMAP
-    normalOut = encodeNormal(calcBump());
+    normalOut.rgb = calcBump() * 0.5f + 0.5f;
 #else
-    normalOut = encodeNormal(normal0);
+    normalOut.rgb = normal0 * 0.5 + 0.5f;
 #endif
 #ifdef USE_SPECMAP
-    // red channel contains intensity while green contains power
-    specularOut = texture(gSpecMap, texCoord0).rg;
+    // R contains intensity, B contains power. We pack intensity in alpha of
+    // diffuse while power in alpha of normal
+    vec2 spec = texture(gSpecMap, texCoord0).rg;
+    diffuseOut.a = spec.r;
+    normalOut.a = spec.g;
 #elif defined(USE_SPECPARAMS)
-    specularOut.x = gSpecIntensity;
-    specularOut.y = gSpecPower;
+    diffuseOut.a = gSpecIntensity;
+    normalOut.a = gSpecPower;
 #else
-    specularOut = vec2(0.0f, 0.0f);
+    diffuseOut.a = 0.0f;
+    normalOut.a = 0.0f;
 #endif
 }

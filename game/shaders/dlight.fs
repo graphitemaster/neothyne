@@ -20,7 +20,6 @@ struct directionalLight {
 
 uniform neoSampler2D gColorMap;
 uniform neoSampler2D gNormalMap;
-uniform neoSampler2D gSpecMap;
 uniform neoSampler2D gDepthMap;
 
 uniform vec3 gEyeWorldPosition;
@@ -70,31 +69,6 @@ vec4 calcDirectionalLight(vec3 worldPosition, vec3 normal, vec2 spec) {
 
 #define EPSILON 0.00001f
 
-vec3 decodeNormal(vec2 encodedNormal) {
-    vec2 p = encodedNormal;
-
-    // Find z sign
-    float zsign = sign(1.0f - abs(p.x) - abs(p.y));
-
-    // Map outer triangles to center if encoded z is negative
-    float z_is_negative = max(-zsign, 0.0f);
-    vec2 p_sign = sign(p);
-    p_sign = sign(p_sign + vec2(0.5f, 0.5f));
-
-    // Reflection
-    p -= z_is_negative * (dot(p, p_sign) - 1.0f) * p_sign;
-
-    // Convert square to unit circle
-    float r = abs(p.x) + abs(p.y);
-    float d = length(p) + EPSILON;
-    vec2 q = p * r / d;
-
-    // Deproject unit circle to sphere
-    float den = 2.0f / (dot(q, q) + 1.0f);
-    vec3 v = vec3(den * q, zsign * (den - 1.0f));
-    return v;
-}
-
 vec3 calcPosition(vec2 texCoord) {
 #ifdef HAS_TEXTURE_RECTANGLE
     vec2 fragCoord = texCoord / gScreenSize;
@@ -107,14 +81,13 @@ vec3 calcPosition(vec2 texCoord) {
     return pos.xyz / pos.w;
 }
 
-vec2 calcSpec(vec2 texCoord) {
-    return neoTexture2D(gSpecMap, texCoord).rg;
-}
-
 void main() {
     vec2 texCoord = calcTexCoord();
+    vec4 colorMap = neoTexture2D(gColorMap, texCoord);
+    vec4 normalDecode = neoTexture2D(gNormalMap, texCoord);
+    vec3 normalMap = normalDecode.rgb * 2.0f - 1.0f;
     vec3 worldPosition = calcPosition(texCoord);
-    vec2 spec = calcSpec(texCoord);
+    vec2 specMap = vec2(colorMap.a * 2.0f, exp2(normalDecode.a * 8.0f));
 
     // Uncomment to visualize depth buffer
     //float z = neoTexture2D(gDepthMap, texCoord).r;
@@ -122,9 +95,8 @@ void main() {
     //    gScreenFrustum.x - z * (gScreenFrustum.y - gScreenFrustum.x));
     //fragColor.rgb = vec3(c);
 
-    //fragColor.rgb = decodeNormal(neoTexture2D(gNormalMap, texCoord).xy) *0.5+0.5;
-    vec3 color = neoTexture2D(gColorMap, texCoord).xyz;
-    vec3 normal = decodeNormal(neoTexture2D(gNormalMap, texCoord).xy);
+    // Uncomment to visualize normal buffer
+    //fragColor.rgb = normalMap * 0.5 + 0.5;
 
-    fragColor = vec4(color, 1.0f) * calcDirectionalLight(worldPosition, normal, spec);
+    fragColor = vec4(colorMap.rgb, 1.0f) * calcDirectionalLight(worldPosition, normalMap, specMap);
 }

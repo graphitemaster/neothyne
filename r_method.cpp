@@ -77,7 +77,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
         gl::GetShaderiv(shaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
         infoLog.resize(infoLogLength);
         gl::GetShaderInfoLog(shaderObject, infoLogLength, nullptr, &infoLog[0]);
-        u::print("Shader error:\n%s\n", infoLog);
+        u::print("Shader error %s :\n%s\n", shaderFile, infoLog);
         return false;
     }
 

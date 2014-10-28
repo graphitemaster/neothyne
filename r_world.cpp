@@ -286,8 +286,8 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
         specParams = false;
 
     batch->specParams = specParams;
-    batch->specIntensity = specIntensity;
-    batch->specPower = specPower;
+    batch->specIntensity = specIntensity / 2.0f;
+    batch->specPower = log2f(specPower * 8);
 
     return true;
 }
