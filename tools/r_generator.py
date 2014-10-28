@@ -143,7 +143,7 @@ def genHeader(functionList, extensionList, headerFile):
         #   define GL_INFOP
         #endif
 
-        #define GL_OFFSET(X) ((const GLvoid *)(sizeof(GLfloat) * (X)))
+        #define ATTRIB_OFFSET(X) ((const GLvoid *)(sizeof(GLfloat) * (X)))
 
         """) % (__file__))
         # Write out the extension macros
@@ -226,7 +226,7 @@ def genSource(functionList, extensionList, sourceFile):
         """) % (__file__))
         # Generate the PFNGL typedefs
         for f in functionList:
-            source.write('typedef %s (APIENTRYP PFNGL%sPROC)'
+            source.write('typedef %s (APIENTRYP MYPFNGL%sPROC)'
                 % (f.type, f.name.upper()))
             printFormals(source, f, False, True)
             source.write(';\n')
@@ -234,7 +234,7 @@ def genSource(functionList, extensionList, sourceFile):
         largest = max(len(x.name) for x in functionList)
         for f in functionList:
             fill = largest - len(f.name)
-            source.write('static PFNGL%sPROC %s gl%s_ %s= nullptr;\n'
+            source.write('static MYPFNGL%sPROC %s gl%s_ %s= nullptr;\n'
                 % (f.name.upper(),
                    ''.rjust(fill),
                    f.name,
@@ -336,7 +336,7 @@ def genSource(functionList, extensionList, sourceFile):
         source.write('    void init() {\n')
         for f in functionList:
             fill = largest - len(f.name)
-            source.write('        if (!(gl%s_%s = (PFNGL%sPROC)SDL_GL_GetProcAddress("gl%s")))\n            goto loadError;\n'
+            source.write('        if (!(gl%s_%s = (MYPFNGL%sPROC)SDL_GL_GetProcAddress("gl%s")))\n            goto loadError;\n'
                 % (f.name, ''.rjust(fill), f.name.upper(), f.name))
         source.write('\n');
         source.write('        goto loadExtensions;\n\n')

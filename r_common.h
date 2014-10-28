@@ -12,7 +12,7 @@
 #   define GL_INFOP
 #endif
 
-#define GL_OFFSET(X) ((const GLvoid *)(sizeof(GLfloat) * (X)))
+#define ATTRIB_OFFSET(X) ((const GLvoid *)(sizeof(GLfloat) * (X)))
 
 #define EXT_texture_compression_s3tc   0
 #define EXT_texture_compression_rgtc   1

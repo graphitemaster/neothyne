@@ -23,8 +23,8 @@ bool quad::upload() {
     static const GLubyte indices[] = { 0, 1, 2, 0, 2, 3 };
 
     gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, GL_OFFSET(0)); // position
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, GL_OFFSET(3)); // uvs
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, ATTRIB_OFFSET(0)); // position
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, ATTRIB_OFFSET(3)); // uvs
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
 

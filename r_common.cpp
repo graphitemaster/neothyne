@@ -40,141 +40,141 @@
 #define GL_CHECK(...) \
    PP_PASTE(GL_CHECK_, GL_CHECK_ARG(__VA_ARGS__))(__VA_ARGS__)
 
-typedef GLuint (APIENTRYP PFNGLCREATESHADERPROC)(GLenum);
-typedef void (APIENTRYP PFNGLSHADERSOURCEPROC)(GLuint, GLsizei, const GLchar**, const GLint*);
-typedef void (APIENTRYP PFNGLCOMPILESHADERPROC)(GLuint);
-typedef void (APIENTRYP PFNGLATTACHSHADERPROC)(GLuint, GLuint);
-typedef GLuint (APIENTRYP PFNGLCREATEPROGRAMPROC)();
-typedef void (APIENTRYP PFNGLLINKPROGRAMPROC)(GLuint);
-typedef void (APIENTRYP PFNGLUSEPROGRAMPROC)(GLuint);
-typedef GLint (APIENTRYP PFNGLGETUNIFORMLOCATIONPROC)(GLuint, const GLchar*);
-typedef void (APIENTRYP PFNGLENABLEVERTEXATTRIBARRAYPROC)(GLuint);
-typedef void (APIENTRYP PFNGLDISABLEVERTEXATTRIBARRAYPROC)(GLuint);
-typedef void (APIENTRYP PFNGLUNIFORMMATRIX4FVPROC)(GLint, GLsizei, GLboolean, const GLfloat*);
-typedef void (APIENTRYP PFNGLBINDBUFFERPROC)(GLenum, GLuint);
-typedef void (APIENTRYP PFNGLGENBUFFERSPROC)(GLsizei, GLuint*);
-typedef void (APIENTRYP PFNGLVERTEXATTRIBPOINTERPROC)(GLuint, GLint, GLenum, GLboolean, GLsizei, const GLvoid*);
-typedef void (APIENTRYP PFNGLBUFFERDATAPROC)(GLenum, GLsizeiptr, const GLvoid*, GLenum);
-typedef void (APIENTRYP PFNGLVALIDATEPROGRAMPROC)(GLuint);
-typedef void (APIENTRYP PFNGLGENVERTEXARRAYSPROC)(GLsizei, GLuint*);
-typedef void (APIENTRYP PFNGLBINDVERTEXARRAYPROC)(GLuint);
-typedef void (APIENTRYP PFNGLDELETEPROGRAMPROC)(GLuint);
-typedef void (APIENTRYP PFNGLDELETEBUFFERSPROC)(GLsizei, const GLuint*);
-typedef void (APIENTRYP PFNGLDELETEVERTEXARRAYSPROC)(GLsizei, const GLuint*);
-typedef void (APIENTRYP PFNGLUNIFORM1IPROC)(GLint, GLint);
-typedef void (APIENTRYP PFNGLUNIFORM1FPROC)(GLint, GLfloat);
-typedef void (APIENTRYP PFNGLUNIFORM2FPROC)(GLint, GLfloat, GLfloat);
-typedef void (APIENTRYP PFNGLUNIFORM3FVPROC)(GLint, GLsizei, const GLfloat*);
-typedef void (APIENTRYP PFNGLGENERATEMIPMAPPROC)(GLenum);
-typedef void (APIENTRYP PFNGLDELETESHADERPROC)(GLuint);
-typedef void (APIENTRYP PFNGLGETSHADERIVPROC)(GLuint, GLenum, GLint*);
-typedef void (APIENTRYP PFNGLGETPROGRAMIVPROC)(GLuint, GLenum, GLint*);
-typedef void (APIENTRYP PFNGLGETSHADERINFOLOGPROC)(GLuint, GLsizei, GLsizei*, GLchar*);
-typedef void (APIENTRYP PFNGLACTIVETEXTUREPROC)(GLenum);
-typedef void (APIENTRYP PFNGLGENFRAMEBUFFERSPROC)(GLsizei, GLuint*);
-typedef void (APIENTRYP PFNGLBINDFRAMEBUFFERPROC)(GLenum, GLuint);
-typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTURE2DPROC)(GLenum, GLenum, GLenum, GLuint, GLint);
-typedef void (APIENTRYP PFNGLDRAWBUFFERSPROC)(GLsizei, const GLenum*);
-typedef GLenum (APIENTRYP PFNGLCHECKFRAMEBUFFERSTATUSPROC)(GLenum);
-typedef void (APIENTRYP PFNGLDELETEFRAMEBUFFERSPROC)(GLsizei, const GLuint*);
-typedef void (APIENTRYP PFNGLCLEARPROC)(GLbitfield);
-typedef void (APIENTRYP PFNGLCLEARCOLORPROC)(GLfloat, GLfloat, GLfloat, GLfloat);
-typedef void (APIENTRYP PFNGLFRONTFACEPROC)(GLenum);
-typedef void (APIENTRYP PFNGLCULLFACEPROC)(GLenum);
-typedef void (APIENTRYP PFNGLENABLEPROC)(GLenum);
-typedef void (APIENTRYP PFNGLDISABLEPROC)(GLenum);
-typedef void (APIENTRYP PFNGLDRAWELEMENTSPROC)(GLenum, GLsizei, GLenum, const GLvoid*);
-typedef void (APIENTRYP PFNGLDEPTHMASKPROC)(GLboolean);
-typedef void (APIENTRYP PFNGLBINDTEXTUREPROC)(GLenum, GLuint);
-typedef void (APIENTRYP PFNGLTEXIMAGE2DPROC)(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, const GLvoid*);
-typedef void (APIENTRYP PFNGLDELETETEXTURESPROC)(GLsizei, const GLuint*);
-typedef void (APIENTRYP PFNGLGENTEXTURESPROC)(GLsizei, GLuint*);
-typedef void (APIENTRYP PFNGLTEXPARAMETERFPROC)(GLenum, GLenum, GLfloat);
-typedef void (APIENTRYP PFNGLTEXPARAMETERIPROC)(GLenum, GLenum, GLint);
-typedef void (APIENTRYP PFNGLDRAWARRAYSPROC)(GLenum, GLint, GLsizei);
-typedef void (APIENTRYP PFNGLBLENDEQUATIONPROC)(GLenum);
-typedef void (APIENTRYP PFNGLBLENDFUNCPROC)(GLenum, GLenum);
-typedef void (APIENTRYP PFNGLDEPTHFUNCPROC)(GLenum);
-typedef void (APIENTRYP PFNGLCOLORMASKPROC)(GLboolean, GLboolean, GLboolean, GLboolean);
-typedef void (APIENTRYP PFNGLREADPIXELSPROC)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, GLvoid*);
-typedef void (APIENTRYP PFNGLVIEWPORTPROC)(GLint, GLint, GLsizei, GLsizei);
-typedef void (APIENTRYP PFNGLGETINTEGERVPROC)(GLenum, GLint*);
-typedef const GLubyte* (APIENTRYP PFNGLGETSTRINGPROC)(GLenum);
-typedef const GLubyte* (APIENTRYP PFNGLGETSTRINGIPROC)(GLenum, GLuint);
-typedef void (APIENTRYP PFNGLGETFLOATVPROC)(GLenum, GLfloat*);
-typedef GLenum (APIENTRYP PFNGLGETERRORPROC)();
-typedef void (APIENTRYP PFNGLGETTEXLEVELPARAMETERIVPROC)(GLenum, GLint, GLenum, GLint*);
-typedef void (APIENTRYP PFNGLGETCOMPRESSEDTEXIMAGEPROC)(GLenum, GLint, GLvoid*);
-typedef void (APIENTRYP PFNGLCOMPRESSEDTEXIMAGE2DPROC)(GLenum, GLint, GLenum, GLsizei, GLsizei, GLint, GLsizei, const GLvoid*);
-typedef void (APIENTRYP PFNGLPIXELSTOREIPROC)(GLenum, GLint);
+typedef GLuint (APIENTRYP MYPFNGLCREATESHADERPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLSHADERSOURCEPROC)(GLuint, GLsizei, const GLchar**, const GLint*);
+typedef void (APIENTRYP MYPFNGLCOMPILESHADERPROC)(GLuint);
+typedef void (APIENTRYP MYPFNGLATTACHSHADERPROC)(GLuint, GLuint);
+typedef GLuint (APIENTRYP MYPFNGLCREATEPROGRAMPROC)();
+typedef void (APIENTRYP MYPFNGLLINKPROGRAMPROC)(GLuint);
+typedef void (APIENTRYP MYPFNGLUSEPROGRAMPROC)(GLuint);
+typedef GLint (APIENTRYP MYPFNGLGETUNIFORMLOCATIONPROC)(GLuint, const GLchar*);
+typedef void (APIENTRYP MYPFNGLENABLEVERTEXATTRIBARRAYPROC)(GLuint);
+typedef void (APIENTRYP MYPFNGLDISABLEVERTEXATTRIBARRAYPROC)(GLuint);
+typedef void (APIENTRYP MYPFNGLUNIFORMMATRIX4FVPROC)(GLint, GLsizei, GLboolean, const GLfloat*);
+typedef void (APIENTRYP MYPFNGLBINDBUFFERPROC)(GLenum, GLuint);
+typedef void (APIENTRYP MYPFNGLGENBUFFERSPROC)(GLsizei, GLuint*);
+typedef void (APIENTRYP MYPFNGLVERTEXATTRIBPOINTERPROC)(GLuint, GLint, GLenum, GLboolean, GLsizei, const GLvoid*);
+typedef void (APIENTRYP MYPFNGLBUFFERDATAPROC)(GLenum, GLsizeiptr, const GLvoid*, GLenum);
+typedef void (APIENTRYP MYPFNGLVALIDATEPROGRAMPROC)(GLuint);
+typedef void (APIENTRYP MYPFNGLGENVERTEXARRAYSPROC)(GLsizei, GLuint*);
+typedef void (APIENTRYP MYPFNGLBINDVERTEXARRAYPROC)(GLuint);
+typedef void (APIENTRYP MYPFNGLDELETEPROGRAMPROC)(GLuint);
+typedef void (APIENTRYP MYPFNGLDELETEBUFFERSPROC)(GLsizei, const GLuint*);
+typedef void (APIENTRYP MYPFNGLDELETEVERTEXARRAYSPROC)(GLsizei, const GLuint*);
+typedef void (APIENTRYP MYPFNGLUNIFORM1IPROC)(GLint, GLint);
+typedef void (APIENTRYP MYPFNGLUNIFORM1FPROC)(GLint, GLfloat);
+typedef void (APIENTRYP MYPFNGLUNIFORM2FPROC)(GLint, GLfloat, GLfloat);
+typedef void (APIENTRYP MYPFNGLUNIFORM3FVPROC)(GLint, GLsizei, const GLfloat*);
+typedef void (APIENTRYP MYPFNGLGENERATEMIPMAPPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLDELETESHADERPROC)(GLuint);
+typedef void (APIENTRYP MYPFNGLGETSHADERIVPROC)(GLuint, GLenum, GLint*);
+typedef void (APIENTRYP MYPFNGLGETPROGRAMIVPROC)(GLuint, GLenum, GLint*);
+typedef void (APIENTRYP MYPFNGLGETSHADERINFOLOGPROC)(GLuint, GLsizei, GLsizei*, GLchar*);
+typedef void (APIENTRYP MYPFNGLACTIVETEXTUREPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLGENFRAMEBUFFERSPROC)(GLsizei, GLuint*);
+typedef void (APIENTRYP MYPFNGLBINDFRAMEBUFFERPROC)(GLenum, GLuint);
+typedef void (APIENTRYP MYPFNGLFRAMEBUFFERTEXTURE2DPROC)(GLenum, GLenum, GLenum, GLuint, GLint);
+typedef void (APIENTRYP MYPFNGLDRAWBUFFERSPROC)(GLsizei, const GLenum*);
+typedef GLenum (APIENTRYP MYPFNGLCHECKFRAMEBUFFERSTATUSPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLDELETEFRAMEBUFFERSPROC)(GLsizei, const GLuint*);
+typedef void (APIENTRYP MYPFNGLCLEARPROC)(GLbitfield);
+typedef void (APIENTRYP MYPFNGLCLEARCOLORPROC)(GLfloat, GLfloat, GLfloat, GLfloat);
+typedef void (APIENTRYP MYPFNGLFRONTFACEPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLCULLFACEPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLENABLEPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLDISABLEPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLDRAWELEMENTSPROC)(GLenum, GLsizei, GLenum, const GLvoid*);
+typedef void (APIENTRYP MYPFNGLDEPTHMASKPROC)(GLboolean);
+typedef void (APIENTRYP MYPFNGLBINDTEXTUREPROC)(GLenum, GLuint);
+typedef void (APIENTRYP MYPFNGLTEXIMAGE2DPROC)(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, const GLvoid*);
+typedef void (APIENTRYP MYPFNGLDELETETEXTURESPROC)(GLsizei, const GLuint*);
+typedef void (APIENTRYP MYPFNGLGENTEXTURESPROC)(GLsizei, GLuint*);
+typedef void (APIENTRYP MYPFNGLTEXPARAMETERFPROC)(GLenum, GLenum, GLfloat);
+typedef void (APIENTRYP MYPFNGLTEXPARAMETERIPROC)(GLenum, GLenum, GLint);
+typedef void (APIENTRYP MYPFNGLDRAWARRAYSPROC)(GLenum, GLint, GLsizei);
+typedef void (APIENTRYP MYPFNGLBLENDEQUATIONPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLBLENDFUNCPROC)(GLenum, GLenum);
+typedef void (APIENTRYP MYPFNGLDEPTHFUNCPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLCOLORMASKPROC)(GLboolean, GLboolean, GLboolean, GLboolean);
+typedef void (APIENTRYP MYPFNGLREADPIXELSPROC)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, GLvoid*);
+typedef void (APIENTRYP MYPFNGLVIEWPORTPROC)(GLint, GLint, GLsizei, GLsizei);
+typedef void (APIENTRYP MYPFNGLGETINTEGERVPROC)(GLenum, GLint*);
+typedef const GLubyte* (APIENTRYP MYPFNGLGETSTRINGPROC)(GLenum);
+typedef const GLubyte* (APIENTRYP MYPFNGLGETSTRINGIPROC)(GLenum, GLuint);
+typedef void (APIENTRYP MYPFNGLGETFLOATVPROC)(GLenum, GLfloat*);
+typedef GLenum (APIENTRYP MYPFNGLGETERRORPROC)();
+typedef void (APIENTRYP MYPFNGLGETTEXLEVELPARAMETERIVPROC)(GLenum, GLint, GLenum, GLint*);
+typedef void (APIENTRYP MYPFNGLGETCOMPRESSEDTEXIMAGEPROC)(GLenum, GLint, GLvoid*);
+typedef void (APIENTRYP MYPFNGLCOMPRESSEDTEXIMAGE2DPROC)(GLenum, GLint, GLenum, GLsizei, GLsizei, GLint, GLsizei, const GLvoid*);
+typedef void (APIENTRYP MYPFNGLPIXELSTOREIPROC)(GLenum, GLint);
 
-static PFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
-static PFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
-static PFNGLCOMPILESHADERPROC             glCompileShader_            = nullptr;
-static PFNGLATTACHSHADERPROC              glAttachShader_             = nullptr;
-static PFNGLCREATEPROGRAMPROC             glCreateProgram_            = nullptr;
-static PFNGLLINKPROGRAMPROC               glLinkProgram_              = nullptr;
-static PFNGLUSEPROGRAMPROC                glUseProgram_               = nullptr;
-static PFNGLGETUNIFORMLOCATIONPROC        glGetUniformLocation_       = nullptr;
-static PFNGLENABLEVERTEXATTRIBARRAYPROC   glEnableVertexAttribArray_  = nullptr;
-static PFNGLDISABLEVERTEXATTRIBARRAYPROC  glDisableVertexAttribArray_ = nullptr;
-static PFNGLUNIFORMMATRIX4FVPROC          glUniformMatrix4fv_         = nullptr;
-static PFNGLBINDBUFFERPROC                glBindBuffer_               = nullptr;
-static PFNGLGENBUFFERSPROC                glGenBuffers_               = nullptr;
-static PFNGLVERTEXATTRIBPOINTERPROC       glVertexAttribPointer_      = nullptr;
-static PFNGLBUFFERDATAPROC                glBufferData_               = nullptr;
-static PFNGLVALIDATEPROGRAMPROC           glValidateProgram_          = nullptr;
-static PFNGLGENVERTEXARRAYSPROC           glGenVertexArrays_          = nullptr;
-static PFNGLBINDVERTEXARRAYPROC           glBindVertexArray_          = nullptr;
-static PFNGLDELETEPROGRAMPROC             glDeleteProgram_            = nullptr;
-static PFNGLDELETEBUFFERSPROC             glDeleteBuffers_            = nullptr;
-static PFNGLDELETEVERTEXARRAYSPROC        glDeleteVertexArrays_       = nullptr;
-static PFNGLUNIFORM1IPROC                 glUniform1i_                = nullptr;
-static PFNGLUNIFORM1FPROC                 glUniform1f_                = nullptr;
-static PFNGLUNIFORM2FPROC                 glUniform2f_                = nullptr;
-static PFNGLUNIFORM3FVPROC                glUniform3fv_               = nullptr;
-static PFNGLGENERATEMIPMAPPROC            glGenerateMipmap_           = nullptr;
-static PFNGLDELETESHADERPROC              glDeleteShader_             = nullptr;
-static PFNGLGETSHADERIVPROC               glGetShaderiv_              = nullptr;
-static PFNGLGETPROGRAMIVPROC              glGetProgramiv_             = nullptr;
-static PFNGLGETSHADERINFOLOGPROC          glGetShaderInfoLog_         = nullptr;
-static PFNGLACTIVETEXTUREPROC             glActiveTexture_            = nullptr;
-static PFNGLGENFRAMEBUFFERSPROC           glGenFramebuffers_          = nullptr;
-static PFNGLBINDFRAMEBUFFERPROC           glBindFramebuffer_          = nullptr;
-static PFNGLFRAMEBUFFERTEXTURE2DPROC      glFramebufferTexture2D_     = nullptr;
-static PFNGLDRAWBUFFERSPROC               glDrawBuffers_              = nullptr;
-static PFNGLCHECKFRAMEBUFFERSTATUSPROC    glCheckFramebufferStatus_   = nullptr;
-static PFNGLDELETEFRAMEBUFFERSPROC        glDeleteFramebuffers_       = nullptr;
-static PFNGLCLEARPROC                     glClear_                    = nullptr;
-static PFNGLCLEARCOLORPROC                glClearColor_               = nullptr;
-static PFNGLFRONTFACEPROC                 glFrontFace_                = nullptr;
-static PFNGLCULLFACEPROC                  glCullFace_                 = nullptr;
-static PFNGLENABLEPROC                    glEnable_                   = nullptr;
-static PFNGLDISABLEPROC                   glDisable_                  = nullptr;
-static PFNGLDRAWELEMENTSPROC              glDrawElements_             = nullptr;
-static PFNGLDEPTHMASKPROC                 glDepthMask_                = nullptr;
-static PFNGLBINDTEXTUREPROC               glBindTexture_              = nullptr;
-static PFNGLTEXIMAGE2DPROC                glTexImage2D_               = nullptr;
-static PFNGLDELETETEXTURESPROC            glDeleteTextures_           = nullptr;
-static PFNGLGENTEXTURESPROC               glGenTextures_              = nullptr;
-static PFNGLTEXPARAMETERFPROC             glTexParameterf_            = nullptr;
-static PFNGLTEXPARAMETERIPROC             glTexParameteri_            = nullptr;
-static PFNGLDRAWARRAYSPROC                glDrawArrays_               = nullptr;
-static PFNGLBLENDEQUATIONPROC             glBlendEquation_            = nullptr;
-static PFNGLBLENDFUNCPROC                 glBlendFunc_                = nullptr;
-static PFNGLDEPTHFUNCPROC                 glDepthFunc_                = nullptr;
-static PFNGLCOLORMASKPROC                 glColorMask_                = nullptr;
-static PFNGLREADPIXELSPROC                glReadPixels_               = nullptr;
-static PFNGLVIEWPORTPROC                  glViewport_                 = nullptr;
-static PFNGLGETINTEGERVPROC               glGetIntegerv_              = nullptr;
-static PFNGLGETSTRINGPROC                 glGetString_                = nullptr;
-static PFNGLGETSTRINGIPROC                glGetStringi_               = nullptr;
-static PFNGLGETFLOATVPROC                 glGetFloatv_                = nullptr;
-static PFNGLGETERRORPROC                  glGetError_                 = nullptr;
-static PFNGLGETTEXLEVELPARAMETERIVPROC    glGetTexLevelParameteriv_   = nullptr;
-static PFNGLGETCOMPRESSEDTEXIMAGEPROC     glGetCompressedTexImage_    = nullptr;
-static PFNGLCOMPRESSEDTEXIMAGE2DPROC      glCompressedTexImage2D_     = nullptr;
-static PFNGLPIXELSTOREIPROC               glPixelStorei_              = nullptr;
+static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
+static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
+static MYPFNGLCOMPILESHADERPROC             glCompileShader_            = nullptr;
+static MYPFNGLATTACHSHADERPROC              glAttachShader_             = nullptr;
+static MYPFNGLCREATEPROGRAMPROC             glCreateProgram_            = nullptr;
+static MYPFNGLLINKPROGRAMPROC               glLinkProgram_              = nullptr;
+static MYPFNGLUSEPROGRAMPROC                glUseProgram_               = nullptr;
+static MYPFNGLGETUNIFORMLOCATIONPROC        glGetUniformLocation_       = nullptr;
+static MYPFNGLENABLEVERTEXATTRIBARRAYPROC   glEnableVertexAttribArray_  = nullptr;
+static MYPFNGLDISABLEVERTEXATTRIBARRAYPROC  glDisableVertexAttribArray_ = nullptr;
+static MYPFNGLUNIFORMMATRIX4FVPROC          glUniformMatrix4fv_         = nullptr;
+static MYPFNGLBINDBUFFERPROC                glBindBuffer_               = nullptr;
+static MYPFNGLGENBUFFERSPROC                glGenBuffers_               = nullptr;
+static MYPFNGLVERTEXATTRIBPOINTERPROC       glVertexAttribPointer_      = nullptr;
+static MYPFNGLBUFFERDATAPROC                glBufferData_               = nullptr;
+static MYPFNGLVALIDATEPROGRAMPROC           glValidateProgram_          = nullptr;
+static MYPFNGLGENVERTEXARRAYSPROC           glGenVertexArrays_          = nullptr;
+static MYPFNGLBINDVERTEXARRAYPROC           glBindVertexArray_          = nullptr;
+static MYPFNGLDELETEPROGRAMPROC             glDeleteProgram_            = nullptr;
+static MYPFNGLDELETEBUFFERSPROC             glDeleteBuffers_            = nullptr;
+static MYPFNGLDELETEVERTEXARRAYSPROC        glDeleteVertexArrays_       = nullptr;
+static MYPFNGLUNIFORM1IPROC                 glUniform1i_                = nullptr;
+static MYPFNGLUNIFORM1FPROC                 glUniform1f_                = nullptr;
+static MYPFNGLUNIFORM2FPROC                 glUniform2f_                = nullptr;
+static MYPFNGLUNIFORM3FVPROC                glUniform3fv_               = nullptr;
+static MYPFNGLGENERATEMIPMAPPROC            glGenerateMipmap_           = nullptr;
+static MYPFNGLDELETESHADERPROC              glDeleteShader_             = nullptr;
+static MYPFNGLGETSHADERIVPROC               glGetShaderiv_              = nullptr;
+static MYPFNGLGETPROGRAMIVPROC              glGetProgramiv_             = nullptr;
+static MYPFNGLGETSHADERINFOLOGPROC          glGetShaderInfoLog_         = nullptr;
+static MYPFNGLACTIVETEXTUREPROC             glActiveTexture_            = nullptr;
+static MYPFNGLGENFRAMEBUFFERSPROC           glGenFramebuffers_          = nullptr;
+static MYPFNGLBINDFRAMEBUFFERPROC           glBindFramebuffer_          = nullptr;
+static MYPFNGLFRAMEBUFFERTEXTURE2DPROC      glFramebufferTexture2D_     = nullptr;
+static MYPFNGLDRAWBUFFERSPROC               glDrawBuffers_              = nullptr;
+static MYPFNGLCHECKFRAMEBUFFERSTATUSPROC    glCheckFramebufferStatus_   = nullptr;
+static MYPFNGLDELETEFRAMEBUFFERSPROC        glDeleteFramebuffers_       = nullptr;
+static MYPFNGLCLEARPROC                     glClear_                    = nullptr;
+static MYPFNGLCLEARCOLORPROC                glClearColor_               = nullptr;
+static MYPFNGLFRONTFACEPROC                 glFrontFace_                = nullptr;
+static MYPFNGLCULLFACEPROC                  glCullFace_                 = nullptr;
+static MYPFNGLENABLEPROC                    glEnable_                   = nullptr;
+static MYPFNGLDISABLEPROC                   glDisable_                  = nullptr;
+static MYPFNGLDRAWELEMENTSPROC              glDrawElements_             = nullptr;
+static MYPFNGLDEPTHMASKPROC                 glDepthMask_                = nullptr;
+static MYPFNGLBINDTEXTUREPROC               glBindTexture_              = nullptr;
+static MYPFNGLTEXIMAGE2DPROC                glTexImage2D_               = nullptr;
+static MYPFNGLDELETETEXTURESPROC            glDeleteTextures_           = nullptr;
+static MYPFNGLGENTEXTURESPROC               glGenTextures_              = nullptr;
+static MYPFNGLTEXPARAMETERFPROC             glTexParameterf_            = nullptr;
+static MYPFNGLTEXPARAMETERIPROC             glTexParameteri_            = nullptr;
+static MYPFNGLDRAWARRAYSPROC                glDrawArrays_               = nullptr;
+static MYPFNGLBLENDEQUATIONPROC             glBlendEquation_            = nullptr;
+static MYPFNGLBLENDFUNCPROC                 glBlendFunc_                = nullptr;
+static MYPFNGLDEPTHFUNCPROC                 glDepthFunc_                = nullptr;
+static MYPFNGLCOLORMASKPROC                 glColorMask_                = nullptr;
+static MYPFNGLREADPIXELSPROC                glReadPixels_               = nullptr;
+static MYPFNGLVIEWPORTPROC                  glViewport_                 = nullptr;
+static MYPFNGLGETINTEGERVPROC               glGetIntegerv_              = nullptr;
+static MYPFNGLGETSTRINGPROC                 glGetString_                = nullptr;
+static MYPFNGLGETSTRINGIPROC                glGetStringi_               = nullptr;
+static MYPFNGLGETFLOATVPROC                 glGetFloatv_                = nullptr;
+static MYPFNGLGETERRORPROC                  glGetError_                 = nullptr;
+static MYPFNGLGETTEXLEVELPARAMETERIVPROC    glGetTexLevelParameteriv_   = nullptr;
+static MYPFNGLGETCOMPRESSEDTEXIMAGEPROC     glGetCompressedTexImage_    = nullptr;
+static MYPFNGLCOMPRESSEDTEXIMAGE2DPROC      glCompressedTexImage2D_     = nullptr;
+static MYPFNGLPIXELSTOREIPROC               glPixelStorei_              = nullptr;
 
 #ifdef DEBUG_GL
 template <char C, typename T>
@@ -360,139 +360,139 @@ namespace gl {
     };
 
     void init() {
-        if (!(glCreateShader_             = (PFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader")))
+        if (!(glCreateShader_             = (MYPFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader")))
             goto loadError;
-        if (!(glShaderSource_             = (PFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress("glShaderSource")))
+        if (!(glShaderSource_             = (MYPFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress("glShaderSource")))
             goto loadError;
-        if (!(glCompileShader_            = (PFNGLCOMPILESHADERPROC)SDL_GL_GetProcAddress("glCompileShader")))
+        if (!(glCompileShader_            = (MYPFNGLCOMPILESHADERPROC)SDL_GL_GetProcAddress("glCompileShader")))
             goto loadError;
-        if (!(glAttachShader_             = (PFNGLATTACHSHADERPROC)SDL_GL_GetProcAddress("glAttachShader")))
+        if (!(glAttachShader_             = (MYPFNGLATTACHSHADERPROC)SDL_GL_GetProcAddress("glAttachShader")))
             goto loadError;
-        if (!(glCreateProgram_            = (PFNGLCREATEPROGRAMPROC)SDL_GL_GetProcAddress("glCreateProgram")))
+        if (!(glCreateProgram_            = (MYPFNGLCREATEPROGRAMPROC)SDL_GL_GetProcAddress("glCreateProgram")))
             goto loadError;
-        if (!(glLinkProgram_              = (PFNGLLINKPROGRAMPROC)SDL_GL_GetProcAddress("glLinkProgram")))
+        if (!(glLinkProgram_              = (MYPFNGLLINKPROGRAMPROC)SDL_GL_GetProcAddress("glLinkProgram")))
             goto loadError;
-        if (!(glUseProgram_               = (PFNGLUSEPROGRAMPROC)SDL_GL_GetProcAddress("glUseProgram")))
+        if (!(glUseProgram_               = (MYPFNGLUSEPROGRAMPROC)SDL_GL_GetProcAddress("glUseProgram")))
             goto loadError;
-        if (!(glGetUniformLocation_       = (PFNGLGETUNIFORMLOCATIONPROC)SDL_GL_GetProcAddress("glGetUniformLocation")))
+        if (!(glGetUniformLocation_       = (MYPFNGLGETUNIFORMLOCATIONPROC)SDL_GL_GetProcAddress("glGetUniformLocation")))
             goto loadError;
-        if (!(glEnableVertexAttribArray_  = (PFNGLENABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glEnableVertexAttribArray")))
+        if (!(glEnableVertexAttribArray_  = (MYPFNGLENABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glEnableVertexAttribArray")))
             goto loadError;
-        if (!(glDisableVertexAttribArray_ = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glDisableVertexAttribArray")))
+        if (!(glDisableVertexAttribArray_ = (MYPFNGLDISABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glDisableVertexAttribArray")))
             goto loadError;
-        if (!(glUniformMatrix4fv_         = (PFNGLUNIFORMMATRIX4FVPROC)SDL_GL_GetProcAddress("glUniformMatrix4fv")))
+        if (!(glUniformMatrix4fv_         = (MYPFNGLUNIFORMMATRIX4FVPROC)SDL_GL_GetProcAddress("glUniformMatrix4fv")))
             goto loadError;
-        if (!(glBindBuffer_               = (PFNGLBINDBUFFERPROC)SDL_GL_GetProcAddress("glBindBuffer")))
+        if (!(glBindBuffer_               = (MYPFNGLBINDBUFFERPROC)SDL_GL_GetProcAddress("glBindBuffer")))
             goto loadError;
-        if (!(glGenBuffers_               = (PFNGLGENBUFFERSPROC)SDL_GL_GetProcAddress("glGenBuffers")))
+        if (!(glGenBuffers_               = (MYPFNGLGENBUFFERSPROC)SDL_GL_GetProcAddress("glGenBuffers")))
             goto loadError;
-        if (!(glVertexAttribPointer_      = (PFNGLVERTEXATTRIBPOINTERPROC)SDL_GL_GetProcAddress("glVertexAttribPointer")))
+        if (!(glVertexAttribPointer_      = (MYPFNGLVERTEXATTRIBPOINTERPROC)SDL_GL_GetProcAddress("glVertexAttribPointer")))
             goto loadError;
-        if (!(glBufferData_               = (PFNGLBUFFERDATAPROC)SDL_GL_GetProcAddress("glBufferData")))
+        if (!(glBufferData_               = (MYPFNGLBUFFERDATAPROC)SDL_GL_GetProcAddress("glBufferData")))
             goto loadError;
-        if (!(glValidateProgram_          = (PFNGLVALIDATEPROGRAMPROC)SDL_GL_GetProcAddress("glValidateProgram")))
+        if (!(glValidateProgram_          = (MYPFNGLVALIDATEPROGRAMPROC)SDL_GL_GetProcAddress("glValidateProgram")))
             goto loadError;
-        if (!(glGenVertexArrays_          = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays")))
+        if (!(glGenVertexArrays_          = (MYPFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays")))
             goto loadError;
-        if (!(glBindVertexArray_          = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray")))
+        if (!(glBindVertexArray_          = (MYPFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray")))
             goto loadError;
-        if (!(glDeleteProgram_            = (PFNGLDELETEPROGRAMPROC)SDL_GL_GetProcAddress("glDeleteProgram")))
+        if (!(glDeleteProgram_            = (MYPFNGLDELETEPROGRAMPROC)SDL_GL_GetProcAddress("glDeleteProgram")))
             goto loadError;
-        if (!(glDeleteBuffers_            = (PFNGLDELETEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteBuffers")))
+        if (!(glDeleteBuffers_            = (MYPFNGLDELETEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteBuffers")))
             goto loadError;
-        if (!(glDeleteVertexArrays_       = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays")))
+        if (!(glDeleteVertexArrays_       = (MYPFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays")))
             goto loadError;
-        if (!(glUniform1i_                = (PFNGLUNIFORM1IPROC)SDL_GL_GetProcAddress("glUniform1i")))
+        if (!(glUniform1i_                = (MYPFNGLUNIFORM1IPROC)SDL_GL_GetProcAddress("glUniform1i")))
             goto loadError;
-        if (!(glUniform1f_                = (PFNGLUNIFORM1FPROC)SDL_GL_GetProcAddress("glUniform1f")))
+        if (!(glUniform1f_                = (MYPFNGLUNIFORM1FPROC)SDL_GL_GetProcAddress("glUniform1f")))
             goto loadError;
-        if (!(glUniform2f_                = (PFNGLUNIFORM2FPROC)SDL_GL_GetProcAddress("glUniform2f")))
+        if (!(glUniform2f_                = (MYPFNGLUNIFORM2FPROC)SDL_GL_GetProcAddress("glUniform2f")))
             goto loadError;
-        if (!(glUniform3fv_               = (PFNGLUNIFORM3FVPROC)SDL_GL_GetProcAddress("glUniform3fv")))
+        if (!(glUniform3fv_               = (MYPFNGLUNIFORM3FVPROC)SDL_GL_GetProcAddress("glUniform3fv")))
             goto loadError;
-        if (!(glGenerateMipmap_           = (PFNGLGENERATEMIPMAPPROC)SDL_GL_GetProcAddress("glGenerateMipmap")))
+        if (!(glGenerateMipmap_           = (MYPFNGLGENERATEMIPMAPPROC)SDL_GL_GetProcAddress("glGenerateMipmap")))
             goto loadError;
-        if (!(glDeleteShader_             = (PFNGLDELETESHADERPROC)SDL_GL_GetProcAddress("glDeleteShader")))
+        if (!(glDeleteShader_             = (MYPFNGLDELETESHADERPROC)SDL_GL_GetProcAddress("glDeleteShader")))
             goto loadError;
-        if (!(glGetShaderiv_              = (PFNGLGETSHADERIVPROC)SDL_GL_GetProcAddress("glGetShaderiv")))
+        if (!(glGetShaderiv_              = (MYPFNGLGETSHADERIVPROC)SDL_GL_GetProcAddress("glGetShaderiv")))
             goto loadError;
-        if (!(glGetProgramiv_             = (PFNGLGETPROGRAMIVPROC)SDL_GL_GetProcAddress("glGetProgramiv")))
+        if (!(glGetProgramiv_             = (MYPFNGLGETPROGRAMIVPROC)SDL_GL_GetProcAddress("glGetProgramiv")))
             goto loadError;
-        if (!(glGetShaderInfoLog_         = (PFNGLGETSHADERINFOLOGPROC)SDL_GL_GetProcAddress("glGetShaderInfoLog")))
+        if (!(glGetShaderInfoLog_         = (MYPFNGLGETSHADERINFOLOGPROC)SDL_GL_GetProcAddress("glGetShaderInfoLog")))
             goto loadError;
-        if (!(glActiveTexture_            = (PFNGLACTIVETEXTUREPROC)SDL_GL_GetProcAddress("glActiveTexture")))
+        if (!(glActiveTexture_            = (MYPFNGLACTIVETEXTUREPROC)SDL_GL_GetProcAddress("glActiveTexture")))
             goto loadError;
-        if (!(glGenFramebuffers_          = (PFNGLGENFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glGenFramebuffers")))
+        if (!(glGenFramebuffers_          = (MYPFNGLGENFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glGenFramebuffers")))
             goto loadError;
-        if (!(glBindFramebuffer_          = (PFNGLBINDFRAMEBUFFERPROC)SDL_GL_GetProcAddress("glBindFramebuffer")))
+        if (!(glBindFramebuffer_          = (MYPFNGLBINDFRAMEBUFFERPROC)SDL_GL_GetProcAddress("glBindFramebuffer")))
             goto loadError;
-        if (!(glFramebufferTexture2D_     = (PFNGLFRAMEBUFFERTEXTURE2DPROC)SDL_GL_GetProcAddress("glFramebufferTexture2D")))
+        if (!(glFramebufferTexture2D_     = (MYPFNGLFRAMEBUFFERTEXTURE2DPROC)SDL_GL_GetProcAddress("glFramebufferTexture2D")))
             goto loadError;
-        if (!(glDrawBuffers_              = (PFNGLDRAWBUFFERSPROC)SDL_GL_GetProcAddress("glDrawBuffers")))
+        if (!(glDrawBuffers_              = (MYPFNGLDRAWBUFFERSPROC)SDL_GL_GetProcAddress("glDrawBuffers")))
             goto loadError;
-        if (!(glCheckFramebufferStatus_   = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)SDL_GL_GetProcAddress("glCheckFramebufferStatus")))
+        if (!(glCheckFramebufferStatus_   = (MYPFNGLCHECKFRAMEBUFFERSTATUSPROC)SDL_GL_GetProcAddress("glCheckFramebufferStatus")))
             goto loadError;
-        if (!(glDeleteFramebuffers_       = (PFNGLDELETEFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteFramebuffers")))
+        if (!(glDeleteFramebuffers_       = (MYPFNGLDELETEFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteFramebuffers")))
             goto loadError;
-        if (!(glClear_                    = (PFNGLCLEARPROC)SDL_GL_GetProcAddress("glClear")))
+        if (!(glClear_                    = (MYPFNGLCLEARPROC)SDL_GL_GetProcAddress("glClear")))
             goto loadError;
-        if (!(glClearColor_               = (PFNGLCLEARCOLORPROC)SDL_GL_GetProcAddress("glClearColor")))
+        if (!(glClearColor_               = (MYPFNGLCLEARCOLORPROC)SDL_GL_GetProcAddress("glClearColor")))
             goto loadError;
-        if (!(glFrontFace_                = (PFNGLFRONTFACEPROC)SDL_GL_GetProcAddress("glFrontFace")))
+        if (!(glFrontFace_                = (MYPFNGLFRONTFACEPROC)SDL_GL_GetProcAddress("glFrontFace")))
             goto loadError;
-        if (!(glCullFace_                 = (PFNGLCULLFACEPROC)SDL_GL_GetProcAddress("glCullFace")))
+        if (!(glCullFace_                 = (MYPFNGLCULLFACEPROC)SDL_GL_GetProcAddress("glCullFace")))
             goto loadError;
-        if (!(glEnable_                   = (PFNGLENABLEPROC)SDL_GL_GetProcAddress("glEnable")))
+        if (!(glEnable_                   = (MYPFNGLENABLEPROC)SDL_GL_GetProcAddress("glEnable")))
             goto loadError;
-        if (!(glDisable_                  = (PFNGLDISABLEPROC)SDL_GL_GetProcAddress("glDisable")))
+        if (!(glDisable_                  = (MYPFNGLDISABLEPROC)SDL_GL_GetProcAddress("glDisable")))
             goto loadError;
-        if (!(glDrawElements_             = (PFNGLDRAWELEMENTSPROC)SDL_GL_GetProcAddress("glDrawElements")))
+        if (!(glDrawElements_             = (MYPFNGLDRAWELEMENTSPROC)SDL_GL_GetProcAddress("glDrawElements")))
             goto loadError;
-        if (!(glDepthMask_                = (PFNGLDEPTHMASKPROC)SDL_GL_GetProcAddress("glDepthMask")))
+        if (!(glDepthMask_                = (MYPFNGLDEPTHMASKPROC)SDL_GL_GetProcAddress("glDepthMask")))
             goto loadError;
-        if (!(glBindTexture_              = (PFNGLBINDTEXTUREPROC)SDL_GL_GetProcAddress("glBindTexture")))
+        if (!(glBindTexture_              = (MYPFNGLBINDTEXTUREPROC)SDL_GL_GetProcAddress("glBindTexture")))
             goto loadError;
-        if (!(glTexImage2D_               = (PFNGLTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glTexImage2D")))
+        if (!(glTexImage2D_               = (MYPFNGLTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glTexImage2D")))
             goto loadError;
-        if (!(glDeleteTextures_           = (PFNGLDELETETEXTURESPROC)SDL_GL_GetProcAddress("glDeleteTextures")))
+        if (!(glDeleteTextures_           = (MYPFNGLDELETETEXTURESPROC)SDL_GL_GetProcAddress("glDeleteTextures")))
             goto loadError;
-        if (!(glGenTextures_              = (PFNGLGENTEXTURESPROC)SDL_GL_GetProcAddress("glGenTextures")))
+        if (!(glGenTextures_              = (MYPFNGLGENTEXTURESPROC)SDL_GL_GetProcAddress("glGenTextures")))
             goto loadError;
-        if (!(glTexParameterf_            = (PFNGLTEXPARAMETERFPROC)SDL_GL_GetProcAddress("glTexParameterf")))
+        if (!(glTexParameterf_            = (MYPFNGLTEXPARAMETERFPROC)SDL_GL_GetProcAddress("glTexParameterf")))
             goto loadError;
-        if (!(glTexParameteri_            = (PFNGLTEXPARAMETERIPROC)SDL_GL_GetProcAddress("glTexParameteri")))
+        if (!(glTexParameteri_            = (MYPFNGLTEXPARAMETERIPROC)SDL_GL_GetProcAddress("glTexParameteri")))
             goto loadError;
-        if (!(glDrawArrays_               = (PFNGLDRAWARRAYSPROC)SDL_GL_GetProcAddress("glDrawArrays")))
+        if (!(glDrawArrays_               = (MYPFNGLDRAWARRAYSPROC)SDL_GL_GetProcAddress("glDrawArrays")))
             goto loadError;
-        if (!(glBlendEquation_            = (PFNGLBLENDEQUATIONPROC)SDL_GL_GetProcAddress("glBlendEquation")))
+        if (!(glBlendEquation_            = (MYPFNGLBLENDEQUATIONPROC)SDL_GL_GetProcAddress("glBlendEquation")))
             goto loadError;
-        if (!(glBlendFunc_                = (PFNGLBLENDFUNCPROC)SDL_GL_GetProcAddress("glBlendFunc")))
+        if (!(glBlendFunc_                = (MYPFNGLBLENDFUNCPROC)SDL_GL_GetProcAddress("glBlendFunc")))
             goto loadError;
-        if (!(glDepthFunc_                = (PFNGLDEPTHFUNCPROC)SDL_GL_GetProcAddress("glDepthFunc")))
+        if (!(glDepthFunc_                = (MYPFNGLDEPTHFUNCPROC)SDL_GL_GetProcAddress("glDepthFunc")))
             goto loadError;
-        if (!(glColorMask_                = (PFNGLCOLORMASKPROC)SDL_GL_GetProcAddress("glColorMask")))
+        if (!(glColorMask_                = (MYPFNGLCOLORMASKPROC)SDL_GL_GetProcAddress("glColorMask")))
             goto loadError;
-        if (!(glReadPixels_               = (PFNGLREADPIXELSPROC)SDL_GL_GetProcAddress("glReadPixels")))
+        if (!(glReadPixels_               = (MYPFNGLREADPIXELSPROC)SDL_GL_GetProcAddress("glReadPixels")))
             goto loadError;
-        if (!(glViewport_                 = (PFNGLVIEWPORTPROC)SDL_GL_GetProcAddress("glViewport")))
+        if (!(glViewport_                 = (MYPFNGLVIEWPORTPROC)SDL_GL_GetProcAddress("glViewport")))
             goto loadError;
-        if (!(glGetIntegerv_              = (PFNGLGETINTEGERVPROC)SDL_GL_GetProcAddress("glGetIntegerv")))
+        if (!(glGetIntegerv_              = (MYPFNGLGETINTEGERVPROC)SDL_GL_GetProcAddress("glGetIntegerv")))
             goto loadError;
-        if (!(glGetString_                = (PFNGLGETSTRINGPROC)SDL_GL_GetProcAddress("glGetString")))
+        if (!(glGetString_                = (MYPFNGLGETSTRINGPROC)SDL_GL_GetProcAddress("glGetString")))
             goto loadError;
-        if (!(glGetStringi_               = (PFNGLGETSTRINGIPROC)SDL_GL_GetProcAddress("glGetStringi")))
+        if (!(glGetStringi_               = (MYPFNGLGETSTRINGIPROC)SDL_GL_GetProcAddress("glGetStringi")))
             goto loadError;
-        if (!(glGetFloatv_                = (PFNGLGETFLOATVPROC)SDL_GL_GetProcAddress("glGetFloatv")))
+        if (!(glGetFloatv_                = (MYPFNGLGETFLOATVPROC)SDL_GL_GetProcAddress("glGetFloatv")))
             goto loadError;
-        if (!(glGetError_                 = (PFNGLGETERRORPROC)SDL_GL_GetProcAddress("glGetError")))
+        if (!(glGetError_                 = (MYPFNGLGETERRORPROC)SDL_GL_GetProcAddress("glGetError")))
             goto loadError;
-        if (!(glGetTexLevelParameteriv_   = (PFNGLGETTEXLEVELPARAMETERIVPROC)SDL_GL_GetProcAddress("glGetTexLevelParameteriv")))
+        if (!(glGetTexLevelParameteriv_   = (MYPFNGLGETTEXLEVELPARAMETERIVPROC)SDL_GL_GetProcAddress("glGetTexLevelParameteriv")))
             goto loadError;
-        if (!(glGetCompressedTexImage_    = (PFNGLGETCOMPRESSEDTEXIMAGEPROC)SDL_GL_GetProcAddress("glGetCompressedTexImage")))
+        if (!(glGetCompressedTexImage_    = (MYPFNGLGETCOMPRESSEDTEXIMAGEPROC)SDL_GL_GetProcAddress("glGetCompressedTexImage")))
             goto loadError;
-        if (!(glCompressedTexImage2D_     = (PFNGLCOMPRESSEDTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glCompressedTexImage2D")))
+        if (!(glCompressedTexImage2D_     = (MYPFNGLCOMPRESSEDTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glCompressedTexImage2D")))
             goto loadError;
-        if (!(glPixelStorei_              = (PFNGLPIXELSTOREIPROC)SDL_GL_GetProcAddress("glPixelStorei")))
+        if (!(glPixelStorei_              = (MYPFNGLPIXELSTOREIPROC)SDL_GL_GetProcAddress("glPixelStorei")))
             goto loadError;
 
         goto loadExtensions;
