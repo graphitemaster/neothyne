@@ -67,8 +67,6 @@ vec4 calcDirectionalLight(vec3 worldPosition, vec3 normal, vec2 spec) {
         worldPosition, normal, spec);
 }
 
-#define EPSILON 0.00001f
-
 vec3 calcPosition(vec2 texCoord) {
 #ifdef HAS_TEXTURE_RECTANGLE
     vec2 fragCoord = texCoord / gScreenSize;

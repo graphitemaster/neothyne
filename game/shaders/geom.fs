@@ -21,8 +21,6 @@ uniform float gSpecPower;
 uniform float gSpecIntensity;
 #endif
 
-#define EPSILON 0.00001f
-
 #ifdef USE_NORMALMAP
 vec3 calcBump() {
     vec3 normal;
