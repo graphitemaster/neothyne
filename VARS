@@ -72,6 +72,11 @@ RENDERER
     Adjust texture quality
         any value in the range [0.0, 1.0]
 
+    r_fxaa
+    Fast approximate anti-aliasing
+        0 = disable
+        1 = enable
+
 CLIENT
     cl_farp
     Far clipping plane distance

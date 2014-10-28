@@ -25,6 +25,7 @@ embodies the following:
   * Sky meshes (skybox, skydome, etc, any mesh will suffice).
   * Normal mapping (dot3 bump mapping)
   * Sky fog gradient
+  * FXAA
 
 ## Supported texture formats
 
@@ -55,9 +56,10 @@ below:
   * Supports RLE compressed color (paletted)
   * Supports RLE compressed (BGRA)
 
-In addition to those supported texture formats. Neothyne also builds BPTC, DXT1 and
-DXT5 compressed textures at runtime and caches them to disk. It will prefer the cached
-textures if the hardware supports BPTC or S3TC texture compression.
+In addition to those supported texture formats. Neothyne also builds BPTC, DXT1,
+DXT5 and RGTC compressed textures at runtime and caches them to disk. It will
+prefer the cached textures if the hardware supports BPTC, S3TC or RGTC texture
+compression.
 
 ## Organization
 The source code is organized into namespaces and a file name convention.

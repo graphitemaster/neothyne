@@ -86,7 +86,7 @@ private:
 };
 
 struct finalMethod : method {
-    bool init();
+    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setWVP(const m::mat4 &wvp);
     void setColorTextureUnit(int unit);
@@ -174,7 +174,9 @@ private:
     geomMethod m_geomMethods[7];
 
     // final composite method
-    finalMethod m_finalMethod;
+    // 0 = pass-through shader
+    // 1 = fxaa
+    finalMethod m_finalMethods[2];
 
     directionalLightMethod m_directionalLightMethod;
 

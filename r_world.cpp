@@ -5,7 +5,11 @@
 #include "u_misc.h"
 #include "u_file.h"
 
+#include "c_var.h"
+
 #include "engine.h"
+
+VAR(int, r_fxaa, "fast approximate anti-aliasing", 0, 1, 1);
 
 namespace r {
 ///! methods
@@ -155,9 +159,12 @@ void geomMethod::setSpecPower(float power) {
 }
 
 ///! Final Composite Method
-bool finalMethod::init() {
+bool finalMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
+
+    for (auto &it : defines)
+        method::define(it);
 
     if (gl::has(ARB_texture_rectangle))
         method::define("HAS_TEXTURE_RECTANGLE");
@@ -478,8 +485,13 @@ bool world::upload(const m::perspectiveProjection &project) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
 
-    if (!m_finalMethod.init())
-        neoFatal("failed to final composite method");
+    // Init the shader permuations
+    // 0 = pass-through shader
+    // 1 = fxaa
+    if (!m_finalMethods[0].init())
+        neoFatal("failed to initialize final composite method");
+    if (!m_finalMethods[1].init({"USE_FXAA"}))
+        neoFatal("failed to initialize final composite method");
 
     // Init the shader permutations
     // 0 = pass-through shader (vertex normals)
@@ -551,9 +563,13 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_geomMethods[6].setColorTextureUnit(0);
     m_geomMethods[6].setNormalTextureUnit(1);
 
-    m_finalMethod.enable();
-    m_finalMethod.setWVP(m_identity);
-    m_finalMethod.setColorTextureUnit(0);
+    m_finalMethods[0].enable();
+    m_finalMethods[0].setWVP(m_identity);
+    m_finalMethods[0].setColorTextureUnit(0);
+
+    m_finalMethods[1].enable();
+    m_finalMethods[1].setWVP(m_identity);
+    m_finalMethods[1].setColorTextureUnit(0);
 
     u::print("[world] => uploaded\n");
     return true;
@@ -681,8 +697,13 @@ void world::render(const rendererPipeline &pipeline) {
 
     /// final composite pass
     m_final.bindReading();
-    m_finalMethod.enable();
-    m_finalMethod.setPerspectiveProjection(project);
+    if (r_fxaa) {
+        m_finalMethods[1].enable();
+        m_finalMethods[1].setPerspectiveProjection(project);
+    } else {
+        m_finalMethods[0].enable();
+        m_finalMethods[0].setPerspectiveProjection(project);
+    }
     m_quad.render();
 }
 
