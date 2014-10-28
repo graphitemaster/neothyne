@@ -34,8 +34,11 @@ struct geomMethod : method {
     void setColorTextureUnit(int unit);
     void setNormalTextureUnit(int unit);
     void setSpecTextureUnit(int unit);
+    void setDispTextureUnit(int unit);
     void setSpecPower(float power);
     void setSpecIntensity(float intensity);
+    void setEyeWorldPos(const m::vec3 &position);
+    void setParallax(float scale, float bias);
 
 private:
     GLint m_WVPLocation;
@@ -43,8 +46,11 @@ private:
     GLint m_colorTextureUnitLocation;
     GLint m_normalTextureUnitLocation;
     GLint m_specTextureUnitLocation;
+    GLint m_dispTextureUnitLocation;
     GLint m_specPowerLocation;
     GLint m_specIntensityLocation;
+    GLint m_eyeWorldPositionLocation;
+    GLint m_parallaxLocation;
 };
 
 struct lightMethod : method {
@@ -101,9 +107,12 @@ struct renderTextureBatch {
     texture2D *diffuse;
     texture2D *normal;
     texture2D *spec;
+    texture2D *displacement;
     bool specParams;
     float specPower;
     float specIntensity;
+    float dispScale;
+    float dispBias;
 };
 
 struct world {
@@ -152,7 +161,10 @@ private:
     // 4 = diffuse and spec param permutation
     // 5 = diffuse and normal and spec permutation
     // 6 = diffuse and normal and spec param permutation
-    geomMethod m_geomMethods[7];
+    // 7 = diffuse and normal and parallax permutation
+    // 8 = diffuse and normal and spec and parallax permutation
+    // 9 = diffuse and normal and spec param and parallax permutation
+    geomMethod m_geomMethods[10];
 
     directionalLightMethod m_directionalLightMethod;
 

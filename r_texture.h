@@ -16,6 +16,7 @@ struct texture2D {
     bool cache(GLuint internal);
     void bind(GLenum unit);
     void resize(size_t width, size_t height);
+    textureFormat format() const;
 
 private:
     bool useCache();

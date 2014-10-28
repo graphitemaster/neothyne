@@ -120,8 +120,11 @@ bool geomMethod::init(const u::vector<const char *> &defines) {
     m_colorTextureUnitLocation = getUniformLocation("gColorMap");
     m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
     m_specTextureUnitLocation = getUniformLocation("gSpecMap");
+    m_dispTextureUnitLocation = getUniformLocation("gDispMap");
     m_specPowerLocation = getUniformLocation("gSpecPower");
     m_specIntensityLocation = getUniformLocation("gSpecIntensity");
+    m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
+    m_parallaxLocation = getUniformLocation("gParallax");
 
     return true;
 }
@@ -134,12 +137,24 @@ void geomMethod::setWorld(const m::mat4 &worldInverse) {
     gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
 }
 
+void geomMethod::setEyeWorldPos(const m::vec3 &position) {
+    gl::Uniform3fv(m_eyeWorldPositionLocation, 1, &position.x);
+}
+
+void geomMethod::setParallax(float scale, float bias) {
+    gl::Uniform2f(m_parallaxLocation, scale, bias);
+}
+
 void geomMethod::setColorTextureUnit(int unit) {
     gl::Uniform1i(m_colorTextureUnitLocation, unit);
 }
 
 void geomMethod::setNormalTextureUnit(int unit) {
     gl::Uniform1i(m_normalTextureUnitLocation, unit);
+}
+
+void geomMethod::setDispTextureUnit(int unit) {
+    gl::Uniform1i(m_dispTextureUnitLocation, unit);
 }
 
 void geomMethod::setSpecTextureUnit(int unit) {
@@ -230,6 +245,7 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
     u::string diffuseName;
     u::string specName;
     u::string normalName = "<normal>";
+    u::string displacementName;
 
     // Read the material
     auto fp = u::fopen(neoGamePath() + materialName + ".cfg", "r");
@@ -241,6 +257,8 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
     bool specParams = false;
     float specIntensity = 0;
     float specPower = 0;
+    float dispScale = 0;
+    float dispBias = 0;
 
     while (auto line = u::getline(fp)) {
         auto get = *line;
@@ -251,6 +269,8 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
             diffuseName = "textures/" + value;
         else if (key == "normal")
             normalName += "textures/" + value;
+        else if (key == "displacement")
+            displacementName += "textures/" + value;
         else if (key == "spec")
             specName = "textures/" + value;
         else if (key == "spec_power") {
@@ -259,6 +279,10 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
         } else if (key == "spec_intensity") {
             specIntensity = u::atof(value);
             specParams = true;
+        } else if (key == "parallax") {
+            dispScale = u::atof(value);
+            if (split.size() > 2)
+                dispBias = u::atof(split[2]);
         }
     }
 
@@ -280,6 +304,7 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
     loadTexture(diffuseName, &batch->diffuse);
     loadTexture(normalName, &batch->normal);
     loadTexture(specName, &batch->spec);
+    loadTexture(displacementName, &batch->displacement);
 
     // If there is a specular map, silently drop the specular parameters
     if (batch->spec && specParams)
@@ -288,6 +313,8 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
     batch->specParams = specParams;
     batch->specIntensity = specIntensity / 2.0f;
     batch->specPower = log2f(specPower) * (1.0f / 8.0f);
+    batch->dispScale = dispScale;
+    batch->dispBias = dispBias;
 
     return true;
 }
@@ -356,6 +383,10 @@ bool world::upload(const m::perspectiveProjection &project) {
             neoFatal("failed to upload world textures");
         if (it.normal && !it.normal->upload())
             neoFatal("failed to upload world textures");
+        if (it.spec && !it.spec->upload())
+            neoFatal("failed to upload world textures");
+        if (it.displacement && !it.displacement->upload())
+            neoFatal("failed to upload world textures");
     }
 
     if (!m_directionalLightQuad.upload())
@@ -394,6 +425,8 @@ bool world::upload(const m::perspectiveProjection &project) {
     // 4 = diffuse and spec param permutation
     // 5 = diffuse and normal and spec permutation
     // 6 = diffuse and normal and spec param permutation
+    // 7 = diffuse and normal and parallax and spec permutation
+    // 8 = diffuse and normal and parallax and spec param permutation
     if (!m_geomMethods[0].init())
         neoFatal("failed to initialize geometry rendering method\n");
     if (!m_geomMethods[1].init({"USE_DIFFUSE"}))
@@ -407,6 +440,12 @@ bool world::upload(const m::perspectiveProjection &project) {
     if (!m_geomMethods[5].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_SPECMAP"}))
         neoFatal("failed to initialize geometry rendering method\n");
     if (!m_geomMethods[6].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_SPECPARAMS"}))
+        neoFatal("failed to initialize geometry rendering method\n");
+    if (!m_geomMethods[7].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_PARALLAX"}))
+        neoFatal("failed to initialize geometry rendering method\n");
+    if (!m_geomMethods[8].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_PARALLAX", "USE_SPECMAP"}))
+        neoFatal("failed to initialize geometry rendering method\n");
+    if (!m_geomMethods[9].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_PARALLAX", "USE_SPECPARAMS"}))
         neoFatal("failed to initialize geometry rendering method\n");
 
     if (!m_directionalLightMethod.init())
@@ -430,6 +469,9 @@ bool world::upload(const m::perspectiveProjection &project) {
     // 4 = diffuse and spec param permutation
     // 5 = diffuse and normal and spec permutation
     // 6 = diffuse and normal and spec param permutation
+    // 7 = diffuse and normal and parallax permutation
+    // 8 = diffuse and normal and parallax and spec permutation
+    // 9 = diffuse and normal and parallax and spec param permutation
     m_geomMethods[0].enable();
 
     m_geomMethods[1].enable();
@@ -454,6 +496,22 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_geomMethods[6].enable();
     m_geomMethods[6].setColorTextureUnit(0);
     m_geomMethods[6].setNormalTextureUnit(1);
+
+    m_geomMethods[7].enable();
+    m_geomMethods[7].setColorTextureUnit(0);
+    m_geomMethods[7].setNormalTextureUnit(1);
+    m_geomMethods[7].setDispTextureUnit(3);
+
+    m_geomMethods[8].enable();
+    m_geomMethods[8].setColorTextureUnit(0);
+    m_geomMethods[8].setNormalTextureUnit(1);
+    m_geomMethods[8].setSpecTextureUnit(2);
+    m_geomMethods[7].setDispTextureUnit(3);
+
+    m_geomMethods[9].enable();
+    m_geomMethods[9].setColorTextureUnit(0);
+    m_geomMethods[9].setNormalTextureUnit(1);
+    m_geomMethods[7].setDispTextureUnit(3);
 
     u::print("[world] => uploaded\n");
     return true;
@@ -486,7 +544,18 @@ void world::geometryPass(const rendererPipeline &pipeline) {
             // Specularity parameter permutation (global spec map)
             if (it.normal) {
                 // diffuse + normal + specparams
-                m_geomMethods[6].enable();
+                if (it.displacement) {
+                    m_geomMethods[9].enable();
+                    m_geomMethods[9].setEyeWorldPos(p.getPosition());
+                    m_geomMethods[9].setParallax(it.dispScale, it.dispBias);
+                    m_geomMethods[9].setSpecIntensity(it.specIntensity);
+                    m_geomMethods[9].setSpecPower(it.specPower);
+                    it.displacement->bind(GL_TEXTURE3);
+                } else {
+                    m_geomMethods[6].enable();
+                    m_geomMethods[6].setSpecIntensity(it.specIntensity);
+                    m_geomMethods[6].setSpecPower(it.specPower);
+                }
                 it.diffuse->bind(GL_TEXTURE0);
                 it.normal->bind(GL_TEXTURE1);
             } else {
@@ -501,13 +570,25 @@ void world::geometryPass(const rendererPipeline &pipeline) {
                 if (it.normal) {
                     if (it.spec) {
                         // diffuse + normal + spec
-                        m_geomMethods[5].enable();
+                        if (it.displacement) {
+                            m_geomMethods[8].enable();
+                            m_geomMethods[8].setEyeWorldPos(p.getPosition());
+                            m_geomMethods[8].setParallax(it.dispScale, it.dispBias);
+                            it.displacement->bind(GL_TEXTURE3);
+                        } else
+                            m_geomMethods[5].enable();
                         it.diffuse->bind(GL_TEXTURE0);
                         it.normal->bind(GL_TEXTURE1);
                         it.spec->bind(GL_TEXTURE2);
                     } else {
                         // diffuse + normal
-                        m_geomMethods[2].enable();
+                        if (it.displacement) {
+                            m_geomMethods[7].enable();
+                            m_geomMethods[7].setEyeWorldPos(p.getPosition());
+                            m_geomMethods[7].setParallax(it.dispScale, it.dispBias);
+                            it.displacement->bind(GL_TEXTURE3);
+                        } else
+                            m_geomMethods[2].enable();
                         it.diffuse->bind(GL_TEXTURE0);
                         it.normal->bind(GL_TEXTURE1);
                     }
