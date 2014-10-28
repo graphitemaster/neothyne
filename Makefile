@@ -59,7 +59,7 @@ GAME_DIR = game
 all: $(GAME_BIN)
 
 $(GAME_BIN): $(GAME_OBJECTS)
-	$(CXX) $(ENGINE_LDFLAGS) $(GAME_OBJECTS) -o $@
+	$(CXX) $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@
 
 .cpp.o:
 	$(CXX) -c $(ENGINE_CXXFLAGS) $< -o $@
