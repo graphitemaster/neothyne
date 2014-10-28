@@ -24,6 +24,8 @@ struct gBuffer {
     void bindReading();
     void bindWriting();
 
+    GLuint depth() const;
+
 private:
     void destroy();
 

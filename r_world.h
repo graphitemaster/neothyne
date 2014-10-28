@@ -85,13 +85,37 @@ private:
     } m_directionalLightLocation;
 };
 
-struct depthMethod : method {
+struct finalMethod : method {
     bool init();
 
     void setWVP(const m::mat4 &wvp);
+    void setColorTextureUnit(int unit);
+    void setPerspectiveProjection(const m::perspectiveProjection &project);
 
 private:
     GLint m_WVPLocation;
+    GLint m_colorMapLocation;
+    GLint m_screenSizeLocation;
+};
+
+
+struct finalComposite {
+    finalComposite();
+    ~finalComposite();
+
+    bool init(const m::perspectiveProjection &project, GLuint depth);
+
+    void update(const m::perspectiveProjection &project, GLuint depth);
+    void bindReading();
+    void bindWriting();
+
+private:
+    void destroy();
+
+    GLuint m_fbo;
+    GLuint m_texture;
+    size_t m_width;
+    size_t m_height;
 };
 
 struct renderTextureBatch {
@@ -124,12 +148,8 @@ struct world {
     void render(const rendererPipeline &p);
 
 private:
-    void depthPass(const rendererPipeline &pipeline);
-    void depthPrePass(const rendererPipeline &pipeline);
     void geometryPass(const rendererPipeline &pipeline);
-    void beginLightPass();
-    void pointLightPass(const rendererPipeline &pipeline);
-    void directionalLightPass(const rendererPipeline &pipeline);
+    void directionalLightPass(const rendererPipeline &pipelines);
 
     bool loadMaterial(const kdMap &map, renderTextureBatch *batch);
 
@@ -142,8 +162,7 @@ private:
     };
     GLuint m_vao;
 
-    // The following rendering methods / passes for the world
-    depthMethod m_depthMethod;
+    // world shading methods and permutations
 
     // 0 = pass-through shader (vertex normals)
     // 1 = diffuse only permutation
@@ -154,11 +173,14 @@ private:
     // 6 = diffuse and normal and spec param permutation
     geomMethod m_geomMethods[7];
 
+    // final composite method
+    finalMethod m_finalMethod;
+
     directionalLightMethod m_directionalLightMethod;
 
     // Other things in the world to render
     skybox m_skybox;
-    quad m_directionalLightQuad;
+    quad m_quad;
     u::vector<billboard> m_billboards;
 
     // The world itself
@@ -169,7 +191,11 @@ private:
 
     // World lights
     directionalLight m_directionalLight;
+
     gBuffer m_gBuffer;
+    finalComposite m_final;
+
+    m::mat4 m_identity;
 };
 
 }

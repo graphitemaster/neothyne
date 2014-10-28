@@ -90,7 +90,6 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
 }
 
 void gBuffer::bindReading() {
-    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     GLenum format = gl::has(ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
     for (size_t i = 0; i < kMax; i++) {
@@ -101,6 +100,10 @@ void gBuffer::bindReading() {
 
 void gBuffer::bindWriting() {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
+}
+
+GLuint gBuffer::depth() const {
+    return m_textures[kDepth];
 }
 
 }

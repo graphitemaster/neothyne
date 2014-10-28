@@ -154,23 +154,116 @@ void geomMethod::setSpecPower(float power) {
     gl::Uniform1f(m_specPowerLocation, power);
 }
 
-///! Depth Pass Method
-bool depthMethod::init() {
+///! Final Composite Method
+bool finalMethod::init() {
     if (!method::init())
         return false;
-    if (!addShader(GL_VERTEX_SHADER, "shaders/depthpass.vs"))
+
+    if (gl::has(ARB_texture_rectangle))
+        method::define("HAS_TEXTURE_RECTANGLE");
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/final.vs"))
         return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/depthpass.fs"))
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/final.fs"))
         return false;
     if (!finalize())
         return false;
 
     m_WVPLocation = getUniformLocation("gWVP");
+    m_colorMapLocation = getUniformLocation("gColorMap");
+    m_screenSizeLocation = getUniformLocation("gScreenSize");
     return true;
 }
 
-void depthMethod::setWVP(const m::mat4 &wvp) {
+void finalMethod::setWVP(const m::mat4 &wvp) {
     gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+}
+
+void finalMethod::setColorTextureUnit(int unit) {
+    gl::Uniform1i(m_colorMapLocation, unit);
+}
+
+void finalMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
+    gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
+    // TODO: frustum in final shader to do other things eventually
+    //gl::Uniform2f(m_screenFrustumLocation, project.nearp, project.farp);
+}
+
+finalComposite::finalComposite()
+    : m_fbo(0)
+    , m_texture(0)
+    , m_width(0)
+    , m_height(0)
+{
+}
+
+finalComposite::~finalComposite() {
+    destroy();
+}
+
+void finalComposite::destroy() {
+    if (m_fbo)
+        gl::DeleteFramebuffers(1, &m_fbo);
+    if (m_texture)
+        gl::DeleteTextures(1, &m_texture);
+}
+
+void finalComposite::update(const m::perspectiveProjection &project, GLuint depth) {
+    size_t width = project.width;
+    size_t height = project.height;
+
+    if (m_width != width || m_height != height) {
+        destroy();
+        init(project, depth);
+    }
+}
+
+bool finalComposite::init(const m::perspectiveProjection &project, GLuint depth) {
+    m_width = project.width;
+    m_height = project.height;
+
+    gl::GenFramebuffers(1, &m_fbo);
+    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
+
+    gl::GenTextures(1, &m_texture);
+
+    GLenum format = gl::has(ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+
+    // final composite
+    gl::BindTexture(format, m_texture);
+    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format, m_texture, 0);
+
+    // depth
+    gl::BindTexture(format, depth);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, format, depth, 0);
+
+    static GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
+    gl::DrawBuffers(1, drawBuffers);
+
+    GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+        return false;
+
+    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    return true;
+}
+
+void finalComposite::bindReading() {
+    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // Go to screen
+    GLenum format = gl::has(ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    gl::ActiveTexture(GL_TEXTURE0);
+    gl::BindTexture(format, m_texture);
+}
+
+void finalComposite::bindWriting() {
+    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
 }
 
 ///! renderer
@@ -339,9 +432,14 @@ bool world::load(const kdMap &map) {
 }
 
 bool world::upload(const m::perspectiveProjection &project) {
+    m_identity.loadIdentity();
+
     // upload skybox
     if (!m_skybox.upload())
         neoFatal("failed to upload skybox");
+
+    if (!m_quad.upload())
+        neoFatal("failed to upload screen-space quad");
 
     // upload billboards
     for (auto &it : m_billboards) {
@@ -357,9 +455,6 @@ bool world::upload(const m::perspectiveProjection &project) {
         if (it.normal && !it.normal->upload())
             neoFatal("failed to upload world textures");
     }
-
-    if (!m_directionalLightQuad.upload())
-        neoFatal("failed to upload directional light quad");
 
     gl::GenVertexArrays(1, &m_vao);
     gl::BindVertexArray(m_vao);
@@ -383,8 +478,8 @@ bool world::upload(const m::perspectiveProjection &project) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
 
-    if (!m_depthMethod.init())
-        neoFatal("failed to initialize depth pass method\n");
+    if (!m_finalMethod.init())
+        neoFatal("failed to final composite method");
 
     // Init the shader permutations
     // 0 = pass-through shader (vertex normals)
@@ -413,10 +508,11 @@ bool world::upload(const m::perspectiveProjection &project) {
         neoFatal("failed to initialize directional light rendering method");
 
     // setup g-buffer
-    if (!m_gBuffer.init(project))
-        neoFatal("failed to initialize G-buffer");
+    if (!m_gBuffer.init(project) || !m_final.init(project, m_gBuffer.depth()))
+        neoFatal("failed to initialize world renderer");
 
     m_directionalLightMethod.enable();
+    m_directionalLightMethod.setWVP(m_identity);
     m_directionalLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
     m_directionalLightMethod.setNormalTextureUnit(gBuffer::kNormal);
     m_directionalLightMethod.setSpecTextureUnit(gBuffer::kSpec);
@@ -455,6 +551,10 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_geomMethods[6].setColorTextureUnit(0);
     m_geomMethods[6].setNormalTextureUnit(1);
 
+    m_finalMethod.enable();
+    m_finalMethod.setWVP(m_identity);
+    m_finalMethod.setColorTextureUnit(0);
+
     u::print("[world] => uploaded\n");
     return true;
 }
@@ -462,15 +562,9 @@ bool world::upload(const m::perspectiveProjection &project) {
 void world::geometryPass(const rendererPipeline &pipeline) {
     rendererPipeline p = pipeline;
 
-    m_gBuffer.bindWriting();
-
-    // Only the geometry pass should update the depth buffer
-    gl::DepthMask(GL_TRUE);
     gl::Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // Only the geometry pass should update the depth buffer
-    gl::Enable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
+    gl::Enable(GL_DEPTH_TEST);
 
     // Update the shader permuations
     for (size_t i = 0; i < sizeof(m_geomMethods)/sizeof(*m_geomMethods); i++) {
@@ -531,23 +625,12 @@ void world::geometryPass(const rendererPipeline &pipeline) {
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }
-
-    // The depth buffer is populated and the stencil pass will require it.
-    // However, it will not write to it.
-    gl::DepthMask(GL_FALSE);
     gl::Disable(GL_DEPTH_TEST);
 }
 
-void world::beginLightPass() {
-    gl::Enable(GL_BLEND);
-    gl::BlendEquation(GL_FUNC_ADD);
-    gl::BlendFunc(GL_ONE, GL_ONE);
-
-    m_gBuffer.bindReading();
-    gl::Clear(GL_COLOR_BUFFER_BIT);
-}
-
 void world::directionalLightPass(const rendererPipeline &pipeline) {
+    gl::Clear(GL_COLOR_BUFFER_BIT);
+
     const m::perspectiveProjection &project = pipeline.getPerspectiveProjection();
     m_directionalLightMethod.enable();
 
@@ -556,64 +639,51 @@ void world::directionalLightPass(const rendererPipeline &pipeline) {
 
     m_directionalLightMethod.setEyeWorldPos(pipeline.getPosition());
 
-    m::mat4 wvp;
-    wvp.loadIdentity();
-
     rendererPipeline p = pipeline;
-    m_directionalLightMethod.setWVP(wvp);
     m_directionalLightMethod.setInverse(p.getInverseTransform());
-    m_directionalLightQuad.render();
-}
-
-void world::depthPass(const rendererPipeline &pipeline) {
-    rendererPipeline p = pipeline;
-    m_depthMethod.enable();
-    m_depthMethod.setWVP(p.getWVPTransform());
-
-    gl::Enable(GL_DEPTH_TEST); // make sure depth testing is enabled
-    gl::Clear(GL_DEPTH_BUFFER_BIT); // clear
-
-    // do a depth pass
-    gl::BindVertexArray(m_vao);
-    gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
-}
-
-void world::depthPrePass(const rendererPipeline &pipeline) {
-    gl::DepthMask(GL_TRUE);
-    gl::DepthFunc(GL_LESS);
-    gl::ColorMask(0.0f, 0.0f, 0.0f, 0.0f);
-
-    depthPass(pipeline);
-
-    gl::DepthFunc(GL_LEQUAL);
-    gl::DepthMask(GL_FALSE);
-    gl::ColorMask(1.0f, 1.0f, 1.0f, 1.0f);
+    m_quad.render();
 }
 
 void world::render(const rendererPipeline &pipeline) {
-    m_gBuffer.update(pipeline.getPerspectiveProjection());
+    rendererPipeline p = pipeline;
+    auto project = p.getPerspectiveProjection();
 
-    // depth pre pass
-    depthPrePass(pipeline);
+    m_gBuffer.update(project);
+    m_final.update(project, m_gBuffer.depth());
 
-    // geometry pass
+    /// geometry pass
+    m_gBuffer.bindWriting(); // write to the g-buffer
     geometryPass(pipeline);
 
-    // begin lighting pass
-    beginLightPass();
+    /// lighting passes
+    gl::Enable(GL_BLEND);
+    gl::BlendEquation(GL_FUNC_ADD);
+    gl::BlendFunc(GL_ONE, GL_ONE);
 
-    // directional light pass
+    m_gBuffer.bindReading(); // read from the g-buffer
+    m_final.bindWriting();   // write to final composite buffer
+
     directionalLightPass(pipeline);
 
-    // Now standard forward rendering
-    //m_gBuffer.bindReading();
+    //gl::Disable(GL_BLEND);
+
+    /// forward rendering passes
+
+    // Forward render the skybox and other things last. These will go to the
+    // final composite buffer and use the final composite depth buffer as well
+    // for depth testing.
     gl::Enable(GL_DEPTH_TEST);
     m_skybox.render(pipeline);
-
-    gl::DepthMask(GL_TRUE);
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for (auto &it : m_billboards)
         it.render(pipeline);
+    gl::Disable(GL_DEPTH_TEST);
+
+    /// final composite pass
+    m_final.bindReading();
+    m_finalMethod.enable();
+    m_finalMethod.setPerspectiveProjection(project);
+    m_quad.render();
 }
 
 }

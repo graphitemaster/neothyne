@@ -96,6 +96,7 @@ void skybox::render(const rendererPipeline &pipeline) {
     m_method.setWorld(worldPipeline.getWorldTransform());
 
     // render skybox cube
+    gl::DepthFunc(GL_LEQUAL);
     gl::CullFace(GL_FRONT);
 
     m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
@@ -103,6 +104,7 @@ void skybox::render(const rendererPipeline &pipeline) {
     gl::BindVertexArray(m_vao);
     gl::DrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_BYTE, 0);
     gl::BindVertexArray(0);
+    gl::DepthFunc(GL_LESS);
     gl::CullFace(GL_BACK);
 }
 
