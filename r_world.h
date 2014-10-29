@@ -125,6 +125,7 @@ private:
 };
 
 struct renderTextureBatch {
+    size_t permute;
     size_t start;
     size_t count;
     size_t index;
@@ -172,23 +173,8 @@ private:
     GLuint m_vao;
 
     // world shading methods and permutations
-
-    // 0 = pass-through shader (vertex normals)
-    // 1 = diffuse only permutation
-    // 2 = diffuse and normal permutation
-    // 3 = diffuse and spec permutation
-    // 4 = diffuse and spec param permutation
-    // 5 = diffuse and normal and spec permutation
-    // 6 = diffuse and normal and spec param permutation
-    // 7 = diffuse and normal and parallax permutation
-    // 8 = diffuse and normal and spec and parallax permutation
-    // 9 = diffuse and normal and spec param and parallax permutation
-    geomMethod m_geomMethods[10];
-
-    // final composite method
-    // 0 = pass-through shader
-    // 1 = fxaa
-    finalMethod m_finalMethods[2];
+    u::vector<geomMethod> m_geomMethods;
+    u::vector<finalMethod> m_finalMethods;
 
     directionalLightMethod m_directionalLightMethod;
 

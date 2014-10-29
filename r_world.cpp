@@ -340,6 +340,102 @@ world::~world() {
         delete it.second;
 }
 
+/// shader permutations
+struct geomPermutation {
+    int permute;    // flags of the permutations
+    int color;      // color texture unit (or -1 if not to be used)
+    int normal;     // normal texture unit (or -1 if not to be used)
+    int spec;       // ...
+    int disp;       // ...
+};
+
+struct finalPermutation {
+    int permute;    // flags of the permutations
+};
+
+// All the final shader permutations
+enum {
+    kFinalPermFXAA       = 1 << 0
+};
+
+// All the geometry shader permutations
+enum {
+    kGeomPermDiffuse     = 1 << 0,
+    kGeomPermNormalMap   = 1 << 1,
+    kGeomPermSpecMap     = 1 << 2,
+    kGeomPermSpecParams  = 1 << 3,
+    kGeomPermParallax    = 1 << 4
+};
+
+// The prelude defines to compile that final shader permutation
+// These must be in the same order as the enums
+static const char *finalPermutationNames[] = {
+    "USE_FXAA"
+};
+
+// The prelude defines to compile that geometry shader permutation
+// These must be in the same order as the enums
+static const char *geomPermutationNames[] = {
+    "USE_DIFFUSE",
+    "USE_NORMALMAP",
+    "USE_SPECMAP",
+    "USE_SPECPARAMS",
+    "USE_PARALLAX"
+};
+
+// All the possible final permutations
+static const finalPermutation finalPermutations[] = {
+    { 0 },
+    { kFinalPermFXAA }
+};
+
+// All the possible geometry permutations
+static const geomPermutation geomPermutations[] = {
+    { 0,                                                                              -1, -1, -1, -1 },
+    { kGeomPermDiffuse,                                                                0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap,                                           0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecMap,                                             0, -1,  1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecParams,                                          0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap,                                           0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecMap,                        0,  1,  2, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecParams,                     0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermParallax,                       0,  1, -1,  2 },
+    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecMap    | kGeomPermParallax, 0,  1,  2,  3 },
+    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecParams | kGeomPermParallax, 0,  1, -1,  2 }
+};
+
+// Generate the list of permutation names for the shader
+template <typename T, size_t N, typename U>
+static u::vector<const char *> generatePermutation(const T(&list)[N], const U &p) {
+    u::vector<const char *> permutes;
+    for (size_t i = 0; i < N; i++)
+        if (p.permute & (1 << i))
+            permutes.push_back(list[i]);
+    return permutes;
+}
+
+// Calculate the correct permutation to use for the final composite
+static size_t finalCalculatePermutation() {
+    for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++)
+        if (r_fxaa && (geomPermutations[i].permute & kFinalPermFXAA))
+            return i;
+    return 0;
+}
+
+// Calculate the correct permutation to use for a given rendering batch
+static size_t geomCalculatePermutation(const renderTextureBatch &batch) {
+    int permute = 0;
+    if (batch.diffuse)      permute |= kGeomPermDiffuse;
+    if (batch.normal)       permute |= kGeomPermNormalMap;
+    if (batch.spec)         permute |= kGeomPermSpecMap;
+    if (batch.displacement) permute |= kGeomPermParallax;
+    if (batch.specParams)   permute |= kGeomPermSpecParams;
+    for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++)
+        if (geomPermutations[i].permute == permute)
+            return i;
+    return 0;
+}
+
 bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
     u::string materialName = map.textures[batch->index].name;
     u::string diffuseName;
@@ -415,6 +511,7 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
     batch->specPower = log2f(specPower) * (1.0f / 8.0f);
     batch->dispScale = dispScale;
     batch->dispBias = dispBias;
+    batch->permute = geomCalculatePermutation(*batch);
 
     return true;
 }
@@ -516,44 +613,30 @@ bool world::upload(const m::perspectiveProjection &project) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
 
-    // Init the shader permuations
-    // 0 = pass-through shader
-    // 1 = fxaa
-    if (!m_finalMethods[0].init())
-        neoFatal("failed to initialize final composite method");
-    if (!m_finalMethods[1].init({"USE_FXAA"}))
-        neoFatal("failed to initialize final composite method");
+    // final shader permutations
+    static const size_t finalCount = sizeof(finalPermutations)/sizeof(finalPermutations[0]);
+    m_finalMethods.resize(finalCount);
+    for (size_t i = 0; i < finalCount; i++) {
+        const auto &p = finalPermutations[i];
+        if (!m_finalMethods[i].init(generatePermutation(finalPermutationNames, p)))
+            neoFatal("failed to initialize final composite rendering method");
+        m_finalMethods[i].enable();
+        m_finalMethods[i].setWVP(m_identity);
+    }
 
-    // Init the shader permutations
-    // 0 = pass-through shader (vertex normals)
-    // 1 = diffuse only permutation
-    // 2 = diffuse and normal permutation
-    // 3 = diffuse and spec permutation
-    // 4 = diffuse and spec param permutation
-    // 5 = diffuse and normal and spec permutation
-    // 6 = diffuse and normal and spec param permutation
-    // 7 = diffuse and normal and parallax and spec permutation
-    // 8 = diffuse and normal and parallax and spec param permutation
-    if (!m_geomMethods[0].init())
-        neoFatal("failed to initialize geometry rendering method\n");
-    if (!m_geomMethods[1].init({"USE_DIFFUSE"}))
-        neoFatal("failed to initialize geometry rendering method\n");
-    if (!m_geomMethods[2].init({"USE_DIFFUSE", "USE_NORMALMAP"}))
-        neoFatal("failed to initialize geometry rendering method\n");
-    if (!m_geomMethods[3].init({"USE_DIFFUSE", "USE_SPECMAP"}))
-        neoFatal("failed to initialize geometry rendering method\n");
-    if (!m_geomMethods[4].init({"USE_DIFFUSE", "USE_SPECPARAMS"}))
-        neoFatal("failed to initialize geometry rendering method\n");
-    if (!m_geomMethods[5].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_SPECMAP"}))
-        neoFatal("failed to initialize geometry rendering method\n");
-    if (!m_geomMethods[6].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_SPECPARAMS"}))
-        neoFatal("failed to initialize geometry rendering method\n");
-    if (!m_geomMethods[7].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_PARALLAX"}))
-        neoFatal("failed to initialize geometry rendering method\n");
-    if (!m_geomMethods[8].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_PARALLAX", "USE_SPECMAP"}))
-        neoFatal("failed to initialize geometry rendering method\n");
-    if (!m_geomMethods[9].init({"USE_DIFFUSE", "USE_NORMALMAP", "USE_PARALLAX", "USE_SPECPARAMS"}))
-        neoFatal("failed to initialize geometry rendering method\n");
+    // geometry shader permutations
+    static const size_t geomCount = sizeof(geomPermutations)/sizeof(geomPermutations[0]);
+    m_geomMethods.resize(geomCount);
+    for (size_t i = 0; i < geomCount; i++) {
+        const auto &p = geomPermutations[i];
+        if (!m_geomMethods[i].init(generatePermutation(geomPermutationNames, p)))
+            neoFatal("failed to initialize geometry rendering method\n");
+        m_geomMethods[i].enable();
+        if (p.color  != -1) m_geomMethods[i].setColorTextureUnit(p.color);
+        if (p.normal != -1) m_geomMethods[i].setNormalTextureUnit(p.normal);
+        if (p.spec   != -1) m_geomMethods[i].setSpecTextureUnit(p.spec);
+        if (p.disp   != -1) m_geomMethods[i].setDispTextureUnit(p.disp);
+    }
 
     if (!m_directionalLightMethod.init())
         neoFatal("failed to initialize directional light rendering method");
@@ -569,66 +652,6 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_directionalLightMethod.setSpecTextureUnit(gBuffer::kSpec);
     m_directionalLightMethod.setDepthTextureUnit(gBuffer::kDepth);
 
-    // Setup the shader permutations
-    // 0 = pass-through shader (vertex normals)
-    // 1 = diffuse only permutation
-    // 2 = diffuse and normal permutation
-    // 3 = diffuse and spec permutation
-    // 4 = diffuse and spec param permutation
-    // 5 = diffuse and normal and spec permutation
-    // 6 = diffuse and normal and spec param permutation
-    // 7 = diffuse and normal and parallax permutation
-    // 8 = diffuse and normal and parallax and spec permutation
-    // 9 = diffuse and normal and parallax and spec param permutation
-    m_geomMethods[0].enable();
-
-    m_geomMethods[1].enable();
-    m_geomMethods[1].setColorTextureUnit(0);
-
-    m_geomMethods[2].enable();
-    m_geomMethods[2].setColorTextureUnit(0);
-    m_geomMethods[2].setNormalTextureUnit(1);
-
-    m_geomMethods[3].enable();
-    m_geomMethods[3].setColorTextureUnit(0);
-    m_geomMethods[3].setSpecTextureUnit(1);
-
-    m_geomMethods[4].enable();
-    m_geomMethods[4].setColorTextureUnit(0);
-
-    m_geomMethods[5].enable();
-    m_geomMethods[5].setColorTextureUnit(0);
-    m_geomMethods[5].setNormalTextureUnit(1);
-    m_geomMethods[5].setSpecTextureUnit(2);
-
-    m_geomMethods[6].enable();
-    m_geomMethods[6].setColorTextureUnit(0);
-    m_geomMethods[6].setNormalTextureUnit(1);
-
-    m_geomMethods[7].enable();
-    m_geomMethods[7].setColorTextureUnit(0);
-    m_geomMethods[7].setNormalTextureUnit(1);
-    m_geomMethods[7].setDispTextureUnit(3);
-
-    m_geomMethods[8].enable();
-    m_geomMethods[8].setColorTextureUnit(0);
-    m_geomMethods[8].setNormalTextureUnit(1);
-    m_geomMethods[8].setSpecTextureUnit(2);
-    m_geomMethods[7].setDispTextureUnit(3);
-
-    m_geomMethods[9].enable();
-    m_geomMethods[9].setColorTextureUnit(0);
-    m_geomMethods[9].setNormalTextureUnit(1);
-    m_geomMethods[7].setDispTextureUnit(3);
-
-    m_finalMethods[0].enable();
-    m_finalMethods[0].setWVP(m_identity);
-    m_finalMethods[0].setColorTextureUnit(0);
-
-    m_finalMethods[1].enable();
-    m_finalMethods[1].setWVP(m_identity);
-    m_finalMethods[1].setColorTextureUnit(0);
-
     u::print("[world] => uploaded\n");
     return true;
 }
@@ -640,85 +663,30 @@ void world::geometryPass(const rendererPipeline &pipeline) {
     gl::Disable(GL_BLEND);
     gl::Enable(GL_DEPTH_TEST);
 
-    // Update the shader permuations
-    for (size_t i = 0; i < sizeof(m_geomMethods)/sizeof(*m_geomMethods); i++) {
-        m_geomMethods[i].enable();
-        m_geomMethods[i].setWVP(p.getWVPTransform());
-        m_geomMethods[i].setWorld(p.getWorldTransform());
-    }
-
     // Render the world
     gl::BindVertexArray(m_vao);
     for (auto &it : m_textureBatches) {
-        if (it.specParams) {
-            // Specularity parameter permutation (global spec map)
-            if (it.normal) {
-                // diffuse + normal + specparams
-                if (it.displacement) {
-                    m_geomMethods[9].enable();
-                    m_geomMethods[9].setEyeWorldPos(p.getPosition());
-                    m_geomMethods[9].setParallax(it.dispScale, it.dispBias);
-                    m_geomMethods[9].setSpecIntensity(it.specIntensity);
-                    m_geomMethods[9].setSpecPower(it.specPower);
-                    it.displacement->bind(GL_TEXTURE3);
-                } else {
-                    m_geomMethods[6].enable();
-                    m_geomMethods[6].setSpecIntensity(it.specIntensity);
-                    m_geomMethods[6].setSpecPower(it.specPower);
-                }
-                it.diffuse->bind(GL_TEXTURE0);
-                it.normal->bind(GL_TEXTURE1);
-            } else {
-                // diffuse + specparams
-                m_geomMethods[4].enable();
-                it.diffuse->bind(GL_TEXTURE0);
-                m_geomMethods[4].setSpecIntensity(it.specIntensity);
-                m_geomMethods[4].setSpecPower(it.specPower);
-            }
-        } else {
-            if (it.diffuse) {
-                if (it.normal) {
-                    if (it.spec) {
-                        // diffuse + normal + spec
-                        if (it.displacement) {
-                            m_geomMethods[8].enable();
-                            m_geomMethods[8].setEyeWorldPos(p.getPosition());
-                            m_geomMethods[8].setParallax(it.dispScale, it.dispBias);
-                            it.displacement->bind(GL_TEXTURE3);
-                        } else
-                            m_geomMethods[5].enable();
-                        it.diffuse->bind(GL_TEXTURE0);
-                        it.normal->bind(GL_TEXTURE1);
-                        it.spec->bind(GL_TEXTURE2);
-                    } else {
-                        // diffuse + normal
-                        if (it.displacement) {
-                            m_geomMethods[7].enable();
-                            m_geomMethods[7].setEyeWorldPos(p.getPosition());
-                            m_geomMethods[7].setParallax(it.dispScale, it.dispBias);
-                            it.displacement->bind(GL_TEXTURE3);
-                        } else
-                            m_geomMethods[2].enable();
-                        it.diffuse->bind(GL_TEXTURE0);
-                        it.normal->bind(GL_TEXTURE1);
-                    }
-                } else {
-                    if (it.spec) {
-                        // diffuse + spec
-                        m_geomMethods[3].enable();
-                        it.diffuse->bind(GL_TEXTURE0);
-                        it.spec->bind(GL_TEXTURE1);
-                    } else {
-                        // diffuse
-                        m_geomMethods[1].enable();
-                        it.diffuse->bind(GL_TEXTURE0);
-                    }
-                }
-            } else {
-                // null
-                m_geomMethods[0].enable();
-            }
+        auto &permutation = geomPermutations[it.permute];
+        auto &method = m_geomMethods[it.permute];
+        method.enable();
+        method.setWVP(p.getWVPTransform());
+        method.setWorld(p.getWorldTransform());
+        if (permutation.permute & kGeomPermParallax) {
+            method.setEyeWorldPos(p.getPosition());
+            method.setParallax(it.dispScale, it.dispBias);
         }
+        if (permutation.permute & kGeomPermSpecParams) {
+            method.setSpecIntensity(it.specIntensity);
+            method.setSpecPower(it.specPower);
+        }
+        if (permutation.permute & kGeomPermDiffuse)
+            it.diffuse->bind(GL_TEXTURE0 + permutation.color);
+        if (permutation.permute & kGeomPermNormalMap)
+            it.normal->bind(GL_TEXTURE0 + permutation.normal);
+        if (permutation.permute & kGeomPermSpecMap)
+            it.spec->bind(GL_TEXTURE0 + permutation.spec);
+        if (permutation.permute & kGeomPermParallax)
+            it.displacement->bind(GL_TEXTURE0 + permutation.disp);
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }
@@ -778,13 +746,10 @@ void world::render(const rendererPipeline &pipeline) {
 
     /// final composite pass
     m_final.bindReading();
-    if (r_fxaa) {
-        m_finalMethods[1].enable();
-        m_finalMethods[1].setPerspectiveProjection(project);
-    } else {
-        m_finalMethods[0].enable();
-        m_finalMethods[0].setPerspectiveProjection(project);
-    }
+    const size_t index = finalCalculatePermutation();
+    auto &it = m_finalMethods[index];
+    it.enable();
+    it.setPerspectiveProjection(project);
     m_quad.render();
 }
 
