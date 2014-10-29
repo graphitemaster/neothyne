@@ -4,11 +4,11 @@
 
 namespace u {
 
-// unlike the standard libraries implementation of pair. This one implements
+// unlike the standard librarie's implementation of pair. This one implements
 // empty-base-class-optimization. If one of the template parameters contains
 // an incomplete type or an empty type (void, empty class, etc), the representation
 // of the class will consume only the memory of the one type which isn't.
-// in other worse, sizeof(pair<int, void>) == sizeof(int) or, struct foo {};
+// in other words, sizeof(pair<int, void>) == sizeof(int) or, struct foo {};
 // sizeof(pair<foo, int>) == sizeof(int).
 namespace detail {
     template <typename T>
