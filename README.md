@@ -24,7 +24,7 @@ embodies the following:
   * Specular lighting (with power and intensity terms)
   * Sky meshes (skybox, skydome, etc, any mesh will suffice).
   * Normal mapping (dot3 bump mapping)
-  * Displacement mapping (steep parallax and relif mapping)
+  * Displacement mapping (steep parallax and relief mapping)
   * Sky fog gradient
   * FXAA
 
