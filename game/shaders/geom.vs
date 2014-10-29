@@ -29,7 +29,7 @@ void main() {
     bitangent0 = w * cross(normal0, tangent0);
 
 #ifdef USE_PARALLAX
-    float eyePosition = (gWorld * vec4(position, 1.0f)).xyz;
+    vec3 eyePosition = (gWorld * vec4(position, 1.0f)).xyz;
     vec3 eyeDirection = gEyeWorldPosition - position;
     mat3 eyeTBN = mat3(tangent0, bitangent0, normal0);
     eyePosition0 = eyeDirection * eyeTBN;
