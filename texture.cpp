@@ -1700,19 +1700,12 @@ void texture::convert() {
         for (unsigned char *end = &data[length]; data < end; data += m_bpp)
             u::swap(data[0], data[2]);
     } else if (F == TEX_RG) {
-        // Get the data into the right order
-        // RGB -> RGB
-        // BGRA -> RGBA
-        if (m_format == TEX_BGR)
-            convert<TEX_RGB>();
-        else if (m_format == TEX_BGRA)
-            convert<TEX_RGBA>();
-
         // Eliminate blue and alpha
         u::vector<unsigned char> rework;
         rework.reserve(m_width * m_height * 2);
+        const size_t roff = (m_format == TEX_BGR || m_format == TEX_BGRA) ? 2 : 0;
         for (size_t i = 0; i < m_data.size(); i += m_bpp) {
-            rework.push_back(m_data[i]); // R
+            rework.push_back(m_data[i + roff]); // R
             rework.push_back(m_data[i + 1]); // G
         }
         // Eliminate the memory of the original texture and swap in the new one
