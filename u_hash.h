@@ -45,8 +45,8 @@ struct hash_node<K, void> {
     hash_node(const K& key);
 
     const K first;
-    hash_node* next;
-    hash_node* prev;
+    hash_node *next;
+    hash_node *prev;
 };
 
 template <typename K>

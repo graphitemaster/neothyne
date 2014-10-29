@@ -149,11 +149,8 @@ inline typename map<K, V>::const_iterator map<K, V>::find(const K &key) const {
 
 template <typename K, typename V>
 inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(const pair<K, V> &p) {
-    pair<iterator, bool> result;
-    result.second = false;
-
-    result.first = find(p.first);
-    if (result.first.node != 0)
+    pair<iterator, bool> result(find(p.first), false);
+    if (get<0>(result).node != 0)
         return result;
 
     unsigned char *data = (unsigned char *)malloc(sizeof(hash_node<K, V>));

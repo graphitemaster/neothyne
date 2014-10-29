@@ -119,11 +119,8 @@ inline typename set<K>::iterator set<K>::find(const K &key) const {
 
 template <typename K>
 inline pair<typename set<K>::iterator, bool> set<K>::insert(const K &key) {
-    pair<iterator, bool> result;
-    result.second = false;
-
-    result.first = find(key);
-    if (result.first.node != 0)
+    pair<iterator, bool> result(find(key), false);
+    if (get<0>(result).node != 0)
         return result;
 
     unsigned char *data = (unsigned char *)malloc(sizeof(hash_node<K, void>));
