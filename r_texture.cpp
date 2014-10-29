@@ -372,6 +372,10 @@ void texture2D::resize(size_t width, size_t height) {
     m_texture.resize(width, height);
 }
 
+textureFormat texture2D::format() const {
+  return m_texture.format();
+}
+
 ///! texture3D
 texture3D::texture3D() :
     m_uploaded(false),

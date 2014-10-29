@@ -3,17 +3,28 @@ in vec2 texCoord0;
 in vec3 tangent0;
 in vec3 bitangent0;
 
+#ifdef USE_PARALLAX
+in vec3 eyePosition0;
+in float eyeDotDirection0;
+#endif
+
 layout (location = 0) out vec4 diffuseOut;
 layout (location = 1) out vec4 normalOut;
 
 #ifdef USE_DIFFUSE
 uniform sampler2D gColorMap;
 #endif
+
 #ifdef USE_NORMALMAP
 uniform sampler2D gNormalMap;
 #endif
+
 #ifdef USE_SPECMAP
 uniform sampler2D gSpecMap;
+#endif
+
+#ifdef USE_PARALLAX
+uniform sampler2D gDispMap;
 #endif
 
 #ifdef USE_SPECPARAMS
@@ -21,31 +32,75 @@ uniform float gSpecPower;
 uniform float gSpecIntensity;
 #endif
 
+#ifdef USE_PARALLAX
+// x = scale, y = bias
+uniform vec2 gParallax;
+#endif
+
 #ifdef USE_NORMALMAP
-vec3 calcBump() {
+vec3 calcBump(vec2 texCoord) {
     vec3 normal;
-    normal.xy = texture(gNormalMap, texCoord0).rg * 2.0f - vec2(1.0f, 1.0f);
+    normal.xy = texture(gNormalMap, texCoord).rg * 2.0f - vec2(1.0f, 1.0f);
     normal.z = sqrt(1.0f - dot(normal.xy, normal.xy));
     mat3 tbn = mat3(tangent0, bitangent0, normal0);
     return normalize(tbn * normal);
 }
 #endif
 
-void main() {
-#ifdef USE_DIFFUSE
-    diffuseOut.rgb = texture(gColorMap, texCoord0).rgb;
+#ifdef USE_PARALLAX
+const int minLayers = 15;
+const int maxLayers = 20;
+const int maxReliefSearches = 15;
+
+vec2 parallax(vec2 texCoord) {
+    float numLayers = clamp(eyeDotDirection0, minLayers, maxLayers);
+    float layerHeight = 1.0f / numLayers;
+
+    vec3 shift = vec3(0.1f * gParallax.x * layerHeight * eyePosition0.xy / eyePosition0.z, layerHeight);
+    vec3 position = vec3(texCoord - shift.xy * numLayers * gParallax.y, 1.0f);
+
+    // steep parallax part (forward stepping until the ray is below the heightmap)
+    float height = texture(gDispMap, position.xy).r;
+    for (int i = 0; i < numLayers; ++i) {
+        position -= shift * step(height, position.z);
+        height = texture(gDispMap, position.xy).r;
+    }
+
+    // Relief mapping part (binary search for the intersection)
+    height = texture(gDispMap, position.xy).r;
+    for (int i = 0; i < maxReliefSearches; i++) {
+        position -= shift * (step(height, position.z) - 0.5f) * exp2(-i);
+        height = texture(gDispMap, position.xy).r;
+    }
+
+    return position.xy;
+}
 #endif
+
+void main() {
+#if defined(USE_PARALLAX)
+    vec2 texCoord = parallax(texCoord0);
+#else
+    vec2 texCoord = texCoord0;
+#endif
+
+#ifdef USE_DIFFUSE
+    diffuseOut.rgb = texture(gColorMap, texCoord).rgb;
+#endif
+
 #ifdef USE_NORMALMAP
-    normalOut.rgb = calcBump() * 0.5f + 0.5f;
+    normalOut.rgb = calcBump(texCoord) * 0.5f + 0.5f;
 #else
     normalOut.rgb = normal0 * 0.5 + 0.5f;
 #endif
+
 #ifdef USE_SPECMAP
     // R contains intensity, B contains power. We pack intensity in alpha of
     // diffuse while power in alpha of normal
-    vec2 spec = texture(gSpecMap, texCoord0).rg;
+    vec2 spec = texture(gSpecMap, texCoord).rg;
     diffuseOut.a = spec.r;
     normalOut.a = spec.g;
+    // red channel contains intensity while green contains power
 #elif defined(USE_SPECPARAMS)
     diffuseOut.a = gSpecIntensity;
     normalOut.a = gSpecPower;
