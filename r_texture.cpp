@@ -55,6 +55,8 @@ static const char *cacheFormat(GLuint internal) {
             return "RGB_S3TC_DXT1";
         case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
             return "RED_GREEN_RGTC2";
+        case GL_COMPRESSED_RED_RGTC1_EXT:
+            return "RED_RGTC1";
     }
     return "";
 }
@@ -109,6 +111,7 @@ static bool readCache(texture &tex, GLuint &internal) {
             if (!gl::has(EXT_texture_compression_s3tc))
                 return false;
         case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
+        case GL_COMPRESSED_RED_RGTC1_EXT:
             if (!gl::has(EXT_texture_compression_rgtc))
                 return false;
     }
@@ -137,6 +140,7 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
         case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
         case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
         case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
+        case GL_COMPRESSED_RED_RGTC1_EXT:
             break;
         default:
             return false;
@@ -247,6 +251,8 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
                         bptc ? GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB : GL_COMPRESSED_RGB_S3TC_DXT1_EXT);
                 case TEX_RG:
                     return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
+                case TEX_LUMINANCE:
+                    return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
                 default:
                     break;
             }
