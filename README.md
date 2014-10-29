@@ -74,6 +74,23 @@ which is also named `u`. The following namespaces and file prefixes exist:
 | r_     | r         | renderer    |
 | c_     | c         | console     |
 
+## Utility library
+Neothyne doesn't use the C++ standard library, instead it rolls it's own
+implementation of common containers. They're not meant to be compatible with the
+standard in any way, even if they share a similar API. The following containers
+exist.
+
+* u::pair
+* u::set
+* u::map
+* u::string
+* u::vector
+* u::buffer
+
+As well as a plethora of type traits and algorithmic functions which can be
+found in `u_traits.h` and `u_algorithm.h` respectfully. Miscellaneous utilites can
+be found in `u_misc.h`.
+
 ## Goals
 
 * Particles
