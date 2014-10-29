@@ -1728,7 +1728,7 @@ void texture::convert() {
         // convert this to integer domain
         //  (2 * R + 5 * G + 1 * B) / 8
         // then use the following bitwise calculation
-        // (unsigned char)(((R < 1) + (G << 2 + G) + B) >> 3)
+        // (unsigned char)(((R << 1) + ((G << 2) + G) + B) >> 3)
         if (m_format == TEX_BGR || m_format == TEX_BGRA) {
             // Format is BGR[A]
             for (size_t i = 0; i < m_data.size(); i+= m_bpp) {
