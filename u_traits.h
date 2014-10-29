@@ -61,17 +61,17 @@ struct enable_if<true, T> {
 };
 
 /// conditional
-template <bool B, typename A, typename B>
+template <bool B, typename T1, typename T2>
 struct conditional;
 
-template <typename A, typename B>
-struct conditional<true, A, B> {
-    typedef A type;
+template <typename T1, typename T2>
+struct conditional<true, T1, T2> {
+    typedef T1 type;
 };
 
-template <typename A, typename B>
-struct conditional<false, A, B> {
-    typedef B type;
+template <typename T1, typename T2>
+struct conditional<false, T1, T2> {
+    typedef T2 type;
 };
 
 /// remove_volatile
