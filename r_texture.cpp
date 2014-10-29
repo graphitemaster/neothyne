@@ -223,6 +223,8 @@ static size_t textureAlignment(const texture &tex) {
 static u::optional<queryFormat> getBestFormat(texture &tex) {
     if (tex.normal())
         tex.convert<TEX_RG>();
+    else if (tex.grey())
+        tex.convert<TEX_LUMINANCE>();
 
     // Texture compression?
     if (r_texcomp) {

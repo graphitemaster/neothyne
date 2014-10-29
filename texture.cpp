@@ -1691,7 +1691,7 @@ void texture::convert() {
     if (F == m_format)
         return;
 
-    if (F != TEX_RG) {
+    if (F != TEX_RG && F != TEX_LUMINANCE) {
         unsigned char *data = &m_data[0];
         const size_t length = m_data.size();
 
@@ -1699,7 +1699,7 @@ void texture::convert() {
         //          BGRA -> RGBA or RGBA -> BGRA
         for (unsigned char *end = &data[length]; data < end; data += m_bpp)
             u::swap(data[0], data[2]);
-    } else {
+    } else if (F == TEX_RG) {
         // Get the data into the right order
         // RGB -> RGB
         // BGRA -> RGBA
@@ -1720,6 +1720,36 @@ void texture::convert() {
         m_data.swap(rework);
         m_bpp = 2;
         m_pitch = m_width * m_bpp;
+    } else if (F == TEX_LUMINANCE) {
+        u::vector<unsigned char> rework;
+        rework.reserve(m_width * m_height);
+        // weight sum can be calculated as follows
+        //  0.299 * R + 0.587 * G + 0.114 * B + 0.5
+        // convert this to integer domain
+        //  (2 * R + 5 * G + 1 * B) / 8
+        // then use the following bitwise calculation
+        // (unsigned char)(((R < 1) + (G << 2 + G) + B) >> 3)
+        if (m_format == TEX_BGR || m_format == TEX_BGRA) {
+            // Format is BGR[A]
+            for (size_t i = 0; i < m_data.size(); i+= m_bpp) {
+                unsigned char R = m_data[i + 2];
+                unsigned char G = m_data[i + 1];
+                unsigned char B = m_data[i];
+                rework.push_back((unsigned char)((((R << 1) + ((G << 2) + G) + B)) >> 3));
+            }
+        } else {
+            // Format is RGB[A]
+            for (size_t i = 0; i < m_data.size(); i+= m_bpp) {
+                unsigned char R = m_data[i];
+                unsigned char G = m_data[i + 1];
+                unsigned char B = m_data[i + 2];
+                rework.push_back((unsigned char)((((R << 1) + ((G << 2) + G) + B)) >> 3));
+            }
+        }
+        m_data.destroy();
+        m_data.swap(rework);
+        m_bpp = 1;
+        m_pitch = m_width;
     }
 
     // Update the format
@@ -1729,6 +1759,7 @@ void texture::convert() {
 template void texture::convert<TEX_RG>();
 template void texture::convert<TEX_RGB>();
 template void texture::convert<TEX_RGBA>();
+template void texture::convert<TEX_LUMINANCE>();
 
 template <typename T>
 bool texture::decode(const u::vector<unsigned char> &data, const char *name, float quality) {
@@ -1788,8 +1819,11 @@ u::optional<u::string> texture::find(const u::string &infile) {
         auto end = file.find('>');
         if (end == u::string::npos)
             return u::none;
-        if (u::string(file.begin() + beg + 1, file.begin() + end) == "normal")
+        const u::string tag(file.begin() + beg + 1, file.begin() + end);
+        if (tag == "normal")
             m_normal = true;
+        else if (tag == "grey")
+            m_grey = true;
         file.erase(beg, end + 1);
     }
 
@@ -1888,6 +1922,10 @@ const u::string &texture::hashString() const {
 
 bool texture::normal() const {
     return m_normal;
+}
+
+bool texture::grey() const {
+    return m_grey;
 }
 
 bool texture::disk() const {

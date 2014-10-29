@@ -345,7 +345,7 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
     u::string diffuseName;
     u::string specName;
     u::string normalName = "<normal>";
-    u::string displacementName;
+    u::string displacementName = "<grey>";
 
     // Read the material
     auto fp = u::fopen(neoGamePath() + materialName + ".cfg", "r");
