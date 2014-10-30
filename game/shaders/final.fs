@@ -30,15 +30,17 @@ vec4 fxaa(neoSampler2D textureSampler, vec2 texCoord) {
     const float FXAA_REDUCE_MIN = (1.0/128.0);
 
 #ifdef HAS_TEXTURE_RECTANGLE
-    vec2 texCoordOffset = vec2(1.0f, 1.0f);
+    vec3 rgbNW = neoTexture2D(textureSampler, texCoord.xy + (vec2(-1.0f, -1.0f))).xyz;
+    vec3 rgbNE = neoTexture2D(textureSampler, texCoord.xy + (vec2(+1.0f, -1.0f))).xyz;
+    vec3 rgbSW = neoTexture2D(textureSampler, texCoord.xy + (vec2(-1.0f, +1.0f))).xyz;
+    vec3 rgbSE = neoTexture2D(textureSampler, texCoord.xy + (vec2(+1.0f, +1.0f))).xyz;
 #else
     vec2 texCoordOffset = vec2(1.0f, 1.0f) / gScreenSize;
-#endif
-
     vec3 rgbNW = neoTexture2D(textureSampler, texCoord.xy + (vec2(-1.0f, -1.0f) * texCoordOffset)).xyz;
     vec3 rgbNE = neoTexture2D(textureSampler, texCoord.xy + (vec2(+1.0f, -1.0f) * texCoordOffset)).xyz;
     vec3 rgbSW = neoTexture2D(textureSampler, texCoord.xy + (vec2(-1.0f, +1.0f) * texCoordOffset)).xyz;
     vec3 rgbSE = neoTexture2D(textureSampler, texCoord.xy + (vec2(+1.0f, +1.0f) * texCoordOffset)).xyz;
+#endif
     vec3 rgbM  = neoTexture2D(textureSampler, texCoord.xy).xyz;
 
     vec3 luma = vec3(0.299f, 0.587f, 0.114f);
@@ -60,7 +62,11 @@ vec4 fxaa(neoSampler2D textureSampler, vec2 texCoord) {
     float rcpDirMin = 1.0f / (min(abs(dir.x), abs(dir.y)) + dirReduce);
 
     dir = min(vec2(FXAA_SPAN_MAX,  FXAA_SPAN_MAX),
-        max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX), dir * rcpDirMin)) * texCoordOffset;
+        max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX), dir * rcpDirMin));
+
+#ifndef HAS_TEXTURE_RECTANGLE
+    dir *= texCoordOffset;
+#endif
 
     vec3 rgbA = (1.0/2.0) * (
               neoTexture2D(textureSampler, texCoord.xy + dir * (1.0/3.0 - 0.5)).xyz +

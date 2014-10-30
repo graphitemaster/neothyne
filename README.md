@@ -88,7 +88,7 @@ exist.
 * u::buffer
 
 As well as a plethora of type traits and algorithmic functions which can be
-found in `u_traits.h` and `u_algorithm.h` respectfully. Miscellaneous utilites can
+found in `u_traits.h` and `u_algorithm.h` respectively. Miscellaneous utilites can
 be found in `u_misc.h`.
 
 ## Goals

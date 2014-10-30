@@ -10,7 +10,7 @@ The following keys exist
 * normal
     A tangent space normal map texture. Tangent space normals assume 0.5 is a
     null component, 0.0 is a -1 component and 1.0 is a +1 component. Where
-    RGB is XYZ respectfully. The engine ignores the blue component since it can
+    RGB is XYZ respectively. The engine ignores the blue component since it can
     be derived from R and G.
 
 * spec
