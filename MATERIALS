@@ -18,13 +18,9 @@ The following keys exist
     R component consists of the power term for specularity, while the G component
     consists of the intensity term.
 
-* spec_power
+* specparams
     The following key cannot be used in conjuction with spec. This gives the entire
-    material the following specular power for all pixels.
-
-* spec_intensity
-    The following key cannot be used in conjuction with spec. This gives the entire
-    material the following specular intensity for all pixels.
+    material the following specular power and intensity for all pixels.
 
 * displacement
     A height map used for displacement mapping

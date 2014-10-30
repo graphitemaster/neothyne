@@ -469,11 +469,10 @@ bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
             displacementName += "textures/" + value;
         else if (key == "spec")
             specName = "textures/" + value;
-        else if (key == "spec_power") {
+        else if (key == "specparams") {
             specPower = u::atof(value);
-            specParams = true;
-        } else if (key == "spec_intensity") {
-            specIntensity = u::atof(value);
+            if (split.size() > 2)
+                specIntensity = u::atof(split[2]);
             specParams = true;
         } else if (key == "parallax") {
             dispScale = u::atof(value);
