@@ -67,13 +67,19 @@ vec4 calcDirectionalLight(vec3 worldPosition, vec3 normal, vec2 spec) {
         worldPosition, normal, spec);
 }
 
-vec3 calcPosition(vec2 texCoord) {
+vec2 calcFragCoord(vec2 texCoord) {
 #ifdef HAS_TEXTURE_RECTANGLE
-    vec2 fragCoord = texCoord / gScreenSize;
+    return texCoord / gScreenSize;
 #else
-    vec2 fragCoord = texCoord;
+    return texCoord;
 #endif
-    float depth = neoTexture2D(gDepthMap, fragCoord).r * 2.0f - 1.0f;
+}
+
+float calcDepth(vec2 fragCoord) {
+    return neoTexture2D(gDepthMap, fragCoord).r * 2.0f - 1.0f;
+}
+
+vec3 calcPosition(float depth, vec2 fragCoord) {
     vec4 pos = vec4(fragCoord * 2.0f - 1.0f, depth, 1.0f);
     pos = gInverse * pos;
     return pos.xyz / pos.w;
@@ -81,10 +87,12 @@ vec3 calcPosition(vec2 texCoord) {
 
 void main() {
     vec2 texCoord = calcTexCoord();
+    vec2 fragCoord = calcFragCoord(texCoord);
+    float depth = calcDepth(fragCoord);
     vec4 colorMap = neoTexture2D(gColorMap, texCoord);
     vec4 normalDecode = neoTexture2D(gNormalMap, texCoord);
     vec3 normalMap = normalDecode.rgb * 2.0f - 1.0f;
-    vec3 worldPosition = calcPosition(texCoord);
+    vec3 worldPosition = calcPosition(depth, fragCoord);
     vec2 specMap = vec2(colorMap.a * 2.0f, exp2(normalDecode.a * 8.0f));
 
     // Uncomment to visualize depth buffer
@@ -96,5 +104,5 @@ void main() {
     // Uncomment to visualize normal buffer
     //fragColor.rgb = normalMap * 0.5 + 0.5;
 
-    fragColor = vec4(colorMap.rgb, 1.0f) * calcDirectionalLight(worldPosition, normalMap, specMap);
+    fragColor = vec4(colorMap.rgb, depth) * calcDirectionalLight(worldPosition, normalMap, specMap);
 }
