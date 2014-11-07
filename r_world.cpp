@@ -10,6 +10,7 @@
 #include "engine.h"
 
 VAR(int, r_fxaa, "fast approximate anti-aliasing", 0, 1, 1);
+VAR(int, r_parallax, "parallax mapping", 0, 1, 1);
 
 namespace r {
 ///! methods
@@ -425,11 +426,16 @@ static size_t finalCalculatePermutation() {
 // Calculate the correct permutation to use for a given rendering batch
 static size_t geomCalculatePermutation(const renderTextureBatch &batch) {
     int permute = 0;
-    if (batch.diffuse)      permute |= kGeomPermDiffuse;
-    if (batch.normal)       permute |= kGeomPermNormalMap;
-    if (batch.spec)         permute |= kGeomPermSpecMap;
-    if (batch.displacement) permute |= kGeomPermParallax;
-    if (batch.specParams)   permute |= kGeomPermSpecParams;
+    if (batch.diffuse)
+        permute |= kGeomPermDiffuse;
+    if (batch.normal)
+        permute |= kGeomPermNormalMap;
+    if (batch.spec)
+        permute |= kGeomPermSpecMap;
+    if (batch.displacement && r_parallax)
+        permute |= kGeomPermParallax;
+    if (batch.specParams)
+        permute |= kGeomPermSpecParams;
     for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++)
         if (geomPermutations[i].permute == permute)
             return i;
