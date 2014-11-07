@@ -8,9 +8,14 @@
 namespace m {
 
 struct vec3 {
-    float x;
-    float y;
-    float z;
+    union {
+        struct {
+            float x;
+            float y;
+            float z;
+        };
+        float m[3];
+    };
 
     constexpr vec3();
     constexpr vec3(float nx, float ny, float nz);
@@ -176,11 +181,11 @@ inline vec3 vec3::operator -() const {
 }
 
 inline float vec3::operator[](size_t index) const {
-    return (&x)[index];
+    return m[index];
 }
 
 inline float &vec3::operator[](size_t index) {
-    return (&x)[index];
+    return m[index];
 }
 
 inline vec3 operator+(const vec3 &a, const vec3 &b) {
