@@ -11,29 +11,12 @@ struct quat {
     float z;
     float w;
 
-    constexpr quat()
-        : x(0.0f)
-        , y(0.0f)
-        , z(0.0f)
-        , w(1.0f)
-    {
-    }
+    constexpr quat();
+    constexpr quat(float x, float y, float z, float w);
 
-    constexpr quat(float x, float y, float z, float w)
-        : x(x)
-        , y(y)
-        , z(z)
-        , w(w)
-    {
-    }
+    quat(const vec3 &vec, float angle);
 
-    quat(const vec3 &vec, float angle) {
-        rotationAxis(vec, angle);
-    }
-
-    quat conjugate() const {
-        return quat(-x, -y, -z, w);
-    }
+    constexpr quat conjugate() const;
 
     void endianSwap();
 
@@ -46,6 +29,30 @@ struct quat {
 private:
     void rotationAxis(const vec3 &vec, float angle);
 };
+
+inline constexpr quat::quat()
+    : x(0.0f)
+    , y(0.0f)
+    , z(0.0f)
+    , w(1.0f)
+{
+}
+
+inline constexpr quat::quat(float x, float y, float z, float w)
+    : x(x)
+    , y(y)
+    , z(z)
+    , w(w)
+{
+}
+
+inline quat::quat(const vec3 &vec, float angle) {
+    rotationAxis(vec, angle);
+}
+
+inline constexpr quat quat::conjugate() const {
+    return quat(-x, -y, -z, -w);
+}
 
 }
 
