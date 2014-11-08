@@ -26,7 +26,21 @@ bool method::init() {
 }
 
 void method::define(const u::string &macro) {
-    u::string prelude = "#define " + macro + "\n";
+    auto prelude = u::format("#define %s\n", macro);
+    m_vertexSource += prelude;
+    m_fragmentSource += prelude;
+    m_geometrySource += prelude;
+}
+
+void method::define(const u::string &macro, size_t value) {
+    auto prelude = u::format("#define %s %zu\n", macro, value);
+    m_vertexSource += prelude;
+    m_fragmentSource += prelude;
+    m_geometrySource += prelude;
+}
+
+void method::define(const u::string &macro, float value) {
+    auto prelude = u::format("#define %s %f\n", macro, value);
     m_vertexSource += prelude;
     m_fragmentSource += prelude;
     m_geometrySource += prelude;

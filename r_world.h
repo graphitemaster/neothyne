@@ -116,6 +116,10 @@ private:
 struct ssaoMethod : method {
     bool init();
 
+    // Note if you change this you'll need to update the shader since all
+    // of the `kKernelSize' iterations are unrolled
+    static constexpr size_t kKernelSize = 4;
+
     enum {
         kNormal,
         kDepth,
@@ -143,6 +147,7 @@ private:
     GLint m_normalTextureLocation;
     GLint m_depthTextureLocation;
     GLint m_randomTextureLocation;
+    GLint m_kernelLocation[kKernelSize];
 };
 
 struct finalComposite {

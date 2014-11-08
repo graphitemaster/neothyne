@@ -186,6 +186,10 @@ bool ssaoMethod::init() {
     if (gl::has(ARB_texture_rectangle))
         method::define("HAS_TEXTURE_RECTANGLE");
 
+    method::define("kKernelSize", kKernelSize);
+    method::define("kKernelFactor", sinf(M_PI / float(kKernelSize)));
+    method::define("kKernelOffset", 1.0f / kKernelSize);
+
     if (!addShader(GL_VERTEX_SHADER, "shaders/ssao.vs"))
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/ssao.fs"))
@@ -203,6 +207,21 @@ bool ssaoMethod::init() {
     m_normalTextureLocation = getUniformLocation("gNormalMap");
     m_depthTextureLocation = getUniformLocation("gDepthMap");
     m_randomTextureLocation = getUniformLocation("gRandomMap");
+
+    for (size_t i = 0; i < kKernelSize; i++)
+        m_kernelLocation[i] = getUniformLocation(u::format("gKernel[%zu]", i));
+
+    // Setup the kernel
+    // Note: This must be changed as well if kKernelSize changes
+    static const float kernel[kKernelSize * 2] = {
+        0.0f, 1.0f,
+        1.0f, 0.0f,
+        0.0f, -1.0f,
+        -1.0f, 0.0f
+    };
+    enable();
+    for (size_t i = 0; i < kKernelSize; i++)
+        gl::Uniform2f(m_kernelLocation[i], kernel[2 * i + 0], kernel[2 * i + 1]);
 
     return true;
 }

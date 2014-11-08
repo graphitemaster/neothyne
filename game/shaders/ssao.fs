@@ -18,6 +18,7 @@ uniform vec2 gScreenFrustum; // { near, far }
 
 uniform float gOccluderBias;
 uniform float gSamplingRadius;
+uniform vec2 gKernel[kKernelSize];
 uniform vec2 gAttenuation; // { constant, linear }
 uniform mat4 gInverse;
 
@@ -82,26 +83,42 @@ void main() {
 
     float kernelRadius = gSamplingRadius * (1.0f - srcDepth);
 
-    float sin45 = sin(M_PI / 4.0f);
-
     float occlusion = 0.0f;
 
-    vec2 kernel[4];
-    kernel[0] = vec2(0.0f, 1.0f);
-    kernel[1] = vec2(1.0f, 0.0f);
-    kernel[2] = vec2(0.0f, -1.0f);
-    kernel[3] = vec2(-1.0f, 0.0f);
+    // Unrolled completely
+    vec2 k10 = reflect(gKernel[0], randomJitter);
+    vec2 k11 = reflect(gKernel[1], randomJitter);
+    vec2 k12 = reflect(gKernel[2], randomJitter);
+    vec2 k13 = reflect(gKernel[3], randomJitter);
 
-    for (int i = 0; i < 4; ++i) {
-        vec2 k1 = reflect(kernel[i], randomJitter);
-        vec2 k2 = vec2(k1.x * sin45 - k1.y * sin45,
-                       k1.x * sin45 + k1.y * sin45);
+    vec2 k20 = vec2(k10.x * kKernelFactor - k10.y * kKernelFactor,
+                    k10.x * kKernelFactor + k10.y * kKernelFactor);
+    vec2 k21 = vec2(k11.x * kKernelFactor - k11.y * kKernelFactor,
+                    k11.x * kKernelFactor + k11.y * kKernelFactor);
+    vec2 k22 = vec2(k12.x * kKernelFactor - k12.y * kKernelFactor,
+                    k12.x * kKernelFactor + k12.y * kKernelFactor);
+    vec2 k23 = vec2(k13.x * kKernelFactor - k13.y * kKernelFactor,
+                    k13.x * kKernelFactor + k13.y * kKernelFactor);
 
-        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k1 * kernelRadius);
-        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k2 * kernelRadius * 0.75f);
-        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k1 * kernelRadius * 0.50f);
-        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k2 * kernelRadius * 0.25f);
-    }
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k10 * kernelRadius);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k20 * kernelRadius * 0.75f);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k10 * kernelRadius * 0.50f);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k20 * kernelRadius * 0.25f);
 
-    fragColor.r = 1.0f - clamp(occlusion / 16.0f, 0.0f, 1.0f);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k11 * kernelRadius);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k21 * kernelRadius * 0.75f);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k11 * kernelRadius * 0.50f);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k21 * kernelRadius * 0.25f);
+
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k12 * kernelRadius);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k22 * kernelRadius * 0.75f);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k12 * kernelRadius * 0.50f);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k22 * kernelRadius * 0.25f);
+
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k13 * kernelRadius);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k23 * kernelRadius * 0.75f);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k13 * kernelRadius * 0.50f);
+    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k23 * kernelRadius * 0.25f);
+
+    fragColor.r = 1.0f - clamp(occlusion / (kKernelSize * kKernelSize), 0.0f, 1.0f);
 }
