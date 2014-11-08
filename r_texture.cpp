@@ -350,12 +350,12 @@ bool texture2D::upload() {
         if (!query)
             return false;
         format = *query;
-        gl::PixelStorei(GL_PACK_ALIGNMENT, textureAlignment(m_texture));
+        gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_texture));
         gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_texture.pitch() / m_texture.bpp());
         gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
             m_texture.height(), 0, format.format, format.data, m_texture.data());
         gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-        gl::PixelStorei(GL_PACK_ALIGNMENT, 8);
+        gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
     }
 
     if (r_mipmaps)
@@ -451,13 +451,13 @@ bool texture3D::upload() {
         if (!query)
             return false;
         const auto format = *query;
-        gl::PixelStorei(GL_PACK_ALIGNMENT, textureAlignment(m_textures[i]));
+        gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_textures[i]));
         gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_textures[i].pitch() / m_textures[i].bpp());
         gl::TexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
             format.internal, fw, fh, 0, format.format, format.data, m_textures[i].data());
     }
     gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-    gl::PixelStorei(GL_PACK_ALIGNMENT, 8);
+    gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
 
     return m_uploaded = true;
 }
