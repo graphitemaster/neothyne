@@ -13,8 +13,8 @@ uniform neoSampler2D gNormalMap;
 uniform neoSampler2D gDepthMap;
 uniform sampler2D gRandomMap;
 
-uniform vec2 gScreenSize;
-uniform vec2 gScreenFrustum;
+uniform vec2 gScreenSize;    // { width, height }
+uniform vec2 gScreenFrustum; // { near, far }
 
 uniform float gOccluderBias;
 uniform float gSamplingRadius;
@@ -39,6 +39,15 @@ vec2 calcFragCoord(vec2 texCoord) {
 #endif
 }
 
+const float kCapMinDistance = 0.00001f;
+const float kCapMaxDistance = 0.015f;
+
+float calcLinearDepth(vec2 texCoord) {
+    return (2.0f * gScreenFrustum.x)
+        / (gScreenFrustum.y + gScreenFrustum.x -
+            neoTexture2D(gDepthMap, texCoord).x * (gScreenFrustum.y - gScreenFrustum.x));
+}
+
 vec3 calcPosition(vec2 texCoord) {
     float depth = neoTexture2D(gDepthMap, texCoord).r * 2.0f - 1.0f;
     vec4 pos = vec4(calcFragCoord(texCoord) * 2.0f - 1.0f, depth, 1.0f);
@@ -46,7 +55,12 @@ vec3 calcPosition(vec2 texCoord) {
     return pos.xyz / pos.w;
 }
 
-float samplePixels(vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
+float samplePixels(float srcDepth, vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
+    float dstDepth = calcLinearDepth(texCoord);
+    float deltaDepth = (dstDepth > srcDepth) ? dstDepth - srcDepth : srcDepth - dstDepth;
+    if (deltaDepth < kCapMinDistance || deltaDepth > kCapMaxDistance)
+        return 0.0f;
+
     // Calculate destination position
     vec3 dstPosition = calcPosition(texCoord);
 
@@ -55,14 +69,14 @@ float samplePixels(vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
     // fragment cast the hardest shadow and objects closer to the horizon have
     // very minimal effect.
     vec3 position = dstPosition - srcPosition;
+
+    float distance = length(position);
     float intensity = max(dot(normalize(position), srcNormal) - gOccluderBias, 0.0f);
 
     // Attenuate the occlusion. This is similar to attenuating a lighting source,
     // in that the further the distance between two points, the less effect
     // AO has on the fragment.
-    float distance = length(position);
     float attenuation = 1.0f / (gAttenuation.x + (gAttenuation.y * distance));
-
     return intensity * attenuation;
 }
 
@@ -72,10 +86,10 @@ void main() {
     vec2 randomJitter = normalize(texture(gRandomMap, calcFragCoord(texCoord)).xy * 2.0f - 2.0f);
     vec3 srcNormal = neoTexture2D(gNormalMap, texCoord).rgb * 2.0f - 1.0f;
 
+    float srcDepth = calcLinearDepth(texCoord);
     vec3 srcPosition = calcPosition(texCoord);
 
-    float depth = neoTexture2D(gDepthMap, texCoord).r * 2.0f - 1.0f * 0.5 + 0.5;
-    float kernelRadius = gSamplingRadius * (1.0f - depth);
+    float kernelRadius = gSamplingRadius * (1.0f - srcDepth);
 
     float sin45 = sin(M_PI / 4.0f);
 
@@ -92,10 +106,10 @@ void main() {
         vec2 k2 = vec2(k1.x * sin45 - k1.y * sin45,
                        k1.x * sin45 + k1.y * sin45);
 
-        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k1 * kernelRadius);
-        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k2 * kernelRadius * 0.75f);
-        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k1 * kernelRadius * 0.50f);
-        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k2 * kernelRadius * 0.25f);
+        occlusion += samplePixels(srcDepth, srcPosition, srcNormal, texCoord + k1 * kernelRadius);
+        occlusion += samplePixels(srcDepth, srcPosition, srcNormal, texCoord + k2 * kernelRadius * 0.75f);
+        occlusion += samplePixels(srcDepth, srcPosition, srcNormal, texCoord + k1 * kernelRadius * 0.50f);
+        occlusion += samplePixels(srcDepth, srcPosition, srcNormal, texCoord + k2 * kernelRadius * 0.25f);
     }
 
     fragColor.r = 1.0f - clamp(occlusion / 16.0f, 0.0f, 1.0f);

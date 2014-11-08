@@ -100,11 +100,12 @@ void main() {
     // Uncomment to visualize normal buffer
     //fragColor.rgb = normalMap * 0.5 + 0.5;
 
-    // Uncomment to visualize occlusion
-    //fragColor.rgb = occlusionMap.rrr;
-
 #ifdef USE_SSAO
     float occlusionMap = neoTexture2D(gOcclusionMap, texCoord).r;
+
+    // Uncomment to visualize occlusion
+    //fragColor.rgb = vec3(occlusionMap);
+
     fragColor = vec4(colorMap.rgb, 1.0f)
         * occlusionMap
         * calcDirectionalLight(worldPosition, normalMap, specMap);
@@ -112,5 +113,4 @@ void main() {
     fragColor = vec4(colorMap.rgb, 1.0f)
         * calcDirectionalLight(worldPosition, normalMap, specMap);
 #endif
-
 }
