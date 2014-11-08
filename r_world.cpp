@@ -11,17 +11,21 @@
 
 VAR(int, r_fxaa, "fast approximate anti-aliasing", 0, 1, 1);
 VAR(int, r_parallax, "parallax mapping", 0, 1, 1);
+VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 
 namespace r {
 ///! methods
 
 ///! Light Rendering Method
-bool lightMethod::init(const char *vs, const char *fs) {
+bool lightMethod::init(const char *vs, const char *fs, const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
 
     if (gl::has(ARB_texture_rectangle))
         method::define("HAS_TEXTURE_RECTANGLE");
+
+    for (auto &it : defines)
+        method::define(it);
 
     if (!addShader(GL_VERTEX_SHADER, vs))
         return false;
@@ -37,7 +41,7 @@ bool lightMethod::init(const char *vs, const char *fs) {
     // samplers
     m_colorTextureUnitLocation = getUniformLocation("gColorMap");
     m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
-    m_occlusionTextureUnitLocation = getUniformLocation("gOcculsionMap");
+    m_occlusionTextureUnitLocation = getUniformLocation("gOcclusionMap");
     m_depthTextureUnitLocation = getUniformLocation("gDepthMap");
 
     // specular lighting
@@ -84,8 +88,8 @@ void lightMethod::setPerspectiveProjection(const m::perspectiveProjection &proje
 }
 
 ///! Directional Light Rendering Method
-bool directionalLightMethod::init() {
-    if (!lightMethod::init("shaders/dlight.vs", "shaders/dlight.fs"))
+bool directionalLightMethod::init(const u::vector<const char *> &defines) {
+    if (!lightMethod::init("shaders/dlight.vs", "shaders/dlight.fs", defines))
         return false;
 
     m_directionalLightLocation.color = getUniformLocation("gDirectionalLight.base.color");
@@ -419,9 +423,18 @@ struct finalPermutation {
     int permute;    // flags of the permutations
 };
 
+struct lightPermutation {
+    int permute;    // flags of the permutations
+};
+
 // All the final shader permutations
 enum {
     kFinalPermFXAA       = 1 << 0
+};
+
+// All the light shader permutations
+enum {
+    kLightPermSSAO       = 1 << 0
 };
 
 // All the geometry shader permutations
@@ -439,6 +452,12 @@ static const char *finalPermutationNames[] = {
     "USE_FXAA"
 };
 
+// The prelude defines to compile that light shader permutation
+// These must be in the same order as the enums
+static const char *lightPermutationNames[] = {
+    "USE_SSAO"
+};
+
 // The prelude defines to compile that geometry shader permutation
 // These must be in the same order as the enums
 static const char *geomPermutationNames[] = {
@@ -453,6 +472,12 @@ static const char *geomPermutationNames[] = {
 static const finalPermutation finalPermutations[] = {
     { 0 },
     { kFinalPermFXAA }
+};
+
+// All the possible light permutations
+static const lightPermutation lightPermutations[] = {
+    { 0 },
+    { kLightPermSSAO }
 };
 
 // All the possible geometry permutations
@@ -484,6 +509,14 @@ static u::vector<const char *> generatePermutation(const T(&list)[N], const U &p
 static size_t finalCalculatePermutation() {
     for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++)
         if (r_fxaa && (geomPermutations[i].permute & kFinalPermFXAA))
+            return i;
+    return 0;
+}
+
+// Calculate the correct permutation to use for the light buffer
+static size_t lightCalculatePermutation() {
+    for (size_t i = 0; i < sizeof(lightPermutations)/sizeof(lightPermutations[0]); i++)
+        if (r_ssao && (lightPermutations[i].permute & kLightPermSSAO))
             return i;
     return 0;
 }
@@ -701,7 +734,7 @@ bool world::upload(const m::perspectiveProjection &project) {
     for (size_t i = 0; i < geomCount; i++) {
         const auto &p = geomPermutations[i];
         if (!m_geomMethods[i].init(generatePermutation(geomPermutationNames, p)))
-            neoFatal("failed to initialize geometry rendering method\n");
+            neoFatal("failed to initialize geometry rendering method");
         m_geomMethods[i].enable();
         if (p.color  != -1) m_geomMethods[i].setColorTextureUnit(p.color);
         if (p.normal != -1) m_geomMethods[i].setNormalTextureUnit(p.normal);
@@ -709,11 +742,21 @@ bool world::upload(const m::perspectiveProjection &project) {
         if (p.disp   != -1) m_geomMethods[i].setDispTextureUnit(p.disp);
     }
 
-    if (!m_directionalLightMethod.init())
-        neoFatal("failed to initialize directional light rendering method");
-
-    if (!m_ssaoMethod.init())
-        neoFatal("failed to initialize ssao rendering method");
+    // light shader permutations
+    static const size_t lightCount = sizeof(lightPermutations)/sizeof(lightPermutations[0]);
+    m_directionalLightMethods.resize(lightCount);
+    for (size_t i = 0; i < lightCount; i++) {
+        const auto &p = lightPermutations[i];
+        if (!m_directionalLightMethods[i].init(generatePermutation(lightPermutationNames, p)))
+            neoFatal("failed to initialize light rendering method");
+        m_directionalLightMethods[i].enable();
+        m_directionalLightMethods[i].setWVP(m_identity);
+        m_directionalLightMethods[i].setColorTextureUnit(lightMethod::kColor);
+        m_directionalLightMethods[i].setNormalTextureUnit(lightMethod::kNormal);
+        m_directionalLightMethods[i].setDepthTextureUnit(lightMethod::kDepth);
+        if (p.permute & kLightPermSSAO)
+            m_directionalLightMethods[i].setOcclusionTextureUnit(lightMethod::kOcclusion);
+    }
 
     // setup g-buffer
     if (!m_gBuffer.init(project))
@@ -723,13 +766,8 @@ bool world::upload(const m::perspectiveProjection &project) {
     if (!m_final.init(project, m_gBuffer.texture(gBuffer::kDepth)))
         neoFatal("failed to initialize world renderer");
 
-    // Setup default uniforms for lighting
-    m_directionalLightMethod.enable();
-    m_directionalLightMethod.setWVP(m_identity);
-    m_directionalLightMethod.setColorTextureUnit(lightMethod::kColor);
-    m_directionalLightMethod.setNormalTextureUnit(lightMethod::kNormal);
-    m_directionalLightMethod.setDepthTextureUnit(lightMethod::kDepth);
-    m_directionalLightMethod.setOcclusionTextureUnit(lightMethod::kOcclusion);
+    if (!m_ssaoMethod.init())
+        neoFatal("failed to initialize ssao rendering method");
 
     // Setup default uniforms for ssao
     m_ssaoMethod.enable();
@@ -791,28 +829,29 @@ void world::scenePass(const rendererPipeline &pipeline) {
     gl::Disable(GL_DEPTH_TEST);
 
     // Screen space ambient occlusion pass
+    if (r_ssao) {
+        // Read from the gbuffer, write to the ssao pass
+        m_ssao.update(p.getPerspectiveProjection());
+        m_ssao.bindWriting();
 
-    // Read from the gbuffer, write to the ssao pass
-    m_ssao.update(p.getPerspectiveProjection());
-    m_ssao.bindWriting();
+        // Write to SSAO
+        GLenum format = gl::has(ARB_texture_rectangle)
+            ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
-    // Write to SSAO
-    GLenum format = gl::has(ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+        // Bind normal/depth/random
+        gl::ActiveTexture(GL_TEXTURE0);
+        gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal));
+        gl::ActiveTexture(GL_TEXTURE1);
+        gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
+        gl::ActiveTexture(GL_TEXTURE2);
+        gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal)); // TODO: random target
 
-    // Bind normal/depth/random
-    gl::ActiveTexture(GL_TEXTURE0);
-    gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal));
-    gl::ActiveTexture(GL_TEXTURE1);
-    gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
-    gl::ActiveTexture(GL_TEXTURE2);
-    gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal)); // TODO: random target
-
-    // do SSAO pass
-    m_ssaoMethod.enable();
-    m_ssaoMethod.setPerspectiveProjection(p.getPerspectiveProjection());
-    m_ssaoMethod.setInverse(p.getInverseTransform());
-    m_quad.render();
+        // do SSAO pass
+        m_ssaoMethod.enable();
+        m_ssaoMethod.setPerspectiveProjection(p.getPerspectiveProjection());
+        m_ssaoMethod.setInverse(p.getInverseTransform());
+        m_quad.render();
+    }
 }
 
 void world::lightPass(const rendererPipeline &pipeline) {
@@ -839,15 +878,18 @@ void world::lightPass(const rendererPipeline &pipeline) {
     gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal));
     gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kDepth);
     gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
-    gl::ActiveTexture(GL_TEXTURE3);
-    gl::BindTexture(format, m_ssao.texture());
+    if (r_ssao) {
+        gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kOcclusion);
+        gl::BindTexture(format, m_ssao.texture());
+    }
 
+    auto &method = m_directionalLightMethods[lightCalculatePermutation()];
     // Do ambient lighting
-    m_directionalLightMethod.enable();
-    m_directionalLightMethod.setDirectionalLight(m_directionalLight);
-    m_directionalLightMethod.setPerspectiveProjection(pipeline.getPerspectiveProjection());
-    m_directionalLightMethod.setEyeWorldPos(pipeline.getPosition());
-    m_directionalLightMethod.setInverse(p.getInverseTransform());
+    method.enable();
+    method.setDirectionalLight(m_directionalLight);
+    method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
+    method.setEyeWorldPos(pipeline.getPosition());
+    method.setInverse(p.getInverseTransform());
     m_quad.render();
 
     // Other lighting passes can be added here later

@@ -52,7 +52,7 @@ private:
 };
 
 struct lightMethod : method {
-    bool init(const char *vs, const char *fs);
+    bool init(const char *vs, const char *fs, const u::vector<const char *> &defines = u::vector<const char *>());
 
     enum {
         // First three must have same layout as gBuffer
@@ -87,7 +87,7 @@ private:
 };
 
 struct directionalLightMethod : lightMethod {
-    bool init();
+    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setDirectionalLight(const directionalLight &light);
 
@@ -217,7 +217,7 @@ private:
     // world shading methods and permutations
     u::vector<geomMethod> m_geomMethods;
     u::vector<finalMethod> m_finalMethods;
-    directionalLightMethod m_directionalLightMethod;
+    u::vector<directionalLightMethod> m_directionalLightMethods;
     ssaoMethod m_ssaoMethod;
 
     // Other things in the world to render

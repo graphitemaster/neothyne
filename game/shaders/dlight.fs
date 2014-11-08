@@ -21,7 +21,10 @@ struct directionalLight {
 uniform neoSampler2D gColorMap;
 uniform neoSampler2D gNormalMap;
 uniform neoSampler2D gDepthMap;
+
+#ifdef USE_SSAO
 uniform neoSampler2D gOcclusionMap;
+#endif
 
 uniform vec3 gEyeWorldPosition;
 uniform vec2 gScreenSize;
@@ -83,7 +86,6 @@ vec3 calcPosition(vec2 texCoord) {
 void main() {
     vec2 texCoord = calcTexCoord();
     vec4 colorMap = neoTexture2D(gColorMap, texCoord);
-    vec4 occlusionMap = neoTexture2D(gOcclusionMap, texCoord);
     vec4 normalDecode = neoTexture2D(gNormalMap, texCoord);
     vec3 normalMap = normalDecode.rgb * 2.0f - 1.0f;
     vec3 worldPosition = calcPosition(texCoord);
@@ -99,7 +101,16 @@ void main() {
     //fragColor.rgb = normalMap * 0.5 + 0.5;
 
     // Uncomment to visualize occlusion
-    // fragColor.rgb = occlusionMap.rrr;
+    //fragColor.rgb = occlusionMap.rrr;
 
-    fragColor = vec4(colorMap.rgb, 1.0f) * calcDirectionalLight(worldPosition, normalMap, specMap);
+#ifdef USE_SSAO
+    float occlusionMap = neoTexture2D(gOcclusionMap, texCoord).r;
+    fragColor = vec4(colorMap.rgb, 1.0f)
+        * occlusionMap
+        * calcDirectionalLight(worldPosition, normalMap, specMap);
+#else
+    fragColor = vec4(colorMap.rgb, 1.0f)
+        * calcDirectionalLight(worldPosition, normalMap, specMap);
+#endif
+
 }

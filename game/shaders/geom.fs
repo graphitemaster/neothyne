@@ -48,9 +48,9 @@ vec3 calcBump(vec2 texCoord) {
 #endif
 
 #ifdef USE_PARALLAX
-const int minLayers = 30;
-const int maxLayers = 50;
-const int maxReliefSearches = 30;
+const int minLayers = 15;
+const int maxLayers = 20;
+const int maxReliefSearches = 15;
 
 vec2 parallax(vec2 texCoord) {
     float numLayers = clamp(eyeDotDirection0, minLayers, maxLayers);
