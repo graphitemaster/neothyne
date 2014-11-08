@@ -55,7 +55,7 @@ billboard::~billboard() {
 }
 
 bool billboard::load(const u::string &billboardTexture) {
-    if (!m_texture.load(billboardTexture))
+    if (!m_texture.load("<premul>" + billboardTexture))
         return false;
     return true;
 }

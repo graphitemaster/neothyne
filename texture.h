@@ -19,6 +19,7 @@ struct texture {
         : m_normal(false)
         , m_grey(false)
         , m_disk(false)
+        , m_premul(false)
     {
     }
 
@@ -84,6 +85,7 @@ private:
     bool m_normal;
     bool m_grey;
     bool m_disk;
+    bool m_premul;
     textureFormat m_format;
 };
 

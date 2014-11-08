@@ -1797,6 +1797,21 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
         resize(w, h);
     }
 
+    // Premultiply alpha
+    if (m_premul && (m_format == TEX_RGBA || m_format == TEX_BGRA)) {
+        u::vector<unsigned char> rework;
+        rework.reserve(m_width * m_height * m_bpp);
+        for (size_t i = 0; i < m_data.size(); i += m_bpp) {
+            const unsigned char A = m_data[i + 3];
+            rework.push_back(m_data[i + 0] * A / 255);
+            rework.push_back(m_data[i + 1] * A / 255);
+            rework.push_back(m_data[i + 2] * A / 255);
+            rework.push_back(A);
+        }
+        m_data.destroy();
+        m_data.swap(rework);
+    }
+
     // Hash the contents as well to generate a hash string
     u::sha512 hash(&m_data[0], m_data.size());
     m_hashString = hash.hex();
@@ -1817,6 +1832,8 @@ u::optional<u::string> texture::find(const u::string &infile) {
             m_normal = true;
         else if (tag == "grey")
             m_grey = true;
+        else if (tag == "premul")
+            m_premul = true;
         file.erase(beg, end + 1);
     }
 
