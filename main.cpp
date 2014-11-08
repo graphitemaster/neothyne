@@ -161,8 +161,10 @@ static void screenShot() {
     // make sure we're reading from the final framebuffer when obtaining the pixels
     // for the screenshot.
     gl::BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    gl::PixelStorei(GL_PACK_ALIGNMENT, 1);
     gl::ReadPixels(0, 0, screenWidth, screenHeight, GL_RGB, GL_UNSIGNED_BYTE,
         (GLvoid *)pixels.get());
+    gl::PixelStorei(GL_PACK_ALIGNMENT, 8);
 
     // Reorient because it will be upside down
     auto temp = u::unique_ptr<unsigned char>(new unsigned char[screenSize * 3]);
