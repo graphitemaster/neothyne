@@ -8,9 +8,8 @@ namespace r {
 struct gBuffer {
     // also the texture unit order
     enum textureType {
-        kDiffuse,
+        kColor,
         kNormal,
-        kSpec,
         kDepth,
         kMax
     };
@@ -24,7 +23,7 @@ struct gBuffer {
     void bindReading();
     void bindWriting();
 
-    GLuint depth() const;
+    GLuint texture(textureType type) const;
 
 private:
     void destroy();

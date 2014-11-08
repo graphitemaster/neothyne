@@ -1,12 +1,10 @@
 #ifndef R_WORLD_HDR
 #define R_WORLD_HDR
 
-#include "r_common.h"
-#include "r_texture.h"
+#include "r_ssao.h"
 #include "r_skybox.h"
 #include "r_billboard.h"
 #include "r_gbuffer.h"
-#include "r_method.h"
 #include "r_quad.h"
 
 #include "u_map.h"
@@ -56,25 +54,36 @@ private:
 struct lightMethod : method {
     bool init(const char *vs, const char *fs);
 
+    enum {
+        // First three must have same layout as gBuffer
+        kColor  = gBuffer::kColor,
+        kNormal = gBuffer::kNormal,
+        kDepth  = gBuffer::kDepth,
+        kOcclusion
+    };
+
     void setWVP(const m::mat4 &wvp);
     void setInverse(const m::mat4 &inverse);
     void setColorTextureUnit(int unit);
     void setNormalTextureUnit(int unit);
-    void setSpecTextureUnit(int unit);
+    void setDepthTextureUnit(int unit);
+    void setOcclusionTextureUnit(int unit);
     void setEyeWorldPos(const m::vec3 &position);
     void setPerspectiveProjection(const m::perspectiveProjection &project);
-    void setDepthTextureUnit(int unit);
 
 private:
     GLint m_WVPLocation;
     GLint m_inverseLocation;
-    GLint m_normalTextureUnitLocation;
-    GLint m_specTextureUnitLocation;
+
     GLint m_colorTextureUnitLocation;
+    GLint m_normalTextureUnitLocation;
+    GLint m_depthTextureUnitLocation;
+    GLint m_occlusionTextureUnitLocation;
+
     GLint m_eyeWorldPositionLocation;
+
     GLint m_screenSizeLocation;
     GLint m_screenFrustumLocation;
-    GLint m_depthTextureUnitLocation;
 };
 
 struct directionalLightMethod : lightMethod {
@@ -104,16 +113,47 @@ private:
     GLint m_screenSizeLocation;
 };
 
+struct ssaoMethod : method {
+    bool init();
+
+    enum {
+        kNormal,
+        kDepth,
+        kRandom
+    };
+
+    void setOccluderBias(float bias);
+    void setSamplingRadius(float radius);
+    void setAttenuation(float constant, float linear);
+    void setInverse(const m::mat4 &inverse);
+    void setWVP(const m::mat4 &wvp);
+    void setPerspectiveProjection(const m::perspectiveProjection &project);
+    void setNormalTextureUnit(int unit);
+    void setDepthTextureUnit(int unit);
+    void setRandomTextureUnit(int unit);
+
+private:
+    GLint m_occluderBiasLocation;
+    GLint m_samplingRadiusLocation;
+    GLint m_attenuationLocation;
+    GLint m_inverseLocation;
+    GLint m_WVPLocation;
+    GLint m_screenFrustumLocation;
+    GLint m_screenSizeLocation;
+    GLint m_normalTextureLocation;
+    GLint m_depthTextureLocation;
+    GLint m_randomTextureLocation;
+};
 
 struct finalComposite {
     finalComposite();
     ~finalComposite();
 
     bool init(const m::perspectiveProjection &project, GLuint depth);
-
     void update(const m::perspectiveProjection &project, GLuint depth);
-    void bindReading();
     void bindWriting();
+
+    GLuint texture() const;
 
 private:
     void destroy();
@@ -158,8 +198,10 @@ struct world {
     void render(const rendererPipeline &p);
 
 private:
-    void geometryPass(const rendererPipeline &pipeline);
-    void directionalLightPass(const rendererPipeline &pipelines);
+    void scenePass(const rendererPipeline &pipeline);
+    void lightPass(const rendererPipeline &pipeline);
+    void finalPass(const rendererPipeline &pipeline);
+    void otherPass(const rendererPipeline &pipeline);
 
     bool loadMaterial(const kdMap &map, renderTextureBatch *batch);
 
@@ -175,8 +217,8 @@ private:
     // world shading methods and permutations
     u::vector<geomMethod> m_geomMethods;
     u::vector<finalMethod> m_finalMethods;
-
     directionalLightMethod m_directionalLightMethod;
+    ssaoMethod m_ssaoMethod;
 
     // Other things in the world to render
     skybox m_skybox;
@@ -193,6 +235,7 @@ private:
     directionalLight m_directionalLight;
 
     gBuffer m_gBuffer;
+    ssao m_ssao;
     finalComposite m_final;
 
     m::mat4 m_identity;

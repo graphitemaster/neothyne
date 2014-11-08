@@ -37,7 +37,7 @@ bool lightMethod::init(const char *vs, const char *fs) {
     // samplers
     m_colorTextureUnitLocation = getUniformLocation("gColorMap");
     m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
-    m_specTextureUnitLocation = getUniformLocation("gSpecMap");
+    m_occlusionTextureUnitLocation = getUniformLocation("gOcculsionMap");
     m_depthTextureUnitLocation = getUniformLocation("gDepthMap");
 
     // specular lighting
@@ -66,8 +66,12 @@ void lightMethod::setNormalTextureUnit(int unit) {
     gl::Uniform1i(m_normalTextureUnitLocation, unit);
 }
 
-void lightMethod::setSpecTextureUnit(int unit) {
-    gl::Uniform1i(m_specTextureUnitLocation, unit);
+void lightMethod::setDepthTextureUnit(int unit) {
+    gl::Uniform1i(m_depthTextureUnitLocation, unit);
+}
+
+void lightMethod::setOcclusionTextureUnit(int unit) {
+    gl::Uniform1i(m_occlusionTextureUnitLocation, unit);
 }
 
 void lightMethod::setEyeWorldPos(const m::vec3 &position) {
@@ -77,10 +81,6 @@ void lightMethod::setEyeWorldPos(const m::vec3 &position) {
 void lightMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
     gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
     gl::Uniform2f(m_screenFrustumLocation, project.nearp, project.farp);
-}
-
-void lightMethod::setDepthTextureUnit(int unit) {
-    gl::Uniform1i(m_depthTextureUnitLocation, unit);
 }
 
 ///! Directional Light Rendering Method
@@ -172,6 +172,75 @@ void geomMethod::setSpecIntensity(float intensity) {
 
 void geomMethod::setSpecPower(float power) {
     gl::Uniform1f(m_specPowerLocation, power);
+}
+
+///! SSAO Method
+bool ssaoMethod::init() {
+    if (!method::init())
+        return false;
+
+    if (gl::has(ARB_texture_rectangle))
+        method::define("HAS_TEXTURE_RECTANGLE");
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/ssao.vs"))
+        return false;
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/ssao.fs"))
+        return false;
+    if (!finalize())
+        return false;
+
+    m_occluderBiasLocation = getUniformLocation("gOccluderBias");
+    m_samplingRadiusLocation = getUniformLocation("gSamplingRadius");
+    m_attenuationLocation = getUniformLocation("gAttenuation");
+    m_inverseLocation = getUniformLocation("gInverse");
+    m_WVPLocation = getUniformLocation("gWVP");
+    m_screenFrustumLocation = getUniformLocation("gScreenFrustum");
+    m_screenSizeLocation = getUniformLocation("gScreenSize");
+    m_normalTextureLocation = getUniformLocation("gNormalMap");
+    m_depthTextureLocation = getUniformLocation("gDepthMap");
+    m_randomTextureLocation = getUniformLocation("gRandomMap");
+
+    return true;
+}
+
+void ssaoMethod::setOccluderBias(float bias) {
+    gl::Uniform1f(m_occluderBiasLocation, bias);
+}
+
+void ssaoMethod::setSamplingRadius(float radius) {
+    gl::Uniform1f(m_samplingRadiusLocation, radius);
+}
+
+void ssaoMethod::setAttenuation(float constant, float linear) {
+    gl::Uniform2f(m_attenuationLocation, constant, linear);
+}
+
+void ssaoMethod::setInverse(const m::mat4 &inverse) {
+    // This is the inverse projection matrix used to reconstruct position from
+    // depth in the SSAO pass
+    gl::UniformMatrix4fv(m_inverseLocation, 1, GL_TRUE, (const GLfloat *)inverse.m);
+}
+
+void ssaoMethod::setWVP(const m::mat4 &wvp) {
+    // Will set an identity matrix as this will be a screen space QUAD
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+}
+
+void ssaoMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
+    gl::Uniform2f(m_screenFrustumLocation, project.nearp, project.farp);
+    gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
+}
+
+void ssaoMethod::setNormalTextureUnit(int unit) {
+    gl::Uniform1i(m_normalTextureLocation, unit);
+}
+
+void ssaoMethod::setDepthTextureUnit(int unit) {
+    gl::Uniform1i(m_depthTextureLocation, unit);
+}
+
+void ssaoMethod::setRandomTextureUnit(int unit) {
+    gl::Uniform1i(m_randomTextureLocation, unit);
 }
 
 ///! Final Composite Method
@@ -277,16 +346,12 @@ bool finalComposite::init(const m::perspectiveProjection &project, GLuint depth)
     return true;
 }
 
-void finalComposite::bindReading() {
-    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // Go to screen
-    GLenum format = gl::has(ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
-    gl::ActiveTexture(GL_TEXTURE0);
-    gl::BindTexture(format, m_texture);
-}
-
 void finalComposite::bindWriting() {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
+}
+
+GLuint finalComposite::texture() const {
+    return m_texture;
 }
 
 ///! renderer
@@ -626,6 +691,7 @@ bool world::upload(const m::perspectiveProjection &project) {
         if (!m_finalMethods[i].init(generatePermutation(finalPermutationNames, p)))
             neoFatal("failed to initialize final composite rendering method");
         m_finalMethods[i].enable();
+        m_finalMethods[i].setColorTextureUnit(0);
         m_finalMethods[i].setWVP(m_identity);
     }
 
@@ -646,29 +712,54 @@ bool world::upload(const m::perspectiveProjection &project) {
     if (!m_directionalLightMethod.init())
         neoFatal("failed to initialize directional light rendering method");
 
+    if (!m_ssaoMethod.init())
+        neoFatal("failed to initialize ssao rendering method");
+
     // setup g-buffer
-    if (!m_gBuffer.init(project) || !m_final.init(project, m_gBuffer.depth()))
+    if (!m_gBuffer.init(project))
+        neoFatal("failed to initialize world renderer");
+    if (!m_ssao.init(project))
+        neoFatal("failed to initialize world renderer");
+    if (!m_final.init(project, m_gBuffer.texture(gBuffer::kDepth)))
         neoFatal("failed to initialize world renderer");
 
+    // Setup default uniforms for lighting
     m_directionalLightMethod.enable();
     m_directionalLightMethod.setWVP(m_identity);
-    m_directionalLightMethod.setColorTextureUnit(gBuffer::kDiffuse);
-    m_directionalLightMethod.setNormalTextureUnit(gBuffer::kNormal);
-    m_directionalLightMethod.setSpecTextureUnit(gBuffer::kSpec);
-    m_directionalLightMethod.setDepthTextureUnit(gBuffer::kDepth);
+    m_directionalLightMethod.setColorTextureUnit(lightMethod::kColor);
+    m_directionalLightMethod.setNormalTextureUnit(lightMethod::kNormal);
+    m_directionalLightMethod.setDepthTextureUnit(lightMethod::kDepth);
+    m_directionalLightMethod.setOcclusionTextureUnit(lightMethod::kOcclusion);
+
+    // Setup default uniforms for ssao
+    m_ssaoMethod.enable();
+    m_ssaoMethod.setWVP(m_identity);
+    m_ssaoMethod.setOccluderBias(0.05f);
+    m_ssaoMethod.setSamplingRadius(15.0f);
+    m_ssaoMethod.setAttenuation(1.0f, 0.000005f);
+    m_ssaoMethod.setNormalTextureUnit(ssaoMethod::kNormal);
+    m_ssaoMethod.setDepthTextureUnit(ssaoMethod::kDepth);
+    m_ssaoMethod.setRandomTextureUnit(ssaoMethod::kRandom);
 
     u::print("[world] => uploaded\n");
     return true;
 }
 
-void world::geometryPass(const rendererPipeline &pipeline) {
-    rendererPipeline p = pipeline;
+void world::scenePass(const rendererPipeline &pipeline) {
+    auto p = pipeline;
 
+    // The scene pass will be writing into the gbuffer
+    m_gBuffer.update(p.getPerspectiveProjection());
+    m_gBuffer.bindWriting();
+
+    // Clear the depth and color buffers. This is a new scene pass.
+    // We need depth testing as the scene pass will write into the depth
+    // buffer. Blending isn't needed.
     gl::Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     gl::Disable(GL_BLEND);
     gl::Enable(GL_DEPTH_TEST);
 
-    // Render the world
+    // Render the scene
     gl::BindVertexArray(m_vao);
     for (auto &it : m_textureBatches) {
         auto &permutation = geomPermutations[it.permute];
@@ -695,67 +786,114 @@ void world::geometryPass(const rendererPipeline &pipeline) {
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }
+
+    // Only the scene pass needs to write to the depth buffer
     gl::Disable(GL_DEPTH_TEST);
-}
 
-void world::directionalLightPass(const rendererPipeline &pipeline) {
-    gl::Clear(GL_COLOR_BUFFER_BIT);
+    // Screen space ambient occlusion pass
 
-    const m::perspectiveProjection &project = pipeline.getPerspectiveProjection();
-    m_directionalLightMethod.enable();
+    // Read from the gbuffer, write to the ssao pass
+    m_ssao.update(p.getPerspectiveProjection());
+    m_ssao.bindWriting();
 
-    m_directionalLightMethod.setDirectionalLight(m_directionalLight);
-    m_directionalLightMethod.setPerspectiveProjection(project);
+    // Write to SSAO
+    GLenum format = gl::has(ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
-    m_directionalLightMethod.setEyeWorldPos(pipeline.getPosition());
+    // Bind normal/depth/random
+    gl::ActiveTexture(GL_TEXTURE0);
+    gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal));
+    gl::ActiveTexture(GL_TEXTURE1);
+    gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
+    gl::ActiveTexture(GL_TEXTURE2);
+    gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal)); // TODO: random target
 
-    rendererPipeline p = pipeline;
-    m_directionalLightMethod.setInverse(p.getInverseTransform());
+    // do SSAO pass
+    m_ssaoMethod.enable();
+    m_ssaoMethod.setPerspectiveProjection(p.getPerspectiveProjection());
+    m_ssaoMethod.setInverse(p.getInverseTransform());
     m_quad.render();
 }
 
-void world::render(const rendererPipeline &pipeline) {
-    rendererPipeline p = pipeline;
-    auto project = p.getPerspectiveProjection();
+void world::lightPass(const rendererPipeline &pipeline) {
+    auto p = pipeline;
 
-    m_gBuffer.update(project);
-    m_final.update(project, m_gBuffer.depth());
+    // Write to the final composite
+    m_final.bindWriting();
 
-    /// geometry pass
-    m_gBuffer.bindWriting(); // write to the g-buffer
-    geometryPass(pipeline);
+    // Clear the final composite
+    gl::Clear(GL_COLOR_BUFFER_BIT);
 
-    /// lighting passes
+    // Lighting will require blending
     gl::Enable(GL_BLEND);
     gl::BlendEquation(GL_FUNC_ADD);
     gl::BlendFunc(GL_ONE, GL_ONE);
 
-    m_gBuffer.bindReading(); // read from the g-buffer
-    m_final.bindWriting();   // write to final composite buffer
+    // Need to read from the gbuffer and ssao buffer to do lighting
+    GLenum format = gl::has(ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
-    directionalLightPass(pipeline);
+    gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kColor);
+    gl::BindTexture(format, m_gBuffer.texture(gBuffer::kColor));
+    gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kNormal);
+    gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal));
+    gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kDepth);
+    gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
+    gl::ActiveTexture(GL_TEXTURE3);
+    gl::BindTexture(format, m_ssao.texture());
 
-    //gl::Disable(GL_BLEND);
+    // Do ambient lighting
+    m_directionalLightMethod.enable();
+    m_directionalLightMethod.setDirectionalLight(m_directionalLight);
+    m_directionalLightMethod.setPerspectiveProjection(pipeline.getPerspectiveProjection());
+    m_directionalLightMethod.setEyeWorldPos(pipeline.getPosition());
+    m_directionalLightMethod.setInverse(p.getInverseTransform());
+    m_quad.render();
 
-    /// forward rendering passes
+    // Other lighting passes can be added here later
+}
 
-    // Forward render the skybox and other things last. These will go to the
-    // final composite buffer and use the final composite depth buffer as well
-    // for depth testing.
+void world::otherPass(const rendererPipeline &pipeline) {
+    // Forward rendering takes place here, reenable depth testing
     gl::Enable(GL_DEPTH_TEST);
+
+    // Forward render skybox
     m_skybox.render(pipeline);
+
+    // World billboards
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for (auto &it : m_billboards)
         it.render(pipeline);
-    gl::Disable(GL_DEPTH_TEST);
 
-    /// final composite pass
-    m_final.bindReading();
+    // Don't need depth testing anymore
+    gl::Disable(GL_DEPTH_TEST);
+}
+
+void world::finalPass(const rendererPipeline &pipeline) {
+    // We're going to be reading from the final composite
+    m_final.update(pipeline.getPerspectiveProjection(), m_gBuffer.texture(gBuffer::kDepth));
+
+    // For the final pass it's important we output to the screen
+    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+    GLenum format = gl::has(ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+
+    gl::ActiveTexture(GL_TEXTURE0);
+    gl::BindTexture(format, m_final.texture());
+
     const size_t index = finalCalculatePermutation();
     auto &it = m_finalMethods[index];
     it.enable();
-    it.setPerspectiveProjection(project);
+    it.setPerspectiveProjection(pipeline.getPerspectiveProjection());
     m_quad.render();
+}
+
+void world::render(const rendererPipeline &pipeline) {
+    scenePass(pipeline);
+    lightPass(pipeline);
+    otherPass(pipeline);
+    finalPass(pipeline);
 }
 
 }

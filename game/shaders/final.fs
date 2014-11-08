@@ -76,7 +76,7 @@ vec4 fxaa(neoSampler2D textureSampler, vec2 texCoord) {
               neoTexture2D(textureSampler, texCoord.xy + dir * (3.0/3.0 - 0.5)).xyz);
     float lumaB = dot(rgbB, luma);
 
-    if((lumaB < lumaMin) || (lumaB > lumaMax)){
+    if((lumaB < lumaMin) || (lumaB > lumaMax)) {
         outColor.xyz = rgbA;
     } else {
         outColor.xyz = rgbB;

@@ -46,13 +46,13 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     // diffuse + specular
-    gl::BindTexture(format, m_textures[kDiffuse]);
+    gl::BindTexture(format, m_textures[kColor]);
     gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
     gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format, m_textures[kDiffuse], 0);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format, m_textures[kColor], 0);
 
     // normals + specular
     gl::BindTexture(format, m_textures[kNormal]);
@@ -89,21 +89,12 @@ bool gBuffer::init(const m::perspectiveProjection &project) {
     return true;
 }
 
-void gBuffer::bindReading() {
-    GLenum format = gl::has(ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
-    for (size_t i = 0; i < kMax; i++) {
-        gl::ActiveTexture(GL_TEXTURE0 + i);
-        gl::BindTexture(format, m_textures[i]);
-    }
-}
-
 void gBuffer::bindWriting() {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
 }
 
-GLuint gBuffer::depth() const {
-    return m_textures[kDepth];
+GLuint gBuffer::texture(gBuffer::textureType type) const {
+    return m_textures[type];
 }
 
 }
