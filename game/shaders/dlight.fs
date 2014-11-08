@@ -104,11 +104,11 @@ void main() {
     float occlusionMap = neoTexture2D(gOcclusionMap, texCoord).r;
 
     // Uncomment to visualize occlusion
-    fragColor.rgb = vec3(occlusionMap);
+    //fragColor.rgb = vec3(occlusionMap);
 
-    //fragColor = vec4(colorMap.rgb, 1.0f)
-    //    * occlusionMap
-    //    * calcDirectionalLight(worldPosition, normalMap, specMap);
+    fragColor = vec4(colorMap.rgb, 1.0f)
+        * occlusionMap
+        * calcDirectionalLight(worldPosition, normalMap, specMap);
 #else
     fragColor = vec4(colorMap.rgb, 1.0f)
         * calcDirectionalLight(worldPosition, normalMap, specMap);

@@ -67,7 +67,7 @@ float samplePixels(vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
     // Attenuate the occlusion. This is similar to attenuating a lighting source,
     // in that the further the distance between two points, the less effect
     // AO has on the fragment.
-    float attenuation = 1.0f / (gAttenuation.x + (gAttenuation.y * distance));
+    float attenuation = step(distance, 16.0f) / (gAttenuation.x + (gAttenuation.y * distance));
     return intensity * attenuation;
 }
 
