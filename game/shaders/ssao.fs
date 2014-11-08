@@ -39,9 +39,6 @@ vec2 calcFragCoord(vec2 texCoord) {
 #endif
 }
 
-const float kCapMinDistance = 0.00001f;
-const float kCapMaxDistance = 0.015f;
-
 float calcLinearDepth(vec2 texCoord) {
     return (2.0f * gScreenFrustum.x)
         / (gScreenFrustum.y + gScreenFrustum.x -
@@ -55,12 +52,7 @@ vec3 calcPosition(vec2 texCoord) {
     return pos.xyz / pos.w;
 }
 
-float samplePixels(float srcDepth, vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
-    float dstDepth = calcLinearDepth(texCoord);
-    float deltaDepth = (dstDepth > srcDepth) ? dstDepth - srcDepth : srcDepth - dstDepth;
-    if (deltaDepth < kCapMinDistance || deltaDepth > kCapMaxDistance)
-        return 0.0f;
-
+float samplePixels(vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
     // Calculate destination position
     vec3 dstPosition = calcPosition(texCoord);
 
@@ -69,7 +61,6 @@ float samplePixels(float srcDepth, vec3 srcPosition, vec3 srcNormal, vec2 texCoo
     // fragment cast the hardest shadow and objects closer to the horizon have
     // very minimal effect.
     vec3 position = dstPosition - srcPosition;
-
     float distance = length(position);
     float intensity = max(dot(normalize(position), srcNormal) - gOccluderBias, 0.0f);
 
@@ -106,10 +97,10 @@ void main() {
         vec2 k2 = vec2(k1.x * sin45 - k1.y * sin45,
                        k1.x * sin45 + k1.y * sin45);
 
-        occlusion += samplePixels(srcDepth, srcPosition, srcNormal, texCoord + k1 * kernelRadius);
-        occlusion += samplePixels(srcDepth, srcPosition, srcNormal, texCoord + k2 * kernelRadius * 0.75f);
-        occlusion += samplePixels(srcDepth, srcPosition, srcNormal, texCoord + k1 * kernelRadius * 0.50f);
-        occlusion += samplePixels(srcDepth, srcPosition, srcNormal, texCoord + k2 * kernelRadius * 0.25f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k1 * kernelRadius);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k2 * kernelRadius * 0.75f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k1 * kernelRadius * 0.50f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k2 * kernelRadius * 0.25f);
     }
 
     fragColor.r = 1.0f - clamp(occlusion / 16.0f, 0.0f, 1.0f);
