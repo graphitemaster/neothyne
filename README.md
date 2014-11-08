@@ -26,7 +26,8 @@ embodies the following:
   * Normal mapping (dot3 bump mapping)
   * Displacement mapping (steep parallax and relief mapping)
   * Sky fog gradient
-  * FXAA
+  * Fast approximate anti-aliasing (FXAA)
+  * Screen space ambient occlusion (SSAO)
 
 ## Supported texture formats
 
