@@ -37,6 +37,7 @@ VIDEO
     vid_driver
         the driver to use for rendering enclosed in quotes
 
+
 RENDERER
     r_aniso
     Anisotropic texture filtering
@@ -76,6 +77,17 @@ RENDERER
     Fast approximate anti-aliasing
         0 = disable
         1 = enable
+
+    r_ssao
+    Screen space ambient occlusion
+        0 = disable
+        1 = enable
+
+    r_parallax
+    Displacement mapping
+        0 = disable
+        1 = enable
+
 
 CLIENT
     cl_farp
