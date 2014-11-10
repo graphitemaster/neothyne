@@ -809,12 +809,15 @@ void world::scenePass(const rendererPipeline &pipeline) {
     m_gBuffer.update(p.getPerspectiveProjection());
     m_gBuffer.bindWriting();
 
+    // Only geometry updates depth
+    gl::DepthMask(GL_TRUE);
+
     // Clear the depth and color buffers. This is a new scene pass.
     // We need depth testing as the scene pass will write into the depth
     // buffer. Blending isn't needed.
     gl::Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    gl::Disable(GL_BLEND);
     gl::Enable(GL_DEPTH_TEST);
+    gl::Disable(GL_BLEND);
 
     // Render the scene
     gl::BindVertexArray(m_vao);
@@ -843,6 +846,9 @@ void world::scenePass(const rendererPipeline &pipeline) {
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }
+
+    // don't need depth writes
+    gl::DepthMask(GL_FALSE);
 
     // Only the scene pass needs to write to the depth buffer
     gl::Disable(GL_DEPTH_TEST);
@@ -879,13 +885,13 @@ void world::lightPass(const rendererPipeline &pipeline) {
     // Write to the final composite
     m_final.bindWriting();
 
-    // Clear the final composite
-    gl::Clear(GL_COLOR_BUFFER_BIT);
-
     // Lighting will require blending
     gl::Enable(GL_BLEND);
     gl::BlendEquation(GL_FUNC_ADD);
     gl::BlendFunc(GL_ONE, GL_ONE);
+
+    // Clear the final composite
+    gl::Clear(GL_COLOR_BUFFER_BIT);
 
     // Need to read from the gbuffer and ssao buffer to do lighting
     GLenum format = gl::has(ARB_texture_rectangle)
@@ -921,10 +927,16 @@ void world::otherPass(const rendererPipeline &pipeline) {
     // Forward render skybox
     m_skybox.render(pipeline);
 
+    // Billboards can write to depth
+    gl::DepthMask(GL_TRUE);
+
     // World billboards
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for (auto &it : m_billboards)
         it.render(pipeline);
+
+    // Don't need depth writes anymore
+    gl::DepthMask(GL_FALSE);
 
     // Don't need depth testing anymore
     gl::Disable(GL_DEPTH_TEST);
