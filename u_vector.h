@@ -110,6 +110,8 @@ struct vector {
     iterator begin();
     iterator end();
 
+    iterator erase(iterator first, iterator last);
+
     const_iterator begin() const;
     const_iterator end() const;
 
@@ -261,6 +263,11 @@ inline typename vector<T>::const_iterator vector<T>::begin() const {
 template <typename T>
 inline typename vector<T>::const_iterator vector<T>::end() const {
     return m_buffer.last;
+}
+
+template <typename T>
+inline typename vector<T>::iterator vector<T>::erase(iterator first, iterator last) {
+    return m_buffer.erase(first, last);
 }
 
 template <typename T>

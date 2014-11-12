@@ -1,4 +1,5 @@
 #include "r_world.h"
+#include "r_model.h"
 
 #include "u_algorithm.h"
 #include "u_memory.h"
@@ -674,6 +675,35 @@ bool world::load(const kdMap &map) {
         batch.count = m_indices.size() - batch.start;
         m_textureBatches.push_back(batch);
     }
+
+// TODO: Offline step in kdtree.cpp instead
+#if 0
+    u::print("Optimizing world geometry (this could take awhile)\n");
+    // optimize the indices
+    size_t cacheMissesBefore = 0;
+    size_t cacheMissesAfter = 0;
+    for (auto &it : m_textureBatches) {
+        // collect the indices to optimize
+        u::vector<size_t> indices;
+        indices.resize(it.count);
+        for (size_t i = 0; i < it.count; i++)
+            indices[i] = m_indices[it.start + i];
+
+        // Calculate the number of cache misses in the unoptimized mesh
+        vertexCache cache;
+        cacheMissesBefore += cache.getCacheMissCount(indices);
+
+        // Optimize the indices
+        vertexCacheOptimizer opt;
+        auto result = opt.optimize(indices);
+        if (result == vertexCacheOptimizer::kSuccess) {
+            cacheMissesAfter += opt.getCacheMissCount();
+            for (size_t i = 0; i < it.count; i++)
+                m_indices[it.start + i] = indices[i];
+        }
+    }
+    u::print("Eliminated %zu cache misses\n", cacheMissesBefore - cacheMissesAfter);
+#endif
 
     // load materials
     for (size_t i = 0; i < m_textureBatches.size(); i++)

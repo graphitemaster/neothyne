@@ -30,6 +30,7 @@ RENDERER_SOURCES = \
 	r_billboard.cpp \
 	r_common.cpp \
 	r_gbuffer.cpp \
+	r_model.cpp \
 	r_method.cpp \
 	r_pipeline.cpp \
 	r_quad.cpp \

@@ -24,6 +24,21 @@ namespace detail {
         new(a) T(b);
         a->swap(b);
     }
+
+    template <typename T>
+    static inline void move_impl(T &a, T &b, ...) {
+        a = b;
+    }
+
+    template <typename T>
+    static inline void move_impl(T &a, T &b, T*, swap_test<void (T::*)(T&), &T::swap>* = 0) {
+        a.swap(b);
+    }
+
+    template <typename T>
+    static inline void move(T &a, T &b) {
+        move_impl(a, b, (T*)0);
+    }
 }
 
 template <typename T>
@@ -51,6 +66,8 @@ struct buffer {
     template <typename I>
     void insert(T *where, const I *ifirst, const I *ilast);
     void swap(buffer &other);
+
+    T *erase(T *ifirst, T*ilast);
 
 private:
     void destroy_range_traits(T *first, T *last, detail::is_pod<T, false>);
@@ -233,6 +250,16 @@ inline void buffer<T>::bmove_urange_traits(T *dest, T *first, T *last,
     dest += (last - first);
     for (T* it = last; it != first; --it, --dest)
         *(dest - 1) = *(it - 1);
+}
+
+template <typename T>
+inline T *buffer<T>::erase(T *ifirst, T*ilast) {
+    const size_t range = ilast - ifirst;
+    for (T *it = ilast, *end = last, *dest = ifirst; it != end; ++it, ++dest)
+        detail::move(*dest, *it);
+    destroy_range(last - range, last);
+    last -= range;
+    return ifirst;
 }
 
 }
