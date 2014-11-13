@@ -124,7 +124,8 @@ u::map<int, int> &neoKeyState(int key, bool keyDown, bool keyUp) {
 }
 
 void neoMouseDelta(int *deltaX, int *deltaY) {
-    SDL_GetRelativeMouseState(deltaX, deltaY);
+    if (SDL_GetRelativeMouseMode() == SDL_TRUE)
+        SDL_GetRelativeMouseState(deltaX, deltaY);
 }
 
 void neoSwap() {
@@ -140,10 +141,8 @@ size_t neoHeight() {
     return gScreenHeight;
 }
 
-void neoToggleRelativeMouseMode() {
-    SDL_SetRelativeMouseMode(
-        SDL_GetRelativeMouseMode() == SDL_TRUE
-            ? SDL_FALSE : SDL_TRUE);
+void neoRelativeMouse(bool state) {
+    SDL_SetRelativeMouseMode(state ? SDL_TRUE : SDL_FALSE);
 }
 
 void neoSetWindowTitle(const char *title) {
@@ -155,6 +154,8 @@ void neoResize(size_t width, size_t height) {
     gScreenWidth = width;
     gScreenHeight = height;
     gl::Viewport(0, 0, width, height);
+    vid_width.set(width);
+    vid_height.set(height);
 }
 
 void neoSetVSyncOption(vSyncOption option) {

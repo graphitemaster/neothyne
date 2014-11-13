@@ -43,6 +43,8 @@ struct varTypeTraits<u::string> {
 
 void varRegister(const char *name, const char *desc, void *what, varType type);
 
+varStatus varChange(const u::string &name, const u::string &value, bool callback = false);
+
 template <typename T>
 inline void varDefine(const char *name, const char *desc, T *self) {
     varRegister(name, desc, (void *)self, varTypeTraits<typename T::type>::type);

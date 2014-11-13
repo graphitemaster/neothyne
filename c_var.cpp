@@ -60,7 +60,7 @@ static inline varStatus varSet(const u::string &name, const T &value, bool callb
     return status;
 }
 
-varStatus varChange(const u::string &name, const u::string &value, bool callback = false) {
+varStatus varChange(const u::string &name, const u::string &value, bool callback) {
     if (variables().find(name) == variables().end())
         return kVarNotFoundError;
     auto &ref = variables()[name];

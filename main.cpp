@@ -250,6 +250,12 @@ int neoMain(frameTimer &timer, int, char **) {
                             projection.height = neoHeight();
                             pipeline.setPerspectiveProjection(projection);
                             break;
+                        case SDL_WINDOWEVENT_FOCUS_GAINED:
+                            neoRelativeMouse(true);
+                            break;
+                        case SDL_WINDOWEVENT_FOCUS_LOST:
+                            neoRelativeMouse(false);
+                            break;
                     }
                     break;
                 case SDL_KEYDOWN:
@@ -264,13 +270,16 @@ int neoMain(frameTimer &timer, int, char **) {
                             u::print("%d fps : %.2f mspf\n", timer.fps(), timer.mspf());
                             break;
                         case SDLK_F12:
-                            neoToggleRelativeMouseMode();
+                            neoRelativeMouse(false);
                             break;
                     }
                     neoKeyState(e.key.keysym.sym, true);
                     break;
                 case SDL_KEYUP:
                     neoKeyState(e.key.keysym.sym, false, true);
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    neoRelativeMouse(true);
                     break;
             }
         }

@@ -54,7 +54,7 @@ void neoMouseDelta(int *deltaX, int *deltaY);
 void neoSwap();
 size_t neoWidth();
 size_t neoHeight();
-void neoToggleRelativeMouseMode();
+void neoRelativeMouse(bool state);
 void neoSetWindowTitle(const char *title);
 void neoResize(size_t width, size_t height);
 const u::string &neoUserPath();

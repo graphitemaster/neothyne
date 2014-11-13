@@ -53,8 +53,12 @@ void ssao::update(const m::perspectiveProjection &project) {
     size_t height = project.height;
 
     if (m_width != width || m_height != height) {
-        destroy();
-        init(project);
+        GLenum format = gl::has(ARB_texture_rectangle)
+            ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+        m_width = width;
+        m_height = height;
+        gl::BindTexture(format, m_texture);
+        gl::TexImage2D(format, 0, GL_R16F, m_width, m_height, 0, GL_RED, GL_FLOAT, nullptr);
     }
 }
 
