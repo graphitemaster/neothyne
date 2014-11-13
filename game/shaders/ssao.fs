@@ -100,6 +100,19 @@ void main() {
     vec2 k23 = vec2(k13.x * kKernelFactor - k13.y * kKernelFactor,
                     k13.x * kKernelFactor + k13.y * kKernelFactor);
 
+#ifndef HAS_TEXTURE_RECTANGLE
+    vec2 texelSize = 1.0f / gScreenSize;
+
+    k10 *= texelSize;
+    k11 *= texelSize;
+    k12 *= texelSize;
+    k13 *= texelSize;
+    k20 *= texelSize;
+    k21 *= texelSize;
+    k22 *= texelSize;
+    k23 *= texelSize;
+#endif
+
     occlusion += samplePixels(srcPosition, srcNormal, texCoord + k10 * kernelRadius);
     occlusion += samplePixels(srcPosition, srcNormal, texCoord + k20 * kernelRadius * 0.75f);
     occlusion += samplePixels(srcPosition, srcNormal, texCoord + k10 * kernelRadius * 0.50f);
