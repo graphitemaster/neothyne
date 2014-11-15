@@ -11,7 +11,7 @@
 
 uniform neoSampler2D gNormalMap;
 uniform neoSampler2D gDepthMap;
-uniform sampler2D gRandomMap;
+uniform neoSampler2D gRandomMap;
 
 uniform vec2 gScreenSize;    // { width, height }
 uniform vec2 gScreenFrustum; // { near, far }
@@ -39,6 +39,7 @@ vec2 calcFragCoord(vec2 texCoord) {
     return texCoord;
 #endif
 }
+
 
 float calcLinearDepth(vec2 texCoord) {
     return (2.0f * gScreenFrustum.x)
@@ -75,7 +76,7 @@ float samplePixels(vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
 void main() {
     vec2 texCoord = calcTexCoord();
 
-    vec2 randomJitter = normalize(texture(gRandomMap, calcFragCoord(texCoord)).xy * 2.0f - 2.0f);
+    vec2 randomJitter = normalize(neoTexture2D(gRandomMap, texCoord).xy * 2.0f - 2.0f);
     vec3 srcNormal = neoTexture2D(gNormalMap, texCoord).rgb * 2.0f - 1.0f;
 
     float srcDepth = calcLinearDepth(texCoord);

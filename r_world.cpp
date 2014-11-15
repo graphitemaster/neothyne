@@ -894,12 +894,12 @@ void world::scenePass(const rendererPipeline &pipeline) {
             ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
         // Bind normal/depth/random
-        gl::ActiveTexture(GL_TEXTURE0);
+        gl::ActiveTexture(GL_TEXTURE0 + ssaoMethod::kNormal);
         gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal));
-        gl::ActiveTexture(GL_TEXTURE1);
+        gl::ActiveTexture(GL_TEXTURE0 + ssaoMethod::kDepth);
         gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
-        gl::ActiveTexture(GL_TEXTURE2);
-        gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal)); // TODO: random target
+        gl::ActiveTexture(GL_TEXTURE0 + ssaoMethod::kRandom);
+        gl::BindTexture(format, m_ssao.texture(ssao::kRandom));
 
         // do SSAO pass
         m_ssaoMethod.enable();
@@ -935,7 +935,7 @@ void world::lightPass(const rendererPipeline &pipeline) {
     gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
     if (r_ssao) {
         gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kOcclusion);
-        gl::BindTexture(format, m_ssao.texture());
+        gl::BindTexture(format, m_ssao.texture(ssao::kBuffer));
     }
 
     auto &method = m_directionalLightMethods[lightCalculatePermutation()];
