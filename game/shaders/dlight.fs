@@ -1,11 +1,4 @@
-#ifdef HAS_TEXTURE_RECTANGLE
-#  extension GL_ARB_texture_rectangle : enable
-#  define neoSampler2D sampler2DRect
-#  define neoTexture2D texture2DRect
-#else
-#  define neoSampler2D sampler2D
-#  define neoTexture2D texture2D
-#endif
+#include <shaders/screenspace.h>
 
 struct baseLight {
     vec3 color;
@@ -27,22 +20,12 @@ uniform neoSampler2D gOcclusionMap;
 #endif
 
 uniform vec3 gEyeWorldPosition;
-uniform vec2 gScreenSize;
-uniform vec2 gScreenFrustum;
 
 uniform mat4 gInverse;
 
 uniform directionalLight gDirectionalLight;
 
 out vec4 fragColor;
-
-vec2 calcTexCoord() {
-#ifdef HAS_TEXTURE_RECTANGLE
-    return gl_FragCoord.xy;
-#else
-    return gl_FragCoord.xy / gScreenSize;
-#endif
-}
 
 vec4 calcLightGeneric(baseLight light, vec3 lightDirection, vec3 worldPosition, vec3 normal, vec2 spec) {
     vec4 ambientColor = vec4(light.color, 1.0f) * light.ambient;

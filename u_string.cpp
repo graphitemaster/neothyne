@@ -102,15 +102,19 @@ string &string::append(const char *str, size_t len) {
     return append(str, str + len);
 }
 
-void string::pop_back() {
+char string::pop_back() {
     if (m_last == m_first)
-        return;
+        return *m_first;
     m_last--;
+    char last = *m_last;
     *m_last = '\0';
+    return last;
 }
 
-void string::pop_front() {
+char string::pop_front() {
+    char front = *m_first;
     erase(0, 1);
+    return front;
 }
 
 string::iterator string::begin() {

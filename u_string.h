@@ -40,8 +40,8 @@ struct string {
     string &append(const char *first, const char* last);
     string &append(const char *str, size_t len);
 
-    void pop_back();
-    void pop_front();
+    char pop_back();
+    char pop_front();
 
     char &operator[](size_t index);
     const char &operator[](size_t index) const;

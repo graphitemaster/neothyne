@@ -4,6 +4,7 @@
 
 #include "u_string.h"
 #include "u_vector.h"
+#include "u_optional.h"
 
 namespace r {
 
@@ -23,6 +24,8 @@ protected:
     bool addShader(GLenum shaderType, const char *shaderText);
 
     bool finalize();
+
+    u::optional<u::string> preprocess(const u::string &file);
 
     GLint getUniformLocation(const char *name);
     GLint getUniformLocation(const u::string &name);

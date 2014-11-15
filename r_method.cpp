@@ -46,6 +46,36 @@ void method::define(const u::string &macro, float value) {
     m_geometrySource += prelude;
 }
 
+u::optional<u::string> method::preprocess(const u::string &file) {
+    auto fp = u::fopen(neoGamePath() + file, "r");
+    if (!fp)
+        return u::none;
+    u::string result;
+    size_t lineno = 1;
+    while (auto read = u::getline(fp)) {
+        auto line = *read;
+        while (line[0] && strchr(" \t", line[0])) line.pop_front();
+        if (line[0] == '#') {
+            auto split = u::split(&line[1]);
+            if (split.size() == 2 && split[0] == "include") {
+                auto thing = split[1];
+                auto front = thing.pop_front(); // '"' or '<'
+                auto back = thing.pop_back(); // '"' or '>'
+                if ((front == '<' && back != '>') && (front != back))
+                    return u::format("#error invalid use of include directive on line %zu\n", lineno);
+                u::optional<u::string> include = preprocess(thing);
+                if (!include)
+                    return u::format("#error failed to include %s\n", thing);
+                result += u::format("#line %zu\n%s\n", lineno++, *include);
+                continue;
+            }
+        }
+        result += line + "\n";
+        lineno++;
+    }
+    return result;
+}
+
 bool method::addShader(GLenum shaderType, const char *shaderFile) {
     u::string *shaderSource = nullptr;
     switch (shaderType) {
@@ -62,11 +92,11 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
             break;
     }
 
-    auto source = u::read(neoGamePath() + shaderFile, "r");
-    if (source)
-        *shaderSource += u::string((*source).begin(), (*source).end());
-    else
-        return false;
+    auto pp = preprocess(shaderFile);
+    if (!pp)
+        neoFatal("failed preprocessing `%s'", shaderFile);
+
+    *shaderSource += *pp;
 
     GLuint shaderObject = gl::CreateShader(shaderType);
     if (!shaderObject)
@@ -91,7 +121,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
         gl::GetShaderiv(shaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
         infoLog.resize(infoLogLength);
         gl::GetShaderInfoLog(shaderObject, infoLogLength, nullptr, &infoLog[0]);
-        u::print("Shader error %s :\n%s\n", shaderFile, infoLog);
+        u::print("shader compilation error `%s':\n%s\n", shaderFile, infoLog);
         return false;
     }
 

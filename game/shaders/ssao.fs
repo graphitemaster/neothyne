@@ -1,20 +1,10 @@
-#ifdef HAS_TEXTURE_RECTANGLE
-#  extension GL_ARB_texture_rectangle : enable
-#  define neoSampler2D sampler2DRect
-#  define neoTexture2D texture2DRect
-#else
-#  define neoSampler2D sampler2D
-#  define neoTexture2D texture2D
-#endif
+#include <shaders/screenspace.h>
 
 #define M_PI 3.1415926535897932384626433832795
 
 uniform neoSampler2D gNormalMap;
 uniform neoSampler2D gDepthMap;
 uniform neoSampler2D gRandomMap;
-
-uniform vec2 gScreenSize;    // { width, height }
-uniform vec2 gScreenFrustum; // { near, far }
 
 uniform float gOccluderBias;
 uniform float gSamplingRadius;
@@ -23,23 +13,6 @@ uniform vec2 gAttenuation; // { constant, linear }
 uniform mat4 gInverse;
 
 out vec4 fragColor;
-
-vec2 calcTexCoord() {
-#ifdef HAS_TEXTURE_RECTANGLE
-    return gl_FragCoord.xy;
-#else
-    return gl_FragCoord.xy / gScreenSize;
-#endif
-}
-
-vec2 calcFragCoord(vec2 texCoord) {
-#ifdef HAS_TEXTURE_RECTANGLE
-    return texCoord / gScreenSize;
-#else
-    return texCoord;
-#endif
-}
-
 
 float calcLinearDepth(vec2 texCoord) {
     return (2.0f * gScreenFrustum.x)
