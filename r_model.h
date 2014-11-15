@@ -75,6 +75,6 @@ private:
     bool process();
 };
 
-};
+}
 
 #endif
