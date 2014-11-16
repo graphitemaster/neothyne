@@ -22,6 +22,8 @@ embodies the following:
 * Deferred renderer (which can do)
   * Directional lighting (with ambient and diffuse terms)
   * Specular lighting (with power and intensity terms)
+  * Point lighting
+  * Spot lighting
   * Sky meshes (skybox, skydome, etc, any mesh will suffice).
   * Normal mapping (dot3 bump mapping)
   * Displacement mapping (steep parallax and relief mapping)
