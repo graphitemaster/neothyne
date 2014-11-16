@@ -10,7 +10,7 @@
 #  define neoTexture2D texture2D
 #endif
 
-uniform vec2 gScreenSize;    // { width, height }
+uniform vec2 gScreenSize; // { width, height }
 uniform vec2 gScreenFrustum; // { near, far }
 
 vec2 calcTexCoord() {

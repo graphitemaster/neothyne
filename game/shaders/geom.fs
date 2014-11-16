@@ -33,8 +33,7 @@ uniform float gSpecIntensity;
 #endif
 
 #ifdef USE_PARALLAX
-// x = scale, y = bias
-uniform vec2 gParallax;
+uniform vec2 gParallax; // { scale, bias }
 #endif
 
 #ifdef USE_NORMALMAP

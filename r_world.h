@@ -5,7 +5,7 @@
 #include "r_skybox.h"
 #include "r_billboard.h"
 #include "r_gbuffer.h"
-#include "r_quad.h"
+#include "r_geom.h"
 
 #include "u_map.h"
 
@@ -16,12 +16,30 @@ namespace r {
 struct baseLight {
     m::vec3 color;
     float ambient;
-    float diffuse;
+    union {
+        float diffuse;
+        float intensity;
+    };
 };
 
 // a directional light (local ambiance and diffuse)
 struct directionalLight : baseLight {
     m::vec3 direction;
+};
+
+// a point light
+struct pointLight : baseLight {
+    pointLight() {}
+    m::vec3 position;
+    union {
+        struct {
+            float constant;
+            float linear;
+            float exp;
+        };
+        m::vec3 attenuation;
+    };
+    float calcSphere();
 };
 
 struct geomMethod : method {
@@ -89,7 +107,7 @@ private:
 struct directionalLightMethod : lightMethod {
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
-    void setDirectionalLight(const directionalLight &light);
+    void setLight(const directionalLight &light);
 
 private:
     struct {
@@ -98,6 +116,21 @@ private:
         GLint diffuse;
         GLint direction;
     } m_directionalLightLocation;
+};
+
+struct pointLightMethod : lightMethod {
+    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
+
+    void setLight(const pointLight &light);
+
+private:
+    struct {
+        GLint color;
+        GLint ambient;
+        GLint diffuse;
+        GLint position;
+        GLint attenuation;
+    } m_pointLightLocation;
 };
 
 struct finalMethod : method {
@@ -161,6 +194,11 @@ struct finalComposite {
     GLuint texture() const;
 
 private:
+    enum {
+        kBuffer,
+        kDepth
+    };
+
     void destroy();
 
     GLuint m_fbo;
@@ -223,11 +261,13 @@ private:
     u::vector<geomMethod> m_geomMethods;
     u::vector<finalMethod> m_finalMethods;
     u::vector<directionalLightMethod> m_directionalLightMethods;
+    u::vector<pointLightMethod> m_pointLightMethods;
     ssaoMethod m_ssaoMethod;
 
     // Other things in the world to render
     skybox m_skybox;
     quad m_quad;
+    sphere m_sphere;
     u::vector<billboard> m_billboards;
 
     // The world itself
@@ -238,6 +278,7 @@ private:
 
     // World lights
     directionalLight m_directionalLight;
+    u::vector<pointLight> m_pointLights;
 
     gBuffer m_gBuffer;
     ssao m_ssao;

@@ -4,7 +4,7 @@
 #include "r_pipeline.h"
 #include "r_texture.h"
 #include "r_method.h"
-#include "r_quad.h"
+#include "r_geom.h"
 
 #include "m_mat4.h"
 

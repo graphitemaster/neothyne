@@ -16,8 +16,6 @@ out vec2 texCoord0;
 out vec3 tangent0;
 out vec3 bitangent0;
 
-out float depth0;
-
 #ifdef USE_PARALLAX
 out vec3 eyePosition0;
 out float eyeDotDirection0;

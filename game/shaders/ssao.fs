@@ -1,31 +1,17 @@
 #include <shaders/screenspace.h>
+#include <shaders/depth.h>
 
 #define M_PI 3.1415926535897932384626433832795
 
 uniform neoSampler2D gNormalMap;
-uniform neoSampler2D gDepthMap;
 uniform neoSampler2D gRandomMap;
 
 uniform float gOccluderBias;
 uniform float gSamplingRadius;
 uniform vec2 gKernel[kKernelSize];
 uniform vec2 gAttenuation; // { constant, linear }
-uniform mat4 gInverse;
 
 out vec4 fragColor;
-
-float calcLinearDepth(vec2 texCoord) {
-    return (2.0f * gScreenFrustum.x)
-        / (gScreenFrustum.y + gScreenFrustum.x -
-            neoTexture2D(gDepthMap, texCoord).x * (gScreenFrustum.y - gScreenFrustum.x));
-}
-
-vec3 calcPosition(vec2 texCoord) {
-    float depth = neoTexture2D(gDepthMap, texCoord).r * 2.0f - 1.0f;
-    vec4 pos = vec4(calcFragCoord(texCoord) * 2.0f - 1.0f, depth, 1.0f);
-    pos = gInverse * pos;
-    return pos.xyz / pos.w;
-}
 
 float samplePixels(vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
     // Calculate destination position

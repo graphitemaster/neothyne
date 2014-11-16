@@ -33,7 +33,7 @@ RENDERER_SOURCES = \
 	r_model.cpp \
 	r_method.cpp \
 	r_pipeline.cpp \
-	r_quad.cpp \
+	r_geom.cpp \
 	r_skybox.cpp \
 	r_ssao.cpp \
 	r_splash.cpp \

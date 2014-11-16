@@ -101,12 +101,49 @@ bool directionalLightMethod::init(const u::vector<const char *> &defines) {
     return true;
 }
 
-void directionalLightMethod::setDirectionalLight(const directionalLight &light) {
+void directionalLightMethod::setLight(const directionalLight &light) {
     m::vec3 direction = light.direction.normalized();
     gl::Uniform3fv(m_directionalLightLocation.color, 1, &light.color.x);
     gl::Uniform1f(m_directionalLightLocation.ambient, light.ambient);
     gl::Uniform3fv(m_directionalLightLocation.direction, 1, &direction.x);
     gl::Uniform1f(m_directionalLightLocation.diffuse, light.diffuse);
+}
+
+///! Point Light Rendering Method
+bool pointLightMethod::init(const u::vector<const char *> &defines) {
+    if (!lightMethod::init("shaders/plight.vs", "shaders/plight.fs", defines))
+        return false;
+
+    m_pointLightLocation.color = getUniformLocation("gPointLight.base.color");
+    m_pointLightLocation.ambient = getUniformLocation("gPointLight.base.ambient");
+    m_pointLightLocation.diffuse = getUniformLocation("gPointLight.base.diffuse");
+    m_pointLightLocation.position = getUniformLocation("gPointLight.position");
+    m_pointLightLocation.attenuation = getUniformLocation("gPointLight.attenuation");
+
+    return true;
+}
+
+void pointLightMethod::setLight(const pointLight &light) {
+    gl::Uniform3fv(m_pointLightLocation.color, 1, &light.color.x);
+    gl::Uniform1f(m_pointLightLocation.ambient, light.ambient);
+    gl::Uniform1f(m_pointLightLocation.diffuse, light.diffuse);
+    gl::Uniform3fv(m_pointLightLocation.position, 1, &light.position.x);
+    gl::Uniform3fv(m_pointLightLocation.attenuation, 1, &light.attenuation.x);
+}
+
+float pointLight::calcSphere() {
+    // 0 <= Intensity <= 1
+    // Light = R,G,B (0<=R,G,B<=1)
+    // C = max(R,G,B)
+    //
+    // (C*intensity) / attenuation = (1/256) => Attenuation = 256*C*Intensity
+    //
+    // Constant + Linear * Distance + Exp * Distance^2 = 256*C*Intensity
+    //  Exp * Distance^2 + Linear * Distance + Constant - 256*C*Intensity = 0
+    //
+    // Distance = (-Linear+sqrt(Linear^2-4*Exp*(Constant-256*C*Intensity)))/2*Exp
+    const float C = fmax(fmax(color.x, color.y), color.z);
+    return (-linear+sqrtf(linear*linear-4.0f*exp*(exp-256*C*intensity)))/2*exp;
 }
 
 ///! Geomety Rendering Method
@@ -355,7 +392,6 @@ bool finalComposite::init(const m::perspectiveProjection &project, GLuint depth)
     gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format, m_texture, 0);
 
-    // depth
     gl::BindTexture(format, depth);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, format, depth, 0);
 
@@ -419,6 +455,16 @@ world::world() {
             case 2: m_billboards[kBillboardRocket].add(places[i]); break;
             case 3: m_billboards[kBillboardShotgun].add(places[i]); break;
         }
+        pointLight light;
+        light.color = m::vec3(1.0f, 0.0f, 0.0f); // RED
+        light.diffuse = 0.5f; // 75% diffuse intensity
+        light.ambient = 0.5f; // 25% ambient
+        light.attenuation.x = 0.01f;
+        light.attenuation.y = 0.01f;
+        light.attenuation.z = 1.5f;
+        light.position = places[i];
+        light.position.y -= 10.0f;
+        m_pointLights.push_back(light);
     }
 }
 
@@ -720,9 +766,10 @@ bool world::upload(const m::perspectiveProjection &project) {
     // upload skybox
     if (!m_skybox.upload())
         neoFatal("failed to upload skybox");
-
     if (!m_quad.upload())
-        neoFatal("failed to upload screen-space quad");
+        neoFatal("failed to upload quad");
+    if (!m_sphere.upload())
+        neoFatal("failed to upload sphere");
 
     // upload billboards
     for (auto &it : m_billboards) {
@@ -791,7 +838,7 @@ bool world::upload(const m::perspectiveProjection &project) {
         if (p.disp   != -1) m_geomMethods[i].setDispTextureUnit(p.disp);
     }
 
-    // light shader permutations
+    // directional light shader permutations
     static const size_t lightCount = sizeof(lightPermutations)/sizeof(lightPermutations[0]);
     m_directionalLightMethods.resize(lightCount);
     for (size_t i = 0; i < lightCount; i++) {
@@ -805,6 +852,19 @@ bool world::upload(const m::perspectiveProjection &project) {
         m_directionalLightMethods[i].setDepthTextureUnit(lightMethod::kDepth);
         if (p.permute & kLightPermSSAO)
             m_directionalLightMethods[i].setOcclusionTextureUnit(lightMethod::kOcclusion);
+    }
+
+    // point light shader permuation (only one so far)
+    static const size_t pointCount = 1;
+    m_pointLightMethods.resize(pointCount);
+    for (size_t i = 0; i < pointCount; i++) {
+        if (!m_pointLightMethods[i].init())
+            neoFatal("failed to initialize light rendering method");
+        m_pointLightMethods[i].enable();
+        //m_pointLightMethods[i].setWVP(m_identity);
+        m_pointLightMethods[i].setColorTextureUnit(lightMethod::kColor);
+        m_pointLightMethods[i].setNormalTextureUnit(lightMethod::kNormal);
+        m_pointLightMethods[i].setDepthTextureUnit(lightMethod::kDepth);
     }
 
     // setup g-buffer
@@ -838,9 +898,6 @@ void world::scenePass(const rendererPipeline &pipeline) {
     // The scene pass will be writing into the gbuffer
     m_gBuffer.update(p.getPerspectiveProjection());
     m_gBuffer.bindWriting();
-
-    // Only geometry updates depth
-    gl::DepthMask(GL_TRUE);
 
     // Clear the depth and color buffers. This is a new scene pass.
     // We need depth testing as the scene pass will write into the depth
@@ -876,9 +933,6 @@ void world::scenePass(const rendererPipeline &pipeline) {
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }
-
-    // don't need depth writes
-    gl::DepthMask(GL_FALSE);
 
     // Only the scene pass needs to write to the depth buffer
     gl::Disable(GL_DEPTH_TEST);
@@ -938,35 +992,66 @@ void world::lightPass(const rendererPipeline &pipeline) {
         gl::BindTexture(format, m_ssao.texture(ssao::kBuffer));
     }
 
-    auto &method = m_directionalLightMethods[lightCalculatePermutation()];
-    // Do ambient lighting
-    method.enable();
-    method.setDirectionalLight(m_directionalLight);
-    method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
-    method.setEyeWorldPos(pipeline.getPosition());
-    method.setInverse(p.getInverseTransform());
-    m_quad.render();
+    // Point Lighting
+    {
+        auto &method = m_pointLightMethods[0];
+        method.enable();
+        method.setEyeWorldPos(pipeline.getPosition());
 
-    // Other lighting passes can be added here later
+        rendererPipeline p;
+        p.setPosition(pipeline.getPosition());
+        p.setRotation(pipeline.getRotation());
+        p.setPerspectiveProjection(pipeline.getPerspectiveProjection());
+
+        gl::Enable(GL_DEPTH_TEST);
+        gl::DepthMask(GL_FALSE);
+        for (auto &it : m_pointLights) {
+            float scale = it.calcSphere();
+            p.setWorldPosition(it.position);
+            p.setScale(m::vec3(scale, scale, scale));
+            method.setLight(it);
+            method.setWVP(p.getWVPTransform());
+            const m::vec3 dist = it.position - p.getPosition();
+            if (dist*dist >= scale*scale) {
+                gl::DepthFunc(GL_LESS);
+                gl::CullFace(GL_BACK);
+            } else {
+                gl::DepthFunc(GL_GEQUAL);
+                gl::CullFace(GL_FRONT);
+            }
+            m_sphere.render();
+        }
+        gl::DepthMask(GL_TRUE);
+        gl::DepthFunc(GL_LESS);
+        gl::CullFace(GL_BACK);
+        gl::Disable(GL_DEPTH_TEST);
+    }
+
+    // Directional Lighting
+    {
+        auto &method = m_directionalLightMethods[lightCalculatePermutation()];
+        method.enable();
+        method.setLight(m_directionalLight);
+        method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
+        method.setEyeWorldPos(pipeline.getPosition());
+        method.setInverse(p.getInverseTransform());
+        m_quad.render();
+    }
 }
 
 void world::otherPass(const rendererPipeline &pipeline) {
+    m_final.bindWriting();
+
     // Forward rendering takes place here, reenable depth testing
     gl::Enable(GL_DEPTH_TEST);
 
     // Forward render skybox
     m_skybox.render(pipeline);
 
-    // Billboards can write to depth
-    gl::DepthMask(GL_TRUE);
-
     // World billboards
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for (auto &it : m_billboards)
         it.render(pipeline);
-
-    // Don't need depth writes anymore
-    gl::DepthMask(GL_FALSE);
 
     // Don't need depth testing anymore
     gl::Disable(GL_DEPTH_TEST);
