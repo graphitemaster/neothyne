@@ -14,15 +14,11 @@ vec4 calcPointLight(vec3 worldPosition, vec3 normal, vec2 spec) {
     float distance = length(lightDirection);
     lightDirection = normalize(lightDirection);
 
-    vec4 color = calcLight(gPointLight.base, lightDirection, worldPosition, normal, spec);
+    vec4 color = distance < gPointLight.radius
+        ? calcLight(gPointLight.base, lightDirection, worldPosition, normal, spec) : vec4(0.0);
 
-    float attenuation = gPointLight.attenuation.x +
-                        gPointLight.attenuation.y * distance +
-                        gPointLight.attenuation.z * distance * distance;
-
-    attenuation = max(1.0f, attenuation);
-
-    return color / attenuation;
+    float attenuation = 1.0f - clamp(distance / gPointLight.radius, 0.0f, 1.0f);
+    return color * attenuation;
 }
 
 void main() {
@@ -33,7 +29,6 @@ void main() {
     vec3 worldPosition = calcPosition(texCoord);
     vec2 specMap = vec2(colorMap.a * 2.0f, exp2(normalDecode.a * 8.0f));
 
-    //fragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
     fragColor = vec4(colorMap.rgb, 1.0f)
         * calcPointLight(worldPosition, normalMap, specMap);
 }

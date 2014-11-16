@@ -12,7 +12,7 @@ struct baseLight {
 struct pointLight {
     baseLight base;
     vec3 position;
-    vec3 attenuation; // { constant, linear, exp }
+    float radius;
 };
 
 struct directionalLight {
@@ -32,7 +32,7 @@ vec4 calcLight(baseLight light, vec3 lightDirection, vec3 worldPosition, vec3 no
 
         vec3 vertexToEye = normalize(gEyeWorldPosition - worldPosition);
 
-        vec3 lightReflect = normalize(reflect(lightDirection, normal));
+        vec3 lightReflect = reflect(lightDirection, normal);
         float specularFactor = dot(vertexToEye, lightReflect);
         specularFactor = pow(specularFactor, spec.y);
         if (specularFactor > 0.0f)

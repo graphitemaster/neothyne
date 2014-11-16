@@ -29,17 +29,12 @@ struct directionalLight : baseLight {
 
 // a point light
 struct pointLight : baseLight {
-    pointLight() {}
+    pointLight()
+        : radius(0.0f)
+    {
+    }
     m::vec3 position;
-    union {
-        struct {
-            float constant;
-            float linear;
-            float exp;
-        };
-        m::vec3 attenuation;
-    };
-    float calcSphere();
+    float radius;
 };
 
 struct geomMethod : method {
@@ -129,7 +124,7 @@ private:
         GLint ambient;
         GLint diffuse;
         GLint position;
-        GLint attenuation;
+        GLint radius;
     } m_pointLightLocation;
 };
 

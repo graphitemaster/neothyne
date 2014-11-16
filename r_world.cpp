@@ -118,7 +118,7 @@ bool pointLightMethod::init(const u::vector<const char *> &defines) {
     m_pointLightLocation.ambient = getUniformLocation("gPointLight.base.ambient");
     m_pointLightLocation.diffuse = getUniformLocation("gPointLight.base.diffuse");
     m_pointLightLocation.position = getUniformLocation("gPointLight.position");
-    m_pointLightLocation.attenuation = getUniformLocation("gPointLight.attenuation");
+    m_pointLightLocation.radius = getUniformLocation("gPointLight.radius");
 
     return true;
 }
@@ -128,22 +128,7 @@ void pointLightMethod::setLight(const pointLight &light) {
     gl::Uniform1f(m_pointLightLocation.ambient, light.ambient);
     gl::Uniform1f(m_pointLightLocation.diffuse, light.diffuse);
     gl::Uniform3fv(m_pointLightLocation.position, 1, &light.position.x);
-    gl::Uniform3fv(m_pointLightLocation.attenuation, 1, &light.attenuation.x);
-}
-
-float pointLight::calcSphere() {
-    // 0 <= Intensity <= 1
-    // Light = R,G,B (0<=R,G,B<=1)
-    // C = max(R,G,B)
-    //
-    // (C*intensity) / attenuation = (1/256) => Attenuation = 256*C*Intensity
-    //
-    // Constant + Linear * Distance + Exp * Distance^2 = 256*C*Intensity
-    //  Exp * Distance^2 + Linear * Distance + Constant - 256*C*Intensity = 0
-    //
-    // Distance = (-Linear+sqrt(Linear^2-4*Exp*(Constant-256*C*Intensity)))/2*Exp
-    const float C = fmax(fmax(color.x, color.y), color.z);
-    return (-linear+sqrtf(linear*linear-4.0f*exp*(exp-256*C*intensity)))/2*exp;
+    gl::Uniform1f(m_pointLightLocation.radius, light.radius);
 }
 
 ///! Geomety Rendering Method
@@ -456,12 +441,13 @@ world::world() {
             case 3: m_billboards[kBillboardShotgun].add(places[i]); break;
         }
         pointLight light;
-        light.color = m::vec3(1.0f, 0.0f, 0.0f); // RED
-        light.diffuse = 0.5f; // 75% diffuse intensity
-        light.ambient = 0.5f; // 25% ambient
-        light.attenuation.x = 0.01f;
-        light.attenuation.y = 0.01f;
-        light.attenuation.z = 1.5f;
+        float R = float(rand()) / float(RAND_MAX);
+        float G = float(rand()) / float(RAND_MAX);
+        float B = float(rand()) / float(RAND_MAX);
+        light.color = m::vec3(R, G, B); // RED
+        light.diffuse = 0.5f;
+        light.ambient = 0.5f;
+        light.radius = 45.0f;
         light.position = places[i];
         light.position.y -= 10.0f;
         m_pointLights.push_back(light);
@@ -996,22 +982,27 @@ void world::lightPass(const rendererPipeline &pipeline) {
     {
         auto &method = m_pointLightMethods[0];
         method.enable();
+        method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
         method.setEyeWorldPos(pipeline.getPosition());
+        method.setInverse(p.getInverseTransform());
 
+        auto project = pipeline.getPerspectiveProjection();
         rendererPipeline p;
         p.setPosition(pipeline.getPosition());
         p.setRotation(pipeline.getRotation());
-        p.setPerspectiveProjection(pipeline.getPerspectiveProjection());
+        p.setPerspectiveProjection(project);
 
+        static constexpr float kLightRadiusTweak = 1.11f;
         gl::Enable(GL_DEPTH_TEST);
         gl::DepthMask(GL_FALSE);
         for (auto &it : m_pointLights) {
-            float scale = it.calcSphere();
+            float scale = it.radius * kLightRadiusTweak;
             p.setWorldPosition(it.position);
-            p.setScale(m::vec3(scale, scale, scale));
+            p.setScale({scale, scale, scale});
             method.setLight(it);
             method.setWVP(p.getWVPTransform());
             const m::vec3 dist = it.position - p.getPosition();
+            scale += project.nearp + 1;
             if (dist*dist >= scale*scale) {
                 gl::DepthFunc(GL_LESS);
                 gl::CullFace(GL_BACK);

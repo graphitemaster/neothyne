@@ -33,9 +33,8 @@ struct quad : geom {
 struct sphere : geom {
     bool upload();
 private:
-    // perfect sphere
-    static constexpr size_t kSlices = 12 * 16;
-    static constexpr size_t kStacks = 6 * 6;
+    static constexpr size_t kSlices = 8;
+    static constexpr size_t kStacks = 4;
 };
 
 }
