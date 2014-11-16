@@ -113,7 +113,6 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
     if (!pp)
         neoFatal("failed preprocessing `%s'", shaderFile);
 
-    u::print("\n\n#%s\n\n%s", shaderFile, *pp);
     *shaderSource += *pp;
 
     GLuint shaderObject = gl::CreateShader(shaderType);

@@ -429,7 +429,7 @@ GLuint finalComposite::texture() const {
 world::world() {
     m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
     m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
-    m_directionalLight.ambient = 0.90f;
+    m_directionalLight.ambient = 0.50f;
     m_directionalLight.diffuse = 0.75f;
 
     const m::vec3 places[] = {
@@ -459,6 +459,10 @@ world::world() {
 
     m_billboards.resize(kBillboardMax);
 
+    pointLight light;
+    light.diffuse = 1.0f;
+    light.ambient = 1.0f;
+    light.radius = 30.0f;
     for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
         switch (rand() % 4) {
             case 0: m_billboards[kBillboardRail].add(places[i]); break;
@@ -466,19 +470,12 @@ world::world() {
             case 2: m_billboards[kBillboardRocket].add(places[i]); break;
             case 3: m_billboards[kBillboardShotgun].add(places[i]); break;
         }
-        spotLight light;
-        float R = float(rand()) / float(RAND_MAX);
-        float G = float(rand()) / float(RAND_MAX);
-        float B = float(rand()) / float(RAND_MAX);
-        light.color = m::vec3(R, G, B); // RED
-        light.diffuse = 0.5f;
-        light.ambient = 0.5f;
-        light.radius = 45.0f;
-        light.direction = m::vec3(5.0f, 5.0f, 5.0f);
-        light.cutOff = 200.0f;
+        light.color = { float(rand()) / float(RAND_MAX),
+                        float(rand()) / float(RAND_MAX),
+                        float(rand()) / float(RAND_MAX) };
         light.position = places[i];
         light.position.y -= 10.0f;
-        m_spotLights.push_back(light);
+        m_pointLights.push_back(light);
     }
 }
 
@@ -1028,10 +1025,18 @@ void world::lightPass(const rendererPipeline &pipeline) {
         gl::DepthMask(GL_FALSE);
         for (auto &it : m_pointLights) {
             float scale = it.radius * kLightRadiusTweak;
+
+            // Frustum cull lights
+            m_frustum.setup(it.position, p.getRotation(), p.getPerspectiveProjection());
+            if (!m_frustum.testSphere(p.getPosition(), scale))
+                continue;
+
             p.setWorldPosition(it.position);
             p.setScale({scale, scale, scale});
+
             method.setLight(it);
             method.setWVP(p.getWVPTransform());
+
             const m::vec3 dist = it.position - p.getPosition();
             scale += project.nearp + 1;
             if (dist*dist >= scale*scale) {
@@ -1068,10 +1073,18 @@ void world::lightPass(const rendererPipeline &pipeline) {
         gl::DepthMask(GL_FALSE);
         for (auto &it : m_spotLights) {
             float scale = it.radius * kLightRadiusTweak;
+
+            // Frustum cull lights
+            m_frustum.setup(it.position, p.getRotation(), p.getPerspectiveProjection());
+            if (!m_frustum.testSphere(p.getPosition(), scale))
+                continue;
+
             p.setWorldPosition(it.position);
             p.setScale({scale, scale, scale});
+
             method.setLight(it);
             method.setWVP(p.getWVPTransform());
+
             const m::vec3 dist = it.position - p.getPosition();
             scale += project.nearp + 1;
             if (dist*dist >= scale*scale) {

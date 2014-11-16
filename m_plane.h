@@ -2,6 +2,7 @@
 #define M_PLANE_HDR
 #include <math.h>
 
+#include "m_mat4.h"
 #include "m_vec3.h"
 
 namespace m {
@@ -101,6 +102,30 @@ struct plane {
     vec3 n;
     float d;
 };
+
+struct frustum {
+    void setup(const m::vec3 &origin, const m::quat &orient, const m::perspectiveProjection &project);
+    bool testSphere(const m::vec3 &point, float radius) const;
+private:
+    enum {
+        kPlaneNear,
+        kPlaneLeft,
+        kPlaneRight,
+        kPlaneUp,
+        kPlaneDown,
+        kPlaneFar,
+        kPlanes
+    };
+    plane m_planes[kPlanes];
+};
+
+inline bool frustum::testSphere(const m::vec3 &point, float radius) const {
+    radius = -radius;
+    for (size_t i = 0; i < 6; i++)
+        if (m_planes[i].getDistanceFromPlane(point) < radius)
+            return false;
+    return true;
+}
 
 }
 

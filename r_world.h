@@ -308,6 +308,7 @@ private:
     finalComposite m_final;
 
     m::mat4 m_identity;
+    m::frustum m_frustum;
 };
 
 }

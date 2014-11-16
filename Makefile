@@ -24,7 +24,8 @@ GAME_SOURCES = \
 MATH_SOURCES = \
 	m_mat4.cpp \
 	m_quat.cpp \
-	m_vec3.cpp
+	m_vec3.cpp \
+	m_plane.cpp
 
 RENDERER_SOURCES = \
 	r_billboard.cpp \
