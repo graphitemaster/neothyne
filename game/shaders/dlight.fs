@@ -30,7 +30,8 @@ void main() {
     //fragColor.rgb = normalMap * 0.5 + 0.5;
 
 #ifdef USE_SSAO
-    float occlusionMap = neoTexture2D(gOcclusionMap, texCoord).r;
+    vec2 fragCoord = texCoord / 2.0f; // Half resolution adjustment
+    float occlusionMap = neoTexture2D(gOcclusionMap, fragCoord).r;
 
     // Uncomment to visualize occlusion
     //fragColor.rgb = vec3(occlusionMap);

@@ -33,7 +33,7 @@ float samplePixels(vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
 }
 
 void main() {
-    vec2 texCoord = calcTexCoord();
+    vec2 texCoord = calcTexCoord() * 2.0f; // Half resultion adjustment
 
     vec2 randomJitter = normalize(neoTexture2D(gRandomMap, texCoord).xy * 2.0f - 2.0f);
     vec3 srcNormal = neoTexture2D(gNormalMap, texCoord).rgb * 2.0f - 1.0f;
@@ -61,7 +61,7 @@ void main() {
                     k13.x * kKernelFactor + k13.y * kKernelFactor);
 
 #ifndef HAS_TEXTURE_RECTANGLE
-    vec2 texelSize = 1.0f / gScreenSize;
+    vec2 texelSize = 1.0f / (gScreenSize / 2.0f); // Half resolution adjustment
 
     k10 *= texelSize;
     k11 *= texelSize;

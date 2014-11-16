@@ -17,8 +17,8 @@ ssao::~ssao() {
 }
 
 bool ssao::init(const m::perspectiveProjection &project) {
-    m_width = project.width;
-    m_height = project.height;
+    m_width = project.width / 2;
+    m_height = project.height / 2;
 
     GLenum format = gl::has(ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
@@ -61,8 +61,8 @@ bool ssao::init(const m::perspectiveProjection &project) {
 }
 
 void ssao::update(const m::perspectiveProjection &project) {
-    size_t width = project.width;
-    size_t height = project.height;
+    size_t width = project.width / 2;
+    size_t height = project.height / 2;
 
     if (m_width != width || m_height != height) {
         GLenum format = gl::has(ARB_texture_rectangle)
