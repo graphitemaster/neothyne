@@ -5,7 +5,7 @@
 uniform neoSampler2D gColorMap;
 uniform neoSampler2D gNormalMap;
 
-uniform pointLight gPointLight;
+uniform spotLight gSpotLight;
 
 out vec4 fragColor;
 
@@ -18,5 +18,5 @@ void main() {
     vec2 specMap = vec2(colorMap.a * 2.0f, exp2(normalDecode.a * 8.0f));
 
     fragColor = vec4(colorMap.rgb, 1.0f)
-        * calcPointLight(gPointLight, worldPosition, normalMap, specMap);
+        * calcSpotLight(gSpotLight, worldPosition, normalMap, specMap);
 }

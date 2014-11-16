@@ -37,6 +37,15 @@ struct pointLight : baseLight {
     float radius;
 };
 
+struct spotLight : pointLight {
+    spotLight()
+        : cutOff(0.0f)
+    {
+    }
+    m::vec3 direction;
+    float cutOff;
+};
+
 struct geomMethod : method {
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
@@ -126,6 +135,23 @@ private:
         GLint position;
         GLint radius;
     } m_pointLightLocation;
+};
+
+struct spotLightMethod : lightMethod {
+    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
+
+    void setLight(const spotLight &light);
+
+private:
+    struct {
+        GLint color;
+        GLint ambient;
+        GLint diffuse;
+        GLint position;
+        GLint radius;
+        GLint direction;
+        GLint cutOff;
+    } m_spotLightLocation;
 };
 
 struct finalMethod : method {
@@ -256,7 +282,8 @@ private:
     u::vector<geomMethod> m_geomMethods;
     u::vector<finalMethod> m_finalMethods;
     u::vector<directionalLightMethod> m_directionalLightMethods;
-    u::vector<pointLightMethod> m_pointLightMethods;
+    pointLightMethod m_pointLightMethod;
+    spotLightMethod m_spotLightMethod;
     ssaoMethod m_ssaoMethod;
 
     // Other things in the world to render
@@ -274,6 +301,7 @@ private:
     // World lights
     directionalLight m_directionalLight;
     u::vector<pointLight> m_pointLights;
+    u::vector<spotLight> m_spotLights;
 
     gBuffer m_gBuffer;
     ssao m_ssao;

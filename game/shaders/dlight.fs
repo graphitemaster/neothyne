@@ -12,11 +12,6 @@ uniform directionalLight gDirectionalLight;
 
 out vec4 fragColor;
 
-vec4 calcDirectionalLight(vec3 worldPosition, vec3 normal, vec2 spec) {
-    return calcLight(gDirectionalLight.base, gDirectionalLight.direction,
-        worldPosition, normal, spec);
-}
-
 void main() {
     vec2 texCoord = calcTexCoord();
     vec4 colorMap = neoTexture2D(gColorMap, texCoord);
@@ -42,9 +37,9 @@ void main() {
 
     fragColor = vec4(colorMap.rgb, 1.0f)
         * occlusionMap
-        * calcDirectionalLight(worldPosition, normalMap, specMap);
+        * calcDirectionalLight(gDirectionalLight, worldPosition, normalMap, specMap);
 #else
     fragColor = vec4(colorMap.rgb, 1.0f)
-        * calcDirectionalLight(worldPosition, normalMap, specMap);
+        * calcDirectionalLight(gDirectionalLight, worldPosition, normalMap, specMap);
 #endif
 }

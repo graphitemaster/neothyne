@@ -131,6 +131,32 @@ void pointLightMethod::setLight(const pointLight &light) {
     gl::Uniform1f(m_pointLightLocation.radius, light.radius);
 }
 
+///! Spot Light Rendering Method
+bool spotLightMethod::init(const u::vector<const char *> &defines) {
+    if (!lightMethod::init("shaders/slight.vs", "shaders/slight.fs", defines))
+        return false;
+
+    m_spotLightLocation.color = getUniformLocation("gSpotLight.base.base.color");
+    m_spotLightLocation.ambient = getUniformLocation("gSpotLight.base.base.ambient");
+    m_spotLightLocation.diffuse = getUniformLocation("gSpotLight.base.base.diffuse");
+    m_spotLightLocation.position = getUniformLocation("gSpotLight.base.position");
+    m_spotLightLocation.radius = getUniformLocation("gSpotLight.base.radius");
+    m_spotLightLocation.direction = getUniformLocation("gSpotLight.direction");
+    m_spotLightLocation.cutOff = getUniformLocation("gSpotLight.cutOfff");
+
+    return true;
+}
+
+void spotLightMethod::setLight(const spotLight &light) {
+    gl::Uniform3fv(m_spotLightLocation.color, 1, &light.color.x);
+    gl::Uniform1f(m_spotLightLocation.ambient, light.ambient);
+    gl::Uniform1f(m_spotLightLocation.diffuse, light.diffuse);
+    gl::Uniform3fv(m_spotLightLocation.position, 1, &light.position.x);
+    gl::Uniform1f(m_spotLightLocation.radius, light.radius);
+    gl::Uniform3fv(m_spotLightLocation.direction, 1, &light.direction.x);
+    gl::Uniform1f(m_spotLightLocation.cutOff, light.cutOff);
+}
+
 ///! Geomety Rendering Method
 bool geomMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
@@ -440,7 +466,7 @@ world::world() {
             case 2: m_billboards[kBillboardRocket].add(places[i]); break;
             case 3: m_billboards[kBillboardShotgun].add(places[i]); break;
         }
-        pointLight light;
+        spotLight light;
         float R = float(rand()) / float(RAND_MAX);
         float G = float(rand()) / float(RAND_MAX);
         float B = float(rand()) / float(RAND_MAX);
@@ -448,9 +474,11 @@ world::world() {
         light.diffuse = 0.5f;
         light.ambient = 0.5f;
         light.radius = 45.0f;
+        light.direction = m::vec3(5.0f, 5.0f, 5.0f);
+        light.cutOff = 200.0f;
         light.position = places[i];
         light.position.y -= 10.0f;
-        m_pointLights.push_back(light);
+        m_spotLights.push_back(light);
     }
 }
 
@@ -840,18 +868,21 @@ bool world::upload(const m::perspectiveProjection &project) {
             m_directionalLightMethods[i].setOcclusionTextureUnit(lightMethod::kOcclusion);
     }
 
-    // point light shader permuation (only one so far)
-    static const size_t pointCount = 1;
-    m_pointLightMethods.resize(pointCount);
-    for (size_t i = 0; i < pointCount; i++) {
-        if (!m_pointLightMethods[i].init())
-            neoFatal("failed to initialize light rendering method");
-        m_pointLightMethods[i].enable();
-        //m_pointLightMethods[i].setWVP(m_identity);
-        m_pointLightMethods[i].setColorTextureUnit(lightMethod::kColor);
-        m_pointLightMethods[i].setNormalTextureUnit(lightMethod::kNormal);
-        m_pointLightMethods[i].setDepthTextureUnit(lightMethod::kDepth);
-    }
+    // point light method
+    if (!m_pointLightMethod.init())
+        neoFatal("failed to initialize point-light rendering method");
+    m_pointLightMethod.enable();
+    m_pointLightMethod.setColorTextureUnit(lightMethod::kColor);
+    m_pointLightMethod.setNormalTextureUnit(lightMethod::kNormal);
+    m_pointLightMethod.setDepthTextureUnit(lightMethod::kDepth);
+
+    // spot light method
+    if (!m_spotLightMethod.init())
+        neoFatal("failed to initialize spot-light rendering method");
+    m_spotLightMethod.enable();
+    m_spotLightMethod.setColorTextureUnit(lightMethod::kColor);
+    m_spotLightMethod.setNormalTextureUnit(lightMethod::kNormal);
+    m_spotLightMethod.setDepthTextureUnit(lightMethod::kDepth);
 
     // setup g-buffer
     if (!m_gBuffer.init(project))
@@ -980,7 +1011,7 @@ void world::lightPass(const rendererPipeline &pipeline) {
 
     // Point Lighting
     {
-        auto &method = m_pointLightMethods[0];
+        auto &method = m_pointLightMethod;
         method.enable();
         method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
         method.setEyeWorldPos(pipeline.getPosition());
@@ -996,6 +1027,46 @@ void world::lightPass(const rendererPipeline &pipeline) {
         gl::Enable(GL_DEPTH_TEST);
         gl::DepthMask(GL_FALSE);
         for (auto &it : m_pointLights) {
+            float scale = it.radius * kLightRadiusTweak;
+            p.setWorldPosition(it.position);
+            p.setScale({scale, scale, scale});
+            method.setLight(it);
+            method.setWVP(p.getWVPTransform());
+            const m::vec3 dist = it.position - p.getPosition();
+            scale += project.nearp + 1;
+            if (dist*dist >= scale*scale) {
+                gl::DepthFunc(GL_LESS);
+                gl::CullFace(GL_BACK);
+            } else {
+                gl::DepthFunc(GL_GEQUAL);
+                gl::CullFace(GL_FRONT);
+            }
+            m_sphere.render();
+        }
+        gl::DepthMask(GL_TRUE);
+        gl::DepthFunc(GL_LESS);
+        gl::CullFace(GL_BACK);
+        gl::Disable(GL_DEPTH_TEST);
+    }
+
+    // Spot lighting
+    {
+        auto &method = m_spotLightMethod;
+        method.enable();
+        method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
+        method.setEyeWorldPos(pipeline.getPosition());
+        method.setInverse(p.getInverseTransform());
+
+        auto project = pipeline.getPerspectiveProjection();
+        rendererPipeline p;
+        p.setPosition(pipeline.getPosition());
+        p.setRotation(pipeline.getRotation());
+        p.setPerspectiveProjection(project);
+
+        static constexpr float kLightRadiusTweak = 1.11f;
+        gl::Enable(GL_DEPTH_TEST);
+        gl::DepthMask(GL_FALSE);
+        for (auto &it : m_spotLights) {
             float scale = it.radius * kLightRadiusTweak;
             p.setWorldPosition(it.position);
             p.setScale({scale, scale, scale});
