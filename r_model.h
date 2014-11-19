@@ -115,14 +115,19 @@ inline size_t hash(const r::face &f) {
 
 namespace r {
 
+struct model;
+
 struct obj : geom {
     bool load(const u::string &file);
     bool upload();
+
 private:
-    u::vector<size_t> m_indices; // Note: every 3 GLuint's form a face
+    friend struct model;
+    bool load(const u::string &file, model *parent);
+    u::vector<size_t> m_indices;
     u::vector<m::vec3> m_positions;
     u::vector<m::vec3> m_normals;
-    u::vector<m::vec3> m_coordinates; // Note: every 2 floats form a texture coordinate
+    u::vector<m::vec3> m_coordinates;
 };
 
 struct model {
@@ -131,7 +136,11 @@ struct model {
 
     void render();
 
+    u::string name() const;
+
 private:
+    friend struct obj;
+    u::string m_name;
     texture2D m_diffuse;
     obj m_mesh;
 };

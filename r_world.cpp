@@ -793,6 +793,8 @@ bool world::upload(const m::perspectiveProjection &project) {
     // upload the model
     if (!m_models[0].upload())
         neoFatal("failed to upload model");
+    else
+        u::print("[model] => loaded %s\n", m_models[0].name());
 
     // upload billboards
     for (auto &it : m_billboards) {

@@ -377,7 +377,7 @@ size_t vertexCacheOptimizer::getCacheMissCount() const {
     return m_vertexCache.getCacheMissCount();
 }
 
-bool obj::load(const u::string &file) {
+bool obj::load(const u::string &file, model *parent) {
     u::file fp = fopen(neoGamePath() + file + ".obj", "r");
     if (!fp)
         return false;
@@ -419,6 +419,11 @@ bool obj::load(const u::string &file) {
             coordinates.push_back({x, y, 0.0f});
         } else if (line[0] == 'g') {
             group++;
+        } else if (line[0] == 'o' && group == 0 && parent) {
+            // Read the name of the model
+            auto contents = u::split(line);
+            if (contents.size() == 2)
+                parent->m_name = contents[1];
         } else if (line[0] == 'f' && group == 0) {
             u::vector<size_t> v;
             u::vector<size_t> n;
@@ -487,6 +492,10 @@ bool obj::load(const u::string &file) {
     return true;
 }
 
+bool obj::load(const u::string &file) {
+    return load(file, nullptr);
+}
+
 bool obj::upload() {
     geom::upload();
 
@@ -536,7 +545,7 @@ bool obj::upload() {
 }
 
 bool model::load(const u::string &file) {
-    if (!m_mesh.load(file))
+    if (!m_mesh.load(file, this))
         return false;
     if (!m_diffuse.load(file))
         return false;
@@ -554,6 +563,10 @@ bool model::upload() {
 void model::render() {
     m_diffuse.bind(GL_TEXTURE0);
     m_mesh.render();
+}
+
+u::string model::name() const {
+    return m_name;
 }
 
 }
