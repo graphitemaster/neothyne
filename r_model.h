@@ -113,6 +113,8 @@ inline size_t hash(const r::face &f) {
 
 }
 
+#include "u_map.h"
+
 namespace r {
 
 struct model;
@@ -130,18 +132,37 @@ private:
     u::vector<m::vec3> m_coordinates;
 };
 
+struct material {
+    material();
+
+    int permute; // Geometry pass permutation for this material
+    texture2D *diffuse;
+    texture2D *normal;
+    texture2D *spec;
+    texture2D *displacement;
+    bool specParams;
+    float specPower;
+    float specIntensity;
+    float dispScale;
+    float dispBias;
+
+    bool load(u::map<u::string, texture2D*> &textures, const u::string &file, const u::string &basePath);
+    bool upload();
+};
+
 struct model {
-    bool load(const u::string &file);
+    bool load(u::map<u::string, texture2D*> &textures, const u::string &file);
     bool upload();
 
     void render();
 
     u::string name() const;
 
+    material mat;
+
 private:
     friend struct obj;
     u::string m_name;
-    texture2D m_diffuse;
     obj m_mesh;
 };
 

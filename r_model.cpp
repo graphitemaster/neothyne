@@ -377,6 +377,7 @@ size_t vertexCacheOptimizer::getCacheMissCount() const {
     return m_vertexCache.getCacheMissCount();
 }
 
+///! OBJ Model Loading and Rendering
 bool obj::load(const u::string &file, model *parent) {
     u::file fp = fopen(neoGamePath() + file + ".obj", "r");
     if (!fp)
@@ -544,10 +545,113 @@ bool obj::upload() {
     return true;
 }
 
-bool model::load(const u::string &file) {
+///! Model Material Loading (Also used for the world)
+material::material()
+    : permute(0)
+    , diffuse(nullptr)
+    , normal(nullptr)
+    , spec(nullptr)
+    , displacement(nullptr)
+    , specParams(false)
+{
+}
+
+bool material::load(u::map<u::string, texture2D*> &textures, const u::string &materialName, const u::string &basePath) {
+    u::string diffuseName;
+    u::string specName;
+    u::string normalName;
+    u::string displacementName;
+
+    // Read the material
+    auto fp = u::fopen(neoGamePath() + materialName + ".cfg", "r");
+    if (!fp) {
+        u::print("Failed to load material: %s\n", materialName);
+        return false;
+    }
+
+    bool specParams = false;
+    float specIntensity = 0;
+    float specPower = 0;
+    float dispScale = 0;
+    float dispBias = 0;
+
+    while (auto line = u::getline(fp)) {
+        auto get = *line;
+        auto split = u::split(get);
+        auto key = split[0];
+        auto value = split[1];
+        if (key == "diffuse")
+            diffuseName = basePath + value;
+        else if (key == "normal")
+            normalName = "<normal>" + basePath + value;
+        else if (key == "displacement")
+            displacementName = "<grey>" + basePath + value;
+        else if (key == "spec")
+            specName = basePath + value;
+        else if (key == "specparams") {
+            specPower = u::atof(value);
+            if (split.size() > 2)
+                specIntensity = u::atof(split[2]);
+            specParams = true;
+        } else if (key == "parallax") {
+            dispScale = u::atof(value);
+            if (split.size() > 2)
+                dispBias = u::atof(split[2]);
+        }
+    }
+
+    auto loadTexture = [&](const u::string &ident, texture2D **store) {
+        if (ident.empty())
+            return;
+        if (textures.find(ident) != textures.end()) {
+            *store = textures[ident];
+        } else {
+            u::unique_ptr<texture2D> tex(new texture2D);
+            if (tex->load(ident)) {
+                auto release = tex.release();
+                textures[ident] = release;
+                *store = release;
+            } else {
+                *store = nullptr;
+            }
+        }
+    };
+
+    loadTexture(diffuseName, &diffuse);
+    loadTexture(normalName, &normal);
+    loadTexture(specName, &spec);
+    loadTexture(displacementName, &displacement);
+
+    // If there is a specular map, silently drop the specular parameters
+    if (spec && specParams)
+        specParams = false;
+
+    specParams = specParams;
+    specIntensity = specIntensity / 2.0f;
+    specPower = log2f(specPower) / 8.0f;
+    dispScale = dispScale;
+    dispBias = dispBias;
+
+    return true;
+}
+
+bool material::upload() {
+    if (diffuse && !diffuse->upload())
+        return false;
+    if (normal && !normal->upload())
+        return false;
+    if (spec && !spec->upload())
+        return false;
+    if (displacement && !displacement->upload())
+        return false;
+    return true;
+}
+
+///! Model Loading and Rendering
+bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file) {
     if (!m_mesh.load(file, this))
         return false;
-    if (!m_diffuse.load(file))
+    if (!mat.load(textures, file, "models/"))
         return false;
     return true;
 }
@@ -555,13 +659,12 @@ bool model::load(const u::string &file) {
 bool model::upload() {
     if (!m_mesh.upload())
         return false;
-    if (!m_diffuse.upload())
+    if (!mat.upload())
         return false;
     return true;
 }
 
 void model::render() {
-    m_diffuse.bind(GL_TEXTURE0);
     m_mesh.render();
 }
 

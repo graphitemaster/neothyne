@@ -230,19 +230,11 @@ private:
 };
 
 struct renderTextureBatch {
-    size_t permute;
+    int permute;
     size_t start;
     size_t count;
     size_t index;
-    texture2D *diffuse;
-    texture2D *normal;
-    texture2D *spec;
-    texture2D *displacement;
-    bool specParams;
-    float specPower;
-    float specIntensity;
-    float dispScale;
-    float dispBias;
+    material mat; // Rendering material (world and models share this)
 };
 
 struct world {
@@ -267,8 +259,6 @@ private:
     void lightPass(const rendererPipeline &pipeline);
     void finalPass(const rendererPipeline &pipeline);
     void otherPass(const rendererPipeline &pipeline);
-
-    bool loadMaterial(const kdMap &map, renderTextureBatch *batch);
 
     union {
         struct {

@@ -601,102 +601,25 @@ static size_t lightCalculatePermutation() {
     return 0;
 }
 
-// Calculate the correct permutation to use for a given rendering batch
-static size_t geomCalculatePermutation(const renderTextureBatch &batch) {
+// Calculate the correct permutation to use for a given material
+static void geomCalculatePermutation(material &mat) {
     int permute = 0;
-    if (batch.diffuse)
+    if (mat.diffuse)
         permute |= kGeomPermDiffuse;
-    if (batch.normal)
+    if (mat.normal)
         permute |= kGeomPermNormalMap;
-    if (batch.spec)
+    if (mat.spec)
         permute |= kGeomPermSpecMap;
-    if (batch.displacement && r_parallax)
+    if (mat.displacement && r_parallax)
         permute |= kGeomPermParallax;
-    if (batch.specParams)
+    if (mat.specParams)
         permute |= kGeomPermSpecParams;
-    for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++)
-        if (geomPermutations[i].permute == permute)
-            return i;
-    return 0;
-}
-
-bool world::loadMaterial(const kdMap &map, renderTextureBatch *batch) {
-    u::string materialName = map.textures[batch->index].name;
-    u::string diffuseName;
-    u::string specName;
-    u::string normalName = "<normal>";
-    u::string displacementName = "<grey>";
-
-    // Read the material
-    auto fp = u::fopen(neoGamePath() + materialName + ".cfg", "r");
-    if (!fp) {
-        u::print("Failed to load material: %s\n", materialName);
-        return false;
-    }
-
-    bool specParams = false;
-    float specIntensity = 0;
-    float specPower = 0;
-    float dispScale = 0;
-    float dispBias = 0;
-
-    while (auto line = u::getline(fp)) {
-        auto get = *line;
-        auto split = u::split(get);
-        auto key = split[0];
-        auto value = split[1];
-        if (key == "diffuse")
-            diffuseName = "textures/" + value;
-        else if (key == "normal")
-            normalName += "textures/" + value;
-        else if (key == "displacement")
-            displacementName += "textures/" + value;
-        else if (key == "spec")
-            specName = "textures/" + value;
-        else if (key == "specparams") {
-            specPower = u::atof(value);
-            if (split.size() > 2)
-                specIntensity = u::atof(split[2]);
-            specParams = true;
-        } else if (key == "parallax") {
-            dispScale = u::atof(value);
-            if (split.size() > 2)
-                dispBias = u::atof(split[2]);
+    for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++) {
+        if (geomPermutations[i].permute == permute) {
+            mat.permute = i;
+            return;
         }
     }
-
-    auto loadTexture = [&](const u::string &ident, texture2D **store) {
-        if (m_textures2D.find(ident) != m_textures2D.end()) {
-            *store = m_textures2D[ident];
-        } else {
-            u::unique_ptr<texture2D> tex(new texture2D);
-            if (tex->load(ident)) {
-                auto release = tex.release();
-                m_textures2D[ident] = release;
-                *store = release;
-            } else {
-                *store = nullptr;
-            }
-        }
-    };
-
-    loadTexture(diffuseName, &batch->diffuse);
-    loadTexture(normalName, &batch->normal);
-    loadTexture(specName, &batch->spec);
-    loadTexture(displacementName, &batch->displacement);
-
-    // If there is a specular map, silently drop the specular parameters
-    if (batch->spec && specParams)
-        specParams = false;
-
-    batch->specParams = specParams;
-    batch->specIntensity = specIntensity / 2.0f;
-    batch->specPower = log2f(specPower) * (1.0f / 8.0f);
-    batch->dispScale = dispScale;
-    batch->dispBias = dispBias;
-    batch->permute = geomCalculatePermutation(*batch);
-
-    return true;
 }
 
 bool world::load(const kdMap &map) {
@@ -706,8 +629,10 @@ bool world::load(const kdMap &map) {
 
     // Load a model
     m_models.resize(1);
-    if (!m_models[0].load("models/test"))
+    if (!m_models[0].load(m_textures2D, "models/test"))
         return false;
+    // Figure out the model's material's permutation
+    geomCalculatePermutation(m_models[0].mat);
 
     static const struct {
         const char *name;
@@ -771,8 +696,11 @@ bool world::load(const kdMap &map) {
 #endif
 
     // load materials
-    for (size_t i = 0; i < m_textureBatches.size(); i++)
-        loadMaterial(map, &m_textureBatches[i]);
+    for (auto &it : m_textureBatches) {
+        if (!it.mat.load(m_textures2D, map.textures[it.index].name, "textures/"))
+            neoFatal("failed to load material\n");
+        geomCalculatePermutation(it.mat);
+    }
 
     m_vertices = u::move(map.vertices);
     u::print("[world] => loaded\n");
@@ -803,17 +731,10 @@ bool world::upload(const m::perspectiveProjection &project) {
         neoFatal("failed to upload billboard");
     }
 
-    // upload textures
-    for (auto &it : m_textureBatches) {
-        if (it.diffuse && !it.diffuse->upload())
-            neoFatal("failed to upload world textures");
-        if (it.normal && !it.normal->upload())
-            neoFatal("failed to upload world textures");
-        if (it.spec && !it.spec->upload())
-            neoFatal("failed to upload world textures");
-        if (it.displacement && !it.displacement->upload())
-            neoFatal("failed to upload world textures");
-    }
+    // upload materials
+    for (auto &it : m_textureBatches)
+        if (!it.mat.upload())
+            neoFatal("failed to upload world materials");
 
     gl::GenVertexArrays(1, &m_vao);
     gl::BindVertexArray(m_vao);
@@ -934,50 +855,45 @@ void world::scenePass(const rendererPipeline &pipeline) {
     gl::Enable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
 
-    // Render the scene
-    gl::BindVertexArray(m_vao);
-    for (auto &it : m_textureBatches) {
-        auto &permutation = geomPermutations[it.permute];
-        auto &method = m_geomMethods[it.permute];
+    auto setup = [this](const material &mat, rendererPipeline &p) {
+        auto &permutation = geomPermutations[mat.permute];
+        auto &method = m_geomMethods[mat.permute];
         method.enable();
         method.setWVP(p.getWVPTransform());
         method.setWorld(p.getWorldTransform());
         if (permutation.permute & kGeomPermParallax) {
             method.setEyeWorldPos(p.getPosition());
-            method.setParallax(it.dispScale, it.dispBias);
+            method.setParallax(mat.dispScale, mat.dispBias);
         }
         if (permutation.permute & kGeomPermSpecParams) {
-            method.setSpecIntensity(it.specIntensity);
-            method.setSpecPower(it.specPower);
+            method.setSpecIntensity(mat.specIntensity);
+            method.setSpecPower(mat.specPower);
         }
         if (permutation.permute & kGeomPermDiffuse)
-            it.diffuse->bind(GL_TEXTURE0 + permutation.color);
+            mat.diffuse->bind(GL_TEXTURE0 + permutation.color);
         if (permutation.permute & kGeomPermNormalMap)
-            it.normal->bind(GL_TEXTURE0 + permutation.normal);
+            mat.normal->bind(GL_TEXTURE0 + permutation.normal);
         if (permutation.permute & kGeomPermSpecMap)
-            it.spec->bind(GL_TEXTURE0 + permutation.spec);
+            mat.spec->bind(GL_TEXTURE0 + permutation.spec);
         if (permutation.permute & kGeomPermParallax)
-            it.displacement->bind(GL_TEXTURE0 + permutation.disp);
+            mat.displacement->bind(GL_TEXTURE0 + permutation.disp);
+    };
+
+    // Render the map
+    gl::BindVertexArray(m_vao);
+    for (auto &it : m_textureBatches) {
+        setup(it.mat, p);
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }
 
-    // Render world models
+    // Render map models
     for (auto &it : m_models) {
-        auto &method = m_geomMethods[1]; // Diffuse only (for now)
-        method.enable();
+        // TODO: model properties adjust this
+        p.setWorldPosition({0, 120, 0});
+        p.setScale({5, 5, 5});
 
-        auto project = pipeline.getPerspectiveProjection();
-        rendererPipeline v;
-        v.setPosition(pipeline.getPosition());
-        v.setRotation(pipeline.getRotation());
-        v.setPerspectiveProjection(project);
-        v.setWorldPosition({0, 120, 0});
-        v.setScale({5, 5, 5});
-        method.setWVP(v.getWVPTransform());
-        method.setWorld(v.getWorldTransform());
-
-        // Render it
+        setup(it.mat, p);
         it.render();
     }
 
