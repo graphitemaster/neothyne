@@ -160,6 +160,9 @@ struct model {
 
     material mat;
 
+    m::vec3 scale;
+    m::vec3 rotate;
+
 private:
     friend struct obj;
     u::string m_name;

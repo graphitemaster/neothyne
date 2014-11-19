@@ -649,8 +649,7 @@ bool material::upload() {
 
 ///! Model Loading and Rendering
 bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file) {
-    // Open the material file and look for a model line to get the name of the
-    // model.
+    // Open the model file and look for a model configuration
     u::file fp = u::fopen(neoGamePath() + file + ".cfg", "r");
     if (!fp)
         return false;
@@ -658,11 +657,18 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
     u::string name;
     while (auto getline = u::getline(fp)) {
         auto split = u::split(*getline);
-        if (split.size() != 2)
+        if (split.size() < 2)
             continue;
-        if (split[0] == "model") {
+        if (split[0] == "model" && name.empty())
             name = u::move(split[1]);
-            break;
+        else if (split[0] == "scale") {
+            scale.x = u::atof(split[1]);
+            if (split.size() > 2) scale.y = u::atof(split[2]);
+            if (split.size() > 3) scale.z = u::atof(split[3]);
+        } else if (split[0] == "rotate") {
+            rotate.x = u::atof(split[1]);
+            if (split.size() > 2) rotate.y = u::atof(split[2]);
+            if (split.size() > 3) rotate.z = u::atof(split[3]);
         }
     }
 
@@ -670,8 +676,7 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
     if (!m_mesh.load("models/" + name, this))
         return false;
 
-    // Load the material file all over again, except we treat it as a material
-    // file now.
+    // Load the model file all over again, except we treat it as a material file
     if (!mat.load(textures, file, "models/"))
         return false;
     return true;

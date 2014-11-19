@@ -891,7 +891,8 @@ void world::scenePass(const rendererPipeline &pipeline) {
     for (auto &it : m_models) {
         // TODO: model properties adjust this
         p.setWorldPosition({0, 120, 0});
-        p.setScale({5, 5, 5});
+        p.setScale(it.scale);
+        p.setRotate(it.rotate);
 
         setup(it.mat, p);
         it.render();
