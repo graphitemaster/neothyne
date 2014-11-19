@@ -626,11 +626,11 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
     if (spec && specParams)
         specParams = false;
 
-    specParams = specParams;
-    specIntensity = specIntensity / 2.0f;
-    specPower = log2f(specPower) / 8.0f;
-    dispScale = dispScale;
-    dispBias = dispBias;
+    this->specParams = specParams;
+    this->specIntensity = specIntensity / 2.0f;
+    this->specPower = log2f(specPower) / 8.0f;
+    this->dispScale = dispScale;
+    this->dispBias = dispBias;
 
     return true;
 }
