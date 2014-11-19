@@ -6,6 +6,7 @@
 #include "r_billboard.h"
 #include "r_gbuffer.h"
 #include "r_geom.h"
+#include "r_model.h"
 
 #include "u_map.h"
 
@@ -309,6 +310,7 @@ private:
 
     m::mat4 m_identity;
     m::frustum m_frustum;
+    u::vector<model> m_models;
 };
 
 }

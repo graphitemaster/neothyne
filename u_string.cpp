@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include "u_string.h"
+#include "u_hash.h"
 
 namespace u {
 
@@ -66,7 +67,7 @@ char *string::copy() const {
 }
 
 void string::reserve(size_t capacity) {
-    if (m_first ? m_first + capacity + 1 <= m_capacity : false)
+    if (m_first + capacity + 1 <= m_capacity)
         return;
 
     const size_t size = m_last - m_first;
@@ -165,6 +166,10 @@ void string::swap(string& other) {
     other.m_first = tfirst;
     other.m_last = tlast;
     other.m_capacity = tcapacity;
+}
+
+size_t hash(const string &str) {
+    return detail::sdbm(str.c_str(), str.size());
 }
 
 }

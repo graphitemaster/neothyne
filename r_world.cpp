@@ -477,6 +477,9 @@ world::world() {
         light.position.y -= 10.0f;
         m_pointLights.push_back(light);
     }
+
+    light.position = { 0, 110, 0 };
+    m_pointLights.push_back(light);
 }
 
 world::~world() {
@@ -701,6 +704,11 @@ bool world::load(const kdMap &map) {
     if (!m_skybox.load("textures/sky01"))
         return false;
 
+    // Load a model
+    m_models.resize(1);
+    if (!m_models[0].load("models/test"))
+        return false;
+
     static const struct {
         const char *name;
         const char *file;
@@ -781,6 +789,10 @@ bool world::upload(const m::perspectiveProjection &project) {
         neoFatal("failed to upload quad");
     if (!m_sphere.upload())
         neoFatal("failed to upload sphere");
+
+    // upload the model
+    if (!m_models[0].upload())
+        neoFatal("failed to upload model");
 
     // upload billboards
     for (auto &it : m_billboards) {
@@ -946,6 +958,25 @@ void world::scenePass(const rendererPipeline &pipeline) {
             it.displacement->bind(GL_TEXTURE0 + permutation.disp);
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
+    }
+
+    // Render world models
+    for (auto &it : m_models) {
+        auto &method = m_geomMethods[1]; // Diffuse only (for now)
+        method.enable();
+
+        auto project = pipeline.getPerspectiveProjection();
+        rendererPipeline v;
+        v.setPosition(pipeline.getPosition());
+        v.setRotation(pipeline.getRotation());
+        v.setPerspectiveProjection(project);
+        v.setWorldPosition({0, 120, 0});
+        v.setScale({5, 5, 5});
+        method.setWVP(v.getWVPTransform());
+        method.setWorld(v.getWorldTransform());
+
+        // Render it
+        it.render();
     }
 
     // Only the scene pass needs to write to the depth buffer

@@ -3,6 +3,12 @@
 
 #include "r_model.h"
 
+#include "u_map.h"
+#include "u_misc.h"
+#include "u_file.h"
+
+#include "engine.h"
+
 namespace r {
 
 ///! vertexCacheData
@@ -369,6 +375,185 @@ inline bool vertexCacheOptimizer::process() {
 
 size_t vertexCacheOptimizer::getCacheMissCount() const {
     return m_vertexCache.getCacheMissCount();
+}
+
+bool obj::load(const u::string &file) {
+    u::file fp = fopen(neoGamePath() + file + ".obj", "r");
+    if (!fp)
+        return false;
+
+    // Processed vertices, normals and coordinates from the OBJ file
+    u::vector<m::vec3> vertices;
+    u::vector<m::vec3> normals;
+    u::vector<m::vec3> coordinates;
+
+    // Unique vertices are stored in a map keyed by face.
+    u::map<face, size_t> uniques;
+
+    size_t count = 0;
+    size_t group = 0;
+    while (auto get = u::getline(fp)) {
+        auto &line = *get;
+        // Skip whitespace
+        while (line.size() && strchr(" \t", line[0]))
+            line.pop_front();
+        // Skip comments
+        if (strchr("#$", line[0]))
+            continue;
+        // Skip empty lines
+        if (line.empty())
+            continue;
+
+        // Process the individual lines
+        float x = 0.0f;
+        float y = 0.0f;
+        float z = 0.0f;
+        if (u::sscanf(line, "v %f %f %f", &x, &y, &z) == 3) {
+            // v float float float
+            vertices.push_back({x, y, z});
+        } else if (u::sscanf(line, "vn %f %f %f", &x, &y, &z) == 3) {
+            // vn float float float
+            normals.push_back({x, y, z});
+        } else if (u::sscanf(line, "vt %f %f", &x, &y) == 2) {
+            // vt float float
+            coordinates.push_back({x, y, 0.0f});
+        } else if (line[0] == 'g') {
+            group++;
+        } else if (line[0] == 'f' && group == 0) {
+            u::vector<size_t> v;
+            u::vector<size_t> n;
+            u::vector<size_t> t;
+
+            // Note: 1 to skip "f"
+            auto contents = u::split(line);
+            for (size_t i = 1; i < contents.size(); i++) {
+                size_t vi = 0;
+                size_t ni = 0;
+                size_t ti = 0;
+                if (u::sscanf(contents[i], "%zu/%zu/%zu", &vi, &ti, &ni) == 3) {
+                    v.push_back(vi - 1);
+                    t.push_back(ti - 1);
+                    n.push_back(ni - 1);
+                } else if (u::sscanf(contents[i], "%zu//%zu", &vi, &ni) == 2) {
+                    v.push_back(vi - 1);
+                    n.push_back(ni - 1);
+                } else if (u::sscanf(contents[i], "%zu/%zu", &vi, &ti) == 2) {
+                    v.push_back(vi - 1);
+                    t.push_back(ti - 1);
+                } else if (u::sscanf(contents[i], "%zu", &vi) == 1) {
+                    v.push_back(vi - 1);
+                }
+            }
+
+            // Triangulate the mesh
+            for (size_t i = 1; i < v.size() - 1; ++i) {
+                auto index = m_indices.size();
+                m_indices.resize(index + 3);
+                auto triangulate = [&v, &n, &t, &uniques, &count](size_t index, size_t &out) {
+                    face triangle;
+                    triangle.vertex = v[index];
+                    if (n.size()) triangle.normal = n[index];
+                    if (t.size()) triangle.coordinate = t[index];
+                    // Only insert in the map if it doesn't exist
+                    if (uniques.find(triangle) == uniques.end())
+                        uniques[triangle] = count++;
+                    out = uniques[triangle];
+                };
+                triangulate(0,     m_indices[index + 0]);
+                triangulate(i + 0, m_indices[index + 1]);
+                triangulate(i + 1, m_indices[index + 2]);
+            }
+        }
+    }
+
+    // Construct the model, indices are already generated
+    m_positions.resize(count);
+    m_normals.resize(count);
+    m_coordinates.resize(count);
+    for (auto &it : uniques) {
+        const auto &first = it.first;
+        const auto &second = it.second;
+        m_positions[second] = vertices[first.vertex];
+        if (normals.size())
+            m_normals[second] = normals[first.normal];
+        if (coordinates.size())
+            m_coordinates[second] = coordinates[first.coordinate];
+    }
+
+    // Optimize the indices
+    vertexCacheOptimizer vco;
+    vco.optimize(m_indices);
+
+    return true;
+}
+
+bool obj::upload() {
+    geom::upload();
+
+    struct layout {
+        m::vec3 position;
+        m::vec3 normal;
+        float s;
+        float t;
+    };
+
+    // Interleave vertex data for the GPU
+    u::vector<layout> interleave;
+    interleave.resize(m_positions.size());
+    for (size_t i = 0; i < m_positions.size(); i++) {
+        auto &entry = interleave[i];
+        entry.position = m_positions[i];
+        entry.normal = m_normals[i];
+        entry.s = m_coordinates[i].x;
+        entry.t = 1.0f - m_coordinates[i].y;
+    }
+
+    // Copy out of size_t format
+    u::vector<GLuint> indices;
+    indices.reserve(m_indices.size());
+    for (auto &it : m_indices)
+        indices.push_back(it);
+
+    gl::BindVertexArray(vao);
+    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof(layout) * interleave.size(), &interleave[0], GL_STATIC_DRAW);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(0));  // vertex
+    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(3));  // normals
+    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(6));  // texCoord
+    gl::EnableVertexAttribArray(0);
+    gl::EnableVertexAttribArray(1);
+    gl::EnableVertexAttribArray(2);
+
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
+
+    mode = GL_TRIANGLES;
+    count = m_indices.size();
+    type = GL_UNSIGNED_INT;
+
+    return true;
+}
+
+bool model::load(const u::string &file) {
+    if (!m_mesh.load(file))
+        return false;
+    if (!m_diffuse.load(file))
+        return false;
+    return true;
+}
+
+bool model::upload() {
+    if (!m_mesh.upload())
+        return false;
+    if (!m_diffuse.upload())
+        return false;
+    return true;
+}
+
+void model::render() {
+    m_diffuse.bind(GL_TEXTURE0);
+    m_mesh.render();
 }
 
 }

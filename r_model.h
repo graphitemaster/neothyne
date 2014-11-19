@@ -1,8 +1,12 @@
 #ifndef R_MODEL_HDR
 #define R_MODEL_HDR
+#include "r_geom.h"
+#include "r_texture.h"
 
 #include "u_vector.h"
-#include <assert.h>
+#include "u_string.h"
+
+#include "m_vec3.h"
 
 namespace r {
 
@@ -75,6 +79,62 @@ private:
     bool process();
 };
 
+struct face {
+    face();
+    size_t vertex;
+    size_t normal;
+    size_t coordinate;
+};
+
+inline face::face()
+    : vertex((size_t)-1)
+    , normal((size_t)-1)
+    , coordinate((size_t)-1)
+{
 }
 
+inline bool operator==(const face &lhs, const face &rhs) {
+    return lhs.vertex == rhs.vertex
+        && lhs.normal == rhs.normal
+        && lhs.coordinate == rhs.coordinate;
+}
+
+}
+
+// Hash a face
+namespace u {
+
+inline size_t hash(const r::face &f) {
+    static constexpr size_t prime1 = 73856093u;
+    static constexpr size_t prime2 = 19349663u;
+    static constexpr size_t prime3 = 83492791u;
+    return (f.vertex * prime1) ^ (f.normal * prime2) ^ (f.coordinate * prime3);
+}
+
+}
+
+namespace r {
+
+struct obj : geom {
+    bool load(const u::string &file);
+    bool upload();
+private:
+    u::vector<size_t> m_indices; // Note: every 3 GLuint's form a face
+    u::vector<m::vec3> m_positions;
+    u::vector<m::vec3> m_normals;
+    u::vector<m::vec3> m_coordinates; // Note: every 2 floats form a texture coordinate
+};
+
+struct model {
+    bool load(const u::string &file);
+    bool upload();
+
+    void render();
+
+private:
+    texture2D m_diffuse;
+    obj m_mesh;
+};
+
+}
 #endif

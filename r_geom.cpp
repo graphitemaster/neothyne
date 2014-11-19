@@ -8,29 +8,34 @@
 namespace r {
 
 geom::geom()
-    : m_vbo(0)
-    , m_ibo(0)
-    , m_vao(0)
+    : vbo(0)
+    , ibo(0)
+    , vao(0)
 {
-    gl::GenVertexArrays(1, &m_vao);
-    gl::GenBuffers(2, m_buffers);
 }
 
 geom::~geom() {
-    if (m_buffers[0])
-        gl::DeleteBuffers(2, m_buffers);
-    if (m_vao)
-        gl::DeleteVertexArrays(1, &m_vao);
+    if (buffers[0])
+        gl::DeleteBuffers(2, buffers);
+    if (vao)
+        gl::DeleteVertexArrays(1, &vao);
+}
+
+void geom::upload() {
+    gl::GenVertexArrays(1, &vao);
+    gl::GenBuffers(2, buffers);
 }
 
 void geom::render() {
-    gl::BindVertexArray(m_vao);
-    gl::DrawElements(m_mode, m_count, m_type, 0);
+    gl::BindVertexArray(vao);
+    gl::DrawElements(mode, count, type, 0);
 }
 
 bool quad::upload() {
-    gl::BindVertexArray(m_vao);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    geom::upload();
+
+    gl::BindVertexArray(vao);
+    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
     static const GLfloat vertices[] = {
         -1.0f,-1.0f, 0.0f, 0.0f,  0.0f,
@@ -47,17 +52,19 @@ bool quad::upload() {
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
 
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    m_mode = GL_TRIANGLES;
-    m_count = 6;
-    m_type = GL_UNSIGNED_BYTE;
+    mode = GL_TRIANGLES;
+    count = 6;
+    type = GL_UNSIGNED_BYTE;
 
     return true;
 }
 
 bool sphere::upload() {
+    geom::upload();
+
     constexpr size_t numVertices = (kStacks + 1) * (kSlices + 1);
     u::vector<m::vec3> vertices;
     vertices.resize(numVertices);
@@ -99,19 +106,19 @@ bool sphere::upload() {
         }
     }
 
-    gl::BindVertexArray(m_vao);
+    gl::BindVertexArray(vao);
 
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     gl::BufferData(GL_ARRAY_BUFFER, numVertices * sizeof(m::vec3), &vertices[0], GL_STATIC_DRAW);
     gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(m::vec3), ATTRIB_OFFSET(0)); // position
     gl::EnableVertexAttribArray(0);
 
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, numIndices * sizeof(GLushort), &indices[0], GL_STATIC_DRAW);
 
-    m_mode = GL_TRIANGLES;
-    m_count = numIndices;
-    m_type = GL_UNSIGNED_SHORT;
+    mode = GL_TRIANGLES;
+    count = numIndices;
+    type = GL_UNSIGNED_SHORT;
 
     return true;
 }

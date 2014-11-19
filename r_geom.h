@@ -8,22 +8,19 @@ struct geom {
     geom();
     ~geom();
     void render();
-
-private:
-    friend struct quad;
-    friend struct sphere;
+    void upload();
 
     union {
         struct {
-            GLuint m_vbo;
-            GLuint m_ibo;
+            GLuint vbo;
+            GLuint ibo;
         };
-        GLuint m_buffers[2];
+        GLuint buffers[2];
     };
-    GLuint m_vao;
-    GLenum m_mode;
-    GLsizei m_count;
-    GLenum m_type;
+    GLuint vao;
+    GLenum mode;
+    GLsizei count;
+    GLenum type;
 };
 
 struct quad : geom {

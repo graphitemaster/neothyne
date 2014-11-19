@@ -1,7 +1,6 @@
 #ifndef U_STRING_HDR
 #define U_STRING_HDR
 #include <string.h>
-#include "u_hash.h"
 
 namespace u {
 
@@ -98,9 +97,7 @@ inline void operator+=(string &lhs, char rhs) {
     lhs.append(&rhs, 1);
 }
 
-inline size_t hash(const string &str) {
-    return detail::sdbm(str.c_str(), str.size());
-}
+size_t hash(const string &str);
 
 }
 
