@@ -116,3 +116,6 @@ Verify that you have this installed, then run `make'.
 ## System requirements
 Neothyne requires a GPU which is capable of GL 3.3. Modern low profile GPUs may
 function poorly. (Note: Some cards are advertised as being GL 2 capable, but with newer drivers, can become GL 3 capable. This is the case for some cards in the GeForce 8 series, for example.)
+
+## Documentation
+Documentation may be found in the `docs' directory.
