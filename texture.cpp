@@ -1691,7 +1691,7 @@ void texture::convert() {
     if (F == m_format)
         return;
 
-    if (F != TEX_RG && F != TEX_LUMINANCE) {
+    if (F != kTexFormatRG && F != kTexFormatLuminance) {
         unsigned char *data = &m_data[0];
         const size_t length = m_data.size();
 
@@ -1699,11 +1699,11 @@ void texture::convert() {
         //          BGRA -> RGBA or RGBA -> BGRA
         for (unsigned char *end = &data[length]; data < end; data += m_bpp)
             u::swap(data[0], data[2]);
-    } else if (F == TEX_RG) {
+    } else if (F == kTexFormatRG) {
         // Eliminate blue and alpha
         u::vector<unsigned char> rework;
         rework.reserve(m_width * m_height * 2);
-        const size_t roff = (m_format == TEX_BGR || m_format == TEX_BGRA) ? 2 : 0;
+        const size_t roff = (m_format == kTexFormatBGR || m_format == kTexFormatBGRA) ? 2 : 0;
         for (size_t i = 0; i < m_data.size(); i += m_bpp) {
             rework.push_back(m_data[i + roff]); // R
             rework.push_back(m_data[i + 1]); // G
@@ -1713,7 +1713,7 @@ void texture::convert() {
         m_data.swap(rework);
         m_bpp = 2;
         m_pitch = m_width * m_bpp;
-    } else if (F == TEX_LUMINANCE) {
+    } else if (F == kTexFormatLuminance) {
         u::vector<unsigned char> rework;
         rework.reserve(m_width * m_height);
         // weight sum can be calculated as follows
@@ -1722,7 +1722,7 @@ void texture::convert() {
         //  (2 * R + 5 * G + 1 * B) / 8
         // then use the following bitwise calculation
         // (unsigned char)(((R << 1) + ((G << 2) + G) + B) >> 3)
-        if (m_format == TEX_BGR || m_format == TEX_BGRA) {
+        if (m_format == kTexFormatBGR || m_format == kTexFormatBGRA) {
             // Format is BGR[A]
             for (size_t i = 0; i < m_data.size(); i+= m_bpp) {
                 unsigned char R = m_data[i + 2];
@@ -1749,10 +1749,10 @@ void texture::convert() {
     m_format = F;
 }
 
-template void texture::convert<TEX_RG>();
-template void texture::convert<TEX_RGB>();
-template void texture::convert<TEX_RGBA>();
-template void texture::convert<TEX_LUMINANCE>();
+template void texture::convert<kTexFormatRG>();
+template void texture::convert<kTexFormatRGB>();
+template void texture::convert<kTexFormatRGBA>();
+template void texture::convert<kTexFormatLuminance>();
 
 template <typename T>
 bool texture::decode(const u::vector<unsigned char> &data, const char *name, float quality) {
@@ -1764,13 +1764,13 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
 
     switch (decode.bpp()) {
         case 1:
-            m_format = TEX_LUMINANCE;
+            m_format = kTexFormatLuminance;
             break;
         case 3:
-            m_format = TEX_RGB;
+            m_format = kTexFormatRGB;
             break;
         case 4:
-            m_format = TEX_RGBA;
+            m_format = kTexFormatRGBA;
             break;
     }
 
@@ -1779,7 +1779,7 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
     m_bpp = decode.bpp();
     m_pitch = m_width * m_bpp;
     m_data = u::move(decode.data());
-    m_flags |= kTexDisk;
+    m_flags |= kTexFlagDisk;
 
     // Quality will resize the texture accordingly
     if (quality != 1.0f) {
@@ -1798,7 +1798,7 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
     }
 
     // Premultiply alpha
-    if ((m_flags & kTexPremul) && (m_format == TEX_RGBA || m_format == TEX_BGRA)) {
+    if ((m_flags & kTexFlagPremul) && (m_format == kTexFormatRGBA || m_format == kTexFormatBGRA)) {
         u::vector<unsigned char> rework;
         rework.reserve(m_width * m_height * m_bpp);
         for (size_t i = 0; i < m_data.size(); i += m_bpp) {
@@ -1829,11 +1829,11 @@ u::optional<u::string> texture::find(const u::string &infile) {
             return u::none;
         const u::string tag(file.begin() + beg + 1, file.begin() + end);
         if (tag == "normal")
-            m_flags |= kTexNormal;
+            m_flags |= kTexFlagNormal;
         else if (tag == "grey")
-            m_flags |= kTexGrey;
+            m_flags |= kTexFlagGrey;
         else if (tag == "premul")
-            m_flags |= kTexPremul;
+            m_flags |= kTexFlagPremul;
         file.erase(beg, end + 1);
     }
 
@@ -1877,24 +1877,24 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
     size_t height, bool normal, textureFormat format)
     : m_width(width)
     , m_height(height)
-    , m_flags(normal ? kTexNormal : 0)
+    , m_flags(normal ? kTexFlagNormal : 0)
     , m_format(format)
 {
     m_data.resize(length);
     memcpy(&m_data[0], data, length);
     switch (format) {
-        case TEX_RGB:
-        case TEX_BGR:
+        case kTexFormatRGB:
+        case kTexFormatBGR:
             m_bpp = 3;
             break;
-        case TEX_RGBA:
-        case TEX_BGRA:
+        case kTexFormatRGBA:
+        case kTexFormatBGRA:
             m_bpp = 4;
             break;
-        case TEX_RG:
+        case kTexFormatRG:
             m_bpp = 2;
             break;
-        case TEX_LUMINANCE:
+        case kTexFormatLuminance:
             m_bpp = 1;
             break;
     }

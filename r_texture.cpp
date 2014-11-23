@@ -73,7 +73,7 @@ static u::string sizeMetric(size_t size) {
 }
 
 static bool readCache(texture &tex, GLuint &internal) {
-    if (!r_texcomp || !(tex.flags() & kTexDisk))
+    if (!r_texcomp || !(tex.flags() & kTexFlagDisk))
         return false;
 
     // Do we even have it in cache?
@@ -225,10 +225,10 @@ static size_t textureAlignment(const texture &tex) {
 // that texture to the hardware. This function will also favor texture compression
 // if the hardware supports it by converting the texture if it needs to.
 static u::optional<queryFormat> getBestFormat(texture &tex) {
-    if (tex.flags() & kTexNormal)
-        tex.convert<TEX_RG>();
-    else if (tex.flags() & kTexGrey)
-        tex.convert<TEX_LUMINANCE>();
+    if (tex.flags() & kTexFlagNormal)
+        tex.convert<kTexFormatRG>();
+    else if (tex.flags() & kTexFlagGrey)
+        tex.convert<kTexFormatLuminance>();
 
     // Texture compression?
     if (r_texcomp) {
@@ -239,19 +239,19 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
         // While falling through to the correct internal format for the compression
         if (bptc || s3tc || rgtc) {
             switch (tex.format()) {
-                case TEX_BGRA:
-                    tex.convert<TEX_RGBA>();
-                case TEX_RGBA:
+                case kTexFormatBGRA:
+                    tex.convert<kTexFormatRGBA>();
+                case kTexFormatRGBA:
                     return queryFormat(GL_RGBA, R_TEX_DATA_RGBA,
                         bptc ? GL_COMPRESSED_RGBA_BPTC_UNORM_ARB : GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
-                case TEX_BGR:
-                    tex.convert<TEX_RGB>();
-                case TEX_RGB:
+                case kTexFormatBGR:
+                    tex.convert<kTexFormatRGB>();
+                case kTexFormatRGB:
                     return queryFormat(GL_RGB, R_TEX_DATA_RGB,
                         bptc ? GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB : GL_COMPRESSED_RGB_S3TC_DXT1_EXT);
-                case TEX_RG:
+                case kTexFormatRG:
                     return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
-                case TEX_LUMINANCE:
+                case kTexFormatLuminance:
                     return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
                 default:
                     break;
@@ -262,17 +262,17 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     // If we made it here then no compression is possible so use a raw internal
     // format.
     switch (tex.format()) {
-        case TEX_RGBA:
+        case kTexFormatRGBA:
             return queryFormat(GL_RGBA, R_TEX_DATA_RGBA,      GL_RGBA);
-        case TEX_RGB:
+        case kTexFormatRGB:
             return queryFormat(GL_RGB,  R_TEX_DATA_RGB,       GL_RGBA);
-        case TEX_BGRA:
+        case kTexFormatBGRA:
             return queryFormat(GL_BGRA, R_TEX_DATA_BGRA,      GL_RGBA);
-        case TEX_BGR:
+        case kTexFormatBGR:
             return queryFormat(GL_BGR,  R_TEX_DATA_BGR,       GL_RGBA);
-        case TEX_RG:
+        case kTexFormatRG:
             return queryFormat(GL_RG,   R_TEX_DATA_RG,        GL_RG8);
-        case TEX_LUMINANCE:
+        case kTexFormatLuminance:
             return queryFormat(GL_RED,  R_TEX_DATA_LUMINANCE, GL_RED);
     }
     return u::none;

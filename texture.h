@@ -6,19 +6,19 @@
 #include "u_vector.h"
 
 enum {
-    kTexNormal = 1 << 0,
-    kTexGrey   = 1 << 1,
-    kTexDisk   = 1 << 2,
-    kTexPremul = 1 << 3
+    kTexFlagNormal = 1 << 0,
+    kTexFlagGrey   = 1 << 1,
+    kTexFlagDisk   = 1 << 2,
+    kTexFlagPremul = 1 << 3
 };
 
 enum textureFormat {
-    TEX_RGB,
-    TEX_RGBA,
-    TEX_BGR,
-    TEX_BGRA,
-    TEX_RG,
-    TEX_LUMINANCE
+    kTexFormatRGB,
+    kTexFormatRGBA,
+    kTexFormatBGR,
+    kTexFormatBGRA,
+    kTexFormatRG,
+    kTexFormatLuminance
 };
 
 struct texture {

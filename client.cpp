@@ -29,8 +29,8 @@ client::client()
 }
 
 enum {
-    COLLIDE_WALL = 1 << 0,
-    COLLIDE_GROUND = 1 << 1
+    kCollideWall = 1 << 0,
+    kCollideGround = 1 << 1
 };
 
 void client::update(const kdMap &map, float dt) {
@@ -80,10 +80,10 @@ void client::update(const kdMap &map, float dt) {
 
         // We assume a high value in Y to be ground
         if (trace.plane.n[1] > 0.7f)
-            collide |= COLLIDE_GROUND;
+            collide |= kCollideGround;
 
         // If we made it this far it also means we're hitting a wall
-        collide |= COLLIDE_WALL;
+        collide |= kCollideWall;
 
         if (numPlanes >= kdMap::kMaxClippingPlanes) {
             velocity = m::vec3(0.0f, 0.0f, 0.0f);
@@ -162,8 +162,8 @@ void client::update(const kdMap &map, float dt) {
         velocity.y *= 0.25f;
     }
 
-    m_isOnGround = collide & COLLIDE_GROUND;
-    m_isOnWall = collide & COLLIDE_WALL;
+    m_isOnGround = collide & kCollideGround;
+    m_isOnWall = collide & kCollideWall;
     if (m_isOnGround) {
         // Prevent oscillations when we're sitting on the ground
         velocity.y = 0.0f;
