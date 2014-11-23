@@ -1779,7 +1779,7 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
     m_bpp = decode.bpp();
     m_pitch = m_width * m_bpp;
     m_data = u::move(decode.data());
-    m_disk = true;
+    m_flags |= kTexDisk;
 
     // Quality will resize the texture accordingly
     if (quality != 1.0f) {
@@ -1798,7 +1798,7 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
     }
 
     // Premultiply alpha
-    if (m_premul && (m_format == TEX_RGBA || m_format == TEX_BGRA)) {
+    if ((m_flags & kTexPremul) && (m_format == TEX_RGBA || m_format == TEX_BGRA)) {
         u::vector<unsigned char> rework;
         rework.reserve(m_width * m_height * m_bpp);
         for (size_t i = 0; i < m_data.size(); i += m_bpp) {
@@ -1829,11 +1829,11 @@ u::optional<u::string> texture::find(const u::string &infile) {
             return u::none;
         const u::string tag(file.begin() + beg + 1, file.begin() + end);
         if (tag == "normal")
-            m_normal = true;
+            m_flags |= kTexNormal;
         else if (tag == "grey")
-            m_grey = true;
+            m_flags |= kTexGrey;
         else if (tag == "premul")
-            m_premul = true;
+            m_flags |= kTexPremul;
         file.erase(beg, end + 1);
     }
 
@@ -1877,8 +1877,7 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
     size_t height, bool normal, textureFormat format)
     : m_width(width)
     , m_height(height)
-    , m_normal(normal)
-    , m_disk(false)
+    , m_flags(normal ? kTexNormal : 0)
     , m_format(format)
 {
     m_data.resize(length);
@@ -1930,16 +1929,8 @@ const u::string &texture::hashString() const {
     return m_hashString;
 }
 
-bool texture::normal() const {
-    return m_normal;
-}
-
-bool texture::grey() const {
-    return m_grey;
-}
-
-bool texture::disk() const {
-    return m_disk;
+int texture::flags() const {
+    return m_flags;
 }
 
 size_t texture::width() const {

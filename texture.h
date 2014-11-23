@@ -5,6 +5,13 @@
 #include "u_optional.h"
 #include "u_vector.h"
 
+enum {
+    kTexNormal = 1 << 0,
+    kTexGrey   = 1 << 1,
+    kTexDisk   = 1 << 2,
+    kTexPremul = 1 << 3
+};
+
 enum textureFormat {
     TEX_RGB,
     TEX_RGBA,
@@ -16,10 +23,7 @@ enum textureFormat {
 
 struct texture {
     texture()
-        : m_normal(false)
-        , m_grey(false)
-        , m_disk(false)
-        , m_premul(false)
+        : m_flags(0)
     {
     }
 
@@ -64,9 +68,7 @@ struct texture {
 
     const u::string &hashString() const;
 
-    bool normal() const;
-    bool grey() const;
-    bool disk() const;
+    int flags() const;
 
     void unload();
 
@@ -82,10 +84,7 @@ private:
     size_t m_height;
     size_t m_bpp;
     size_t m_pitch;
-    bool m_normal;
-    bool m_grey;
-    bool m_disk;
-    bool m_premul;
+    int m_flags;
     textureFormat m_format;
 };
 

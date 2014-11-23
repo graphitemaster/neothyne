@@ -73,7 +73,7 @@ static u::string sizeMetric(size_t size) {
 }
 
 static bool readCache(texture &tex, GLuint &internal) {
-    if (!r_texcomp || !tex.disk())
+    if (!r_texcomp || !(tex.flags() & kTexDisk))
         return false;
 
     // Do we even have it in cache?
@@ -225,9 +225,9 @@ static size_t textureAlignment(const texture &tex) {
 // that texture to the hardware. This function will also favor texture compression
 // if the hardware supports it by converting the texture if it needs to.
 static u::optional<queryFormat> getBestFormat(texture &tex) {
-    if (tex.normal())
+    if (tex.flags() & kTexNormal)
         tex.convert<TEX_RG>();
-    else if (tex.grey())
+    else if (tex.flags() & kTexGrey)
         tex.convert<TEX_LUMINANCE>();
 
     // Texture compression?
