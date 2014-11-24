@@ -420,7 +420,7 @@ void init() {
     for (GLint i = 0; i < count; i++) {
         for (size_t j = 0; j < sizeof(extensionList)/sizeof(*extensionList); j++)
             if (!strcmp(extensionList[j], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
-                extensionSet.insert(i);
+                extensionSet.insert(j);
     }
 }
 
