@@ -497,52 +497,20 @@ bool obj::load(const u::string &file) {
     return load(file, nullptr);
 }
 
-bool obj::upload() {
-    geom::upload();
+u::vector<size_t> obj::indices() const {
+    return m_indices;
+}
 
-    struct layout {
-        m::vec3 position;
-        m::vec3 normal;
-        float s;
-        float t;
-    };
+u::vector<m::vec3> obj::positions() const {
+    return m_positions;
+}
 
-    // Interleave vertex data for the GPU
-    u::vector<layout> interleave;
-    interleave.resize(m_positions.size());
-    for (size_t i = 0; i < m_positions.size(); i++) {
-        auto &entry = interleave[i];
-        entry.position = m_positions[i];
-        entry.normal = m_normals[i];
-        entry.s = m_coordinates[i].x;
-        entry.t = 1.0f - m_coordinates[i].y;
-    }
+u::vector<m::vec3> obj::normals() const {
+    return m_normals;
+}
 
-    // Copy out of size_t format
-    u::vector<GLuint> indices;
-    indices.reserve(m_indices.size());
-    for (auto &it : m_indices)
-        indices.push_back(it);
-
-    gl::BindVertexArray(vao);
-    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof(layout) * interleave.size(), &interleave[0], GL_STATIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(0));  // vertex
-    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(3));  // normals
-    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(6));  // texCoord
-    gl::EnableVertexAttribArray(0);
-    gl::EnableVertexAttribArray(1);
-    gl::EnableVertexAttribArray(2);
-
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
-
-    mode = GL_TRIANGLES;
-    count = m_indices.size();
-    type = GL_UNSIGNED_INT;
-
-    return true;
+u::vector<m::vec3> obj::coordinates() const {
+    return m_coordinates;
 }
 
 ///! Model Material Loading (Also used for the world)
@@ -683,15 +651,63 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
 }
 
 bool model::upload() {
-    if (!m_mesh.upload())
-        return false;
+    geom::upload();
+
+    struct layout {
+        m::vec3 position;
+        m::vec3 normal;
+        float s;
+        float t;
+    };
+
+    const auto &indices = m_mesh.indices();
+    const auto &positions = m_mesh.positions();
+    const auto &normals = m_mesh.normals();
+    const auto &coordinates = m_mesh.coordinates();
+
+    // Interleave vertex data for the GPU
+    u::vector<layout> interleave;
+    interleave.resize(positions.size());
+    for (size_t i = 0; i < positions.size(); i++) {
+        auto &entry = interleave[i];
+        entry.position = positions[i];
+        entry.normal = normals[i];
+        entry.s = coordinates[i].x;
+        entry.t = 1.0f - coordinates[i].y;
+    }
+
+    // Copy out of size_t format into GLuint format
+    u::vector<GLuint> finalIndices;
+    finalIndices.reserve(indices.size());
+    for (auto &it : indices)
+        finalIndices.push_back(it);
+
+    m_indices = finalIndices.size();
+
+    gl::BindVertexArray(vao);
+    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof(layout) * interleave.size(), &interleave[0], GL_STATIC_DRAW);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(0));  // vertex
+    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(3));  // normals
+    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(6));  // texCoord
+    gl::EnableVertexAttribArray(0);
+    gl::EnableVertexAttribArray(1);
+    gl::EnableVertexAttribArray(2);
+
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof(GLuint), &finalIndices[0], GL_STATIC_DRAW);
+
+    // TODO: multiple materials
     if (!mat.upload())
         return false;
+
     return true;
 }
 
 void model::render() {
-    m_mesh.render();
+    gl::BindVertexArray(vao);
+    gl::DrawElements(GL_TRIANGLES, m_indices, GL_UNSIGNED_INT, 0);
 }
 
 u::string model::name() const {

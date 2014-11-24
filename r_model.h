@@ -119,13 +119,19 @@ namespace r {
 
 struct model;
 
-struct obj : geom {
+struct obj {
     bool load(const u::string &file);
-    bool upload();
+
+    u::vector<size_t> indices() const;
+    u::vector<m::vec3> positions() const;
+    u::vector<m::vec3> normals() const;
+    u::vector<m::vec3> coordinates() const;
 
 private:
     friend struct model;
+
     bool load(const u::string &file, model *parent);
+
     u::vector<size_t> m_indices;
     u::vector<m::vec3> m_positions;
     u::vector<m::vec3> m_normals;
@@ -150,7 +156,7 @@ struct material {
     bool upload();
 };
 
-struct model {
+struct model : geom {
     bool load(u::map<u::string, texture2D*> &textures, const u::string &file);
     bool upload();
 
@@ -158,15 +164,19 @@ struct model {
 
     u::string name() const;
 
+    // The material for this model (TODO: many materials)
     material mat;
 
+    // TODO: not part of the model but rather a place for the model to be
     m::vec3 scale;
     m::vec3 rotate;
 
 private:
     friend struct obj;
+
     u::string m_name;
-    obj m_mesh;
+    size_t m_indices;
+    obj m_mesh; // The mesh: (TODO: abstract opaque type for different model formats)
 };
 
 }

@@ -26,11 +26,6 @@ void geom::upload() {
     gl::GenBuffers(2, buffers);
 }
 
-void geom::render() {
-    gl::BindVertexArray(vao);
-    gl::DrawElements(mode, count, type, 0);
-}
-
 bool quad::upload() {
     geom::upload();
 
@@ -55,11 +50,12 @@ bool quad::upload() {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    mode = GL_TRIANGLES;
-    count = 6;
-    type = GL_UNSIGNED_BYTE;
-
     return true;
+}
+
+void quad::render() {
+    gl::BindVertexArray(vao);
+    gl::DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
 }
 
 bool sphere::upload() {
@@ -86,9 +82,9 @@ bool sphere::upload() {
         t -= dt;
     }
 
-    constexpr size_t numIndices = (kStacks - 1) * kSlices * 3 * 2;
+    m_indices = (kStacks - 1) * kSlices * 3 * 2;
     u::vector<GLushort> indices;
-    indices.resize(numIndices);
+    indices.resize(m_indices);
     GLushort *curIndex = &indices[0];
     for (size_t i = 0; i < kStacks; i++) {
         for (size_t k = 0; k < kSlices; k++) {
@@ -114,13 +110,14 @@ bool sphere::upload() {
     gl::EnableVertexAttribArray(0);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, numIndices * sizeof(GLushort), &indices[0], GL_STATIC_DRAW);
-
-    mode = GL_TRIANGLES;
-    count = numIndices;
-    type = GL_UNSIGNED_SHORT;
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof(GLushort), &indices[0], GL_STATIC_DRAW);
 
     return true;
+}
+
+void sphere::render() {
+    gl::BindVertexArray(vao);
+    gl::DrawElements(GL_TRIANGLES, m_indices, GL_UNSIGNED_SHORT, 0);
 }
 
 }

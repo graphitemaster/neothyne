@@ -7,7 +7,6 @@ namespace r {
 struct geom {
     geom();
     ~geom();
-    void render();
     void upload();
 
     union {
@@ -18,18 +17,18 @@ struct geom {
         GLuint buffers[2];
     };
     GLuint vao;
-    GLenum mode;
-    GLsizei count;
-    GLenum type;
 };
 
 struct quad : geom {
     bool upload();
+    void render();
 };
 
 struct sphere : geom {
     bool upload();
+    void render();
 private:
+    size_t m_indices;
     static constexpr size_t kSlices = 8;
     static constexpr size_t kStacks = 4;
 };
