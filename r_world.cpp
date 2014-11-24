@@ -236,7 +236,7 @@ bool ssaoMethod::init() {
         method::define("HAS_TEXTURE_RECTANGLE");
 
     method::define("kKernelSize", kKernelSize);
-    method::define("kKernelFactor", sinf(M_PI / float(kKernelSize)));
+    method::define("kKernelFactor", sinf(m::kPi / float(kKernelSize)));
     method::define("kKernelOffset", 1.0f / kKernelSize);
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/ssao.vs"))

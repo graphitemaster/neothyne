@@ -119,11 +119,11 @@ def printCheck(stream, function):
                 base = 'GLvoid'
         specs += ''.join([x['spec'] for x in types if x['name'] == base])
     if len(function.formals):
-        stream.write('        GL_CHECK("%s", ' % (specs))
+        stream.write('    GL_CHECK("%s", ' % (specs))
         printFormals(stream, function, True, False, False)
         stream.write(');\n')
     else:
-        stream.write('        GL_CHECK();\n')
+        stream.write('    GL_CHECK("",0);\n')
 
 def genHeader(functionList, extensionList, headerFile):
     with open(headerFile, 'w') as header:
@@ -147,35 +147,38 @@ def genHeader(functionList, extensionList, headerFile):
 
         """) % (__file__))
         # Write out the extension macros
-
         largestExtension = max(len(x) for x in extensionList)
         for i, e in enumerate(extensionList):
             fill = largestExtension - len(e)
             header.write('#define %s%s %d\n' % (e, ''.rjust(fill), i))
-        header.write('\n')
-        # Begin the namespace
-        header.write('namespace gl {\n')
+        header.write(textwrap.dedent("""\
+
+        namespace gl {
+
+        void init();
+        bool has(size_t ext);
+        """))
         # Generate the function prototypes
-        header.write('    void init();\n')
-        header.write('    bool has(size_t ext);\n');
         for function in functionList:
-            header.write('    ')
             printPrototype(header, function, True, True)
-        # End the namespace
-        header.write('}\n\n')
+
+        header.write(textwrap.dedent("""\
+
+        }
+        #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
+        """))
         # Generate the wrapper macros
-        header.write('#if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)\n')
         largest = max(len(x.name) for x in functionList)
         for f in functionList:
-            header.write('    #define %s(...) %s(%s __FILE__, __LINE__)\n'
+            header.write('#   define %s(...) %s(%s __FILE__, __LINE__)\n'
                 % (f.name,
                    f.name.rjust(largest),
                    '__VA_ARGS__,' if len(f.formals) else '/* no arg */')
             )
         # Finish the wrapper macros
-        header.write('#endif\n')
-        # Finish the header
-        header.write('#endif\n')
+        header.write(textwrap.dedent("""\
+        #endif
+        #endif"""))
 
 def genSource(functionList, extensionList, sourceFile):
     with open(sourceFile, 'w') as source:
@@ -185,13 +188,13 @@ def genSource(functionList, extensionList, sourceFile):
         #include <SDL2/SDL.h> // SDL_GL_GetProcAddress
         #include <stdarg.h>
         #define R_COMMON_NO_DEFINES
-        #include "engine.h"
-
         #include "r_common.h"
 
         #include "u_string.h"
         #include "u_set.h"
         #include "u_misc.h"
+
+        #include "engine.h"
 
         #ifndef APIENTRY
         #   define APIENTRY
@@ -201,27 +204,10 @@ def genSource(functionList, extensionList, sourceFile):
         #endif
 
         #ifdef DEBUG_GL
-        #   define GL_CHECK_0(...)     debugCheck("", __func__, file, line)
-        #   define GL_CHECK_1(SP, ...) debugCheck(SP, __func__, file, line)
+        #   define GL_CHECK(SPEC, ...) debugCheck((SPEC), __func__, file, line, __VA_ARGS__)
         #else
-        #   define GL_CHECK_0(...)
-        #   define GL_CHECK_1(...)
+        #   define GL_CHECK(...)
         #endif
-
-        #define PP_PHELP(X, Y) \\
-           X ## Y
-        #define PP_PASTE(X, Y) \\
-           PP_PHELP(X, Y)
-        #define PP_SKIP(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, N, ...) \\
-           N
-        #define PP_SCAN(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, ...) \\
-           PP_SKIP(, __VA_ARGS__, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12)
-        #define PP_COUNT(...) \\
-           PP_SCAN(12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, __VA_ARGS__)
-        #define GL_CHECK_ARG(...) \\
-           PP_SCAN(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, __VA_ARGS__)
-        #define GL_CHECK(...) \\
-           PP_PASTE(GL_CHECK_, GL_CHECK_ARG(__VA_ARGS__))(__VA_ARGS__)
 
         """) % (__file__))
         # Generate the PFNGL typedefs
@@ -322,60 +308,65 @@ def genSource(functionList, extensionList, sourceFile):
                 file, line, debugErrorString(error));
         }
         """))
-        # End debug section
-        source.write('#endif\n')
-        # Begin the namespace
-        source.write('\nnamespace gl {\n')
-        # Write out the extension area
-        source.write('    static u::set<size_t> extensionSet;\n');
-        source.write('    static const char *extensionList[] = {\n');
+
+        source.write(textwrap.dedent("""\
+        #endif
+
+        namespace gl {
+
+        static u::set<size_t> extensionSet;
+        static const char *extensionList[] = {
+        """))
         for i, e in enumerate(extensionList):
-            source.write('        "GL_%s"%s\n' % (e, ',' if i != len(extensionList) - 1 else ''))
-        source.write('    };\n\n')
-        # Generate the init function
-        source.write('    void init() {\n')
+            source.write('    "GL_%s"%s\n' % (e, ',' if i != len(extensionList) - 1 else ''))
+        source.write(textwrap.dedent("""\
+        };
+
+        void init() {
+        """))
         for f in functionList:
             fill = largest - len(f.name)
-            source.write('        if (!(gl%s_%s = (MYPFNGL%sPROC)SDL_GL_GetProcAddress("gl%s")))\n            goto loadError;\n'
+            source.write('    gl%s_%s = (MYPFNGL%sPROC)SDL_GL_GetProcAddress("gl%s");\n'
                 % (f.name, ''.rjust(fill), f.name.upper(), f.name))
-        source.write('\n');
-        source.write('        goto loadExtensions;\n\n')
-        source.write('loadError:\n')
-        source.write('        neoFatal("Failed to initialize OpenGL\\n");\n\n')
-        source.write('loadExtensions:\n')
-        source.write('        GLint count = 0;\n');
-        source.write('        glGetIntegerv_(GL_NUM_EXTENSIONS, &count);\n')
-        source.write('        for (GLint i = 0; i < count; i++) {\n')
-        source.write('            const char *extension = (const char *)glGetStringi_(GL_EXTENSIONS, i);\n')
-        source.write('            for (size_t i = 0; i < sizeof(extensionList)/sizeof(*extensionList); i++)\n')
-        source.write('                if (!strcmp(extensionList[i], extension))\n')
-        source.write('                    extensionSet.insert(i);\n')
-        source.write('        }\n')
-        source.write('    }\n\n')
-        source.write('    bool has(size_t ext) {\n')
-        source.write('         return extensionSet.find(ext) != extensionSet.end();\n')
-        source.write('    }\n')
+        source.write(textwrap.dedent("""\
+
+            if (!glGetIntegerv_ || !glGetStringi_)
+                neoFatal("Failed to initialize OpenGL\\n");
+
+            GLint count = 0;
+            glGetIntegerv_(GL_NUM_EXTENSIONS, &count);
+            for (GLint i = 0; i < count; i++) {
+                for (size_t j = 0; j < sizeof(extensionList)/sizeof(*extensionList); j++)
+                    if (!strcmp(extensionList[i], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
+                        extensionSet.insert(i);
+            }
+        }
+
+        bool has(size_t ext) {
+            return extensionSet.find(ext) != extensionSet.end();
+        }
+        """))
         # Generate the GL function wrappers
         for f in functionList:
-            source.write('\n    %s %s' % (f.type, f.name))
+            source.write('\n%s %s' % (f.type, f.name))
             printFormals(source, f, True, True, True, True)
-            source.write(' {\n        ')
+            source.write(' {\n    ')
             if f.type != 'void':
                 # Local backup result and then return it
                 source.write('%s result = gl%s_' % (f.type, f.name))
                 printFormals(source, f, True, False)
                 source.write(';\n')
                 printCheck(source, f)
-                source.write('        return result;\n    }\n')
+                source.write('    return result;\n}\n')
             else:
                 # Just call
                 source.write('gl%s_' % (f.name))
                 printFormals(source, f, True, False)
                 source.write(';\n')
                 printCheck(source, f)
-                source.write('    }\n')
+                source.write('}\n')
         # End the namespace
-        source.write('}\n')
+        source.write('\n}\n')
 
 def main(argv):
     protos = 'tools/r_gl'

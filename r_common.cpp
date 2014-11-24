@@ -2,13 +2,13 @@
 #include <SDL2/SDL.h> // SDL_GL_GetProcAddress
 #include <stdarg.h>
 #define R_COMMON_NO_DEFINES
-#include "engine.h"
-
 #include "r_common.h"
 
 #include "u_string.h"
 #include "u_set.h"
 #include "u_misc.h"
+
+#include "engine.h"
 
 #ifndef APIENTRY
 #   define APIENTRY
@@ -18,27 +18,10 @@
 #endif
 
 #ifdef DEBUG_GL
-#   define GL_CHECK_0(...)     debugCheck("", __func__, file, line)
-#   define GL_CHECK_1(SP, ...) debugCheck(SP, __func__, file, line)
+#   define GL_CHECK(SPEC, ...) debugCheck((SPEC), __func__, file, line, __VA_ARGS__)
 #else
-#   define GL_CHECK_0(...)
-#   define GL_CHECK_1(...)
+#   define GL_CHECK(...)
 #endif
-
-#define PP_PHELP(X, Y) \
-   X ## Y
-#define PP_PASTE(X, Y) \
-   PP_PHELP(X, Y)
-#define PP_SKIP(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, N, ...) \
-   N
-#define PP_SCAN(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, ...) \
-   PP_SKIP(, __VA_ARGS__, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12)
-#define PP_COUNT(...) \
-   PP_SCAN(12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, __VA_ARGS__)
-#define GL_CHECK_ARG(...) \
-   PP_SCAN(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, __VA_ARGS__)
-#define GL_CHECK(...) \
-   PP_PASTE(GL_CHECK_, GL_CHECK_ARG(__VA_ARGS__))(__VA_ARGS__)
 
 typedef GLuint (APIENTRYP MYPFNGLCREATESHADERPROC)(GLenum);
 typedef void (APIENTRYP MYPFNGLSHADERSOURCEPROC)(GLuint, GLsizei, const GLchar**, const GLint*);
@@ -350,510 +333,441 @@ static void debugCheck(const char *spec, const char *function, const char *file,
 #endif
 
 namespace gl {
-    static u::set<size_t> extensionSet;
-    static const char *extensionList[] = {
-        "GL_EXT_texture_compression_s3tc",
-        "GL_EXT_texture_compression_rgtc",
-        "GL_EXT_texture_filter_anisotropic",
-        "GL_ARB_texture_compression_bptc",
-        "GL_ARB_texture_rectangle"
-    };
 
-    void init() {
-        if (!(glCreateShader_             = (MYPFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader")))
-            goto loadError;
-        if (!(glShaderSource_             = (MYPFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress("glShaderSource")))
-            goto loadError;
-        if (!(glCompileShader_            = (MYPFNGLCOMPILESHADERPROC)SDL_GL_GetProcAddress("glCompileShader")))
-            goto loadError;
-        if (!(glAttachShader_             = (MYPFNGLATTACHSHADERPROC)SDL_GL_GetProcAddress("glAttachShader")))
-            goto loadError;
-        if (!(glCreateProgram_            = (MYPFNGLCREATEPROGRAMPROC)SDL_GL_GetProcAddress("glCreateProgram")))
-            goto loadError;
-        if (!(glLinkProgram_              = (MYPFNGLLINKPROGRAMPROC)SDL_GL_GetProcAddress("glLinkProgram")))
-            goto loadError;
-        if (!(glUseProgram_               = (MYPFNGLUSEPROGRAMPROC)SDL_GL_GetProcAddress("glUseProgram")))
-            goto loadError;
-        if (!(glGetUniformLocation_       = (MYPFNGLGETUNIFORMLOCATIONPROC)SDL_GL_GetProcAddress("glGetUniformLocation")))
-            goto loadError;
-        if (!(glEnableVertexAttribArray_  = (MYPFNGLENABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glEnableVertexAttribArray")))
-            goto loadError;
-        if (!(glDisableVertexAttribArray_ = (MYPFNGLDISABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glDisableVertexAttribArray")))
-            goto loadError;
-        if (!(glUniformMatrix4fv_         = (MYPFNGLUNIFORMMATRIX4FVPROC)SDL_GL_GetProcAddress("glUniformMatrix4fv")))
-            goto loadError;
-        if (!(glBindBuffer_               = (MYPFNGLBINDBUFFERPROC)SDL_GL_GetProcAddress("glBindBuffer")))
-            goto loadError;
-        if (!(glGenBuffers_               = (MYPFNGLGENBUFFERSPROC)SDL_GL_GetProcAddress("glGenBuffers")))
-            goto loadError;
-        if (!(glVertexAttribPointer_      = (MYPFNGLVERTEXATTRIBPOINTERPROC)SDL_GL_GetProcAddress("glVertexAttribPointer")))
-            goto loadError;
-        if (!(glBufferData_               = (MYPFNGLBUFFERDATAPROC)SDL_GL_GetProcAddress("glBufferData")))
-            goto loadError;
-        if (!(glValidateProgram_          = (MYPFNGLVALIDATEPROGRAMPROC)SDL_GL_GetProcAddress("glValidateProgram")))
-            goto loadError;
-        if (!(glGenVertexArrays_          = (MYPFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays")))
-            goto loadError;
-        if (!(glBindVertexArray_          = (MYPFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray")))
-            goto loadError;
-        if (!(glDeleteProgram_            = (MYPFNGLDELETEPROGRAMPROC)SDL_GL_GetProcAddress("glDeleteProgram")))
-            goto loadError;
-        if (!(glDeleteBuffers_            = (MYPFNGLDELETEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteBuffers")))
-            goto loadError;
-        if (!(glDeleteVertexArrays_       = (MYPFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays")))
-            goto loadError;
-        if (!(glUniform1i_                = (MYPFNGLUNIFORM1IPROC)SDL_GL_GetProcAddress("glUniform1i")))
-            goto loadError;
-        if (!(glUniform1f_                = (MYPFNGLUNIFORM1FPROC)SDL_GL_GetProcAddress("glUniform1f")))
-            goto loadError;
-        if (!(glUniform2f_                = (MYPFNGLUNIFORM2FPROC)SDL_GL_GetProcAddress("glUniform2f")))
-            goto loadError;
-        if (!(glUniform3fv_               = (MYPFNGLUNIFORM3FVPROC)SDL_GL_GetProcAddress("glUniform3fv")))
-            goto loadError;
-        if (!(glGenerateMipmap_           = (MYPFNGLGENERATEMIPMAPPROC)SDL_GL_GetProcAddress("glGenerateMipmap")))
-            goto loadError;
-        if (!(glDeleteShader_             = (MYPFNGLDELETESHADERPROC)SDL_GL_GetProcAddress("glDeleteShader")))
-            goto loadError;
-        if (!(glGetShaderiv_              = (MYPFNGLGETSHADERIVPROC)SDL_GL_GetProcAddress("glGetShaderiv")))
-            goto loadError;
-        if (!(glGetProgramiv_             = (MYPFNGLGETPROGRAMIVPROC)SDL_GL_GetProcAddress("glGetProgramiv")))
-            goto loadError;
-        if (!(glGetShaderInfoLog_         = (MYPFNGLGETSHADERINFOLOGPROC)SDL_GL_GetProcAddress("glGetShaderInfoLog")))
-            goto loadError;
-        if (!(glActiveTexture_            = (MYPFNGLACTIVETEXTUREPROC)SDL_GL_GetProcAddress("glActiveTexture")))
-            goto loadError;
-        if (!(glGenFramebuffers_          = (MYPFNGLGENFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glGenFramebuffers")))
-            goto loadError;
-        if (!(glBindFramebuffer_          = (MYPFNGLBINDFRAMEBUFFERPROC)SDL_GL_GetProcAddress("glBindFramebuffer")))
-            goto loadError;
-        if (!(glFramebufferTexture2D_     = (MYPFNGLFRAMEBUFFERTEXTURE2DPROC)SDL_GL_GetProcAddress("glFramebufferTexture2D")))
-            goto loadError;
-        if (!(glDrawBuffers_              = (MYPFNGLDRAWBUFFERSPROC)SDL_GL_GetProcAddress("glDrawBuffers")))
-            goto loadError;
-        if (!(glCheckFramebufferStatus_   = (MYPFNGLCHECKFRAMEBUFFERSTATUSPROC)SDL_GL_GetProcAddress("glCheckFramebufferStatus")))
-            goto loadError;
-        if (!(glDeleteFramebuffers_       = (MYPFNGLDELETEFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteFramebuffers")))
-            goto loadError;
-        if (!(glClear_                    = (MYPFNGLCLEARPROC)SDL_GL_GetProcAddress("glClear")))
-            goto loadError;
-        if (!(glClearColor_               = (MYPFNGLCLEARCOLORPROC)SDL_GL_GetProcAddress("glClearColor")))
-            goto loadError;
-        if (!(glFrontFace_                = (MYPFNGLFRONTFACEPROC)SDL_GL_GetProcAddress("glFrontFace")))
-            goto loadError;
-        if (!(glCullFace_                 = (MYPFNGLCULLFACEPROC)SDL_GL_GetProcAddress("glCullFace")))
-            goto loadError;
-        if (!(glEnable_                   = (MYPFNGLENABLEPROC)SDL_GL_GetProcAddress("glEnable")))
-            goto loadError;
-        if (!(glDisable_                  = (MYPFNGLDISABLEPROC)SDL_GL_GetProcAddress("glDisable")))
-            goto loadError;
-        if (!(glDrawElements_             = (MYPFNGLDRAWELEMENTSPROC)SDL_GL_GetProcAddress("glDrawElements")))
-            goto loadError;
-        if (!(glDepthMask_                = (MYPFNGLDEPTHMASKPROC)SDL_GL_GetProcAddress("glDepthMask")))
-            goto loadError;
-        if (!(glBindTexture_              = (MYPFNGLBINDTEXTUREPROC)SDL_GL_GetProcAddress("glBindTexture")))
-            goto loadError;
-        if (!(glTexImage2D_               = (MYPFNGLTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glTexImage2D")))
-            goto loadError;
-        if (!(glDeleteTextures_           = (MYPFNGLDELETETEXTURESPROC)SDL_GL_GetProcAddress("glDeleteTextures")))
-            goto loadError;
-        if (!(glGenTextures_              = (MYPFNGLGENTEXTURESPROC)SDL_GL_GetProcAddress("glGenTextures")))
-            goto loadError;
-        if (!(glTexParameterf_            = (MYPFNGLTEXPARAMETERFPROC)SDL_GL_GetProcAddress("glTexParameterf")))
-            goto loadError;
-        if (!(glTexParameteri_            = (MYPFNGLTEXPARAMETERIPROC)SDL_GL_GetProcAddress("glTexParameteri")))
-            goto loadError;
-        if (!(glDrawArrays_               = (MYPFNGLDRAWARRAYSPROC)SDL_GL_GetProcAddress("glDrawArrays")))
-            goto loadError;
-        if (!(glBlendEquation_            = (MYPFNGLBLENDEQUATIONPROC)SDL_GL_GetProcAddress("glBlendEquation")))
-            goto loadError;
-        if (!(glBlendFunc_                = (MYPFNGLBLENDFUNCPROC)SDL_GL_GetProcAddress("glBlendFunc")))
-            goto loadError;
-        if (!(glDepthFunc_                = (MYPFNGLDEPTHFUNCPROC)SDL_GL_GetProcAddress("glDepthFunc")))
-            goto loadError;
-        if (!(glColorMask_                = (MYPFNGLCOLORMASKPROC)SDL_GL_GetProcAddress("glColorMask")))
-            goto loadError;
-        if (!(glReadPixels_               = (MYPFNGLREADPIXELSPROC)SDL_GL_GetProcAddress("glReadPixels")))
-            goto loadError;
-        if (!(glViewport_                 = (MYPFNGLVIEWPORTPROC)SDL_GL_GetProcAddress("glViewport")))
-            goto loadError;
-        if (!(glGetIntegerv_              = (MYPFNGLGETINTEGERVPROC)SDL_GL_GetProcAddress("glGetIntegerv")))
-            goto loadError;
-        if (!(glGetString_                = (MYPFNGLGETSTRINGPROC)SDL_GL_GetProcAddress("glGetString")))
-            goto loadError;
-        if (!(glGetStringi_               = (MYPFNGLGETSTRINGIPROC)SDL_GL_GetProcAddress("glGetStringi")))
-            goto loadError;
-        if (!(glGetFloatv_                = (MYPFNGLGETFLOATVPROC)SDL_GL_GetProcAddress("glGetFloatv")))
-            goto loadError;
-        if (!(glGetError_                 = (MYPFNGLGETERRORPROC)SDL_GL_GetProcAddress("glGetError")))
-            goto loadError;
-        if (!(glGetTexLevelParameteriv_   = (MYPFNGLGETTEXLEVELPARAMETERIVPROC)SDL_GL_GetProcAddress("glGetTexLevelParameteriv")))
-            goto loadError;
-        if (!(glGetCompressedTexImage_    = (MYPFNGLGETCOMPRESSEDTEXIMAGEPROC)SDL_GL_GetProcAddress("glGetCompressedTexImage")))
-            goto loadError;
-        if (!(glCompressedTexImage2D_     = (MYPFNGLCOMPRESSEDTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glCompressedTexImage2D")))
-            goto loadError;
-        if (!(glPixelStorei_              = (MYPFNGLPIXELSTOREIPROC)SDL_GL_GetProcAddress("glPixelStorei")))
-            goto loadError;
+static u::set<size_t> extensionSet;
+static const char *extensionList[] = {
+    "GL_EXT_texture_compression_s3tc",
+    "GL_EXT_texture_compression_rgtc",
+    "GL_EXT_texture_filter_anisotropic",
+    "GL_ARB_texture_compression_bptc",
+    "GL_ARB_texture_rectangle"
+};
 
-        goto loadExtensions;
+void init() {
+    glCreateShader_             = (MYPFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader");
+    glShaderSource_             = (MYPFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress("glShaderSource");
+    glCompileShader_            = (MYPFNGLCOMPILESHADERPROC)SDL_GL_GetProcAddress("glCompileShader");
+    glAttachShader_             = (MYPFNGLATTACHSHADERPROC)SDL_GL_GetProcAddress("glAttachShader");
+    glCreateProgram_            = (MYPFNGLCREATEPROGRAMPROC)SDL_GL_GetProcAddress("glCreateProgram");
+    glLinkProgram_              = (MYPFNGLLINKPROGRAMPROC)SDL_GL_GetProcAddress("glLinkProgram");
+    glUseProgram_               = (MYPFNGLUSEPROGRAMPROC)SDL_GL_GetProcAddress("glUseProgram");
+    glGetUniformLocation_       = (MYPFNGLGETUNIFORMLOCATIONPROC)SDL_GL_GetProcAddress("glGetUniformLocation");
+    glEnableVertexAttribArray_  = (MYPFNGLENABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glEnableVertexAttribArray");
+    glDisableVertexAttribArray_ = (MYPFNGLDISABLEVERTEXATTRIBARRAYPROC)SDL_GL_GetProcAddress("glDisableVertexAttribArray");
+    glUniformMatrix4fv_         = (MYPFNGLUNIFORMMATRIX4FVPROC)SDL_GL_GetProcAddress("glUniformMatrix4fv");
+    glBindBuffer_               = (MYPFNGLBINDBUFFERPROC)SDL_GL_GetProcAddress("glBindBuffer");
+    glGenBuffers_               = (MYPFNGLGENBUFFERSPROC)SDL_GL_GetProcAddress("glGenBuffers");
+    glVertexAttribPointer_      = (MYPFNGLVERTEXATTRIBPOINTERPROC)SDL_GL_GetProcAddress("glVertexAttribPointer");
+    glBufferData_               = (MYPFNGLBUFFERDATAPROC)SDL_GL_GetProcAddress("glBufferData");
+    glValidateProgram_          = (MYPFNGLVALIDATEPROGRAMPROC)SDL_GL_GetProcAddress("glValidateProgram");
+    glGenVertexArrays_          = (MYPFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays");
+    glBindVertexArray_          = (MYPFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray");
+    glDeleteProgram_            = (MYPFNGLDELETEPROGRAMPROC)SDL_GL_GetProcAddress("glDeleteProgram");
+    glDeleteBuffers_            = (MYPFNGLDELETEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteBuffers");
+    glDeleteVertexArrays_       = (MYPFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays");
+    glUniform1i_                = (MYPFNGLUNIFORM1IPROC)SDL_GL_GetProcAddress("glUniform1i");
+    glUniform1f_                = (MYPFNGLUNIFORM1FPROC)SDL_GL_GetProcAddress("glUniform1f");
+    glUniform2f_                = (MYPFNGLUNIFORM2FPROC)SDL_GL_GetProcAddress("glUniform2f");
+    glUniform3fv_               = (MYPFNGLUNIFORM3FVPROC)SDL_GL_GetProcAddress("glUniform3fv");
+    glGenerateMipmap_           = (MYPFNGLGENERATEMIPMAPPROC)SDL_GL_GetProcAddress("glGenerateMipmap");
+    glDeleteShader_             = (MYPFNGLDELETESHADERPROC)SDL_GL_GetProcAddress("glDeleteShader");
+    glGetShaderiv_              = (MYPFNGLGETSHADERIVPROC)SDL_GL_GetProcAddress("glGetShaderiv");
+    glGetProgramiv_             = (MYPFNGLGETPROGRAMIVPROC)SDL_GL_GetProcAddress("glGetProgramiv");
+    glGetShaderInfoLog_         = (MYPFNGLGETSHADERINFOLOGPROC)SDL_GL_GetProcAddress("glGetShaderInfoLog");
+    glActiveTexture_            = (MYPFNGLACTIVETEXTUREPROC)SDL_GL_GetProcAddress("glActiveTexture");
+    glGenFramebuffers_          = (MYPFNGLGENFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glGenFramebuffers");
+    glBindFramebuffer_          = (MYPFNGLBINDFRAMEBUFFERPROC)SDL_GL_GetProcAddress("glBindFramebuffer");
+    glFramebufferTexture2D_     = (MYPFNGLFRAMEBUFFERTEXTURE2DPROC)SDL_GL_GetProcAddress("glFramebufferTexture2D");
+    glDrawBuffers_              = (MYPFNGLDRAWBUFFERSPROC)SDL_GL_GetProcAddress("glDrawBuffers");
+    glCheckFramebufferStatus_   = (MYPFNGLCHECKFRAMEBUFFERSTATUSPROC)SDL_GL_GetProcAddress("glCheckFramebufferStatus");
+    glDeleteFramebuffers_       = (MYPFNGLDELETEFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteFramebuffers");
+    glClear_                    = (MYPFNGLCLEARPROC)SDL_GL_GetProcAddress("glClear");
+    glClearColor_               = (MYPFNGLCLEARCOLORPROC)SDL_GL_GetProcAddress("glClearColor");
+    glFrontFace_                = (MYPFNGLFRONTFACEPROC)SDL_GL_GetProcAddress("glFrontFace");
+    glCullFace_                 = (MYPFNGLCULLFACEPROC)SDL_GL_GetProcAddress("glCullFace");
+    glEnable_                   = (MYPFNGLENABLEPROC)SDL_GL_GetProcAddress("glEnable");
+    glDisable_                  = (MYPFNGLDISABLEPROC)SDL_GL_GetProcAddress("glDisable");
+    glDrawElements_             = (MYPFNGLDRAWELEMENTSPROC)SDL_GL_GetProcAddress("glDrawElements");
+    glDepthMask_                = (MYPFNGLDEPTHMASKPROC)SDL_GL_GetProcAddress("glDepthMask");
+    glBindTexture_              = (MYPFNGLBINDTEXTUREPROC)SDL_GL_GetProcAddress("glBindTexture");
+    glTexImage2D_               = (MYPFNGLTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glTexImage2D");
+    glDeleteTextures_           = (MYPFNGLDELETETEXTURESPROC)SDL_GL_GetProcAddress("glDeleteTextures");
+    glGenTextures_              = (MYPFNGLGENTEXTURESPROC)SDL_GL_GetProcAddress("glGenTextures");
+    glTexParameterf_            = (MYPFNGLTEXPARAMETERFPROC)SDL_GL_GetProcAddress("glTexParameterf");
+    glTexParameteri_            = (MYPFNGLTEXPARAMETERIPROC)SDL_GL_GetProcAddress("glTexParameteri");
+    glDrawArrays_               = (MYPFNGLDRAWARRAYSPROC)SDL_GL_GetProcAddress("glDrawArrays");
+    glBlendEquation_            = (MYPFNGLBLENDEQUATIONPROC)SDL_GL_GetProcAddress("glBlendEquation");
+    glBlendFunc_                = (MYPFNGLBLENDFUNCPROC)SDL_GL_GetProcAddress("glBlendFunc");
+    glDepthFunc_                = (MYPFNGLDEPTHFUNCPROC)SDL_GL_GetProcAddress("glDepthFunc");
+    glColorMask_                = (MYPFNGLCOLORMASKPROC)SDL_GL_GetProcAddress("glColorMask");
+    glReadPixels_               = (MYPFNGLREADPIXELSPROC)SDL_GL_GetProcAddress("glReadPixels");
+    glViewport_                 = (MYPFNGLVIEWPORTPROC)SDL_GL_GetProcAddress("glViewport");
+    glGetIntegerv_              = (MYPFNGLGETINTEGERVPROC)SDL_GL_GetProcAddress("glGetIntegerv");
+    glGetString_                = (MYPFNGLGETSTRINGPROC)SDL_GL_GetProcAddress("glGetString");
+    glGetStringi_               = (MYPFNGLGETSTRINGIPROC)SDL_GL_GetProcAddress("glGetStringi");
+    glGetFloatv_                = (MYPFNGLGETFLOATVPROC)SDL_GL_GetProcAddress("glGetFloatv");
+    glGetError_                 = (MYPFNGLGETERRORPROC)SDL_GL_GetProcAddress("glGetError");
+    glGetTexLevelParameteriv_   = (MYPFNGLGETTEXLEVELPARAMETERIVPROC)SDL_GL_GetProcAddress("glGetTexLevelParameteriv");
+    glGetCompressedTexImage_    = (MYPFNGLGETCOMPRESSEDTEXIMAGEPROC)SDL_GL_GetProcAddress("glGetCompressedTexImage");
+    glCompressedTexImage2D_     = (MYPFNGLCOMPRESSEDTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glCompressedTexImage2D");
+    glPixelStorei_              = (MYPFNGLPIXELSTOREIPROC)SDL_GL_GetProcAddress("glPixelStorei");
 
-loadError:
+    if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
 
-loadExtensions:
-        GLint count = 0;
-        glGetIntegerv_(GL_NUM_EXTENSIONS, &count);
-        for (GLint i = 0; i < count; i++) {
-            const char *extension = (const char *)glGetStringi_(GL_EXTENSIONS, i);
-            for (size_t i = 0; i < sizeof(extensionList)/sizeof(*extensionList); i++)
-                if (!strcmp(extensionList[i], extension))
-                    extensionSet.insert(i);
-        }
-    }
-
-    bool has(size_t ext) {
-         return extensionSet.find(ext) != extensionSet.end();
-    }
-
-    GLuint CreateShader(GLenum shaderType GL_INFOP) {
-        GLuint result = glCreateShader_(shaderType);
-        GL_CHECK("2", shaderType);
-        return result;
-    }
-
-    void ShaderSource(GLuint shader, GLsizei count, const GLchar** string, const GLint* length GL_INFOP) {
-        glShaderSource_(shader, count, string, length);
-        GL_CHECK("b8*0*7", shader, count, string, length);
-    }
-
-    void CompileShader(GLuint shader GL_INFOP) {
-        glCompileShader_(shader);
-        GL_CHECK("b", shader);
-    }
-
-    void AttachShader(GLuint program, GLuint shader GL_INFOP) {
-        glAttachShader_(program, shader);
-        GL_CHECK("bb", program, shader);
-    }
-
-    GLuint CreateProgram(GL_INFO) {
-        GLuint result = glCreateProgram_();
-        GL_CHECK();
-        return result;
-    }
-
-    void LinkProgram(GLuint program GL_INFOP) {
-        glLinkProgram_(program);
-        GL_CHECK("b", program);
-    }
-
-    void UseProgram(GLuint program GL_INFOP) {
-        glUseProgram_(program);
-        GL_CHECK("b", program);
-    }
-
-    GLint GetUniformLocation(GLuint program, const GLchar* name GL_INFOP) {
-        GLint result = glGetUniformLocation_(program, name);
-        GL_CHECK("b*1", program, name);
-        return result;
-    }
-
-    void EnableVertexAttribArray(GLuint index GL_INFOP) {
-        glEnableVertexAttribArray_(index);
-        GL_CHECK("b", index);
-    }
-
-    void DisableVertexAttribArray(GLuint index GL_INFOP) {
-        glDisableVertexAttribArray_(index);
-        GL_CHECK("b", index);
-    }
-
-    void UniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value GL_INFOP) {
-        glUniformMatrix4fv_(location, count, transpose, value);
-        GL_CHECK("783*c", location, count, transpose, value);
-    }
-
-    void BindBuffer(GLenum target, GLuint buffer GL_INFOP) {
-        glBindBuffer_(target, buffer);
-        GL_CHECK("2b", target, buffer);
-    }
-
-    void GenBuffers(GLsizei n, GLuint* buffers GL_INFOP) {
-        glGenBuffers_(n, buffers);
-        GL_CHECK("8*b", n, buffers);
-    }
-
-    void VertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid* pointer GL_INFOP) {
-        glVertexAttribPointer_(index, size, type, normalized, stride, pointer);
-        GL_CHECK("b7238*0", index, size, type, normalized, stride, pointer);
-    }
-
-    void BufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage GL_INFOP) {
-        glBufferData_(target, size, data, usage);
-        GL_CHECK("2f*02", target, size, data, usage);
-    }
-
-    void ValidateProgram(GLuint program GL_INFOP) {
-        glValidateProgram_(program);
-        GL_CHECK("b", program);
-    }
-
-    void GenVertexArrays(GLsizei n, GLuint* arrays GL_INFOP) {
-        glGenVertexArrays_(n, arrays);
-        GL_CHECK("8*b", n, arrays);
-    }
-
-    void BindVertexArray(GLuint array GL_INFOP) {
-        glBindVertexArray_(array);
-        GL_CHECK("b", array);
-    }
-
-    void DeleteProgram(GLuint program GL_INFOP) {
-        glDeleteProgram_(program);
-        GL_CHECK("b", program);
-    }
-
-    void DeleteBuffers(GLsizei n, const GLuint* buffers GL_INFOP) {
-        glDeleteBuffers_(n, buffers);
-        GL_CHECK("8*b", n, buffers);
-    }
-
-    void DeleteVertexArrays(GLsizei n, const GLuint* arrays GL_INFOP) {
-        glDeleteVertexArrays_(n, arrays);
-        GL_CHECK("8*b", n, arrays);
-    }
-
-    void Uniform1i(GLint location, GLint v0 GL_INFOP) {
-        glUniform1i_(location, v0);
-        GL_CHECK("77", location, v0);
-    }
-
-    void Uniform1f(GLint location, GLfloat v0 GL_INFOP) {
-        glUniform1f_(location, v0);
-        GL_CHECK("7c", location, v0);
-    }
-
-    void Uniform2f(GLint location, GLfloat v0, GLfloat v1 GL_INFOP) {
-        glUniform2f_(location, v0, v1);
-        GL_CHECK("7cc", location, v0, v1);
-    }
-
-    void Uniform3fv(GLint location, GLsizei count, const GLfloat* value GL_INFOP) {
-        glUniform3fv_(location, count, value);
-        GL_CHECK("78*c", location, count, value);
-    }
-
-    void GenerateMipmap(GLenum target GL_INFOP) {
-        glGenerateMipmap_(target);
-        GL_CHECK("2", target);
-    }
-
-    void DeleteShader(GLuint shader GL_INFOP) {
-        glDeleteShader_(shader);
-        GL_CHECK("b", shader);
-    }
-
-    void GetShaderiv(GLuint shader, GLenum pname, GLint* params GL_INFOP) {
-        glGetShaderiv_(shader, pname, params);
-        GL_CHECK("b2*7", shader, pname, params);
-    }
-
-    void GetProgramiv(GLuint program, GLenum pname, GLint* params GL_INFOP) {
-        glGetProgramiv_(program, pname, params);
-        GL_CHECK("b2*7", program, pname, params);
-    }
-
-    void GetShaderInfoLog(GLuint shader, GLsizei maxLength, GLsizei* length, GLchar* infoLog GL_INFOP) {
-        glGetShaderInfoLog_(shader, maxLength, length, infoLog);
-        GL_CHECK("b8*8*1", shader, maxLength, length, infoLog);
-    }
-
-    void ActiveTexture(GLenum texture GL_INFOP) {
-        glActiveTexture_(texture);
-        GL_CHECK("2", texture);
-    }
-
-    void GenFramebuffers(GLsizei n, GLuint* ids GL_INFOP) {
-        glGenFramebuffers_(n, ids);
-        GL_CHECK("8*b", n, ids);
-    }
-
-    void BindFramebuffer(GLenum target, GLuint framebuffer GL_INFOP) {
-        glBindFramebuffer_(target, framebuffer);
-        GL_CHECK("2b", target, framebuffer);
-    }
-
-    void FramebufferTexture2D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level GL_INFOP) {
-        glFramebufferTexture2D_(target, attachment, textarget, texture, level);
-        GL_CHECK("222b7", target, attachment, textarget, texture, level);
-    }
-
-    void DrawBuffers(GLsizei n, const GLenum* bufs GL_INFOP) {
-        glDrawBuffers_(n, bufs);
-        GL_CHECK("8*2", n, bufs);
-    }
-
-    GLenum CheckFramebufferStatus(GLenum target GL_INFOP) {
-        GLenum result = glCheckFramebufferStatus_(target);
-        GL_CHECK("2", target);
-        return result;
-    }
-
-    void DeleteFramebuffers(GLsizei n, const GLuint* framebuffers GL_INFOP) {
-        glDeleteFramebuffers_(n, framebuffers);
-        GL_CHECK("8*b", n, framebuffers);
-    }
-
-    void Clear(GLbitfield mask GL_INFOP) {
-        glClear_(mask);
-        GL_CHECK("4", mask);
-    }
-
-    void ClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha GL_INFOP) {
-        glClearColor_(red, green, blue, alpha);
-        GL_CHECK("cccc", red, green, blue, alpha);
-    }
-
-    void FrontFace(GLenum mode GL_INFOP) {
-        glFrontFace_(mode);
-        GL_CHECK("2", mode);
-    }
-
-    void CullFace(GLenum mode GL_INFOP) {
-        glCullFace_(mode);
-        GL_CHECK("2", mode);
-    }
-
-    void Enable(GLenum cap GL_INFOP) {
-        glEnable_(cap);
-        GL_CHECK("2", cap);
-    }
-
-    void Disable(GLenum cap GL_INFOP) {
-        glDisable_(cap);
-        GL_CHECK("2", cap);
-    }
-
-    void DrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid* indices GL_INFOP) {
-        glDrawElements_(mode, count, type, indices);
-        GL_CHECK("282*0", mode, count, type, indices);
-    }
-
-    void DepthMask(GLboolean flag GL_INFOP) {
-        glDepthMask_(flag);
-        GL_CHECK("3", flag);
-    }
-
-    void BindTexture(GLenum target, GLuint texture GL_INFOP) {
-        glBindTexture_(target, texture);
-        GL_CHECK("2b", target, texture);
-    }
-
-    void TexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid* data GL_INFOP) {
-        glTexImage2D_(target, level, internalFormat, width, height, border, format, type, data);
-        GL_CHECK("27788722*0", target, level, internalFormat, width, height, border, format, type, data);
-    }
-
-    void DeleteTextures(GLsizei n, const GLuint* textures GL_INFOP) {
-        glDeleteTextures_(n, textures);
-        GL_CHECK("8*b", n, textures);
-    }
-
-    void GenTextures(GLsizei n, GLuint* textures GL_INFOP) {
-        glGenTextures_(n, textures);
-        GL_CHECK("8*b", n, textures);
-    }
-
-    void TexParameterf(GLenum target, GLenum pname, GLfloat param GL_INFOP) {
-        glTexParameterf_(target, pname, param);
-        GL_CHECK("22c", target, pname, param);
-    }
-
-    void TexParameteri(GLenum target, GLenum pname, GLint param GL_INFOP) {
-        glTexParameteri_(target, pname, param);
-        GL_CHECK("227", target, pname, param);
-    }
-
-    void DrawArrays(GLenum mode, GLint first, GLsizei count GL_INFOP) {
-        glDrawArrays_(mode, first, count);
-        GL_CHECK("278", mode, first, count);
-    }
-
-    void BlendEquation(GLenum mode GL_INFOP) {
-        glBlendEquation_(mode);
-        GL_CHECK("2", mode);
-    }
-
-    void BlendFunc(GLenum sfactor, GLenum dfactor GL_INFOP) {
-        glBlendFunc_(sfactor, dfactor);
-        GL_CHECK("22", sfactor, dfactor);
-    }
-
-    void DepthFunc(GLenum func GL_INFOP) {
-        glDepthFunc_(func);
-        GL_CHECK("2", func);
-    }
-
-    void ColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha GL_INFOP) {
-        glColorMask_(red, green, blue, alpha);
-        GL_CHECK("3333", red, green, blue, alpha);
-    }
-
-    void ReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid* data GL_INFOP) {
-        glReadPixels_(x, y, width, height, format, type, data);
-        GL_CHECK("778822*0", x, y, width, height, format, type, data);
-    }
-
-    void Viewport(GLint x, GLint y, GLsizei width, GLsizei height GL_INFOP) {
-        glViewport_(x, y, width, height);
-        GL_CHECK("7788", x, y, width, height);
-    }
+    GLint count = 0;
+    glGetIntegerv_(GL_NUM_EXTENSIONS, &count);
+    for (GLint i = 0; i < count; i++) {
+        for (size_t j = 0; j < sizeof(extensionList)/sizeof(*extensionList); j++)
+            if (!strcmp(extensionList[i], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
+                extensionSet.insert(i);
+    }
+}
+
+bool has(size_t ext) {
+    return extensionSet.find(ext) != extensionSet.end();
+}
+
+GLuint CreateShader(GLenum shaderType GL_INFOP) {
+    GLuint result = glCreateShader_(shaderType);
+    GL_CHECK("2", shaderType);
+    return result;
+}
+
+void ShaderSource(GLuint shader, GLsizei count, const GLchar** string, const GLint* length GL_INFOP) {
+    glShaderSource_(shader, count, string, length);
+    GL_CHECK("b8*0*7", shader, count, string, length);
+}
+
+void CompileShader(GLuint shader GL_INFOP) {
+    glCompileShader_(shader);
+    GL_CHECK("b", shader);
+}
+
+void AttachShader(GLuint program, GLuint shader GL_INFOP) {
+    glAttachShader_(program, shader);
+    GL_CHECK("bb", program, shader);
+}
+
+GLuint CreateProgram(GL_INFO) {
+    GLuint result = glCreateProgram_();
+    GL_CHECK("",0);
+    return result;
+}
+
+void LinkProgram(GLuint program GL_INFOP) {
+    glLinkProgram_(program);
+    GL_CHECK("b", program);
+}
+
+void UseProgram(GLuint program GL_INFOP) {
+    glUseProgram_(program);
+    GL_CHECK("b", program);
+}
+
+GLint GetUniformLocation(GLuint program, const GLchar* name GL_INFOP) {
+    GLint result = glGetUniformLocation_(program, name);
+    GL_CHECK("b*1", program, name);
+    return result;
+}
+
+void EnableVertexAttribArray(GLuint index GL_INFOP) {
+    glEnableVertexAttribArray_(index);
+    GL_CHECK("b", index);
+}
+
+void DisableVertexAttribArray(GLuint index GL_INFOP) {
+    glDisableVertexAttribArray_(index);
+    GL_CHECK("b", index);
+}
+
+void UniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value GL_INFOP) {
+    glUniformMatrix4fv_(location, count, transpose, value);
+    GL_CHECK("783*c", location, count, transpose, value);
+}
+
+void BindBuffer(GLenum target, GLuint buffer GL_INFOP) {
+    glBindBuffer_(target, buffer);
+    GL_CHECK("2b", target, buffer);
+}
+
+void GenBuffers(GLsizei n, GLuint* buffers GL_INFOP) {
+    glGenBuffers_(n, buffers);
+    GL_CHECK("8*b", n, buffers);
+}
+
+void VertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid* pointer GL_INFOP) {
+    glVertexAttribPointer_(index, size, type, normalized, stride, pointer);
+    GL_CHECK("b7238*0", index, size, type, normalized, stride, pointer);
+}
+
+void BufferData(GLenum target, GLsizeiptr size, const GLvoid* data, GLenum usage GL_INFOP) {
+    glBufferData_(target, size, data, usage);
+    GL_CHECK("2f*02", target, size, data, usage);
+}
+
+void ValidateProgram(GLuint program GL_INFOP) {
+    glValidateProgram_(program);
+    GL_CHECK("b", program);
+}
+
+void GenVertexArrays(GLsizei n, GLuint* arrays GL_INFOP) {
+    glGenVertexArrays_(n, arrays);
+    GL_CHECK("8*b", n, arrays);
+}
+
+void BindVertexArray(GLuint array GL_INFOP) {
+    glBindVertexArray_(array);
+    GL_CHECK("b", array);
+}
+
+void DeleteProgram(GLuint program GL_INFOP) {
+    glDeleteProgram_(program);
+    GL_CHECK("b", program);
+}
+
+void DeleteBuffers(GLsizei n, const GLuint* buffers GL_INFOP) {
+    glDeleteBuffers_(n, buffers);
+    GL_CHECK("8*b", n, buffers);
+}
+
+void DeleteVertexArrays(GLsizei n, const GLuint* arrays GL_INFOP) {
+    glDeleteVertexArrays_(n, arrays);
+    GL_CHECK("8*b", n, arrays);
+}
+
+void Uniform1i(GLint location, GLint v0 GL_INFOP) {
+    glUniform1i_(location, v0);
+    GL_CHECK("77", location, v0);
+}
+
+void Uniform1f(GLint location, GLfloat v0 GL_INFOP) {
+    glUniform1f_(location, v0);
+    GL_CHECK("7c", location, v0);
+}
+
+void Uniform2f(GLint location, GLfloat v0, GLfloat v1 GL_INFOP) {
+    glUniform2f_(location, v0, v1);
+    GL_CHECK("7cc", location, v0, v1);
+}
+
+void Uniform3fv(GLint location, GLsizei count, const GLfloat* value GL_INFOP) {
+    glUniform3fv_(location, count, value);
+    GL_CHECK("78*c", location, count, value);
+}
+
+void GenerateMipmap(GLenum target GL_INFOP) {
+    glGenerateMipmap_(target);
+    GL_CHECK("2", target);
+}
+
+void DeleteShader(GLuint shader GL_INFOP) {
+    glDeleteShader_(shader);
+    GL_CHECK("b", shader);
+}
+
+void GetShaderiv(GLuint shader, GLenum pname, GLint* params GL_INFOP) {
+    glGetShaderiv_(shader, pname, params);
+    GL_CHECK("b2*7", shader, pname, params);
+}
+
+void GetProgramiv(GLuint program, GLenum pname, GLint* params GL_INFOP) {
+    glGetProgramiv_(program, pname, params);
+    GL_CHECK("b2*7", program, pname, params);
+}
+
+void GetShaderInfoLog(GLuint shader, GLsizei maxLength, GLsizei* length, GLchar* infoLog GL_INFOP) {
+    glGetShaderInfoLog_(shader, maxLength, length, infoLog);
+    GL_CHECK("b8*8*1", shader, maxLength, length, infoLog);
+}
+
+void ActiveTexture(GLenum texture GL_INFOP) {
+    glActiveTexture_(texture);
+    GL_CHECK("2", texture);
+}
+
+void GenFramebuffers(GLsizei n, GLuint* ids GL_INFOP) {
+    glGenFramebuffers_(n, ids);
+    GL_CHECK("8*b", n, ids);
+}
+
+void BindFramebuffer(GLenum target, GLuint framebuffer GL_INFOP) {
+    glBindFramebuffer_(target, framebuffer);
+    GL_CHECK("2b", target, framebuffer);
+}
+
+void FramebufferTexture2D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level GL_INFOP) {
+    glFramebufferTexture2D_(target, attachment, textarget, texture, level);
+    GL_CHECK("222b7", target, attachment, textarget, texture, level);
+}
+
+void DrawBuffers(GLsizei n, const GLenum* bufs GL_INFOP) {
+    glDrawBuffers_(n, bufs);
+    GL_CHECK("8*2", n, bufs);
+}
+
+GLenum CheckFramebufferStatus(GLenum target GL_INFOP) {
+    GLenum result = glCheckFramebufferStatus_(target);
+    GL_CHECK("2", target);
+    return result;
+}
+
+void DeleteFramebuffers(GLsizei n, const GLuint* framebuffers GL_INFOP) {
+    glDeleteFramebuffers_(n, framebuffers);
+    GL_CHECK("8*b", n, framebuffers);
+}
+
+void Clear(GLbitfield mask GL_INFOP) {
+    glClear_(mask);
+    GL_CHECK("4", mask);
+}
+
+void ClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha GL_INFOP) {
+    glClearColor_(red, green, blue, alpha);
+    GL_CHECK("cccc", red, green, blue, alpha);
+}
+
+void FrontFace(GLenum mode GL_INFOP) {
+    glFrontFace_(mode);
+    GL_CHECK("2", mode);
+}
+
+void CullFace(GLenum mode GL_INFOP) {
+    glCullFace_(mode);
+    GL_CHECK("2", mode);
+}
+
+void Enable(GLenum cap GL_INFOP) {
+    glEnable_(cap);
+    GL_CHECK("2", cap);
+}
+
+void Disable(GLenum cap GL_INFOP) {
+    glDisable_(cap);
+    GL_CHECK("2", cap);
+}
+
+void DrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid* indices GL_INFOP) {
+    glDrawElements_(mode, count, type, indices);
+    GL_CHECK("282*0", mode, count, type, indices);
+}
+
+void DepthMask(GLboolean flag GL_INFOP) {
+    glDepthMask_(flag);
+    GL_CHECK("3", flag);
+}
+
+void BindTexture(GLenum target, GLuint texture GL_INFOP) {
+    glBindTexture_(target, texture);
+    GL_CHECK("2b", target, texture);
+}
+
+void TexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid* data GL_INFOP) {
+    glTexImage2D_(target, level, internalFormat, width, height, border, format, type, data);
+    GL_CHECK("27788722*0", target, level, internalFormat, width, height, border, format, type, data);
+}
+
+void DeleteTextures(GLsizei n, const GLuint* textures GL_INFOP) {
+    glDeleteTextures_(n, textures);
+    GL_CHECK("8*b", n, textures);
+}
+
+void GenTextures(GLsizei n, GLuint* textures GL_INFOP) {
+    glGenTextures_(n, textures);
+    GL_CHECK("8*b", n, textures);
+}
+
+void TexParameterf(GLenum target, GLenum pname, GLfloat param GL_INFOP) {
+    glTexParameterf_(target, pname, param);
+    GL_CHECK("22c", target, pname, param);
+}
+
+void TexParameteri(GLenum target, GLenum pname, GLint param GL_INFOP) {
+    glTexParameteri_(target, pname, param);
+    GL_CHECK("227", target, pname, param);
+}
+
+void DrawArrays(GLenum mode, GLint first, GLsizei count GL_INFOP) {
+    glDrawArrays_(mode, first, count);
+    GL_CHECK("278", mode, first, count);
+}
+
+void BlendEquation(GLenum mode GL_INFOP) {
+    glBlendEquation_(mode);
+    GL_CHECK("2", mode);
+}
+
+void BlendFunc(GLenum sfactor, GLenum dfactor GL_INFOP) {
+    glBlendFunc_(sfactor, dfactor);
+    GL_CHECK("22", sfactor, dfactor);
+}
+
+void DepthFunc(GLenum func GL_INFOP) {
+    glDepthFunc_(func);
+    GL_CHECK("2", func);
+}
+
+void ColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha GL_INFOP) {
+    glColorMask_(red, green, blue, alpha);
+    GL_CHECK("3333", red, green, blue, alpha);
+}
+
+void ReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid* data GL_INFOP) {
+    glReadPixels_(x, y, width, height, format, type, data);
+    GL_CHECK("778822*0", x, y, width, height, format, type, data);
+}
+
+void Viewport(GLint x, GLint y, GLsizei width, GLsizei height GL_INFOP) {
+    glViewport_(x, y, width, height);
+    GL_CHECK("7788", x, y, width, height);
+}
+
+void GetIntegerv(GLenum pname, GLint* data GL_INFOP) {
+    glGetIntegerv_(pname, data);
+    GL_CHECK("2*7", pname, data);
+}
+
+const GLubyte* GetString(GLenum name GL_INFOP) {
+    const GLubyte* result = glGetString_(name);
+    GL_CHECK("2", name);
+    return result;
+}
+
+const GLubyte* GetStringi(GLenum name, GLuint index GL_INFOP) {
+    const GLubyte* result = glGetStringi_(name, index);
+    GL_CHECK("2b", name, index);
+    return result;
+}
+
+void GetFloatv(GLenum pname, GLfloat* params GL_INFOP) {
+    glGetFloatv_(pname, params);
+    GL_CHECK("2*c", pname, params);
+}
+
+GLenum GetError(GL_INFO) {
+    GLenum result = glGetError_();
+    GL_CHECK("",0);
+    return result;
+}
+
+void GetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint* params GL_INFOP) {
+    glGetTexLevelParameteriv_(target, level, pname, params);
+    GL_CHECK("272*7", target, level, pname, params);
+}
+
+void GetCompressedTexImage(GLenum target, GLint lod, GLvoid* img GL_INFOP) {
+    glGetCompressedTexImage_(target, lod, img);
+    GL_CHECK("27*0", target, lod, img);
+}
+
+void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid* data GL_INFOP) {
+    glCompressedTexImage2D_(target, level, internalformat, width, height, border, imageSize, data);
+    GL_CHECK("2728878*0", target, level, internalformat, width, height, border, imageSize, data);
+}
+
+void PixelStorei(GLenum pname, GLint param GL_INFOP) {
+    glPixelStorei_(pname, param);
+    GL_CHECK("27", pname, param);
+}
 
-    void GetIntegerv(GLenum pname, GLint* data GL_INFOP) {
-        glGetIntegerv_(pname, data);
-        GL_CHECK("2*7", pname, data);
-    }
-
-    const GLubyte* GetString(GLenum name GL_INFOP) {
-        const GLubyte* result = glGetString_(name);
-        GL_CHECK("2", name);
-        return result;
-    }
-
-    const GLubyte* GetStringi(GLenum name, GLuint index GL_INFOP) {
-        const GLubyte* result = glGetStringi_(name, index);
-        GL_CHECK("2b", name, index);
-        return result;
-    }
-
-    void GetFloatv(GLenum pname, GLfloat* params GL_INFOP) {
-        glGetFloatv_(pname, params);
-        GL_CHECK("2*c", pname, params);
-    }
-
-    GLenum GetError(GL_INFO) {
-        GLenum result = glGetError_();
-        GL_CHECK();
-        return result;
-    }
-
-    void GetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint* params GL_INFOP) {
-        glGetTexLevelParameteriv_(target, level, pname, params);
-        GL_CHECK("272*7", target, level, pname, params);
-    }
-
-    void GetCompressedTexImage(GLenum target, GLint lod, GLvoid* img GL_INFOP) {
-        glGetCompressedTexImage_(target, lod, img);
-        GL_CHECK("27*0", target, lod, img);
-    }
-
-    void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid* data GL_INFOP) {
-        glCompressedTexImage2D_(target, level, internalformat, width, height, border, imageSize, data);
-        GL_CHECK("2728878*0", target, level, internalformat, width, height, border, imageSize, data);
-    }
-
-    void PixelStorei(GLenum pname, GLint param GL_INFOP) {
-        glPixelStorei_(pname, param);
-        GL_CHECK("27", pname, param);
-    }
 }
