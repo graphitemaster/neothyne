@@ -91,6 +91,7 @@ void GetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint* par
 void GetCompressedTexImage(GLenum target, GLint lod, GLvoid* img GL_INFOP);
 void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const GLvoid* data GL_INFOP);
 void PixelStorei(GLenum pname, GLint param GL_INFOP);
+void Scissor(GLint x, GLint y, GLsizei width, GLsizei height GL_INFOP);
 
 }
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -161,5 +162,6 @@ void PixelStorei(GLenum pname, GLint param GL_INFOP);
 #   define GetCompressedTexImage(...)    GetCompressedTexImage(__VA_ARGS__, __FILE__, __LINE__)
 #   define CompressedTexImage2D(...)     CompressedTexImage2D(__VA_ARGS__, __FILE__, __LINE__)
 #   define PixelStorei(...)              PixelStorei(__VA_ARGS__, __FILE__, __LINE__)
+#   define Scissor(...)                  Scissor(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif

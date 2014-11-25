@@ -90,6 +90,7 @@ typedef void (APIENTRYP MYPFNGLGETTEXLEVELPARAMETERIVPROC)(GLenum, GLint, GLenum
 typedef void (APIENTRYP MYPFNGLGETCOMPRESSEDTEXIMAGEPROC)(GLenum, GLint, GLvoid*);
 typedef void (APIENTRYP MYPFNGLCOMPRESSEDTEXIMAGE2DPROC)(GLenum, GLint, GLenum, GLsizei, GLsizei, GLint, GLsizei, const GLvoid*);
 typedef void (APIENTRYP MYPFNGLPIXELSTOREIPROC)(GLenum, GLint);
+typedef void (APIENTRYP MYPFNGLSCISSORPROC)(GLint, GLint, GLsizei, GLsizei);
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -158,6 +159,7 @@ static MYPFNGLGETTEXLEVELPARAMETERIVPROC    glGetTexLevelParameteriv_   = nullpt
 static MYPFNGLGETCOMPRESSEDTEXIMAGEPROC     glGetCompressedTexImage_    = nullptr;
 static MYPFNGLCOMPRESSEDTEXIMAGE2DPROC      glCompressedTexImage2D_     = nullptr;
 static MYPFNGLPIXELSTOREIPROC               glPixelStorei_              = nullptr;
+static MYPFNGLSCISSORPROC                   glScissor_                  = nullptr;
 
 #ifdef DEBUG_GL
 template <char C, typename T>
@@ -411,6 +413,7 @@ void init() {
     glGetCompressedTexImage_    = (MYPFNGLGETCOMPRESSEDTEXIMAGEPROC)SDL_GL_GetProcAddress("glGetCompressedTexImage");
     glCompressedTexImage2D_     = (MYPFNGLCOMPRESSEDTEXIMAGE2DPROC)SDL_GL_GetProcAddress("glCompressedTexImage2D");
     glPixelStorei_              = (MYPFNGLPIXELSTOREIPROC)SDL_GL_GetProcAddress("glPixelStorei");
+    glScissor_                  = (MYPFNGLSCISSORPROC)SDL_GL_GetProcAddress("glScissor");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -768,6 +771,11 @@ void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLs
 void PixelStorei(GLenum pname, GLint param GL_INFOP) {
     glPixelStorei_(pname, param);
     GL_CHECK("27", pname, param);
+}
+
+void Scissor(GLint x, GLint y, GLsizei width, GLsizei height GL_INFOP) {
+    glScissor_(x, y, width, height);
+    GL_CHECK("7788", x, y, width, height);
 }
 
 }

@@ -8,6 +8,7 @@
 
 #include "r_world.h"
 #include "r_splash.h"
+#include "r_gui.h"
 
 #include "c_var.h"
 
@@ -186,6 +187,10 @@ int neoMain(frameTimer &timer, int, char **) {
         neoFatal("failed to load splash screen");
     gSplash.upload();
 
+    r::gui gGui;
+    if (!gGui.upload())
+        neoFatal("failed to initialize GUI rendering method\n");
+
     r::rendererPipeline pipeline;
     m::perspectiveProjection projection;
     projection.fov = cl_fov;
@@ -221,6 +226,12 @@ int neoMain(frameTimer &timer, int, char **) {
     client gClient;
 
     bool running = true;
+
+    int mouseButton = 0;
+    int mouseScroll = 0;
+    int mouseX = 0;
+    int mouseY = 0;
+
     while (running) {
         neoSetWindowTitle(u::format("Neothyne: %d fps : %.2f mspf",
             timer.fps(), timer.mspf()).c_str());
@@ -233,9 +244,20 @@ int neoMain(frameTimer &timer, int, char **) {
 
         loadData.gWorld.render(pipeline);
 
+        /// GUI
+        gui::begin(mouseX, neoHeight() - mouseY, mouseButton, mouseScroll * 64);
+            // Cross hair (for now)
+            gui::drawLine(neoWidth() / 2, neoHeight() / 2 - 10, neoWidth() / 2, neoHeight() / 2 + 10, 2, 0xAAAAAA00);
+            gui::drawLine(neoWidth() / 2 + 10, neoHeight() / 2, neoWidth() / 2 - 10, neoHeight() / 2, 2, 0xAAAAAA00);
+            gui::drawRectangle(neoWidth() / 2 - 5, neoHeight()/ 2 - 5, 10, 10, 5, 0xAAAAAA00);
+        gui::finish();
+
+        gGui.render(pipeline);
+
         neoSwap();
 
         SDL_Event e;
+        mouseScroll = 0;
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
                 case SDL_QUIT:
@@ -278,8 +300,32 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_KEYUP:
                     neoKeyState(e.key.keysym.sym, false, true);
                     break;
+                case SDL_MOUSEMOTION:
+                    mouseX = e.motion.x;
+                    mouseY = e.motion.y;
+                    break;
+                case SDL_MOUSEWHEEL:
+                    mouseScroll = e.wheel.y;
+                    break;
                 case SDL_MOUSEBUTTONDOWN:
-                    neoRelativeMouse(true);
+                    switch (e.button.button) {
+                        case SDL_BUTTON_LEFT:
+                            mouseButton |= gui::kMouseButtonLeft;
+                            break;
+                        case SDL_BUTTON_RIGHT:
+                            mouseButton |= gui::kMouseButtonRight;
+                            break;
+                    }
+                    break;
+                case SDL_MOUSEBUTTONUP:
+                    switch (e.button.button) {
+                        case SDL_BUTTON_LEFT:
+                            mouseButton &= ~gui::kMouseButtonLeft;
+                            break;
+                        case SDL_BUTTON_RIGHT:
+                            mouseButton &= ~gui::kMouseButtonRight;
+                            break;
+                    }
                     break;
             }
         }

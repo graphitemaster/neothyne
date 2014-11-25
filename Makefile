@@ -39,9 +39,11 @@ RENDERER_SOURCES = \
 	r_ssao.cpp \
 	r_splash.cpp \
 	r_texture.cpp \
-	r_world.cpp
+	r_world.cpp \
+	r_gui.cpp
 
 ENGINE_SOURCES = \
+	gui.cpp \
 	engine.cpp \
 	kdmap.cpp \
 	kdtree.cpp \
