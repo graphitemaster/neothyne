@@ -211,9 +211,9 @@ static void menuReset() {
 
 static menuState menuUpdate() {
     const size_t w = neoWidth() / 4;
-    const size_t h = neoHeight() / 3;
+    const size_t h = (neoHeight() / 3) - (neoHeight() / 16);
     const size_t x = w + (w/2);
-    const size_t y = h - (h/6);
+    const size_t y = h - (h/6) + (neoHeight() / 16);
     if (gMenuMainButtonPlay)
         return kMenuStatePlay;
     if (gMenuMainButtonExit)
@@ -230,19 +230,25 @@ static menuState menuUpdate() {
             if (gui::collapse("Engine", "", gMenuCreditsCheckEngine))
                 gMenuCreditsCheckEngine = !gMenuCreditsCheckEngine;
             if (gMenuCreditsCheckEngine) {
-                gui::label("Dale 'graphitemaster' Weiler");
+                gui::indent();
+                    gui::label("Dale 'graphitemaster' Weiler");
+                gui::dedent();
             }
             if (gui::collapse("Art", "", gMenuCreditsCheckArt))
                 gMenuCreditsCheckArt = !gMenuCreditsCheckArt;
             if (gMenuCreditsCheckArt) {
-                gui::label("Maxim 'acerspyro' Therrien");
+                gui::indent();
+                    gui::label("Maxim 'acerspyro' Therrien");
+                gui::dedent();
             }
             if (gui::collapse("Special Thanks", "", gMenuCreditsCheckSpecialThanks))
                 gMenuCreditsCheckSpecialThanks = !gMenuCreditsCheckSpecialThanks;
             if (gMenuCreditsCheckSpecialThanks) {
-                gui::label("Lee 'eihrul' Salzman");
-                gui::label("Wolfgang 'Blub\\w' Bullimer");
-                gui::label("Forest 'LordHavoc' Hale");
+                gui::indent();
+                    gui::label("Lee 'eihrul' Salzman");
+                    gui::label("Wolfgang 'Blub\\w' Bullimer");
+                    gui::label("Forest 'LordHavoc' Hale");
+                gui::dedent();
             }
         gui::areaFinish();
         return kMenuStateChild;
