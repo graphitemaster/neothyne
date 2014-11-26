@@ -1756,13 +1756,13 @@ template void texture::convert<kTexFormatLuminance>();
 
 template <typename T>
 bool texture::decode(const u::vector<unsigned char> &data, const char *name, float quality) {
-    T decode(data);
-    if (decode.status() != decoder::kSuccess) {
-        u::print("failed to decode `%s' %s\n", name, decode.error());
+    auto decode = u::unique_ptr<T>(new T(data));
+    if (decode->status() != decoder::kSuccess) {
+        u::print("failed to decode `%s' %s\n", name, decode->error());
         return false;
     }
 
-    switch (decode.bpp()) {
+    switch (decode->bpp()) {
         case 1:
             m_format = kTexFormatLuminance;
             break;
@@ -1774,11 +1774,11 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
             break;
     }
 
-    m_width = decode.width();
-    m_height = decode.height();
-    m_bpp = decode.bpp();
+    m_width = decode->width();
+    m_height = decode->height();
+    m_bpp = decode->bpp();
     m_pitch = m_width * m_bpp;
-    m_data = u::move(decode.data());
+    m_data = u::move(decode->data());
     m_flags |= kTexFlagDisk;
 
     // Quality will resize the texture accordingly
