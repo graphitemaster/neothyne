@@ -315,11 +315,10 @@ int neoMain(frameTimer &timer, int, char **) {
         menuing = true;
     };
 
-    auto escapeMenu = [](bool &running, bool &playing, bool &menuing) {
+    auto escapeMenu = [](bool &running, bool &, bool &menuing) {
         menuReset();
         neoRelativeMouse(false);
         running = true;
-        playing = true;
         menuing = true;
     };
 
@@ -434,6 +433,7 @@ int neoMain(frameTimer &timer, int, char **) {
                 running = false;
                 break;
             case kMenuStateChild:
+                playing = false;
                 escapeBind = escapeMenu;
             case kMenuStateParent:
                 gui::finish();
