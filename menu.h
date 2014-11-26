@@ -1,6 +1,7 @@
 #ifndef MENU_HDR
 #define MENU_HDR
 #include "u_map.h"
+#include "u_stack.h"
 
 enum {
     kMenuMain    = 1 << 0,
@@ -11,6 +12,7 @@ enum {
 
 extern int gMenuState;
 extern u::map<u::string, int*> gMenuReferences;
+extern u::stack<u::string, 25> gMenuConsole;
 
 void menuUpdate();
 void menuReset();

@@ -8,9 +8,8 @@
 namespace gui {
 
 void queue::addScissor(int x, int y, int w, int h) {
-    if (m_size >= kCommandQueueSize)
-        return;
-    auto &cmd = m_data[m_size++];
+    if (m_commands.full()) return;
+    auto &cmd = m_commands.next();
     cmd.type = kCommandScissor;
     cmd.flags = x < 0 ? 0 : 1;
     cmd.color = 0;
@@ -21,9 +20,8 @@ void queue::addScissor(int x, int y, int w, int h) {
 }
 
 void queue::addRectangle(float x, float y, float w, float h, uint32_t color) {
-    if (m_size >= kCommandQueueSize)
-        return;
-    auto &cmd = m_data[m_size++];
+    if (m_commands.full()) return;
+    auto &cmd = m_commands.next();
     cmd.type = kCommandRectangle;
     cmd.flags = 0;
     cmd.color = color;
@@ -35,9 +33,8 @@ void queue::addRectangle(float x, float y, float w, float h, uint32_t color) {
 }
 
 void queue::addLine(float x0, float y0, float x1, float y1, float r, uint32_t color) {
-    if (m_size >= kCommandQueueSize)
-        return;
-    auto &cmd = m_data[m_size++];
+    if (m_commands.full()) return;
+    auto &cmd = m_commands.next();
     cmd.type = kCommandLine;
     cmd.flags = 0;
     cmd.color = color;
@@ -49,9 +46,8 @@ void queue::addLine(float x0, float y0, float x1, float y1, float r, uint32_t co
 }
 
 void queue::addRectangle(float x, float y, float w, float h, float r, uint32_t color) {
-    if (m_size >= kCommandQueueSize)
-        return;
-    auto &cmd = m_data[m_size++];
+    if (m_commands.full()) return;
+    auto &cmd = m_commands.next();
     cmd.type = kCommandRectangle;
     cmd.flags = 0;
     cmd.color = color;
@@ -63,9 +59,8 @@ void queue::addRectangle(float x, float y, float w, float h, float r, uint32_t c
 }
 
 void queue::addTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
-    if (m_size >= kCommandQueueSize)
-        return;
-    auto &cmd = m_data[m_size++];
+    if (m_commands.full()) return;
+    auto &cmd = m_commands.next();
     cmd.type = kCommandTriangle;
     cmd.flags = flags;
     cmd.color = color;
@@ -76,9 +71,8 @@ void queue::addTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
 }
 
 void queue::addText(int x, int y, int align, const u::string &contents, uint32_t color) {
-    if (m_size >= kCommandQueueSize)
-        return;
-    auto &cmd = m_data[m_size++];
+    if (m_commands.full()) return;
+    auto &cmd = m_commands.next();
     cmd.type = kCommandText;
     cmd.flags = 0;
     cmd.color = color;

@@ -2,6 +2,7 @@
 #define GUI_HDR
 #include <stdint.h>
 #include "u_string.h"
+#include "u_stack.h"
 
 namespace gui {
 
@@ -65,10 +66,8 @@ struct command {
 };
 
 struct queue {
-    queue();
     static constexpr size_t kCommandQueueSize = 5000;
-    const command *begin() const;
-    const command *end() const;
+    const u::stack<command, kCommandQueueSize> &operator()() const;
     void reset();
     void addScissor(int x, int y, int w, int h);
     void addRectangle(float x, float y, float w, float h, uint32_t color);
@@ -77,25 +76,15 @@ struct queue {
     void addTriangle(int x, int y, int w, int h, int flags, uint32_t color);
     void addText(int x, int y, int align, const u::string &contents, uint32_t color);
 private:
-    command m_data[kCommandQueueSize];
-    size_t m_size;
+    u::stack<command, kCommandQueueSize> m_commands;
 };
 
-inline queue::queue()
-    : m_size(0)
-{
-}
-
-inline const command *queue::begin() const {
-    return &m_data[0];
-}
-
-inline const command *queue::end() const {
-    return &m_data[m_size];
-}
-
 inline void queue::reset() {
-    m_size = 0;
+    m_commands.reset();
+}
+
+inline const u::stack<command, queue::kCommandQueueSize> &queue::operator()() const {
+    return m_commands;
 }
 
 inline constexpr uint32_t RGBA(unsigned char R, unsigned char G, unsigned char B, unsigned char A = 255) {

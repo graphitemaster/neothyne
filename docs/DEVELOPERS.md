@@ -25,6 +25,7 @@ exist.
 * u::string
 * u::vector
 * u::buffer
+* u::stack
 
 As well as a plethora of type traits and algorithmic functions which can be
 found in `u_traits.h` and `u_algorithm.h` respectively. Miscellaneous utilites can

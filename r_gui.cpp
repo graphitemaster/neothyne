@@ -195,7 +195,7 @@ void gui::render(const rendererPipeline &pipeline) {
     m_methods[kMethodNormal].setPerspectiveProjection(project);
 
     gl::Disable(GL_SCISSOR_TEST);
-    for (auto &it : ::gui::commands()) {
+    for (auto &it : ::gui::commands()()) {
 #ifdef DEBUG_GUI
         printCommand(it);
 #endif

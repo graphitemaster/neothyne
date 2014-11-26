@@ -8,6 +8,9 @@
 #include "u_vector.h" // u::vector
 #include "u_memory.h" // u::unique_ptr
 
+// HACK
+#include "menu.h" // TODO: isolate
+
 namespace u {
 
 template <typename T>
@@ -104,6 +107,7 @@ inline u::string format(const char *fmt, const Ts&... ts) {
 template <typename... Ts>
 inline void fprint(FILE *fp, const char *fmt, const Ts&... ts) {
     fprintf(fp, "%s", format(fmt, ts...).c_str());
+    gMenuConsole.push_back(format(fmt, ts...));
 }
 
 template <typename... Ts>

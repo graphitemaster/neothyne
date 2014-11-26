@@ -3,9 +3,13 @@
 #include "gui.h"
 #include "c_var.h"
 
-int gMenuState = kMenuMain | kMenuConsole;
-u::map<u::string, int*> gMenuReferences;
+int gMenuState = kMenuMain | kMenuConsole; // Default state
+
+u::map<u::string, int*> gMenuReferences; // References to external data
+u::stack<u::string, 25> gMenuConsole; // The console text buffer
+
 static u::map<u::string, int> gMenuData;
+
 
 #define D(X) gMenuData[u::format("%s_%s", __func__, #X)]
 #define R(X) *gMenuReferences[#X]
@@ -200,10 +204,10 @@ static void menuConsole() {
 
     gui::areaBegin("", x, y, w, h, D(scroll));
         gui::indent();
-        for (size_t i = 0; i < 100; i++)
-            gui::label("Never going to give you up!");
+        for (auto &it : gMenuConsole)
+            gui::label(it);
         gui::dedent();
-    gui::areaFinish(25, true);
+    gui::areaFinish(20, true);
 }
 
 void menuRegister(const u::string &name, int &ref) {
