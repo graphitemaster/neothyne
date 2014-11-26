@@ -263,8 +263,6 @@ static SDL_Window *getContext() {
         SDL_Quit();
     }
 
-    SDL_SetRelativeMouseMode(SDL_TRUE);
-
     return window;
 }
 

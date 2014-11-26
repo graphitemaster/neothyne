@@ -198,8 +198,7 @@ static int gMenuCreditsScroll = 0;
 enum menuState {
     kMenuStatePlay,
     kMenuStateExit,
-    kMenuStateChild,
-    kMenuStateParent,
+    kMenuStatePass
 };
 
 static void menuReset() {
@@ -221,9 +220,9 @@ static menuState menuUpdate() {
     if (gMenuMainButtonSettings) {
         gui::areaBegin("Settings", x, y, w, h, gMenuSettingsScroll);
             gui::heading();
-            // TODO
+            for (size_t i = 0; i < 100; i++)
+                gui::label("Never going to give you up!");
         gui::areaFinish();
-        return kMenuStateChild;
     } else if (gMenuMainButtonCredits) {
         gui::areaBegin("Credits", x, y, w, h, gMenuCreditsScroll);
             gui::heading();
@@ -251,7 +250,6 @@ static menuState menuUpdate() {
                 gui::dedent();
             }
         gui::areaFinish();
-        return kMenuStateChild;
     } else {
         gui::areaBegin("Main", x, y, w, h, gMenuMainScroll);
             gui::heading();
@@ -260,8 +258,8 @@ static menuState menuUpdate() {
             if (gui::button("Credits", true))  gMenuMainButtonCredits  = !gMenuMainButtonCredits;
             if (gui::button("Exit", true))     gMenuMainButtonExit     = !gMenuMainButtonExit;
         gui::areaFinish();
-        return kMenuStateParent;
     }
+    return kMenuStatePass;
 }
 
 int neoMain(frameTimer &timer, int, char **) {
@@ -313,24 +311,6 @@ int neoMain(frameTimer &timer, int, char **) {
     int mouseButton = 0;
     int mouseX = 0;
     int mouseY = 0;
-
-    // Escape key binds
-    auto escapeDefault = [](bool &running, bool &playing, bool &menuing) {
-        running = false;
-        playing = false;
-        menuing = true;
-    };
-
-    auto escapeMenu = [](bool &running, bool &, bool &menuing) {
-        menuReset();
-        neoRelativeMouse(false);
-        running = true;
-        menuing = true;
-    };
-
-    void (*escapeBind)(bool &running, bool &playing, bool &menuing) = escapeDefault;
-
-    neoRelativeMouse(false);
     while (running) {
         neoSetWindowTitle(u::format("Neothyne: %d fps : %.2f mspf",
             timer.fps(), timer.mspf()).c_str());
@@ -376,9 +356,21 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_KEYDOWN:
                     switch (e.key.keysym.sym) {
                         case SDLK_ESCAPE:
-                            if (escapeBind)
-                                escapeBind(running, playing, menuing);
-                            escapeBind = escapeDefault;
+                            if (playing) {
+                                // If we're in the menu while playing the escape
+                                // key brings us back to the main menu.
+                                if (menuing)
+                                    menuReset();
+                                else // Otherwise it means to bring up the main
+                                     // menu.
+                                    menuing = true;
+                                // In both cases we don't want relative mouse
+                                neoRelativeMouse(false);
+                            } else {
+                                // If we're not playing every escape from the menu
+                                // should bring us back to the main menu.
+                                menuReset();
+                            }
                             break;
                         case SDLK_F8:
                             screenShot();
@@ -430,18 +422,17 @@ int neoMain(frameTimer &timer, int, char **) {
             case kMenuStatePlay:
                 // Upload the world if it has't already been uploaded
                 loadData.gWorld.upload(projection);
-                neoRelativeMouse(true);
+                // Hide the menu and set the relative mouse mode. We're now
+                // playing.
                 playing = true;
                 menuing = false;
-                escapeBind = escapeMenu; // Escape from in game to go to menu
+                neoRelativeMouse(true);
+                menuReset();
                 break;
             case kMenuStateExit:
                 running = false;
                 break;
-            case kMenuStateChild:
-                playing = false;
-                escapeBind = escapeMenu;
-            case kMenuStateParent:
+            default:
                 gui::finish();
                 break;
         }
