@@ -380,10 +380,10 @@ void areaFinish(int inc) {
 
         // Bar
         if (S.isActive(id)) {
-            Q.addRectangle(hx, hy, hw, hh, float(w)/2-1, RGBA(255, 196, 0, 196));
+            Q.addRectangle(hx, hy, hw, hh, float(w)/2-1, RGBA(255, 0, 225, 196));
         } else {
             Q.addRectangle(hx, hy, hw, hh, float(w)/2-1,
-                S.isHot(id) ? RGBA(255, 196, 0, 96) : RGBA(255, 255, 255, 64));
+                S.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
         }
 
         // Scrolling
@@ -413,7 +413,7 @@ bool button(const u::string &contents, bool enabled) {
         RGBA(128, 128, 128, S.isActive(id) ? 196 : 96));
     if (enabled) {
         Q.addText(x+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
-            contents, S.isHot(id) ? RGBA(255, 196, 0, 255) : RGBA(255, 255, 255, 200));
+            contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
     } else {
         Q.addText(x+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, RGBA(128, 128, 128, 200));
@@ -477,7 +477,7 @@ bool check(const u::string &contents, bool checked, bool enabled) {
     }
     if (enabled) {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
-            contents, S.isHot(id) ? RGBA(255, 196, 0, 255) : RGBA(255, 255, 255, 200));
+            contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
     } else {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, RGBA(128, 128, 128, 200));
@@ -507,7 +507,7 @@ bool collapse(const u::string &contents, const char *subtext, bool checked, bool
 
     if (enabled) {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
-            contents, S.isHot(id) ? RGBA(255, 196, 0, 255) : RGBA(255, 255, 255, 200));
+            contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
     } else {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, RGBA(128, 128, 128, 200));
@@ -586,7 +586,7 @@ bool slider(const u::string &contents, float &value, float min, float max, float
             RGBA(255, 255, 255, 255));
     } else {
         Q.addRectangle(float(x+m), y, kSliderMarkerWidth, kSliderHeight, 4.0f,
-            S.isHot(id) ? RGBA(255, 196, 0, 128) : RGBA(255, 255, 255, 64));
+            S.isHot(id) ? RGBA(255, 0, 225, 128) : RGBA(255, 255, 255, 64));
     }
 
     const int digits = int(ceilf(log10f(inc)));
@@ -594,9 +594,9 @@ bool slider(const u::string &contents, float &value, float min, float max, float
 
     if (enabled) {
         Q.addText(x+kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignLeft,
-            contents, S.isHot(id) ? RGBA(255, 196, 0, 255) : RGBA(255, 255, 255, 200));
+            contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
         Q.addText(x+w-kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignRight,
-            msg, S.isHot(id) ? RGBA(255, 196, 0, 255) : RGBA(255, 255, 255, 200));
+            msg, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
     } else {
         Q.addText(x+kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignLeft,
             contents, RGBA(128, 128, 128, 200));

@@ -341,7 +341,7 @@ int neoMain(frameTimer &timer, int, char **) {
         }
         if (menuing) {
             if (!playing) {
-                gl::ClearColor(1.0f, 1.0f, 1.0f, 0.1f);
+                gl::ClearColor(40/255.0f, 30/255.0f, 50/255.0f, 0.1f);
                 gl::Clear(GL_COLOR_BUFFER_BIT);
             }
             gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
