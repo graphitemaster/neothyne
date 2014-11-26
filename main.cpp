@@ -352,9 +352,9 @@ int neoMain(frameTimer &timer, int, char **) {
         // Must come first as we want the menu to go over the cross hair if it's
         // launched after playing
         if (playing) {
-            gui::drawLine(neoWidth() / 2, neoHeight() / 2 - 10, neoWidth() / 2, neoHeight() / 2 + 10, 2, 0x33FF00E1);
-            gui::drawLine(neoWidth() / 2 + 10, neoHeight() / 2, neoWidth() / 2 - 10, neoHeight() / 2, 2, 0x33FF00E1);
-            gui::drawRectangle(neoWidth() / 2 - 5, neoHeight() / 2 - 5, 10, 10, 5, 0x33FF00E1);
+            gui::drawRectangle(neoWidth() / 2 - 5, neoHeight() / 2 - 5, 10, 10, 5, 0xFFFF00E1);
+            gui::drawLine(neoWidth() / 2, neoHeight() / 2 - 10, neoWidth() / 2, neoHeight() / 2 + 10, 2, 0xFFFF00E1);
+            gui::drawLine(neoWidth() / 2 + 10, neoHeight() / 2, neoWidth() / 2 - 10, neoHeight() / 2, 2, 0xFFFF00E1);
         }
 
         menuUpdate();
