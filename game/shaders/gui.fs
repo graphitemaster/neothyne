@@ -9,9 +9,8 @@ out vec4 fragColor;
 
 void main() {
 #ifdef HAS_FONT
-    float alpha = texture(gColorMap, texCoord0).r;
+    fragColor = vec4(color0.rgb, color0.a * texture(gColorMap, texCoord0).r);
 #else
-    float alpha = 1.0f;
+    fragColor = color0;
 #endif
-    fragColor = vec4(color0.rgb, color0.a * alpha);
 }
