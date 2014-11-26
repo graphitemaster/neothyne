@@ -198,7 +198,7 @@ static void menuConsole() {
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() - h;
 
-    gui::areaBegin("Console", x, y, w, h, D(scroll));
+    gui::areaBegin("", x, y, w, h, D(scroll));
         gui::indent();
         for (size_t i = 0; i < 100; i++)
             gui::label("Never going to give you up!");

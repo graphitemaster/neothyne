@@ -231,6 +231,7 @@ int neoMain(frameTimer &timer, int, char **) {
     menuRegister("playing", playing);
     menuReset(); // To initialize
 
+    neoCenterMouse();
     int mouse[4] = {0}; // X, Y, Scroll, Button
     while (running) {
         neoSetWindowTitle(u::format("Neothyne: %d fps : %.2f mspf",
@@ -300,6 +301,7 @@ int neoMain(frameTimer &timer, int, char **) {
                                 neoRelativeMouse(true);
                             else
                                 neoRelativeMouse(false);
+                            neoCenterMouse();
                             break;
                         case SDLK_F8:
                             screenShot();

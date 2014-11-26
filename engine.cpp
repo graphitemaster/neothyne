@@ -145,6 +145,10 @@ void neoRelativeMouse(bool state) {
     SDL_SetRelativeMouseMode(state ? SDL_TRUE : SDL_FALSE);
 }
 
+void neoCenterMouse() {
+    SDL_WarpMouseInWindow(gScreen, gScreenWidth / 2, gScreenHeight / 2);
+}
+
 void neoSetWindowTitle(const char *title) {
     SDL_SetWindowTitle(gScreen, title);
 }

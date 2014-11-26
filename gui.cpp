@@ -311,26 +311,28 @@ bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value
     W.id = 0;
     B.id = (A << 16) | W.id;
 
+    const size_t header = contents.empty() ? 0 : kAreaHeader;
+
     W.x = x + kScrollAreaPadding;
-    W.y = y+h-kAreaHeader + value;
+    W.y = y+h-header + value;
     W.w = w - kScrollAreaPadding*4;
 
-    B.top = y-kAreaHeader+h;
+    B.top = y-header+h;
     B.bottom = y+kScrollAreaPadding;
     B.right = x+w-kScrollAreaPadding*3;
     B.value = &value;
     B.areaTop = W.y;
-    B.focusTop = y-kAreaHeader;
-    B.focusBottom = y-kAreaHeader+h;
+    B.focusTop = y-header;
+    B.focusBottom = y-header+h;
     B.inside = S.inRectangle(x, y, w, h, false);
 
     S.m_insideCurrentScroll = B.inside;
 
     Q.addRectangle(x, y, w, h, 6.0f, RGBA(0, 0, 0, 192));
-    Q.addText(x+kAreaHeader/2, y+h-kAreaHeader/2-kTextHeight/2, kAlignLeft,
+    Q.addText(x+header/2, y+h-header/2-kTextHeight/2, kAlignLeft,
         contents, RGBA(255, 255, 255, 128));
     Q.addScissor(x+kScrollAreaPadding, y+kScrollAreaPadding, w-kScrollAreaPadding*4,
-        h-kAreaHeader-kScrollAreaPadding);
+        h-header-kScrollAreaPadding);
 
     return B.inside;
 }
