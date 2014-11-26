@@ -39,19 +39,11 @@ struct triangle : box { };
 struct scissor : box { };
 
 struct text {
-    text();
     int x;
     int y;
     int align;
     u::string contents;
 };
-
-inline text::text()
-    : x(0)
-    , y(0)
-    , align(0)
-{
-}
 
 struct line {
     int x[2];
@@ -74,13 +66,12 @@ struct command {
     };
 };
 
-inline command::command()
-    : asText()
-{
+inline command::command() {
 }
 
 inline command::~command() {
-    // Needed
+    if (type == kCommandText)
+        asText.~text();
 }
 
 struct queue {

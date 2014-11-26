@@ -9,7 +9,6 @@ string::string()
     , m_last(nullptr)
     , m_capacity(nullptr)
 {
-    resize(0);
 }
 
 string::string(const string& other)

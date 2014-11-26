@@ -67,8 +67,15 @@ $(GAME_BIN): $(GAME_OBJECTS)
 	$(CXX) $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@
 
 .cpp.o:
-	$(CXX) -c $(ENGINE_CXXFLAGS) $< -o $@
+	$(CXX) -MD -c $(ENGINE_CXXFLAGS) $< -o $@
+	@cp $*.d $*.P; \
+		sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+			-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
+		rm -f $*.d
 
 clean:
 	rm -f $(GAME_OBJECTS)
 	rm -f $(GAME_BIN)
+	rm -f *.P
+
+-include *.P
