@@ -2,7 +2,6 @@
 #define GUI_HDR
 #include <stdint.h>
 #include "u_string.h"
-#include "u_new.h"
 
 namespace gui {
 
