@@ -302,25 +302,28 @@ int neoMain(frameTimer &timer, int, char **) {
 
     bool running = true;
     bool playing = false;
+    bool menuing = true;
 
     int mouseButton = 0;
     int mouseX = 0;
     int mouseY = 0;
 
     // Escape key binds
-    auto escapeDefault = [](bool &running, bool &playing) {
+    auto escapeDefault = [](bool &running, bool &playing, bool &menuing) {
         running = false;
         playing = false;
+        menuing = true;
     };
 
-    auto escapeMenu = [](bool &running, bool &playing) {
+    auto escapeMenu = [](bool &running, bool &playing, bool &menuing) {
         menuReset();
         neoRelativeMouse(false);
         running = true;
-        playing = false;
+        playing = true;
+        menuing = true;
     };
 
-    void (*escapeBind)(bool &running, bool &playing) = escapeDefault;
+    void (*escapeBind)(bool &running, bool &playing, bool &menuing) = escapeDefault;
 
     neoRelativeMouse(false);
     while (running) {
@@ -336,9 +339,12 @@ int neoMain(frameTimer &timer, int, char **) {
         if (playing) {
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
             loadData.gWorld.render(pipeline);
-        } else {
-            gl::ClearColor(1.0f, 1.0f, 1.0f, 0.1f);
-            gl::Clear(GL_COLOR_BUFFER_BIT);
+        }
+        if (menuing) {
+            if (!playing) {
+                gl::ClearColor(1.0f, 1.0f, 1.0f, 0.1f);
+                gl::Clear(GL_COLOR_BUFFER_BIT);
+            }
             gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             gGui.render(pipeline);
         }
@@ -366,7 +372,7 @@ int neoMain(frameTimer &timer, int, char **) {
                     switch (e.key.keysym.sym) {
                         case SDLK_ESCAPE:
                             if (escapeBind)
-                                escapeBind(running, playing);
+                                escapeBind(running, playing, menuing);
                             escapeBind = escapeDefault;
                             break;
                         case SDLK_F8:
@@ -421,6 +427,7 @@ int neoMain(frameTimer &timer, int, char **) {
                 loadData.gWorld.upload(projection);
                 neoRelativeMouse(true);
                 playing = true;
+                menuing = false;
                 escapeBind = escapeMenu; // Escape from in game to go to menu
                 break;
             case kMenuStateExit:
