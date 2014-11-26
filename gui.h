@@ -2,6 +2,7 @@
 #define GUI_HDR
 #include <stdint.h>
 #include "u_string.h"
+#include "u_new.h"
 
 namespace gui {
 
@@ -39,11 +40,19 @@ struct triangle : box { };
 struct scissor : box { };
 
 struct text {
+    text();
     int x;
     int y;
     int align;
     u::string contents;
 };
+
+inline text::text()
+    : x(0)
+    , y(0)
+    , align(0)
+{
+}
 
 struct line {
     int x[2];
@@ -52,6 +61,8 @@ struct line {
 };
 
 struct command {
+    command();
+    ~command();
     int type;
     int flags;
     uint32_t color;
@@ -60,9 +71,18 @@ struct command {
         rectangle asRectangle;
         scissor asScissor;
         triangle asTriangle;
+        text asText;
     };
-    text asText; // Because of u::string
 };
+
+inline command::command()
+    : asText()
+{
+}
+
+inline command::~command() {
+    // Needed
+}
 
 struct queue {
     queue();
