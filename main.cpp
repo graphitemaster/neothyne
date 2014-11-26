@@ -319,12 +319,14 @@ int neoMain(frameTimer &timer, int, char **) {
 
     auto escapeMenu = [](bool &running, bool &playing) {
         menuReset();
+        neoRelativeMouse(false);
         running = true;
         playing = false;
     };
 
     void (*escapeBind)(bool &running, bool &playing) = escapeDefault;
 
+    neoRelativeMouse(false);
     while (running) {
         neoSetWindowTitle(u::format("Neothyne: %d fps : %.2f mspf",
             timer.fps(), timer.mspf()).c_str());
@@ -339,7 +341,6 @@ int neoMain(frameTimer &timer, int, char **) {
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
             loadData.gWorld.render(pipeline);
         } else {
-            neoRelativeMouse(false);
             gl::ClearColor(1.0f, 1.0f, 1.0f, 0.1f);
             gl::Clear(GL_COLOR_BUFFER_BIT);
             gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -364,10 +365,10 @@ int neoMain(frameTimer &timer, int, char **) {
                             pipeline.setPerspectiveProjection(projection);
                             break;
                         case SDL_WINDOWEVENT_FOCUS_GAINED:
-                            neoRelativeMouse(true);
+                            //neoRelativeMouse(true);
                             break;
                         case SDL_WINDOWEVENT_FOCUS_LOST:
-                            neoRelativeMouse(false);
+                            //neoRelativeMouse(false);
                             break;
                     }
                     break;
