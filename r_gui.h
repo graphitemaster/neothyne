@@ -74,7 +74,6 @@ private:
 
     GLuint m_vbos[3];
     GLuint m_vao;
-    GLuint m_white;
     texture2D m_font;
     guiMethod m_methods[2];
 };

@@ -105,8 +105,6 @@ gui::gui() {
 }
 
 gui::~gui() {
-    if (m_white)
-        gl::DeleteTextures(1, &m_white);
     if (m_vao)
         gl::DeleteVertexArrays(1, &m_vao);
     if (m_vbos[0])
@@ -154,13 +152,6 @@ bool gui::load(const u::string &font) {
 bool gui::upload() {
     if (!m_font.upload())
         return false;
-
-    unsigned char whiteAlpha = 255;
-    gl::GenTextures(1, &m_white);
-    gl::BindTexture(GL_TEXTURE_2D, m_white);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1, 1, 0, GL_RED, GL_UNSIGNED_BYTE, &whiteAlpha);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     gl::GenVertexArrays(1, &m_vao);
     gl::GenBuffers(3, m_vbos);
@@ -383,7 +374,7 @@ void gui::drawPolygon(const float *coords, size_t numCoords, float r, uint32_t c
         }
     }
 
-    gl::BindTexture(GL_TEXTURE_2D, m_white);
+    m_methods[kMethodNormal].enable();
 
     gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[0]);
