@@ -297,11 +297,7 @@ int neoMain(frameTimer &timer, int, char **) {
     if (SDL_AtomicGet(&loadData.done) != kLoadSucceeded)
         return 1;
 
-    // we're done loading the resources, now upload them (we can't render a loading
-    // screen when uploading so we assume the process will be sufficently fast.)
-    loadData.gWorld.upload(projection);
-
-    // Now render the world
+    // Now render the menu
     client gClient;
 
     bool running = true;
@@ -364,12 +360,6 @@ int neoMain(frameTimer &timer, int, char **) {
                             projection.height = neoHeight();
                             pipeline.setPerspectiveProjection(projection);
                             break;
-                        case SDL_WINDOWEVENT_FOCUS_GAINED:
-                            //neoRelativeMouse(true);
-                            break;
-                        case SDL_WINDOWEVENT_FOCUS_LOST:
-                            //neoRelativeMouse(false);
-                            break;
                     }
                     break;
                 case SDL_KEYDOWN:
@@ -427,6 +417,8 @@ int neoMain(frameTimer &timer, int, char **) {
         gui::begin(mouseX, neoHeight() - mouseY, mouseButton, mouseScroll * -2);
         switch (menuUpdate()) {
             case kMenuStatePlay:
+                // Upload the world if it has't already been uploaded
+                loadData.gWorld.upload(projection);
                 neoRelativeMouse(true);
                 playing = true;
                 escapeBind = escapeMenu; // Escape from in game to go to menu

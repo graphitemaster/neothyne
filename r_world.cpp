@@ -426,7 +426,9 @@ GLuint finalComposite::texture() const {
 }
 
 ///! renderer
-world::world() {
+world::world()
+    : m_uploaded(false)
+{
     m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
     m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
     m_directionalLight.ambient = 0.50f;
@@ -708,6 +710,9 @@ bool world::load(const kdMap &map) {
 }
 
 bool world::upload(const m::perspectiveProjection &project) {
+    if (m_uploaded)
+        return true;
+
     m_identity.loadIdentity();
 
     // upload skybox
@@ -838,7 +843,7 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_ssaoMethod.setRandomTextureUnit(ssaoMethod::kRandom);
 
     u::print("[world] => uploaded\n");
-    return true;
+    return m_uploaded = true;
 }
 
 void world::scenePass(const rendererPipeline &pipeline) {

@@ -301,6 +301,8 @@ private:
     m::mat4 m_identity;
     m::frustum m_frustum;
     u::vector<model> m_models;
+
+    bool m_uploaded;
 };
 
 }
