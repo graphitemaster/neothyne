@@ -11,7 +11,7 @@
 namespace r {
 
 struct guiMethod : method {
-    bool init();
+    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setPerspectiveProjection(const m::perspectiveProjection &project);
     void setColorTextureUnit(int unit);
@@ -24,6 +24,7 @@ private:
 struct gui {
     gui();
     ~gui();
+    bool load(const u::string &font);
     bool upload();
     void render(const rendererPipeline &p);
 
@@ -35,6 +36,32 @@ protected:
     void drawText(float x, float y, const u::string &contents, int align, uint32_t color);
 
 private:
+    struct glyphQuad {
+        float x0, y0;
+        float x1, y1;
+        float s0, s1;
+        float t0, t1;
+    };
+
+public:
+    glyphQuad getGlyphQuad(int pw, int ph, size_t index, float &xpos, float &ypos);
+
+private:
+    enum {
+        kMethodNormal,
+        kMethodFont
+    };
+
+    struct glyph {
+        int x0, y0;
+        int x1, y1;
+        float xoff;
+        float yoff;
+        float xadvance;
+    };
+
+    u::vector<glyph> m_glyphs;
+
     static constexpr size_t kCoordCount = 100;
     static constexpr size_t kCircleVertices = 8 * 4;
 
@@ -48,7 +75,8 @@ private:
     GLuint m_vbos[3];
     GLuint m_vao;
     GLuint m_white;
-    guiMethod m_method;
+    texture2D m_font;
+    guiMethod m_methods[2];
 };
 
 }

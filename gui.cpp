@@ -581,16 +581,6 @@ bool slider(const u::string &contents, float &value, float min, float max, float
         }
     }
 
-    // Mouse scroll when inside the slider
-    if (S.inRectangle(x, y, w, h, false)) {
-        value += -inc*S.m_mouse[2]; // Invert the direction for vertical sliders
-        value = floor(value / inc + 0.5f) * inc; // Snap to increments
-        // Clamp result
-        if (value < min) value = min;
-        if (value > max) value = max;
-        changed = true;
-    }
-
     if (S.isActive(id)) {
         Q.addRectangle(float(x+m), y, kSliderMarkerWidth, kSliderHeight, 4.0f,
             RGBA(255, 255, 255, 255));

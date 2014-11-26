@@ -181,6 +181,83 @@ VAR(float, cl_fov, "field of view", 45.0f, 270.0f, 90.0f);
 VAR(float, cl_nearp, "near plane", 0.0f, 10.0f, 1.0f);
 VAR(float, cl_farp, "far plane", 128.0f, 4096.0f, 2048.0f);
 
+/// MENU
+static bool gMenuMainButtonPlay = false;
+static bool gMenuMainButtonSettings = false;
+static bool gMenuMainButtonCredits = false;
+static bool gMenuMainButtonExit = false;
+
+static bool gMenuCreditsCheckEngine = true;
+static bool gMenuCreditsCheckArt = true;
+static bool gMenuCreditsCheckSpecialThanks = false;
+
+static int gMenuMainScroll = 0;
+static int gMenuSettingsScroll = 0;
+static int gMenuCreditsScroll = 0;
+
+enum menuState {
+    kMenuStatePlay,
+    kMenuStateExit,
+    kMenuStateChild,
+    kMenuStateParent,
+};
+
+static void menuReset() {
+    gMenuMainButtonPlay = false;
+    gMenuMainButtonSettings = false;
+    gMenuMainButtonCredits = false;
+    gMenuMainButtonExit = false;
+}
+
+static menuState menuUpdate() {
+    const size_t w = neoWidth() / 4;
+    const size_t h = neoHeight() / 3;
+    const size_t x = w + (w/2);
+    const size_t y = h - (h/6);
+    if (gMenuMainButtonPlay)
+        return kMenuStatePlay;
+    if (gMenuMainButtonExit)
+        return kMenuStateExit;
+    if (gMenuMainButtonSettings) {
+        gui::areaBegin("Settings", x, y, w, h, gMenuSettingsScroll);
+            gui::heading();
+            // TODO
+        gui::areaFinish();
+        return kMenuStateChild;
+    } else if (gMenuMainButtonCredits) {
+        gui::areaBegin("Credits", x, y, w, h, gMenuCreditsScroll);
+            gui::heading();
+            if (gui::collapse("Engine", "", gMenuCreditsCheckEngine))
+                gMenuCreditsCheckEngine = !gMenuCreditsCheckEngine;
+            if (gMenuCreditsCheckEngine) {
+                gui::label("Dale 'graphitemaster' Weiler");
+            }
+            if (gui::collapse("Art", "", gMenuCreditsCheckArt))
+                gMenuCreditsCheckArt = !gMenuCreditsCheckArt;
+            if (gMenuCreditsCheckArt) {
+                gui::label("Maxim 'acerspyro' Therrien");
+            }
+            if (gui::collapse("Special Thanks", "", gMenuCreditsCheckSpecialThanks))
+                gMenuCreditsCheckSpecialThanks = !gMenuCreditsCheckSpecialThanks;
+            if (gMenuCreditsCheckSpecialThanks) {
+                gui::label("Lee 'eihrul' Salzman");
+                gui::label("Wolfgang 'Blub\\w' Bullimer");
+                gui::label("Forest 'LordHavoc' Hale");
+            }
+        gui::areaFinish();
+        return kMenuStateChild;
+    } else {
+        gui::areaBegin("Main", x, y, w, h, gMenuMainScroll);
+            gui::heading();
+            if (gui::button("Play", true))     gMenuMainButtonPlay     = !gMenuMainButtonPlay;
+            if (gui::button("Settings", true)) gMenuMainButtonSettings = !gMenuMainButtonSettings;
+            if (gui::button("Credits", true))  gMenuMainButtonCredits  = !gMenuMainButtonCredits;
+            if (gui::button("Exit", true))     gMenuMainButtonExit     = !gMenuMainButtonExit;
+        gui::areaFinish();
+        return kMenuStateParent;
+    }
+}
+
 int neoMain(frameTimer &timer, int, char **) {
     r::splashScreen gSplash;
     if (!gSplash.load("textures/logo"))
@@ -188,6 +265,8 @@ int neoMain(frameTimer &timer, int, char **) {
     gSplash.upload();
 
     r::gui gGui;
+    if (!gGui.load("fonts/droidsans"))
+        neoFatal("failed to load font");
     if (!gGui.upload())
         neoFatal("failed to initialize GUI rendering method\n");
 
@@ -226,11 +305,25 @@ int neoMain(frameTimer &timer, int, char **) {
     client gClient;
 
     bool running = true;
+    bool playing = false;
 
     int mouseButton = 0;
-    int mouseScroll = 0;
     int mouseX = 0;
     int mouseY = 0;
+
+    // Escape key binds
+    auto escapeDefault = [](bool &running, bool &playing) {
+        running = false;
+        playing = false;
+    };
+
+    auto escapeMenu = [](bool &running, bool &playing) {
+        menuReset();
+        running = true;
+        playing = false;
+    };
+
+    void (*escapeBind)(bool &running, bool &playing) = escapeDefault;
 
     while (running) {
         neoSetWindowTitle(u::format("Neothyne: %d fps : %.2f mspf",
@@ -242,22 +335,20 @@ int neoMain(frameTimer &timer, int, char **) {
         pipeline.setPosition(gClient.getPosition());
         pipeline.setTime(timer.ticks());
 
-        loadData.gWorld.render(pipeline);
-
-        /// GUI
-        gui::begin(mouseX, neoHeight() - mouseY, mouseButton, mouseScroll * 64);
-            // Cross hair (for now)
-            gui::drawLine(neoWidth() / 2, neoHeight() / 2 - 10, neoWidth() / 2, neoHeight() / 2 + 10, 2, 0xAAAAAA00);
-            gui::drawLine(neoWidth() / 2 + 10, neoHeight() / 2, neoWidth() / 2 - 10, neoHeight() / 2, 2, 0xAAAAAA00);
-            gui::drawRectangle(neoWidth() / 2 - 5, neoHeight()/ 2 - 5, 10, 10, 5, 0xAAAAAA00);
-        gui::finish();
-
-        gGui.render(pipeline);
-
+        if (playing) {
+            gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            loadData.gWorld.render(pipeline);
+        } else {
+            neoRelativeMouse(false);
+            gl::ClearColor(1.0f, 1.0f, 1.0f, 0.1f);
+            gl::Clear(GL_COLOR_BUFFER_BIT);
+            gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            gGui.render(pipeline);
+        }
         neoSwap();
 
         SDL_Event e;
-        mouseScroll = 0;
+        int mouseScroll = 0;
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
                 case SDL_QUIT:
@@ -283,7 +374,9 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_KEYDOWN:
                     switch (e.key.keysym.sym) {
                         case SDLK_ESCAPE:
-                            running = false;
+                            if (escapeBind)
+                                escapeBind(running, playing);
+                            escapeBind = escapeDefault;
                             break;
                         case SDLK_F8:
                             screenShot();
@@ -328,6 +421,23 @@ int neoMain(frameTimer &timer, int, char **) {
                     }
                     break;
             }
+        }
+
+        gui::begin(mouseX, neoHeight() - mouseY, mouseButton, mouseScroll * -2);
+        switch (menuUpdate()) {
+            case kMenuStatePlay:
+                neoRelativeMouse(true);
+                playing = true;
+                escapeBind = escapeMenu; // Escape from in game to go to menu
+                break;
+            case kMenuStateExit:
+                running = false;
+                break;
+            case kMenuStateChild:
+                escapeBind = escapeMenu;
+            case kMenuStateParent:
+                gui::finish();
+                break;
         }
     }
 

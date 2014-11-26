@@ -366,7 +366,6 @@ int main(int argc, char **argv) {
     gTimer.cap(vid_maxfps.get());
 
     gl::init();
-    gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
     // back face culling
     gl::FrontFace(GL_CW);

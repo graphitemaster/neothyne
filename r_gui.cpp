@@ -1,11 +1,18 @@
 #include "r_gui.h"
+
+#include "u_file.h"
 #include "u_misc.h"
+
+#include "engine.h"
 
 namespace r {
 
-bool guiMethod::init() {
+bool guiMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
+
+    for (auto &it : defines)
+        method::define(it);
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/gui.vs"))
         return false;
@@ -46,7 +53,47 @@ gui::~gui() {
         gl::DeleteBuffers(3, m_vbos);
 }
 
+bool gui::load(const u::string &font) {
+    auto fp = u::fopen(neoGamePath() + font + ".cfg", "r");
+    if (!fp)
+        return false;
+
+    u::string fontMap = "<grey>";
+    while (auto get = u::getline(fp)) {
+        auto &line = *get;
+        auto contents = u::split(line);
+        if (contents[0] == "font" && contents.size() == 2) {
+            fontMap += contents[1];
+            continue;
+        }
+
+        // Ignore anything which don't look like valid glyph entries
+        if (contents.size() < 7)
+            continue;
+
+        glyph g;
+        g.x0 = u::atoi(contents[0]);
+        g.y0 = u::atoi(contents[1]);
+        g.x1 = u::atoi(contents[2]);
+        g.y1 = u::atoi(contents[3]);
+        g.xoff = u::atof(contents[4]);
+        g.yoff = u::atof(contents[5]);
+        g.xadvance = u::atof(contents[6]);
+
+        m_glyphs.push_back(g);
+    }
+
+    u::string where = "fonts/" + fontMap; // TODO: strip from font path
+    u::print("%s\n", where);
+    if (!m_font.load(where))
+        return false;
+
+    return true;
+}
+
 bool gui::upload() {
+    if (!m_font.upload())
+        return false;
 
     unsigned char whiteAlpha = 255;
     gl::GenTextures(1, &m_white);
@@ -73,11 +120,13 @@ bool gui::upload() {
     gl::BufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
 
     // Rendering method for GUI
-    if (!m_method.init())
+    if (!m_methods[kMethodNormal].init())
+        return false;
+    if (!m_methods[kMethodFont].init({"HAS_FONT"}))
         return false;
 
-    m_method.enable();
-    m_method.setColorTextureUnit(0);
+    m_methods[kMethodFont].enable();
+    m_methods[kMethodFont].setColorTextureUnit(0);
 
     return true;
 }
@@ -89,10 +138,10 @@ void gui::render(const rendererPipeline &pipeline) {
 
     gl::Disable(GL_DEPTH_TEST);
     gl::Disable(GL_CULL_FACE);
+    gl::Enable(GL_BLEND);
 
-    m_method.enable();
-    m_method.setPerspectiveProjection(project);
-    gl::ActiveTexture(GL_TEXTURE0);
+    m_methods[kMethodNormal].enable();
+    m_methods[kMethodNormal].setPerspectiveProjection(project);
 
     gl::Disable(GL_SCISSOR_TEST);
     for (auto &it : ::gui::commands()) {
@@ -148,6 +197,8 @@ void gui::render(const rendererPipeline &pipeline) {
                 }
                 break;
             case ::gui::kCommandText:
+                m_methods[kMethodFont].enable();
+                m_methods[kMethodFont].setPerspectiveProjection(project);
                 drawText(it.asText.x, it.asText.y, it.asText.contents, it.asText.align, it.color);
                 break;
             case ::gui::kCommandScissor:
@@ -281,10 +332,10 @@ void gui::drawPolygon(const float *coords, size_t numCoords, float r, uint32_t c
 
 void gui::drawRectangle(float x, float y, float w, float h, float fth, uint32_t color) {
     float vertices[4*2] = {
-            x+0.5f,   y+0.5f,
-            x+w-0.5f, y+0.5f,
-            x+w-0.5f, y+h-0.5f,
-            x+0.5f,   y+h-0.5f,
+        x+0.5f,   y+0.5f,
+        x+w-0.5f, y+0.5f,
+        x+w-0.5f, y+h-0.5f,
+        x+0.5f,   y+h-0.5f,
     };
     drawPolygon(vertices, 4, fth, color);
 }
@@ -315,6 +366,26 @@ void gui::drawRectangle(float x, float y, float w, float h, float r, float fth, 
     *v++ = y+r+m_circleVertices[1]*r;
 
     drawPolygon(vertices, (kRound+1)*4, fth, color);
+}
+
+gui::glyphQuad gui::getGlyphQuad(int pw, int ph, size_t index, float &xpos, float &ypos) {
+    glyphQuad q;
+    auto &b = m_glyphs[index];
+    const int roundX = int(floorf(xpos + b.xoff));
+    const int roundY = int(floorf(ypos - b.yoff));
+
+    q.x0 = float(roundX);
+    q.y0 = float(roundY);
+    q.x1 = float(roundX) + b.x1 - b.x0;
+    q.y1 = float(roundY) - b.y1 + b.y0;
+
+    q.s0 = b.x0 / float(pw);
+    q.t0 = b.y0 / float(pw);
+    q.s1 = b.x1 / float(ph);
+    q.t1 = b.y1 / float(ph);
+
+    xpos += b.xadvance;
+    return q;
 }
 
 void gui::drawLine(float x0, float y0, float x1, float y1, float r, float fth, uint32_t color) {
@@ -352,12 +423,68 @@ void gui::drawLine(float x0, float y0, float x1, float y1, float r, float fth, u
 }
 
 void gui::drawText(float x, float y, const u::string &contents, int align, uint32_t color) {
-    // TODO:
-    (void)x;
-    (void)y;
-    (void)contents;
-    (void)align;
-    (void)color;
+    // Calculate length of text
+    auto textLength = [this](const u::string &contents) -> float {
+        float position = 0;
+        float length = 0;
+        for (int it : contents) {
+            // Ignore anything not ASCII
+            if (it < 32 || it > 128)
+                continue;
+            auto &b = m_glyphs[it - 32];
+            const int round = int(floorf(position + b.xoff) + 0.5f);
+            length = round + b.x1 - b.x0 + 0.5f;
+            position += b.xadvance;
+        }
+        return length;
+    };
+
+    // Alignment of text
+    if (align == ::gui::kAlignCenter)
+        x -= textLength(contents) / 2;
+    else if (align == ::gui::kAlignRight)
+        x -= textLength(contents);
+
+    const float R = float(color & 0xFF) / 255.0f;
+    const float G = float((color >> 8) & 0xFF) / 255.0f;
+    const float B = float((color >> 16) & 0xFF) / 255.0f;
+    const float A = float((color >> 24) & 0xFF) / 255.0f;
+
+    m_font.bind(GL_TEXTURE0);
+
+    for (int it : contents) {
+        // Ignore anything not ASCII
+        if (it < 32 || it > 128)
+            continue;
+        // Construct a quad for the glyph
+        auto q = getGlyphQuad(512, 512, it - 32, x, y);
+
+        // Data for GL
+        float v[12] = {
+            q.x0, q.y0, q.x1, q.y1,
+            q.x1, q.y0, q.x0, q.y0,
+            q.x0, q.y1, q.x1, q.y1
+        };
+        float uv[12] = {
+            q.s0, q.t0, q.s1, q.t1,
+            q.s1, q.t0, q.s0, q.t0,
+            q.s0, q.t1, q.s1, q.t1
+        };
+        float c[24] = {
+            R, G, B, A, R, G, B, A,
+            R, G, B, A, R, G, B, A,
+            R, G, B, A, R, G, B, A
+        };
+
+        gl::BindVertexArray(m_vao);
+        gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[0]);
+        gl::BufferData(GL_ARRAY_BUFFER, 12*sizeof(float), v, GL_STATIC_DRAW);
+        gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[1]);
+        gl::BufferData(GL_ARRAY_BUFFER, 12*sizeof(float), uv, GL_STATIC_DRAW);
+        gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[2]);
+        gl::BufferData(GL_ARRAY_BUFFER, 24*sizeof(float), c, GL_STATIC_DRAW);
+        gl::DrawArrays(GL_TRIANGLES, 0, 6);
+    }
 }
 
 }
