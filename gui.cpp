@@ -3,6 +3,7 @@
 
 #include "gui.h"
 #include "u_misc.h"
+#include "m_const.h"
 
 namespace gui {
 
@@ -334,7 +335,7 @@ bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value
     return B.inside;
 }
 
-void areaFinish(int inc) {
+void areaFinish(int inc, bool autoScroll) {
     Q.addScissor(-1, -1, -1, -1);
 
     const int x = B.right + kScrollAreaPadding/2;
@@ -349,10 +350,7 @@ void areaFinish(int inc) {
     float barHeight = float(h)/float(sh);
 
     if (barHeight < 1.0f) {
-        float barY = float(y - sbot) / float(sh);
-        if (barY < 0.0f) barY = 0.0f;
-        if (barY > 1.0f) barY = 1.0f;
-
+        const float barY = m::clamp(float(y - sbot) / float(sh), 0.0f, 1.0f);
         const auto id = B.id;
         const int hx = x;
         const int hy = y + int(barY * h);
@@ -368,9 +366,7 @@ void areaFinish(int inc) {
                 S.m_dragOrigin = u;
             }
             if (S.m_drag[1] != S.m_mouse[1]) {
-                u = S.m_dragOrigin + (S.m_mouse[1] - S.m_drag[1]) / float(range);
-                if (u < 0.0f) u = 0.0f;
-                if (u > 1.0f) u = 1.0f;
+                u = m::clamp(S.m_dragOrigin + (S.m_mouse[1] - S.m_drag[1]) / float(range), 0.0f, 1.0f);
                 *B.value = int((1 - u) * (sh - h));
             }
         }
@@ -387,11 +383,11 @@ void areaFinish(int inc) {
         }
 
         // Scrolling
-        if (B.inside) {
-            *B.value += inc*S.m_mouse[2];
-            if (*B.value < 0) *B.value = 0;
-            if (*B.value > (sh - h)) *B.value = sh - h;
-        }
+        if (B.inside)
+            *B.value = m::clamp(*B.value + inc*S.m_mouse[2], 0, sh - h);
+        else if (autoScroll)
+            *B.value = m::clamp(*B.value + inc, 0, sh - h);
+
     }
     S.m_insideCurrentScroll = false;
 }
@@ -556,9 +552,7 @@ bool slider(const u::string &contents, T &value, T min, T max, T inc, bool enabl
     Q.addRectangle(x, y, w, h, 4.0f, RGBA(0, 0, 0, 128));
 
     const int range = w - kSliderMarkerWidth;
-    float u = (float(value) - min) / float(max - min);
-    if (u < 0.0f) u = 0.0f;
-    if (u > 1.0f) u = 1.0f;
+    const float u = m::clamp((float(value) - min) / float(max - min), 0.0f, 1.0f);
 
     int m = int(u * range);
 
@@ -572,9 +566,7 @@ bool slider(const u::string &contents, T &value, T min, T max, T inc, bool enabl
             S.m_dragOrigin = u;
         }
         if (S.m_drag[0] != S.m_mouse[0]) { // Mouse and drag don't share same coordinate on the X axis
-            u = S.m_dragOrigin + float(S.m_mouse[0] - S.m_drag[0]) / float(range);
-            if (u < 0.0f) u = 0.0f;
-            if (u > 1.0f) u = 1.0f;
+            const float u = m::clamp(S.m_dragOrigin + float(S.m_mouse[0] - S.m_drag[0]) / float(range), 0.0f, 1.0f);
             value = min + u * max - min;
             value = floorf(float(value) / float(inc) + 0.5f) * float(inc); // Snap to increments
             m = int(u * range);

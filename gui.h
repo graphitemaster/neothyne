@@ -133,8 +133,9 @@ void heading();
 bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value);
 /// Called when finished the menu, `inc' is the value of which to increase the
 /// the `value' as previous referenced in the parent `areaBegin' call when
-/// scrolling in the area.
-void areaFinish(int inc = 5);
+/// scrolling in the area, while autoScroll will enable automatic scrolling of
+/// the area (always go to bottom)
+void areaFinish(int inc = 5, bool autoScroll = false);
 
 // Primitive drawing
 void drawLine(float x0, float y0, float x1, float y1, float r, uint32_t color);

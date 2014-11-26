@@ -203,7 +203,7 @@ static void menuConsole() {
         for (size_t i = 0; i < 100; i++)
             gui::label("Never going to give you up!");
         gui::dedent();
-    gui::areaFinish();
+    gui::areaFinish(25, true);
 }
 
 void menuRegister(const u::string &name, int &ref) {
