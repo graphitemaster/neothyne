@@ -18,6 +18,7 @@ ENGINE_LDFLAGS = \
 	`sdl2-config --libs`
 
 GAME_SOURCES = \
+	menu.cpp \
 	client.cpp \
 	main.cpp
 

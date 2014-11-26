@@ -4,6 +4,7 @@
 #include "kdmap.h"
 #include "kdtree.h"
 #include "client.h"
+#include "menu.h"
 #include "engine.h"
 
 #include "r_world.h"
@@ -181,87 +182,6 @@ VAR(float, cl_fov, "field of view", 45.0f, 270.0f, 90.0f);
 VAR(float, cl_nearp, "near plane", 0.0f, 10.0f, 1.0f);
 VAR(float, cl_farp, "far plane", 128.0f, 4096.0f, 2048.0f);
 
-/// MENU
-static bool gMenuMainButtonPlay = false;
-static bool gMenuMainButtonSettings = false;
-static bool gMenuMainButtonCredits = false;
-static bool gMenuMainButtonExit = false;
-
-static bool gMenuCreditsCheckEngine = true;
-static bool gMenuCreditsCheckArt = true;
-static bool gMenuCreditsCheckSpecialThanks = false;
-
-static int gMenuMainScroll = 0;
-static int gMenuSettingsScroll = 0;
-static int gMenuCreditsScroll = 0;
-
-enum menuState {
-    kMenuStatePlay,
-    kMenuStateExit,
-    kMenuStatePass
-};
-
-static void menuReset() {
-    gMenuMainButtonPlay = false;
-    gMenuMainButtonSettings = false;
-    gMenuMainButtonCredits = false;
-    gMenuMainButtonExit = false;
-}
-
-static menuState menuUpdate() {
-    const size_t w = neoWidth() / 4;
-    const size_t h = (neoHeight() / 3) - (neoHeight() / 16);
-    const size_t x = w + (w/2);
-    const size_t y = h - (h/6) + (neoHeight() / 16);
-    if (gMenuMainButtonPlay)
-        return kMenuStatePlay;
-    if (gMenuMainButtonExit)
-        return kMenuStateExit;
-    if (gMenuMainButtonSettings) {
-        gui::areaBegin("Settings", x, y, w, h, gMenuSettingsScroll);
-            gui::heading();
-            for (size_t i = 0; i < 100; i++)
-                gui::label("Never going to give you up!");
-        gui::areaFinish();
-    } else if (gMenuMainButtonCredits) {
-        gui::areaBegin("Credits", x, y, w, h, gMenuCreditsScroll);
-            gui::heading();
-            if (gui::collapse("Engine", "", gMenuCreditsCheckEngine))
-                gMenuCreditsCheckEngine = !gMenuCreditsCheckEngine;
-            if (gMenuCreditsCheckEngine) {
-                gui::indent();
-                    gui::label("Dale 'graphitemaster' Weiler");
-                gui::dedent();
-            }
-            if (gui::collapse("Art", "", gMenuCreditsCheckArt))
-                gMenuCreditsCheckArt = !gMenuCreditsCheckArt;
-            if (gMenuCreditsCheckArt) {
-                gui::indent();
-                    gui::label("Maxim 'acerspyro' Therrien");
-                gui::dedent();
-            }
-            if (gui::collapse("Special Thanks", "", gMenuCreditsCheckSpecialThanks))
-                gMenuCreditsCheckSpecialThanks = !gMenuCreditsCheckSpecialThanks;
-            if (gMenuCreditsCheckSpecialThanks) {
-                gui::indent();
-                    gui::label("Lee 'eihrul' Salzman");
-                    gui::label("Wolfgang 'Blub\\w' Bullimer");
-                    gui::label("Forest 'LordHavoc' Hale");
-                gui::dedent();
-            }
-        gui::areaFinish();
-    } else {
-        gui::areaBegin("Main", x, y, w, h, gMenuMainScroll);
-            gui::heading();
-            if (gui::button("Play", true))     gMenuMainButtonPlay     = !gMenuMainButtonPlay;
-            if (gui::button("Settings", true)) gMenuMainButtonSettings = !gMenuMainButtonSettings;
-            if (gui::button("Credits", true))  gMenuMainButtonCredits  = !gMenuMainButtonCredits;
-            if (gui::button("Exit", true))     gMenuMainButtonExit     = !gMenuMainButtonExit;
-        gui::areaFinish();
-    }
-    return kMenuStatePass;
-}
-
 int neoMain(frameTimer &timer, int, char **) {
     r::splashScreen gSplash;
     if (!gSplash.load("textures/logo"))
@@ -306,11 +226,12 @@ int neoMain(frameTimer &timer, int, char **) {
 
     bool running = true;
     bool playing = false;
-    bool menuing = true;
 
-    int mouseButton = 0;
-    int mouseX = 0;
-    int mouseY = 0;
+    menuRegister("running", running);
+    menuRegister("playing", playing);
+    menuReset(); // To initialize
+
+    int mouse[4] = {0}; // X, Y, Scroll, Button
     while (running) {
         neoSetWindowTitle(u::format("Neothyne: %d fps : %.2f mspf",
             timer.fps(), timer.mspf()).c_str());
@@ -322,10 +243,11 @@ int neoMain(frameTimer &timer, int, char **) {
         pipeline.setTime(timer.ticks());
 
         if (playing) {
+            loadData.gWorld.upload(projection);
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
             loadData.gWorld.render(pipeline);
         }
-        if (menuing) {
+        if (gMenuState != 0) {
             if (!playing) {
                 gl::ClearColor(40/255.0f, 30/255.0f, 50/255.0f, 0.1f);
                 gl::Clear(GL_COLOR_BUFFER_BIT);
@@ -336,7 +258,7 @@ int neoMain(frameTimer &timer, int, char **) {
         neoSwap();
 
         SDL_Event e;
-        int mouseScroll = 0;
+        mouse[2] = 0;
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
                 case SDL_QUIT:
@@ -356,27 +278,37 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_KEYDOWN:
                     switch (e.key.keysym.sym) {
                         case SDLK_ESCAPE:
-                            if (playing) {
-                                // If we're in the menu while playing the escape
-                                // key brings us back to the main menu.
-                                if (menuing)
-                                    menuReset();
-                                else // Otherwise it means to bring up the main
-                                     // menu.
-                                    menuing = true;
-                                // In both cases we don't want relative mouse
-                                neoRelativeMouse(false);
+                            // The effect of the ESC key is strange. When in game
+                            // it should bring up the menu. While in the menu it
+                            // should always bring you to main menu, except while
+                            // in game and in menu and already at main menu then
+                            // ESC should bring you back in game.
+                            if (playing && gMenuState & kMenuMain) {
+                                if (gMenuState & kMenuConsole) {
+                                    gMenuState = kMenuConsole;
+                                } else {
+                                    gMenuState &= ~kMenuMain;
+                                    //neoRelativeMouse(true);
+                                }
                             } else {
-                                // If we're not playing every escape from the menu
-                                // should bring us back to the main menu.
-                                menuReset();
+                                // If the console is opened leave it open
+                                gMenuState = (gMenuState & kMenuConsole)
+                                    ? kMenuMain | kMenuConsole
+                                    : kMenuMain;
                             }
+                            if (playing && !(gMenuState & kMenuMain))
+                                neoRelativeMouse(true);
+                            else
+                                neoRelativeMouse(false);
                             break;
                         case SDLK_F8:
                             screenShot();
                             break;
                         case SDLK_F9:
                             u::print("%d fps : %.2f mspf\n", timer.fps(), timer.mspf());
+                            break;
+                        case SDLK_F11:
+                            gMenuState ^= kMenuConsole;
                             break;
                         case SDLK_F12:
                             neoRelativeMouse(false);
@@ -388,54 +320,38 @@ int neoMain(frameTimer &timer, int, char **) {
                     neoKeyState(e.key.keysym.sym, false, true);
                     break;
                 case SDL_MOUSEMOTION:
-                    mouseX = e.motion.x;
-                    mouseY = e.motion.y;
+                    mouse[0] = e.motion.x;
+                    mouse[1] = neoHeight() - e.motion.y;
                     break;
                 case SDL_MOUSEWHEEL:
-                    mouseScroll = e.wheel.y;
+                    mouse[2] = e.wheel.y;
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
-                            mouseButton |= gui::kMouseButtonLeft;
+                            mouse[3] |= gui::kMouseButtonLeft;
                             break;
                         case SDL_BUTTON_RIGHT:
-                            mouseButton |= gui::kMouseButtonRight;
+                            mouse[3] |= gui::kMouseButtonRight;
                             break;
                     }
                     break;
                 case SDL_MOUSEBUTTONUP:
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
-                            mouseButton &= ~gui::kMouseButtonLeft;
+                            mouse[3] &= ~gui::kMouseButtonLeft;
                             break;
                         case SDL_BUTTON_RIGHT:
-                            mouseButton &= ~gui::kMouseButtonRight;
+                            mouse[3] &= ~gui::kMouseButtonRight;
                             break;
                     }
                     break;
             }
         }
 
-        gui::begin(mouseX, neoHeight() - mouseY, mouseButton, mouseScroll * -2);
-        switch (menuUpdate()) {
-            case kMenuStatePlay:
-                // Upload the world if it has't already been uploaded
-                loadData.gWorld.upload(projection);
-                // Hide the menu and set the relative mouse mode. We're now
-                // playing.
-                playing = true;
-                menuing = false;
-                neoRelativeMouse(true);
-                menuReset();
-                break;
-            case kMenuStateExit:
-                running = false;
-                break;
-            default:
-                gui::finish();
-                break;
-        }
+        gui::begin(mouse);
+        menuUpdate();
+        gui::finish();
     }
 
     c::writeConfig();

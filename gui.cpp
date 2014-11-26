@@ -155,7 +155,7 @@ struct state {
     const queue &commands() const;
 
     // To update input state
-    void update(int mx, int my, int mb, int scroll);
+    void update(int (&mouse)[4]);
 
     void clearInput(); // Clear any input state
     void clearActive(); // Clear any active state (reference to active thing)
@@ -274,12 +274,12 @@ inline bool state::buttonLogic(ref thing, bool over) {
     return result;
 }
 
-inline void state::update(int mx, int my, int mb, int scroll) {
+inline void state::update(int (&mouse)[4]) {
     // Update the input state
-    bool left = mb & kMouseButtonLeft;
-    m_mouse[0] = mx;
-    m_mouse[1] = my;
-    m_mouse[2] = scroll;
+    bool left = mouse[3] & kMouseButtonLeft;
+    m_mouse[0] = mouse[0];
+    m_mouse[1] = mouse[1];
+    m_mouse[2] = mouse[2] * -2;
     m_leftPressed = !m_left && left;
     m_leftReleased = m_left && !left;
     m_left = left;
@@ -296,10 +296,10 @@ static state S; // [S]tate
 
 // Constants
 static constexpr int kButtonHeight = 20;
-static constexpr int kSliderHeight = 20;
+static constexpr int kSliderHeight = 15;
 static constexpr int kSliderMarkerWidth = 10;
 static constexpr int kCheckBoxSize = 8;
-static constexpr int kDefaultSpacing = 4;
+static constexpr int kDefaultSpacing = 6;
 static constexpr int kTextHeight = 8;
 static constexpr int kScrollAreaPadding = 6;
 static constexpr int kIndentationSize = 16;
@@ -494,7 +494,7 @@ bool collapse(const u::string &contents, const char *subtext, bool checked, bool
     const int w = W.w;
     const int h = kButtonHeight;
 
-    W.y -= kButtonHeight;
+    W.y -= kButtonHeight + kDefaultSpacing;
 
     const int cx = x+kButtonHeight/2-kCheckBoxSize/2;
     const int cy = y+kButtonHeight/2-kCheckBoxSize/2;
@@ -542,7 +542,8 @@ void value(const u::string &contents) {
         contents, RGBA(255, 255, 255, 200));
 }
 
-bool slider(const u::string &contents, float &value, float min, float max, float inc, bool enabled) {
+template <typename T>
+bool slider(const u::string &contents, T &value, T min, T max, T inc, bool enabled) {
     const auto id = (A << 16) | ++W.id;
 
     const int x = W.x;
@@ -555,7 +556,7 @@ bool slider(const u::string &contents, float &value, float min, float max, float
     Q.addRectangle(x, y, w, h, 4.0f, RGBA(0, 0, 0, 128));
 
     const int range = w - kSliderMarkerWidth;
-    float u = (value - min) / (max - min);
+    float u = (float(value) - min) / float(max - min);
     if (u < 0.0f) u = 0.0f;
     if (u > 1.0f) u = 1.0f;
 
@@ -574,8 +575,8 @@ bool slider(const u::string &contents, float &value, float min, float max, float
             u = S.m_dragOrigin + float(S.m_mouse[0] - S.m_drag[0]) / float(range);
             if (u < 0.0f) u = 0.0f;
             if (u > 1.0f) u = 1.0f;
-            value = min + u * (max - min);
-            value = floorf(value / inc + 0.5f) * inc; // Snap to increments
+            value = min + u * max - min;
+            value = floorf(float(value) / float(inc) + 0.5f) * float(inc); // Snap to increments
             m = int(u * range);
             changed = true;
         }
@@ -590,7 +591,9 @@ bool slider(const u::string &contents, float &value, float min, float max, float
     }
 
     const int digits = int(ceilf(log10f(inc)));
-    u::string msg = u::format("%.*f", digits >= 0 ? 0 : -digits, value);
+    u::string msg = u::is_floating_point<T>::value
+        ? u::format("%.*f", digits >= 0 ? 0 : -digits, value)
+        : u::format("%.*d", digits >= 0 ? 1 : -digits, value);
 
     if (enabled) {
         Q.addText(x+kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignLeft,
@@ -606,6 +609,9 @@ bool slider(const u::string &contents, float &value, float min, float max, float
 
     return result || changed;
 }
+
+template bool slider<float>(const u::string &contents, float &value, float min, float max, float inc, bool enabled);
+template bool slider<int>(const u::string &contents, int &value, int min, int max, int inc, bool enabled);
 
 void indent() {
     W.x += kIndentationSize;
@@ -653,8 +659,8 @@ const queue &commands() {
     return Q;
 }
 
-void begin(int mx, int my, int mb, int scroll) {
-    S.update(mx, my, mb, scroll);
+void begin(int (&mouse)[4]) {
+    S.update(mouse);
 
     // This hot becomes the nextHot
     S.m_hot = S.m_nextHot;

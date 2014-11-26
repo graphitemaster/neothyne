@@ -47,6 +47,16 @@ void varRegister(const char *name, const char *desc, void *self, varType type) {
 }
 
 template <typename T>
+var<T> &varGet(const char *name) {
+    auto &ref = variables()[name];
+    auto &val = *(var<T>*)(ref.self);
+    return val;
+}
+
+template var<int> &varGet<int>(const char *name);
+template var<float> &varGet<float>(const char *name);
+
+template <typename T>
 static inline varStatus varSet(const u::string &name, const T &value, bool callback) {
     if (variables().find(name) == variables().end())
         return kVarNotFoundError;

@@ -117,7 +117,8 @@ void value(const u::string &contents);
 /// Returns true when updated, false otherwise, `value' is a reference to the value
 /// which is changed, `min' and `'max' define the applicable range for the slider,
 /// while `inc' specifies how much the value should increment when sliding or scrolling.
-bool slider(const u::string &contents, float &value, float min, float max, float inc, bool enabled = true);
+template <typename T>
+bool slider(const u::string &contents, T &value, T min, T max, T inc, bool enabled = true);
 /// Indent the widget space so that any widgets after the call will be indented
 void indent();
 /// Dedent the widget space so that any widgets after the vall will be dedented
@@ -144,7 +145,7 @@ void drawText(int x, int y, int align, const u::string &contents, uint32_t color
 
 const queue &commands();
 
-void begin(int mx, int my, int mb, int scroll);
+void begin(int (&mouse)[4]);
 void finish();
 
 }

@@ -60,10 +60,13 @@ struct var {
     var(varFlags flags, const char *name, const char *desc, const T &min, const T &max, const T &def, command cb);
 
     operator T&();
-    const T get() const;
+    T &get();
+    const T min() const;
+    const T max() const;
     varStatus set(const T &value);
     void operator()();
     varFlags flags() const;
+    void toggle();
 
 private:
     const T m_min;
@@ -84,7 +87,7 @@ struct var<u::string> {
     var(varFlags flags, const char *name, const char *desc, const u::string &def, command cb);
 
     operator u::string&();
-    const u::string get() const;
+    u::string &get();
     varStatus set(const u::string &value);
     void operator()();
     varFlags flags() const;
@@ -152,8 +155,18 @@ inline var<T>::operator T&() {
 }
 
 template <typename T>
-inline const T var<T>::get() const {
+T &var<T>::get() {
     return m_current;
+}
+
+template <typename T>
+inline const T var<T>::min() const {
+    return m_min;
+}
+
+template <typename T>
+inline const T var<T>::max() const {
+    return m_max;
 }
 
 template <typename T>
@@ -177,6 +190,11 @@ inline void var<T>::operator()() {
 template <typename T>
 inline varFlags var<T>::flags() const {
     return m_flags;
+}
+
+template <typename T>
+inline void var<T>::toggle() {
+    m_current = !m_current;
 }
 
 /// var<u::string>
@@ -218,7 +236,7 @@ inline var<u::string>::operator u::string&() {
     return m_current;
 }
 
-inline const u::string var<u::string>::get() const {
+inline u::string &var<u::string>::get() {
     return m_current;
 }
 
@@ -237,6 +255,9 @@ inline void var<u::string>::operator()() {
 inline varFlags var<u::string>::flags() const {
     return m_flags;
 }
+
+template <typename T>
+var<T> &varGet(const char *name);
 
 #define VAR(TYPE, NAME, ...) \
     static c::var<TYPE> NAME(c::kVarPersist, #NAME, __VA_ARGS__)
