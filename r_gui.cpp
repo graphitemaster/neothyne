@@ -7,6 +7,66 @@
 
 namespace r {
 
+#ifdef DEBUG_GUI
+static void printLine(const ::gui::line &it) {
+    u::print("    [0] = { x: %d, y: %d }\n", it.x[0], it.y[0]);
+    u::print("    [1] = { x: %d, y: %d }\n", it.x[1], it.y[0]);
+    u::print("    r = %d\n", it.r);
+}
+
+static void printRectangle(const ::gui::rectangle &it) {
+    u::print("    { x: %d, y: %d, w: %d, h: %d, r: %d }\n", it.x, it.y, it.w,
+        it.h, it.r);
+}
+
+static void printText(const ::gui::text &it) {
+    auto align = [](int a) {
+        switch (a) {
+            case ::gui::kAlignCenter: return "center";
+            case ::gui::kAlignLeft:   return "left";
+            case ::gui::kAlignRight:  return "right";
+        }
+        return "";
+    };
+    u::print("    { x: %d, y: %d, align: %s, contents: `%s' }\n", it.x, it.y,
+        align(it.align), it.contents);
+}
+
+static void printScissor(const ::gui::scissor &it) {
+    u::print("    { x: %d, y: %d, w: %d, h: %d }\n", it.x, it.y, it.w, it.h);
+}
+
+static void printTriangle(const ::gui::triangle &it) {
+    u::print("    { x: %d, y: %d, w: %d, h: %d }\n", it.x, it.y, it.w, it.h);
+}
+
+static void printCommand(const ::gui::command &it) {
+    switch (it.type) {
+        case ::gui::kCommandLine:
+            u::print("line:      (color: #%X)\n", it.color);
+            printLine(it.asLine);
+            break;
+        case ::gui::kCommandRectangle:
+            u::print("rectangle: (color: #%X)\n", it.color);
+            printRectangle(it.asRectangle);
+            break;
+        case ::gui::kCommandScissor:
+            u::print("scissor:\n");
+            printScissor(it.asScissor);
+            break;
+        case ::gui::kCommandText:
+            u::print("text:      (color: #%X)\n", it.color);
+            printText(it.asText);
+            break;
+        case ::gui::kCommandTriangle:
+            u::print("triangle:  (flags: %d | color: #%X)\n", it.flags, it.color);
+            printTriangle(it.asTriangle);
+            break;
+    }
+    u::print("\n");
+}
+#endif
+
 bool guiMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
@@ -145,6 +205,9 @@ void gui::render(const rendererPipeline &pipeline) {
 
     gl::Disable(GL_SCISSOR_TEST);
     for (auto &it : ::gui::commands()) {
+#ifdef DEBUG_GUI
+        printCommand(it);
+#endif
         switch (it.type) {
             case ::gui::kCommandRectangle:
                 if (it.asRectangle.r == 0) {
@@ -211,6 +274,9 @@ void gui::render(const rendererPipeline &pipeline) {
                 break;
         }
     }
+#ifdef DEBUG_GUI
+    u::printf(">> COMPLETE GUI FRAME\n\n");
+#endif
 
     gl::Enable(GL_DEPTH_TEST);
     gl::Enable(GL_CULL_FACE);
