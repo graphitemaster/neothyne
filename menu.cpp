@@ -6,7 +6,7 @@
 int gMenuState = kMenuMain | kMenuConsole; // Default state
 
 u::map<u::string, int*> gMenuReferences; // References to external data
-u::stack<u::string, 25> gMenuConsole; // The console text buffer
+u::stack<u::string, kMenuConsoleHistorySize> gMenuConsole; // The console text buffer
 
 static u::map<u::string, int> gMenuData;
 

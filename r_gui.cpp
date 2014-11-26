@@ -190,6 +190,7 @@ void gui::render(const rendererPipeline &pipeline) {
     gl::Disable(GL_DEPTH_TEST);
     gl::Disable(GL_CULL_FACE);
     gl::Enable(GL_BLEND);
+    gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     m_methods[kMethodNormal].enable();
     m_methods[kMethodNormal].setPerspectiveProjection(project);

@@ -10,9 +10,11 @@ enum {
     kMenuConsole = 1 << 5
 };
 
+static constexpr size_t kMenuConsoleHistorySize = 80;
+
 extern int gMenuState;
 extern u::map<u::string, int*> gMenuReferences;
-extern u::stack<u::string, 25> gMenuConsole;
+extern u::stack<u::string, kMenuConsoleHistorySize> gMenuConsole;
 
 void menuUpdate();
 void menuReset();
