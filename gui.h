@@ -52,8 +52,6 @@ struct line {
 };
 
 struct command {
-    command();
-    ~command();
     int type;
     int flags;
     uint32_t color;
@@ -62,17 +60,9 @@ struct command {
         rectangle asRectangle;
         scissor asScissor;
         triangle asTriangle;
-        text asText;
     };
+    text asText; // Because of u::string
 };
-
-inline command::command() {
-}
-
-inline command::~command() {
-    if (type == kCommandText)
-        asText.~text();
-}
 
 struct queue {
     queue();
