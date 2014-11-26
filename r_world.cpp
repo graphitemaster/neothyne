@@ -1083,8 +1083,9 @@ void world::otherPass(const rendererPipeline &pipeline) {
     for (auto &it : m_billboards)
         it.render(pipeline);
 
-    // Don't need depth testing anymore
+    // Don't need depth testing or blending anymore
     gl::Disable(GL_DEPTH_TEST);
+    gl::Disable(GL_BLEND);
 }
 
 void world::finalPass(const rendererPipeline &pipeline) {
