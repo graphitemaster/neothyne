@@ -32,7 +32,7 @@ static const char *kCreditsSpecialThanks[] = {
 
 static void menuMain() {
     const size_t w = neoWidth() / 8;
-    const size_t h = neoHeight() / 5;
+    const size_t h = neoHeight() / 4.5;
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() / 2 - h / 2;
 
@@ -202,24 +202,10 @@ static void menuConsole() {
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() - h;
 
-    static constexpr size_t kMaxConsoleLines = 10;
-    static constexpr size_t kConsoleLineSpacing = 20;
-    static constexpr size_t kConsoleLineOffset = 15;
-    gui::drawRectangle(x, y, w, h, gui::RGBA(0, 0, 0, 196));
-
-    size_t begin = 0;
-    if (gMenuConsole.size() > kMaxConsoleLines)
-        begin = gMenuConsole.size() - kMaxConsoleLines;
-
-    for (size_t i = 0; i < kMaxConsoleLines; i++) {
-        gui::drawText(
-            x + kConsoleLineOffset,
-            y - (i * kConsoleLineSpacing) + kConsoleLineOffset + h,
-            gui::kAlignLeft,
-            gMenuConsole[begin + i],
-            gui::RGBA(255, 255, 255, 255)
-        );
-    }
+    gui::areaBegin("", x, y, w, h, D(scroll), 0.0f);
+    for (auto &it : gMenuConsole)
+        gui::label(it);
+    gui::areaFinish(30, true);
 }
 
 void menuRegister(const u::string &name, int &ref) {

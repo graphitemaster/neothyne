@@ -300,7 +300,7 @@ static constexpr int kScrollAreaPadding = 6;
 static constexpr int kIndentationSize = 16;
 static constexpr int kAreaHeader = 28;
 
-bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value) {
+bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value, float round) {
     A++;
     W.id = 0;
     B.id = (A << 16) | W.id;
@@ -322,7 +322,7 @@ bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value
 
     S.m_insideCurrentScroll = B.inside;
 
-    Q.addRectangle(x, y, w, h, 6.0f, RGBA(0, 0, 0, 192));
+    Q.addRectangle(x, y, w, h, round, RGBA(0, 0, 0, 192));
     Q.addText(x+header/2, y+h-header/2-kTextHeight/2, kAlignLeft,
         contents, RGBA(255, 255, 255, 128));
     Q.addScissor(x+kScrollAreaPadding, y+kScrollAreaPadding, w-kScrollAreaPadding*4,
@@ -346,44 +346,41 @@ void areaFinish(int inc, bool autoScroll) {
     float barHeight = float(h)/float(sh);
 
     if (barHeight < 1.0f) {
-        const float barY = m::clamp(float(y - sbot) / float(sh), 0.0f, 1.0f);
-        const auto id = B.id;
-        const int hx = x;
-        const int hy = y + int(barY * h);
-        const int hw = w;
-        const int hh = int(barHeight * h);
-        const int range = h - (hh - 1);
-
-        S.buttonLogic(id, S.inRectangle(hx, hy, hw, hh));
-        if (S.isActive(id)) {
-            float u = float(hy - y) / float(range);
-            if (S.m_wentActive) {
-                S.m_drag[1] = S.m_mouse[1];
-                S.m_dragOrigin = u;
-            }
-            if (S.m_drag[1] != S.m_mouse[1]) {
-                u = m::clamp(S.m_dragOrigin + (S.m_mouse[1] - S.m_drag[1]) / float(range), 0.0f, 1.0f);
-                *B.value = int((1 - u) * (sh - h));
-            }
-        }
-
-        // Background
-        Q.addRectangle(x, y, w, h, float(w)/2-1, RGBA(0, 0, 0, 196));
-
-        // Bar
-        if (S.isActive(id)) {
-            Q.addRectangle(hx, hy, hw, hh, float(w)/2-1, RGBA(255, 0, 225, 196));
-        } else {
-            Q.addRectangle(hx, hy, hw, hh, float(w)/2-1,
-                S.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
-        }
-
-        // Scrolling
-        if (B.inside)
-            *B.value = m::clamp(*B.value + inc*S.m_mouse[2], 0, sh - h);
-        else if (autoScroll)
+        if (autoScroll) {
             *B.value = m::clamp(*B.value + inc, 0, sh - h);
-
+        } else {
+            const float barY = m::clamp(float(y - sbot) / float(sh), 0.0f, 1.0f);
+            const auto id = B.id;
+            const int hx = x;
+            const int hy = y + int(barY * h);
+            const int hw = w;
+            const int hh = int(barHeight * h);
+            const int range = h - (hh - 1);
+            S.buttonLogic(id, S.inRectangle(hx, hy, hw, hh));
+            if (S.isActive(id)) {
+                float u = float(hy - y) / float(range);
+                if (S.m_wentActive) {
+                    S.m_drag[1] = S.m_mouse[1];
+                    S.m_dragOrigin = u;
+                }
+                if (S.m_drag[1] != S.m_mouse[1]) {
+                    u = m::clamp(S.m_dragOrigin + (S.m_mouse[1] - S.m_drag[1]) / float(range), 0.0f, 1.0f);
+                    *B.value = int((1 - u) * (sh - h));
+                }
+            }
+            // Background
+            Q.addRectangle(x, y, w, h, float(w)/2-1, RGBA(0, 0, 0, 196));
+            // Bar
+            if (S.isActive(id)) {
+                Q.addRectangle(hx, hy, hw, hh, float(w)/2-1, RGBA(255, 0, 225, 196));
+            } else {
+                Q.addRectangle(hx, hy, hw, hh, float(w)/2-1,
+                    S.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
+            }
+            // Scrolling
+            if (B.inside)
+                *B.value = m::clamp(*B.value + inc*S.m_mouse[2], 0, sh - h);
+        }
     }
     S.m_insideCurrentScroll = false;
 }
