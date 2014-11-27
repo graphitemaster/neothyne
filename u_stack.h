@@ -11,6 +11,8 @@ struct stack {
     const T *end() const;
     T &next();
     void push_back(const T &data);
+    const T &operator[](size_t index) const;
+    T &operator[](size_t index);
     T pop_back();
     void reset();
     size_t size() const;
@@ -45,6 +47,16 @@ template <typename T, size_t E>
 inline void stack<T, E>::push_back(const T &data) {
     if (full()) reset();
     m_data[m_size++] = data;
+}
+
+template <typename T, size_t E>
+inline const T &stack<T, E>::operator[](size_t index) const {
+    return m_data[index];
+}
+
+template <typename T, size_t E>
+inline T &stack<T, E>::operator[](size_t index) {
+    return m_data[index];
 }
 
 template <typename T, size_t E>

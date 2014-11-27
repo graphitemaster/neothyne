@@ -197,17 +197,29 @@ static void menuCredits() {
 }
 
 static void menuConsole() {
-    const size_t w = neoWidth() - (neoWidth() / 32);
+    const size_t w = neoWidth();
     const size_t h = neoHeight() / 5;
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() - h;
 
-    gui::areaBegin("", x, y, w, h, D(scroll));
-        gui::indent();
-        for (auto &it : gMenuConsole)
-            gui::label(it);
-        gui::dedent();
-    gui::areaFinish(20, true);
+    static constexpr size_t kMaxConsoleLines = 10;
+    static constexpr size_t kConsoleLineSpacing = 20;
+    static constexpr size_t kConsoleLineOffset = 15;
+    gui::drawRectangle(x, y, w, h, gui::RGBA(0, 0, 0, 196));
+
+    size_t begin = 0;
+    if (gMenuConsole.size() > kMaxConsoleLines)
+        begin = gMenuConsole.size() - kMaxConsoleLines;
+
+    for (size_t i = 0; i < kMaxConsoleLines; i++) {
+        gui::drawText(
+            x + kConsoleLineOffset,
+            y - (i * kConsoleLineSpacing) + kConsoleLineOffset + h,
+            gui::kAlignLeft,
+            gMenuConsole[begin + i],
+            gui::RGBA(255, 255, 255, 255)
+        );
+    }
 }
 
 void menuRegister(const u::string &name, int &ref) {

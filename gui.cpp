@@ -518,6 +518,8 @@ void label(const u::string &contents) {
     const int y = W.y - kButtonHeight;
 
     W.y -= kButtonHeight;
+    if (y < B.areaTop || y > B.bottom)
+        return;
 
     Q.addText(x, y+kButtonHeight/2-kTextHeight/2, kAlignLeft, contents,
         RGBA(255, 255, 255, 255));

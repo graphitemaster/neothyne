@@ -107,7 +107,12 @@ inline u::string format(const char *fmt, const Ts&... ts) {
 template <typename... Ts>
 inline void fprint(FILE *fp, const char *fmt, const Ts&... ts) {
     fprintf(fp, "%s", format(fmt, ts...).c_str());
-    gMenuConsole.push_back(format(fmt, ts...));
+    auto contents = format(fmt, ts...);
+    for (auto &it : u::split(contents, '\n')) {
+        if (it.empty())
+            continue;
+        gMenuConsole.push_back(it);
+    }
 }
 
 template <typename... Ts>
