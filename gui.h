@@ -132,6 +132,7 @@ void drawLine(float x0, float y0, float x1, float y1, float r, uint32_t color);
 void drawRectangle(float x, float y, float w, float h, uint32_t color);
 void drawRectangle(float x, float y, float w, float h, float r, uint32_t color);
 void drawText(int x, int y, int align, const u::string &contents, uint32_t color);
+void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color);
 
 const queue &commands();
 

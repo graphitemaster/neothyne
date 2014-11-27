@@ -325,16 +325,6 @@ int neoMain(frameTimer &timer, int, char **) {
                         case SDLK_RETURN:
                             if (input) {
                                 auto split = u::split(inputString);
-                                if (split.size() != 2) {
-                                    if (split.size() == 1 && split[0] == "quit") {
-                                        running = false;
-                                        break;
-                                    }
-                                    u::print("invalid command '%s'\n", inputString);
-                                    input = false;
-                                    inputString.reset();
-                                    break;
-                                }
                                 switch (c::varChange(split[0], split[1], true)) {
                                     case c::kVarNotFoundError:
                                         u::print("'%s' not found\n", split[0]);
@@ -415,8 +405,9 @@ int neoMain(frameTimer &timer, int, char **) {
             if (inputString[0] == '/')
                 inputString.pop_front();
             // Accepting console commands
-            gui::drawText(10, 10, gui::kAlignLeft,
-                u::format("> %s", inputString), gui::RGBA(255, 255, 255, 255));
+            gui::drawTriangle(5, 10, 10, 10, 1, gui::RGBA(155, 155, 155, 255));
+            gui::drawText(20, 10, gui::kAlignLeft,
+                inputString, gui::RGBA(255, 255, 255, 255));
         }
 
         gui::finish();

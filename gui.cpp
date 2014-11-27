@@ -640,6 +640,10 @@ void drawText(int x, int y, int align, const u::string &contents, uint32_t color
     Q.addText(x, y, align, contents, color);
 }
 
+void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
+    Q.addTriangle(x, y, w, h, flags, color);
+}
+
 const queue &commands() {
     return Q;
 }

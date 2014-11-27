@@ -860,7 +860,10 @@ void world::scenePass(const rendererPipeline &pipeline) {
     gl::Enable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
 
-    auto setup = [this](const material &mat, rendererPipeline &p) {
+    auto setup = [this](material &mat, rendererPipeline &p) {
+        // Calculate permutation incase a console variable changes
+        geomCalculatePermutation(mat);
+
         auto &permutation = geomPermutations[mat.permute];
         auto &method = m_geomMethods[mat.permute];
         method.enable();
