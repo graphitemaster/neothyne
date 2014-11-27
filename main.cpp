@@ -71,7 +71,7 @@ bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) 
         int32_t biClrImportant;
     } bmph;
 
-    const size_t bytesPerLine = 3 * width;
+    const size_t bytesPerLine = (3 * (width + 1) / 4) * 4;
     const size_t headerSize = 54;
     const size_t imageSize = bytesPerLine * height;
     const size_t dataSize = headerSize + imageSize;
