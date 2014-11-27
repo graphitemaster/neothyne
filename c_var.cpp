@@ -74,11 +74,17 @@ varStatus varChange(const u::string &name, const u::string &value, bool callback
     if (variables().find(name) == variables().end())
         return kVarNotFoundError;
     auto &ref = variables()[name];
-    if (ref.type == kVarInt)
+    if (ref.type == kVarInt) {
+        for (int it : value)
+            if (!strchr("0123456789", it))
+                return kVarTypeError;
         return varSet<int>(name, u::atoi(value), callback);
-    else if (ref.type == kVarFloat)
-        return varSet<float>(name, u::atof(value), callback);
-    else if (ref.type == kVarString) {
+    } else if (ref.type == kVarFloat) {
+        float val = 0.0f;
+        if (u::sscanf(value, "%f", &val) != 1)
+            return kVarTypeError;
+        return varSet<float>(name, val, callback);
+    } else if (ref.type == kVarString) {
         u::string copy(value);
         copy.pop_front();
         copy.pop_back();

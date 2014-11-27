@@ -226,6 +226,8 @@ int neoMain(frameTimer &timer, int, char **) {
 
     bool running = true;
     bool playing = false;
+    bool input = false;
+    u::string inputString = "";
 
     menuRegister("running", running);
     menuRegister("playing", playing);
@@ -235,7 +237,8 @@ int neoMain(frameTimer &timer, int, char **) {
     neoCenterMouse();
     int mouse[4] = {0}; // X, Y, Scroll, Button
     while (running) {
-        gClient.update(loadData.gMap, timer.delta());
+        if (!input)
+            gClient.update(loadData.gMap, timer.delta());
 
         pipeline.setRotation(gClient.getRotation());
         pipeline.setPosition(gClient.getPosition());
@@ -306,9 +309,52 @@ int neoMain(frameTimer &timer, int, char **) {
                         case SDLK_F11:
                             gMenuState ^= kMenuConsole;
                             break;
-                        case SDLK_F12:
-                            neoRelativeMouse(false);
+                        case SDLK_BACKSPACE:
+                            if (input)
+                                inputString.pop_back();
                             break;
+                        case SDLK_SLASH:
+                            input = !input;
+                            if (input) {
+                                SDL_StartTextInput();
+                            } else {
+                                SDL_StopTextInput();
+                            }
+                            inputString.reset();
+                            break;
+                        case SDLK_RETURN:
+                            if (input) {
+                                auto split = u::split(inputString);
+                                if (split.size() != 2) {
+                                    if (split.size() == 1 && split[0] == "quit") {
+                                        running = false;
+                                        break;
+                                    }
+                                    u::print("invalid command '%s'\n", inputString);
+                                    input = false;
+                                    inputString.reset();
+                                    break;
+                                }
+                                switch (c::varChange(split[0], split[1], true)) {
+                                    case c::kVarNotFoundError:
+                                        u::print("'%s' not found\n", split[0]);
+                                        break;
+                                    case c::kVarRangeError:
+                                        u::print("invalid range '%s' for '%s'\n", split[1], split[0]);
+                                        break;
+                                    case c::kVarReadOnlyError:
+                                        u::print("'%s' is read only\n", split[0]);
+                                        break;
+                                    case c::kVarTypeError:
+                                        u::print("value '%s' wrong type for '%s'\n", split[1], split[0]);
+                                        break;
+                                    case c::kVarSuccess:
+                                        u::print("'%s' changed\n", split[0]);
+                                        break;
+                                }
+                                input = false;
+                                inputString.reset();
+                            }
                     }
                     neoKeyState(e.key.keysym.sym, true);
                     break;
@@ -342,6 +388,9 @@ int neoMain(frameTimer &timer, int, char **) {
                             break;
                     }
                     break;
+                case SDL_TEXTINPUT:
+                    inputString += e.text.text;
+                    break;
             }
         }
 
@@ -361,6 +410,14 @@ int neoMain(frameTimer &timer, int, char **) {
         gui::drawText(neoWidth() - 10, 10, gui::kAlignRight,
             u::format("%d fps : %.2f mspf\n", timer.fps(), timer.mspf()),
             gui::RGBA(255, 255, 255, 255));
+
+        if (input) {
+            if (inputString[0] == '/')
+                inputString.pop_front();
+            // Accepting console commands
+            gui::drawText(10, 10, gui::kAlignLeft,
+                u::format("> %s", inputString), gui::RGBA(255, 255, 255, 255));
+        }
 
         gui::finish();
     }

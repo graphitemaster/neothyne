@@ -50,6 +50,8 @@ struct string {
 
     void swap(string& other);
 
+    void reset();
+
 private:
     char *m_first;
     char *m_last;

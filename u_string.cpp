@@ -167,6 +167,12 @@ void string::swap(string& other) {
     other.m_capacity = tcapacity;
 }
 
+void string::reset() {
+    m_last = m_first;
+    *m_first = '\0';
+    m_capacity = m_first;
+}
+
 size_t hash(const string &str) {
     return detail::sdbm(str.c_str(), str.size());
 }
