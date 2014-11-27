@@ -107,8 +107,8 @@ gui::gui() {
 gui::~gui() {
     if (m_vao)
         gl::DeleteVertexArrays(1, &m_vao);
-    if (m_vbos[0])
-        gl::DeleteBuffers(3, m_vbos);
+    if (m_vbo)
+        gl::DeleteBuffers(1, &m_vbo);
 }
 
 bool gui::load(const u::string &font) {
@@ -154,19 +154,17 @@ bool gui::upload() {
         return false;
 
     gl::GenVertexArrays(1, &m_vao);
-    gl::GenBuffers(3, m_vbos);
+    gl::GenBuffers(1, &m_vbo);
 
     gl::BindVertexArray(m_vao);
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
     gl::EnableVertexAttribArray(2);
 
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[0]);
-    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat[2]), nullptr);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[1]);
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat[2]), nullptr);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[2]);
-    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(GLfloat[4]), nullptr);
+    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(0));
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
+    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
 
     gl::BufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
 
@@ -237,7 +235,7 @@ void gui::render(const rendererPipeline &pipeline) {
                         x*kScale+0.5f+w*kScale-1,     y*kScale+0.5f+h*kScale/2-0.5f,
                         x*kScale+0.5f,                y*kScale+0.5f+h*kScale-1
                     };
-                    drawPolygon(vertices, 3, 1.0f, it.color);
+                    drawPolygon(vertices, 1.0f, it.color);
                 } else if (it.flags == 2) {
                     const float x = it.asTriangle.x;
                     const float y = it.asTriangle.y;
@@ -248,7 +246,7 @@ void gui::render(const rendererPipeline &pipeline) {
                         x*kScale+0.5f+w*kScale/2-0.5f, y*kScale+0.5f,
                         x*kScale+0.5f+w*kScale-1,      y*kScale+0.5f+h*kScale-1
                     };
-                    drawPolygon(vertices, 3, 1.0f, it.color);
+                    drawPolygon(vertices, 1.0f, it.color);
                 }
                 break;
             case ::gui::kCommandText:
@@ -274,9 +272,9 @@ void gui::render(const rendererPipeline &pipeline) {
     gl::Enable(GL_CULL_FACE);
 }
 
-void gui::drawPolygon(const float *coords, size_t numCoords, float r, uint32_t color) {
-    if (numCoords > kCoordCount)
-        numCoords = kCoordCount;
+template <size_t E>
+void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
+    constexpr size_t numCoords = (E/2 > kCoordCount) ? kCoordCount : E/2;
 
     // Normals
     for (size_t i = 0, j = numCoords - 1; i < numCoords; j = i++) {
@@ -320,72 +318,28 @@ void gui::drawPolygon(const float *coords, size_t numCoords, float r, uint32_t c
     const float B = float((color >> 16) & 0xFF) / 255.0f;
     const float A = float((color >> 24) & 0xFF) / 255.0f;
 
-    const size_t verticesCount = numCoords * 12 + (numCoords - 2) * 6;
-    const size_t coordsCount = numCoords * 2 * 6 + (numCoords - 2) * 2 * 3;
-    const size_t colorsCount = numCoords * 4 * 6 + (numCoords - 2) * 4 * 3;
-
-    memset(m_textureCoords, 0, coordsCount * sizeof(float));
-    memset(m_colors, 1, colorsCount * sizeof(float));
-
-    // Vertices / Colors
-    float *v = m_vertices;
-    float *c = m_colors;
+    u::vector<vertex> vertices;
+    vertices.reserve(numCoords);
     for (size_t i = 0, j = numCoords - 1; i < numCoords; j = i++) {
-        *v++ = coords[i*2+0];
-        *v++ = coords[i*2+1];
-        *v++ = coords[j*2+0];
-        *v++ = coords[j*2+1];
-        for (size_t k = 0; k < 2; k++) {
-            *v++ = m_coords[j*2+0];
-            *v++ = m_coords[j*2+1];
-        }
-        *v++ = m_coords[i*2+0];
-        *v++ = m_coords[i*2+1];
-        *v++ = coords[i*2+0];
-        *v++ = coords[i*2+1];
-        for (size_t k = 0; k < 2; k++) {
-            *c++ = R;
-            *c++ = G;
-            *c++ = B;
-            *c++ = A;
-        }
-        for (size_t k = 0; k < 3; k++) {
-            *c++ = R;
-            *c++ = G;
-            *c++ = B;
-            *c++ = 0.0f; // No alpha
-        }
-        *c++ = R;
-        *c++ = G;
-        *c++ = B;
-        *c++ = A;
+        vertices.push_back({coords[i*2], coords[i*2+1], 0, 0, R,G,B,A});
+        vertices.push_back({coords[j*2], coords[j*2+1], 0, 0, R,G,B,A});
+        for (size_t k = 0; k < 2; k++)
+            vertices.push_back({m_coords[j*2], m_coords[j*2+1], 0, 0, R,G,B,0.0f}); // No alpha
+        vertices.push_back({m_coords[i*2], m_coords[i*2+1], 0, 0, R,G,B,0.0f}); // No alpha
+        vertices.push_back({coords[i*2], coords[i*2+1], 0, 0, R,G,B,A});
     }
     for (size_t i = 2; i < numCoords; ++i) {
-        *v++ = coords[0];
-        *v++ = coords[1];
-        *v++ = coords[(i-1)*2+0];
-        *v++ = coords[(i-1)*2+1];
-        *v++ = coords[i*2+0];
-        *v++ = coords[i*2+1];
-        for (size_t j = 0; j < 3; j++) {
-            *c++ = R;
-            *c++ = G;
-            *c++ = B;
-            *c++ = A;
-        }
+        vertices.push_back({coords[0],       coords[1],         0, 0, R,G,B,A});
+        vertices.push_back({coords[(i-1)*2], coords[(i-1)*2+1], 0, 0, R,G,B,A});
+        vertices.push_back({coords[i*2],     coords[i*2+1],     0, 0, R,G,B,A});
     }
 
     m_methods[kMethodNormal].enable();
 
     gl::BindVertexArray(m_vao);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[0]);
-    gl::BufferData(GL_ARRAY_BUFFER, verticesCount * sizeof(float), m_vertices, GL_STATIC_DRAW);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[1]);
-    gl::BufferData(GL_ARRAY_BUFFER, coordsCount * sizeof(float), m_textureCoords, GL_STATIC_DRAW);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[2]);
-    gl::BufferData(GL_ARRAY_BUFFER, colorsCount * sizeof(float), m_colors, GL_STATIC_DRAW);
-
-    gl::DrawArrays(GL_TRIANGLES, 0, (numCoords * 2 + numCoords - 2) * 3);
+    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_STATIC_DRAW);
+    gl::DrawArrays(GL_TRIANGLES, 0, vertices.size());
 }
 
 void gui::drawRectangle(float x, float y, float w, float h, float fth, uint32_t color) {
@@ -395,7 +349,7 @@ void gui::drawRectangle(float x, float y, float w, float h, float fth, uint32_t 
         x+w-0.5f, y+h-0.5f,
         x+0.5f,   y+h-0.5f,
     };
-    drawPolygon(vertices, 4, fth, color);
+    drawPolygon(vertices, fth, color);
 }
 
 void gui::drawRectangle(float x, float y, float w, float h, float r, float fth, uint32_t color) {
@@ -423,7 +377,7 @@ void gui::drawRectangle(float x, float y, float w, float h, float r, float fth, 
     *v++ = x+w-r+m_circleVertices[0]*r;
     *v++ = y+r+m_circleVertices[1]*r;
 
-    drawPolygon(vertices, (kRound+1)*4, fth, color);
+    drawPolygon(vertices, fth, color);
 }
 
 gui::glyphQuad gui::getGlyphQuad(int pw, int ph, size_t index, float &xpos, float &ypos) {
@@ -477,7 +431,7 @@ void gui::drawLine(float x0, float y0, float x1, float y1, float r, float fth, u
         x1+dx-nx, y1+dy-ny
     };
 
-    drawPolygon(vertices, 4, fth, color);
+    drawPolygon(vertices, fth, color);
 }
 
 void gui::drawText(float x, float y, const u::string &contents, int align, uint32_t color) {
@@ -510,52 +464,22 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
 
     m_font.bind(GL_TEXTURE0);
 
-    u::vector<float> vertices;
-    u::vector<float> uvs;
-    u::vector<float> colors;
-
-    vertices.resize(12 * contents.size());
-    uvs.resize(12 * contents.size());
-    colors.resize(24 * contents.size());
-
+    u::vector<vertex> vertices;
+    vertices.reserve(6 * contents.size());
     for (size_t i = 0; i < contents.size(); i++) {
-        int it = contents[i];
-        // Ignore anything not ASCII
-        if (it < 32 || it > 128)
-            continue;
-        // Construct a quad for the glyph
-        auto q = getGlyphQuad(512, 512, it - 32, x, y);
-
-        // Data for GL
-        float v[12] = {
-            q.x0, q.y0, q.x1, q.y1,
-            q.x1, q.y0, q.x0, q.y0,
-            q.x0, q.y1, q.x1, q.y1
-        };
-        float uv[12] = {
-            q.s0, q.t0, q.s1, q.t1,
-            q.s1, q.t0, q.s0, q.t0,
-            q.s0, q.t1, q.s1, q.t1
-        };
-        float c[24] = {
-            R, G, B, A, R, G, B, A,
-            R, G, B, A, R, G, B, A,
-            R, G, B, A, R, G, B, A
-        };
-
-        memcpy(&vertices[12 * i], v, sizeof(v));
-        memcpy(&uvs[12 * i], uv, sizeof(uv));
-        memcpy(&colors[24 * i], c, sizeof(c));
+        auto q = getGlyphQuad(512, 512, contents[i] - 32, x, y);
+        vertices.push_back({q.x0, q.y0, q.s0, q.t0, R,G,B,A});
+        vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
+        vertices.push_back({q.x1, q.y0, q.s1, q.t0, R,G,B,A});
+        vertices.push_back({q.x0, q.y0, q.s0, q.t0, R,G,B,A});
+        vertices.push_back({q.x0, q.y1, q.s0, q.t1, R,G,B,A});
+        vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
     }
 
     gl::BindVertexArray(m_vao);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[0]);
-    gl::BufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), &vertices[0], GL_STATIC_DRAW);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[1]);
-    gl::BufferData(GL_ARRAY_BUFFER, uvs.size()*sizeof(float), &uvs[0], GL_STATIC_DRAW);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[2]);
-    gl::BufferData(GL_ARRAY_BUFFER, colors.size()*sizeof(float), &colors[0], GL_STATIC_DRAW);
-    gl::DrawArrays(GL_TRIANGLES, 0, 6 * contents.size());
+    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_STATIC_DRAW);
+    gl::DrawArrays(GL_TRIANGLES, 0, vertices.size());
 }
 
 }

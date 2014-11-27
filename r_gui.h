@@ -29,7 +29,8 @@ struct gui {
     void render(const rendererPipeline &p);
 
 protected:
-    void drawPolygon(const float *coords, size_t numCoords, float r, uint32_t color);
+    template <size_t E>
+    void drawPolygon(const float (&coords)[E], float r, uint32_t color);
     void drawRectangle(float x, float y, float w, float h, float fth, uint32_t color);
     void drawRectangle(float x, float y, float w, float h, float r, float fth, uint32_t color);
     void drawLine(float x0, float y0, float x1, float y1, float r, float fth, uint32_t color);
@@ -60,6 +61,12 @@ private:
         float xadvance;
     };
 
+    struct vertex {
+        float x, y;
+        float s, t;
+        float r, g, b, a;
+    };
+
     u::vector<glyph> m_glyphs;
 
     static constexpr size_t kCoordCount = 100;
@@ -67,12 +74,9 @@ private:
 
     float m_coords[kCoordCount * 2];
     float m_normals[kCoordCount * 2];
-    float m_vertices[kCoordCount * 12 + (kCoordCount - 2) * 6];
-    float m_textureCoords[kCoordCount * 12 + (kCoordCount - 2) * 6];
-    float m_colors[kCoordCount * 24 + (kCoordCount - 2) * 12];
     float m_circleVertices[kCircleVertices * 2];
 
-    GLuint m_vbos[3];
+    GLuint m_vbo;
     GLuint m_vao;
     texture2D m_font;
     guiMethod m_methods[2];
