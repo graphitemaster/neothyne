@@ -75,15 +75,20 @@ u::optional<u::string> method::preprocess(const u::string &file) {
             // around all uniforms to prevent declaring them twice. This is because
             // it's quite easy to cause multiple declarations when using headers
             auto split = u::split(line);
-            split[2].pop_back(); // Pop the semicolon from the name
+            split[2].pop_back(); // Remove the semicolon
+            auto name = split[2];
+            // Erase anything after '[', which would mark an array
+            auto find = name.find('[');
+            if (find != u::string::npos)
+                name.erase(find, name.size());
             result += u::format("#ifndef uniform_%s\n"
                                 "uniform %s %s;\n"
                                 "#define uniform_%s\n"
                                 "#endif\n"
                                 "#line %zu\n",
-                                split[2],
+                                name,
                                 split[1], split[2],
-                                split[2],
+                                name,
                                 lineno);
         } else {
             result += line + "\n";
@@ -114,6 +119,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
         neoFatal("failed preprocessing `%s'", shaderFile);
 
     *shaderSource += *pp;
+    u::print("[%s]\n", *shaderSource);
 
     GLuint shaderObject = gl::CreateShader(shaderType);
     if (!shaderObject)
