@@ -510,7 +510,16 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
 
     m_font.bind(GL_TEXTURE0);
 
-    for (int it : contents) {
+    u::vector<float> vertices;
+    u::vector<float> uvs;
+    u::vector<float> colors;
+
+    vertices.resize(12 * contents.size());
+    uvs.resize(12 * contents.size());
+    colors.resize(24 * contents.size());
+
+    for (size_t i = 0; i < contents.size(); i++) {
+        int it = contents[i];
         // Ignore anything not ASCII
         if (it < 32 || it > 128)
             continue;
@@ -534,15 +543,19 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
             R, G, B, A, R, G, B, A
         };
 
-        gl::BindVertexArray(m_vao);
-        gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[0]);
-        gl::BufferData(GL_ARRAY_BUFFER, 12*sizeof(float), v, GL_STATIC_DRAW);
-        gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[1]);
-        gl::BufferData(GL_ARRAY_BUFFER, 12*sizeof(float), uv, GL_STATIC_DRAW);
-        gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[2]);
-        gl::BufferData(GL_ARRAY_BUFFER, 24*sizeof(float), c, GL_STATIC_DRAW);
-        gl::DrawArrays(GL_TRIANGLES, 0, 6);
+        memcpy(&vertices[12 * i], v, sizeof(v));
+        memcpy(&uvs[12 * i], uv, sizeof(uv));
+        memcpy(&colors[24 * i], c, sizeof(c));
     }
+
+    gl::BindVertexArray(m_vao);
+    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[0]);
+    gl::BufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), &vertices[0], GL_STATIC_DRAW);
+    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[1]);
+    gl::BufferData(GL_ARRAY_BUFFER, uvs.size()*sizeof(float), &uvs[0], GL_STATIC_DRAW);
+    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[2]);
+    gl::BufferData(GL_ARRAY_BUFFER, colors.size()*sizeof(float), &colors[0], GL_STATIC_DRAW);
+    gl::DrawArrays(GL_TRIANGLES, 0, 6 * contents.size());
 }
 
 }
