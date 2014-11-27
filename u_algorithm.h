@@ -22,17 +22,17 @@ inline I find(I first, I last, const T &value) {
 }
 
 template <typename T>
-inline T min(const T &lhs, const T &rhs) {
+inline constexpr T min(const T &lhs, const T &rhs) {
     return lhs < rhs ? lhs : rhs;
 }
 
 template <typename T>
-inline T max(const T &lhs, const T &rhs) {
+inline constexpr T max(const T &lhs, const T &rhs) {
     return lhs > rhs ? lhs : rhs;
 }
 
 template <typename T>
-inline T abs(const T &lhs) {
+inline constexpr T abs(const T &lhs) {
     return lhs < 0 ? -lhs : lhs;
 }
 

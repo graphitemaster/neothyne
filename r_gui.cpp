@@ -2,6 +2,7 @@
 
 #include "u_file.h"
 #include "u_misc.h"
+#include "u_algorithm.h"
 
 #include "engine.h"
 
@@ -273,7 +274,7 @@ void gui::render(const rendererPipeline &pipeline) {
 
 template <size_t E>
 void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
-    constexpr size_t numCoords = (E/2 > kCoordCount) ? kCoordCount : E/2;
+    constexpr size_t numCoords = u::min(E/2, kCoordCount);
 
     // Normals
     for (size_t i = 0, j = numCoords - 1; i < numCoords; j = i++) {
@@ -439,9 +440,6 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
         float position = 0;
         float length = 0;
         for (int it : contents) {
-            // Ignore anything not ASCII
-            if (it < 32 || it > 128)
-                continue;
             auto &b = m_glyphs[it - 32];
             const int round = int(floorf(position + b.xoff) + 0.5f);
             length = round + b.x1 - b.x0 + 0.5f;
