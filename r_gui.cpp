@@ -440,9 +440,9 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
         float position = 0;
         float length = 0;
         for (int it : contents) {
-            auto &b = m_glyphs[it - 32];
             if (it < 32 || it > 128)
                 continue;
+            auto &b = m_glyphs[it - 32];
             const int round = int(floorf(position + b.xoff) + 0.5f);
             length = round + b.x1 - b.x0 + 0.5f;
             position += b.xadvance;
