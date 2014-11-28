@@ -45,5 +45,9 @@ material key.
 Reduce the texture to greyscale. This tag is implicit with the use of the
 `displacement' material key.
 
+##### nocompress
+Prevents the engine from compressing the texture. This may be desired when working
+with small detailed textures of which you want to preserve the detail.
+
 ##### premul
 Premultiply alpha.

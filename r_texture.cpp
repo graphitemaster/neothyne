@@ -73,7 +73,7 @@ static u::string sizeMetric(size_t size) {
 }
 
 static bool readCache(texture &tex, GLuint &internal) {
-    if (!r_texcomp || !(tex.flags() & kTexFlagDisk))
+    if (!r_texcomp || !(tex.flags() & kTexFlagDisk) || (tex.flags() & kTexFlagNoCompress))
         return false;
 
     // Do we even have it in cache?
@@ -231,7 +231,7 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
         tex.convert<kTexFormatLuminance>();
 
     // Texture compression?
-    if (r_texcomp) {
+    if (r_texcomp && !(tex.flags() & kTexFlagNoCompress)) {
         const bool bptc = gl::has(ARB_texture_compression_bptc);
         const bool s3tc = gl::has(EXT_texture_compression_s3tc);
         const bool rgtc = gl::has(EXT_texture_compression_rgtc);

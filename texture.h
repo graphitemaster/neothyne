@@ -6,10 +6,11 @@
 #include "u_vector.h"
 
 enum {
-    kTexFlagNormal = 1 << 0,
-    kTexFlagGrey   = 1 << 1,
-    kTexFlagDisk   = 1 << 2,
-    kTexFlagPremul = 1 << 3
+    kTexFlagNormal     = 1 << 0,
+    kTexFlagGrey       = 1 << 1,
+    kTexFlagDisk       = 1 << 2,
+    kTexFlagPremul     = 1 << 3,
+    kTexFlagNoCompress = 1 << 4
 };
 
 enum textureFormat {

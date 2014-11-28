@@ -1834,6 +1834,8 @@ u::optional<u::string> texture::find(const u::string &infile) {
             m_flags |= kTexFlagGrey;
         else if (tag == "premul")
             m_flags |= kTexFlagPremul;
+        else if (tag == "nocompress")
+            m_flags |= kTexFlagNoCompress;
         file.erase(beg, end + 1);
     }
 
