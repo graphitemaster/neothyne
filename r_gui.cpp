@@ -157,7 +157,6 @@ bool gui::load(const u::string &font) {
     }
 
     u::string where = "fonts/" + fontMap; // TODO: strip from font path
-    u::print("%s\n", where);
     if (!m_font.load(where))
         return false;
 
@@ -412,12 +411,16 @@ void gui::drawRectangle(float x, float y, float w, float h, float r, float fth, 
     drawPolygon(vertices, fth, color);
 }
 
-gui::glyphQuad gui::getGlyphQuad(int pw, int ph, size_t index, float &xpos, float &ypos) {
-    glyphQuad q;
+u::optional<gui::glyphQuad> gui::getGlyphQuad(int pw, int ph, size_t index, float &xpos, float &ypos) {
+    // Prevent these situations
+    if (m_glyphs.size() <= index)
+        return u::none;
+
     auto &b = m_glyphs[index];
     const int roundX = int(floorf(xpos + b.xoff));
     const int roundY = int(floorf(ypos - b.yoff));
 
+    glyphQuad q;
     q.x0 = float(roundX);
     q.y0 = float(roundY);
     q.x1 = float(roundX) + b.x1 - b.x0;
@@ -472,7 +475,7 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
         float position = 0;
         float length = 0;
         for (int it : contents) {
-            if (it < 32 || it > 128)
+            if (it < 32 || size_t(it - 32) <= m_glyphs.size())
                 continue;
             auto &b = m_glyphs[it - 32];
             const int round = int(floorf(position + b.xoff) + 0.5f);
@@ -498,7 +501,10 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
     u::vector<vertex> vertices;
     vertices.reserve(6 * contents.size());
     for (size_t i = 0; i < contents.size(); i++) {
-        auto q = getGlyphQuad(512, 512, contents[i] - 32, x, y);
+        auto quad = getGlyphQuad(512, 512, contents[i] - 32, x, y);
+        if (!quad)
+            continue;
+        const auto q = *quad;
         vertices.push_back({q.x0, q.y0, q.s0, q.t0, R,G,B,A});
         vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
         vertices.push_back({q.x1, q.y0, q.s1, q.t0, R,G,B,A});

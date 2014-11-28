@@ -7,6 +7,7 @@
 #include "m_mat4.h"
 
 #include "u_map.h"
+#include "u_optional.h"
 
 #include "gui.h"
 
@@ -48,7 +49,7 @@ private:
     };
 
 public:
-    glyphQuad getGlyphQuad(int pw, int ph, size_t index, float &xpos, float &ypos);
+    u::optional<glyphQuad> getGlyphQuad(int pw, int ph, size_t index, float &xpos, float &ypos);
 
 private:
     enum {
