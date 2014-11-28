@@ -119,8 +119,11 @@ gui::~gui() {
         gl::DeleteVertexArrays(1, &m_vao);
     if (m_vbo)
         gl::DeleteBuffers(1, &m_vbo);
-    for (auto &it : m_textures)
+    for (auto &it : m_textures) {
+        if (it.second == &m_notex)
+            continue;
         delete it.second;
+    }
 }
 
 bool gui::load(const u::string &font) {
