@@ -411,9 +411,12 @@ bool button(const u::string &contents, bool enabled) {
     const bool over = enabled && S.inRectangle(x, y, w, h);
     const bool result = S.buttonLogic(id, over);
 
-    Q.addRectangle(x, y, w, h, float(kButtonHeight)/2-1,
-        RGBA(128, 128, 128, S.isActive(id) ? 196 : 96));
+    /*Q.addRectangle(x, y, w, h, float(kButtonHeight)/2-1,
+        RGBA(128, 128, 128, S.isActive(id) ? 196 : 96));*/
     if (enabled) {
+        Q.addImage(x, y+2, 5, 18, S.isHot(id) ? "textures/ui/button_1l" : "textures/ui/button_0l");
+        Q.addImage(x+4, y+2, w-8, 18, S.isHot(id) ? "textures/ui/button_1m" : "textures/ui/button_0m");
+        Q.addImage(x+w-5, y+2, 5, 18, S.isHot(id) ? "textures/ui/button_1r" : "textures/ui/button_0r" );
         Q.addText(x+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
     } else {
@@ -466,17 +469,17 @@ bool check(const u::string &contents, bool checked, bool enabled) {
     const int cx = x+kButtonHeight/2-kCheckBoxSize/2;
     const int cy = y+kButtonHeight/2-kCheckBoxSize/2;
 
-    Q.addRectangle(float(cx)-3, float(cy)-3, float(kCheckBoxSize)+6, float(kCheckBoxSize)+6, 4.0f,
-        RGBA(128, 128, 128, S.isActive(id) ? 196 : 96));
     if (checked) {
         if (enabled) {
-            Q.addRectangle(cx, cy, kCheckBoxSize, kCheckBoxSize, float(kCheckBoxSize)/2-1,
-                RGBA(255, 255, 255, S.isActive(id) ? 255 : 200));
+            Q.addImage(x, y+2, 18, 18, "textures/ui/check_1");
+            /*Q.addRectangle(cx, cy, kCheckBoxSize, kCheckBoxSize, float(kCheckBoxSize)/2-1,
+                RGBA(255, 255, 255, S.isActive(id) ? 255 : 200));*/
         } else {
             Q.addRectangle(cx, cy, kCheckBoxSize, kCheckBoxSize, float(kCheckBoxSize)/2-1,
                 RGBA(128, 128, 128, 200));
         }
-    }
+    } else
+        Q.addImage(x, y+2, 18, 18, "textures/ui/check_0");
     if (enabled) {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
