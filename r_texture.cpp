@@ -278,15 +278,17 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     return u::none;
 }
 
-texture2D::texture2D() :
-    m_uploaded(false),
-    m_textureHandle(0)
+texture2D::texture2D(bool mipmaps, int filter)
+    : m_uploaded(false)
+    , m_textureHandle(0)
+    , m_mipmaps(mipmaps)
+    , m_filter(filter)
 {
     //
 }
 
-texture2D::texture2D(texture &tex) :
-    texture2D::texture2D()
+texture2D::texture2D(texture &tex, bool mipmaps, int filter)
+    : texture2D::texture2D(mipmaps, filter)
 {
     m_texture = u::move(tex);
 }
@@ -306,22 +308,24 @@ bool texture2D::useCache() {
 }
 
 void texture2D::applyFilter() {
-    if (r_bilinear) {
-        GLenum min = r_mipmaps
-            ? (r_trilinear ? GL_LINEAR_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR)
-            : GL_LINEAR;
+    if (r_bilinear && (m_filter & kFilterBilinear)) {
+        GLenum min = (r_mipmaps && m_mipmaps)
+            ? ((r_trilinear && (m_filter & kFilterTrilinear))
+                ? GL_LINEAR_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR)
+                : GL_LINEAR;
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min);
     } else {
-        GLenum min = r_mipmaps
-            ? (r_trilinear ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST_MIPMAP_LINEAR)
-            : GL_NEAREST;
+        GLenum min = (r_mipmaps && m_mipmaps)
+            ? ((r_trilinear && (m_filter & kFilterTrilinear))
+                ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST_MIPMAP_LINEAR)
+                : GL_NEAREST;
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min);
     }
 
     // Anisotropic filtering
-    if (r_aniso && gl::has(EXT_texture_filter_anisotropic)) {
+    if ((r_aniso & kFilterAniso) && gl::has(EXT_texture_filter_anisotropic)) {
         GLfloat largest;
         gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
         gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);

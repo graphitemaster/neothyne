@@ -5,11 +5,18 @@
 
 namespace r {
 
+enum {
+    kFilterBilinear  = 1 << 0,
+    kFilterTrilinear = 1 << 1,
+    kFilterAniso     = 1 << 2,
+    kFilterDefault   = kFilterBilinear | kFilterTrilinear | kFilterAniso
+};
+
 struct texture2D {
-    texture2D();
+    texture2D(bool mipmaps = true, int filter = kFilterDefault);
     ~texture2D();
 
-    texture2D(texture &tex);
+    texture2D(texture &tex, bool mipmaps = true, int filter = kFilterDefault);
 
     bool load(const u::string &file);
     bool upload();
@@ -24,6 +31,8 @@ private:
     bool m_uploaded;
     GLuint m_textureHandle;
     texture m_texture;
+    bool m_mipmaps;
+    int m_filter;
 };
 
 struct texture3D {

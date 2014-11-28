@@ -19,43 +19,43 @@ void queue::addScissor(int x, int y, int w, int h) {
     cmd.asScissor.h = h;
 }
 
-void queue::addRectangle(float x, float y, float w, float h, uint32_t color) {
+void queue::addRectangle(int x, int y, int w, int h, uint32_t color) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandRectangle;
     cmd.flags = 0;
     cmd.color = color;
-    cmd.asRectangle.x = int(x * 8.0f);
-    cmd.asRectangle.y = int(y * 8.0f);
-    cmd.asRectangle.w = int(w * 8.0f);
-    cmd.asRectangle.h = int(h * 8.0f);
+    cmd.asRectangle.x = x;
+    cmd.asRectangle.y = y;
+    cmd.asRectangle.w = w;
+    cmd.asRectangle.h = h;
     cmd.asRectangle.r = 0;
 }
 
-void queue::addLine(float x0, float y0, float x1, float y1, float r, uint32_t color) {
+void queue::addLine(int x0, int y0, int x1, int y1, int r, uint32_t color) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandLine;
     cmd.flags = 0;
     cmd.color = color;
-    cmd.asLine.x[0] = int(x0 * 8.0f);
-    cmd.asLine.y[0] = int(y0 * 8.0f);
-    cmd.asLine.x[1] = int(x1 * 8.0f);
-    cmd.asLine.y[1] = int(y1 * 8.0f);
-    cmd.asLine.r = int(r * 8.0f);
+    cmd.asLine.x[0] = x0;
+    cmd.asLine.y[0] = y0;
+    cmd.asLine.x[1] = x1;
+    cmd.asLine.y[1] = y1;
+    cmd.asLine.r = r;
 }
 
-void queue::addRectangle(float x, float y, float w, float h, float r, uint32_t color) {
+void queue::addRectangle(int x, int y, int w, int h, int r, uint32_t color) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandRectangle;
     cmd.flags = 0;
     cmd.color = color;
-    cmd.asRectangle.x = int(x * 8.0f);
-    cmd.asRectangle.y = int(y * 8.0f);
-    cmd.asRectangle.w = int(w * 8.0f);
-    cmd.asRectangle.h = int(h * 8.0f);
-    cmd.asRectangle.r = int(r * 8.0f);
+    cmd.asRectangle.x = x;
+    cmd.asRectangle.y = y;
+    cmd.asRectangle.w = w;
+    cmd.asRectangle.h = h;
+    cmd.asRectangle.r = r;
 }
 
 void queue::addTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
@@ -64,10 +64,10 @@ void queue::addTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
     cmd.type = kCommandTriangle;
     cmd.flags = flags;
     cmd.color = color;
-    cmd.asTriangle.x = x * 8;
-    cmd.asTriangle.y = y * 8;
-    cmd.asTriangle.w = w * 8;
-    cmd.asTriangle.h = h * 8;
+    cmd.asTriangle.x = x;
+    cmd.asTriangle.y = y;
+    cmd.asTriangle.w = w;
+    cmd.asTriangle.h = h;
 }
 
 void queue::addText(int x, int y, int align, const u::string &contents, uint32_t color) {
@@ -82,16 +82,16 @@ void queue::addText(int x, int y, int align, const u::string &contents, uint32_t
     cmd.asText.contents = contents;
 }
 
-void queue::addImage(float x, float y, float w, float h, const u::string &path) {
+void queue::addImage(int x, int y, int w, int h, const u::string &path) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandImage;
     cmd.flags = 0;
     cmd.color = 0;
-    cmd.asImage.x = int(x * 8.0f);
-    cmd.asImage.y = int(y * 8.0f);
-    cmd.asImage.w = int(w * 8.0f);
-    cmd.asImage.h = int(h * 8.0f);
+    cmd.asImage.x = x;
+    cmd.asImage.y = y;
+    cmd.asImage.w = w;
+    cmd.asImage.h = h;
     cmd.asImage.path = path;
 }
 
@@ -645,15 +645,15 @@ void heading() {
 }
 
 /// Primitive drawing (not part of the managed menu), useful for doing HUD
-void drawLine(float x0, float y0, float x1, float y1, float r, uint32_t color) {
+void drawLine(int x0, int y0, int x1, int y1, int r, uint32_t color) {
     Q.addLine(x0, y0, x1, y1, r, color);
 }
 
-void drawRectangle(float x, float y, float w, float h, uint32_t color) {
+void drawRectangle(int x, int y, int w, int h, uint32_t color) {
     Q.addRectangle(x, y, w, h, color);
 }
 
-void drawRectangle(float x, float y, float w, float h, float r, uint32_t color) {
+void drawRectangle(int x, int y, int w, int h, int r, uint32_t color) {
     Q.addRectangle(x, y, w, h, r, color);
 }
 
@@ -665,7 +665,7 @@ void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
     Q.addTriangle(x, y, w, h, flags, color);
 }
 
-void drawImage(float x, float y, float w, float h, const u::string &path) {
+void drawImage(int x, int y, int w, int h, const u::string &path) {
     Q.addImage(x, y, w, h, path);
 }
 

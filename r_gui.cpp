@@ -205,8 +205,6 @@ bool gui::upload() {
 void gui::render(const rendererPipeline &pipeline) {
     auto project = pipeline.getPerspectiveProjection();
 
-    const float kScale = 1.0f / 8.0f;
-
     gl::Disable(GL_DEPTH_TEST);
     gl::Disable(GL_CULL_FACE);
     gl::Enable(GL_BLEND);
@@ -226,26 +224,26 @@ void gui::render(const rendererPipeline &pipeline) {
         switch (it.type) {
             case ::gui::kCommandRectangle:
                 if (it.asRectangle.r == 0) {
-                    drawRectangle(float(it.asRectangle.x) * kScale + 0.5f,
-                                  float(it.asRectangle.y) * kScale + 0.5f,
-                                  float(it.asRectangle.w) * kScale - 1,
-                                  float(it.asRectangle.h) * kScale - 1,
+                    drawRectangle(it.asRectangle.x,
+                                  it.asRectangle.y,
+                                  it.asRectangle.w,
+                                  it.asRectangle.h,
                                   1.0f,
                                   it.color);
                 } else {
-                    drawRectangle(float(it.asRectangle.x) * kScale + 0.5f,
-                                  float(it.asRectangle.y) * kScale + 0.5f,
-                                  float(it.asRectangle.w) * kScale - 1,
-                                  float(it.asRectangle.h) * kScale - 1,
-                                  float(it.asRectangle.r) * kScale,
+                    drawRectangle(it.asRectangle.x,
+                                  it.asRectangle.y,
+                                  it.asRectangle.w,
+                                  it.asRectangle.h,
+                                  it.asRectangle.r,
                                   1.0f,
                                   it.color);
                 }
                 break;
             case ::gui::kCommandLine:
-                drawLine(it.asLine.x[0] * kScale, it.asLine.y[0] * kScale,
-                         it.asLine.x[1] * kScale, it.asLine.y[1] * kScale,
-                         it.asLine.r * kScale,
+                drawLine(it.asLine.x[0], it.asLine.y[0],
+                         it.asLine.x[1], it.asLine.y[1],
+                         it.asLine.r,
                          1.0f,
                          it.color);
                 break;
@@ -256,9 +254,9 @@ void gui::render(const rendererPipeline &pipeline) {
                     const float w = it.asTriangle.w;
                     const float h = it.asTriangle.h;
                     const float vertices[3 * 2] = {
-                        x*kScale+0.5f,                y*kScale+0.5f,
-                        x*kScale+0.5f+w*kScale-1,     y*kScale+0.5f+h*kScale/2-0.5f,
-                        x*kScale+0.5f,                y*kScale+0.5f+h*kScale-1
+                        x,     y,
+                        x+w-1, y+h/2,
+                        x,     y+h-1
                     };
                     drawPolygon(vertices, 1.0f, it.color);
                 } else if (it.flags == 2) {
@@ -267,9 +265,9 @@ void gui::render(const rendererPipeline &pipeline) {
                     const float w = it.asTriangle.w;
                     const float h = it.asTriangle.h;
                     const float vertices[3 * 2] = {
-                        x*kScale+0.5f,                 y*kScale+0.5f+h*kScale-1,
-                        x*kScale+0.5f+w*kScale/2-0.5f, y*kScale+0.5f,
-                        x*kScale+0.5f+w*kScale-1,      y*kScale+0.5f+h*kScale-1
+                        x,     y+h-1,
+                        x+w/2, y,
+                        x+w-1, y+h-1
                     };
                     drawPolygon(vertices, 1.0f, it.color);
                 }
@@ -282,10 +280,10 @@ void gui::render(const rendererPipeline &pipeline) {
             case ::gui::kCommandImage:
                 m_methods[kMethodImage].enable();
                 m_methods[kMethodImage].setPerspectiveProjection(project);
-                drawImage(float(it.asImage.x) * kScale + 0.5f,
-                          float(it.asImage.y) * kScale + 0.5f,
-                          float(it.asImage.w) * kScale - 1,
-                          float(it.asImage.h) * kScale - 1,
+                drawImage(it.asImage.x,
+                          it.asImage.y,
+                          it.asImage.w,
+                          it.asImage.h,
                           it.asImage.path);
                 break;
         }
@@ -404,10 +402,10 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
 
 void gui::drawRectangle(float x, float y, float w, float h, float fth, uint32_t color) {
     float vertices[4*2] = {
-        x+0.5f,   y+0.5f,
-        x+w-0.5f, y+0.5f,
-        x+w-0.5f, y+h-0.5f,
-        x+0.5f,   y+h-0.5f,
+        x,   y,
+        x+w, y,
+        x+w, y+h,
+        x,   y+h,
     };
     drawPolygon(vertices, fth, color);
 }
@@ -549,7 +547,7 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
 void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
     // Deal with loading of textures
     if (m_textures.find(path) == m_textures.end()) {
-        auto tex = u::unique_ptr<texture2D>(new texture2D);
+        auto tex = u::unique_ptr<texture2D>(new texture2D(false, 0));
         if (!tex->load(path) || !tex->upload())
             m_textures[path] = &m_notex;
         else
@@ -559,12 +557,12 @@ void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
     batch b;
     b.start = m_vertices.size();
     m_vertices.reserve(m_vertices.size() + 6);
-    m_vertices.push_back({ x-0.5f,   y-0.5f,   0.0f, 1.0f, 0,0,0,0 });
-    m_vertices.push_back({ x+w-0.5f, y-0.5f,   1.0f, 1.0f, 0,0,0,0 });
-    m_vertices.push_back({ x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 });
-    m_vertices.push_back({ x-0.5f,   y-0.5f,   0.0f, 1.0f, 0,0,0,0 });
-    m_vertices.push_back({ x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 });
-    m_vertices.push_back({ x-0.5f,   y+h-0.5f, 0.0f, 0.0f, 0,0,0,0 });
+    m_vertices.push_back({x,   y,   0.0f, 1.0f, 0,0,0,0});
+    m_vertices.push_back({x+w, y,   1.0f, 1.0f, 0,0,0,0});
+    m_vertices.push_back({x+w, y+h, 1.0f, 0.0f, 0,0,0,0});
+    m_vertices.push_back({x,   y,   0.0f, 1.0f, 0,0,0,0});
+    m_vertices.push_back({x+w, y+h, 1.0f, 0.0f, 0,0,0,0});
+    m_vertices.push_back({x,   y+h, 0.0f, 0.0f, 0,0,0,0});
     b.count = m_vertices.size() - b.start;
     b.texture = m_textures[path];
     b.method = kMethodImage;

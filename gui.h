@@ -76,12 +76,12 @@ struct queue {
     const u::stack<command, kCommandQueueSize> &operator()() const;
     void reset();
     void addScissor(int x, int y, int w, int h);
-    void addRectangle(float x, float y, float w, float h, uint32_t color);
-    void addLine(float x0, float y0, float x1, float y1, float r, uint32_t color);
-    void addRectangle(float x, float y, float w, float h, float r, uint32_t color);
+    void addRectangle(int x, int y, int w, int h, uint32_t color);
+    void addLine(int x0, int y0, int x1, int y1, int r, uint32_t color);
+    void addRectangle(int x, int y, int w, int h, int r, uint32_t color);
     void addTriangle(int x, int y, int w, int h, int flags, uint32_t color);
     void addText(int x, int y, int align, const u::string &contents, uint32_t color);
-    void addImage(float x, float y, float w, float h, const u::string &path);
+    void addImage(int x, int y, int w, int h, const u::string &path);
 private:
     u::stack<command, kCommandQueueSize> m_commands;
 };
@@ -134,13 +134,13 @@ bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value
 void areaFinish(int inc = 5, bool autoScroll = false);
 
 // Primitive drawing
-void drawLine(float x0, float y0, float x1, float y1, float r, uint32_t color);
-void drawLine(float x0, float y0, float x1, float y1, float r, uint32_t color);
-void drawRectangle(float x, float y, float w, float h, uint32_t color);
-void drawRectangle(float x, float y, float w, float h, float r, uint32_t color);
+void drawLine(int x0, int y0, int x1, int y1, int r, uint32_t color);
+void drawLine(int x0, int y0, int x1, int y1, int r, uint32_t color);
+void drawRectangle(int x, int y, int w, int h, uint32_t color);
+void drawRectangle(int x, int y, int w, int h, int r, uint32_t color);
 void drawText(int x, int y, int align, const u::string &contents, uint32_t color);
 void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color);
-void drawImage(float x, float y, float w, float h, const u::string &path);
+void drawImage(int x, int y, int w, int h, const u::string &path);
 
 const queue &commands();
 
