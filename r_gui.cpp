@@ -286,7 +286,7 @@ void gui::render(const rendererPipeline &pipeline) {
                 m_methods[kMethodImage].enable();
                 m_methods[kMethodImage].setPerspectiveProjection(project);
                 drawImage(float(it.asImage.x) * kScale + 0.5f,
-                          float(it.asImage.y) * kScale + 1.0f,
+                          float(it.asImage.y) * kScale + 0.5f,
                           float(it.asImage.w) * kScale - 1,
                           float(it.asImage.h) * kScale - 1,
                           it.asImage.path);
