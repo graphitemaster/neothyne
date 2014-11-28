@@ -475,7 +475,7 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
         float position = 0;
         float length = 0;
         for (int it : contents) {
-            if (it < 32 || size_t(it - 32) <= m_glyphs.size())
+            if (it < 32 || m_glyphs.size() <= size_t(it - 32))
                 continue;
             auto &b = m_glyphs[it - 32];
             const int round = int(floorf(position + b.xoff) + 0.5f);
