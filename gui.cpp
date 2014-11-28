@@ -82,6 +82,19 @@ void queue::addText(int x, int y, int align, const u::string &contents, uint32_t
     cmd.asText.contents = contents;
 }
 
+void queue::addImage(int x, int y, int w, int h, const u::string &path) {
+    if (m_commands.full()) return;
+    auto &cmd = m_commands.next();
+    cmd.type = kCommandImage;
+    cmd.flags = 0;
+    cmd.color = 0;
+    cmd.asImage.x = x;
+    cmd.asImage.y = y;
+    cmd.asImage.w = w;
+    cmd.asImage.h = h;
+    cmd.asImage.path = path;
+}
+
 // A reference to something in the gui
 typedef size_t ref;
 
@@ -642,6 +655,10 @@ void drawText(int x, int y, int align, const u::string &contents, uint32_t color
 
 void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
     Q.addTriangle(x, y, w, h, flags, color);
+}
+
+void drawImage(int x, int y, int w, int h, const u::string &path) {
+    Q.addImage(x, y, w, h, path);
 }
 
 const queue &commands() {

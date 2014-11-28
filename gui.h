@@ -22,7 +22,8 @@ enum {
     kCommandTriangle,
     kCommandLine,
     kCommandText,
-    kCommandScissor
+    kCommandScissor,
+    kCommandImage
 };
 
 struct box {
@@ -38,6 +39,10 @@ struct rectangle : box {
 
 struct triangle : box { };
 struct scissor : box { };
+
+struct image : box {
+    u::string path;
+};
 
 struct text {
     int x;
@@ -63,6 +68,7 @@ struct command {
         triangle asTriangle;
     };
     text asText; // Because of u::string
+    image asImage; // Because of u::string
 };
 
 struct queue {
@@ -75,6 +81,7 @@ struct queue {
     void addRectangle(float x, float y, float w, float h, float r, uint32_t color);
     void addTriangle(int x, int y, int w, int h, int flags, uint32_t color);
     void addText(int x, int y, int align, const u::string &contents, uint32_t color);
+    void addImage(int x, int y, int w, int h, const u::string &path);
 private:
     u::stack<command, kCommandQueueSize> m_commands;
 };
@@ -133,6 +140,7 @@ void drawRectangle(float x, float y, float w, float h, uint32_t color);
 void drawRectangle(float x, float y, float w, float h, float r, uint32_t color);
 void drawText(int x, int y, int align, const u::string &contents, uint32_t color);
 void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color);
+void drawImage(int x, int y, int w, int h, const u::string &path);
 
 const queue &commands();
 

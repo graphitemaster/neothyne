@@ -6,6 +6,8 @@
 
 #include "m_mat4.h"
 
+#include "u_map.h"
+
 #include "gui.h"
 
 namespace r {
@@ -35,6 +37,7 @@ protected:
     void drawRectangle(float x, float y, float w, float h, float r, float fth, uint32_t color);
     void drawLine(float x0, float y0, float x1, float y1, float r, float fth, uint32_t color);
     void drawText(float x, float y, const u::string &contents, int align, uint32_t color);
+    void drawImage(int x, int y, int w, int h, const u::string &path);
 
 private:
     struct glyphQuad {
@@ -50,7 +53,8 @@ public:
 private:
     enum {
         kMethodNormal,
-        kMethodFont
+        kMethodFont,
+        kMethodImage
     };
 
     struct glyph {
@@ -78,8 +82,10 @@ private:
 
     GLuint m_vbo;
     GLuint m_vao;
+    u::map<u::string, texture2D*> m_textures;
     texture2D m_font;
-    guiMethod m_methods[2];
+    texture2D m_notex;
+    guiMethod m_methods[3];
 };
 
 }

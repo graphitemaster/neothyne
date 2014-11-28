@@ -41,6 +41,11 @@ static void printTriangle(const ::gui::triangle &it) {
     u::print("    { x: %d, y: %d, w: %d, h: %d }\n", it.x, it.y, it.w, it.h);
 }
 
+static void printImage(const ::gui::image &it) {
+    u::print("    { x: %d, y: %d, w: %d, h: %d, path: %s }\n",
+        it.x, it.y, it.w, it.h, it.path);
+}
+
 static void printCommand(const ::gui::command &it) {
     switch (it.type) {
         case ::gui::kCommandLine:
@@ -62,6 +67,10 @@ static void printCommand(const ::gui::command &it) {
         case ::gui::kCommandTriangle:
             u::print("triangle:  (flags: %d | color: #%X)\n", it.flags, it.color);
             printTriangle(it.asTriangle);
+            break;
+        case ::gui::kCommandImage:
+            u::print("image:\n");
+            printImage(it.asImage);
             break;
     }
     u::print("\n");
@@ -110,6 +119,8 @@ gui::~gui() {
         gl::DeleteVertexArrays(1, &m_vao);
     if (m_vbo)
         gl::DeleteBuffers(1, &m_vbo);
+    for (auto &it : m_textures)
+        delete it.second;
 }
 
 bool gui::load(const u::string &font) {
@@ -154,6 +165,10 @@ bool gui::upload() {
     if (!m_font.upload())
         return false;
 
+    // No texture needed if fail to load a menu texture
+    if (!m_notex.load("textures/notex") || !m_notex.upload())
+        return false;
+
     gl::GenVertexArrays(1, &m_vao);
     gl::GenBuffers(1, &m_vbo);
 
@@ -168,14 +183,19 @@ bool gui::upload() {
     gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
     gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
 
-    // Rendering method for GUI
+    // Rendering methods for GUI
     if (!m_methods[kMethodNormal].init())
         return false;
     if (!m_methods[kMethodFont].init({"HAS_FONT"}))
         return false;
+    if (!m_methods[kMethodImage].init({"HAS_IMAGE"}))
+        return false;
 
     m_methods[kMethodFont].enable();
     m_methods[kMethodFont].setColorTextureUnit(0);
+
+    m_methods[kMethodImage].enable();
+    m_methods[kMethodImage].setColorTextureUnit(0);
 
     return true;
 }
@@ -262,6 +282,11 @@ void gui::render(const rendererPipeline &pipeline) {
                     gl::Disable(GL_SCISSOR_TEST);
                 }
                 break;
+            case ::gui::kCommandImage:
+                m_methods[kMethodImage].enable();
+                m_methods[kMethodImage].setPerspectiveProjection(project);
+                drawImage(it.asImage.x, it.asImage.y, it.asImage.w, it.asImage.h, it.asImage.path);
+                break;
         }
     }
 #ifdef DEBUG_GUI
@@ -313,10 +338,10 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
         m_coords[i*2+1] = coords[i*2+1]+dmy*r;
     }
 
-    const float R = float(color & 0xFF) / 255.0f;
-    const float G = float((color >> 8) & 0xFF) / 255.0f;
-    const float B = float((color >> 16) & 0xFF) / 255.0f;
-    const float A = float((color >> 24) & 0xFF) / 255.0f;
+    float R = float(color & 0xFF) / 255.0f;
+    float G = float((color >> 8) & 0xFF) / 255.0f;
+    float B = float((color >> 16) & 0xFF) / 255.0f;
+    float A = float((color >> 24) & 0xFF) / 255.0f;
 
     u::vector<vertex> vertices;
     vertices.reserve(numCoords);
@@ -479,6 +504,33 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
     gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_DYNAMIC_DRAW);
     gl::DrawArrays(GL_TRIANGLES, 0, vertices.size());
+}
+
+void gui::drawImage(int x, int y, int w, int h, const u::string &path) {
+    // Deal with loading of textures
+    if (m_textures.find(path) == m_textures.end()) {
+        auto tex = u::unique_ptr<texture2D>(new texture2D);
+        if (!tex->load(path) || !tex->upload())
+            m_textures[path] = &m_notex;
+        else
+            m_textures[path] = tex.release();
+    }
+
+    m_textures[path]->bind(GL_TEXTURE0);
+
+    vertex vertices[6] = {
+        { x-0.5f,   y-0.5f,   0.0f, 1.0f, 0,0,0,0 },
+        { x+w-0.5f, y-0.5f,   1.0f, 1.0f, 0,0,0,0 },
+        { x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 },
+        { x-0.5f,   y-0.5f,   0.0f, 1.0f, 0,0,0,0 },
+        { x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 },
+        { x-0.5f,   y+h-0.5f, 0.0f, 0.0f, 0,0,0,0 }
+    };
+
+    gl::BindVertexArray(m_vao);
+    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    gl::BufferData(GL_ARRAY_BUFFER, 6 * sizeof(vertex), vertices, GL_DYNAMIC_DRAW);
+    gl::DrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 }
