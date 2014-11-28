@@ -219,7 +219,6 @@ void gui::render(const rendererPipeline &pipeline) {
     m_methods[kMethodImage].enable();
     m_methods[kMethodImage].setPerspectiveProjection(project);
 
-    gl::Disable(GL_SCISSOR_TEST);
     for (auto &it : ::gui::commands()()) {
 #ifdef DEBUG_GUI
         printCommand(it);
@@ -280,14 +279,6 @@ void gui::render(const rendererPipeline &pipeline) {
                 m_methods[kMethodFont].setPerspectiveProjection(project);
                 drawText(it.asText.x, it.asText.y, it.asText.contents, it.asText.align, it.color);
                 break;
-            case ::gui::kCommandScissor:
-                if (it.flags) {
-                    gl::Enable(GL_SCISSOR_TEST);
-                    gl::Scissor(it.asScissor.x, it.asScissor.y, it.asScissor.w, it.asScissor.h);
-                } else {
-                    gl::Disable(GL_SCISSOR_TEST);
-                }
-                break;
             case ::gui::kCommandImage:
                 m_methods[kMethodImage].enable();
                 m_methods[kMethodImage].setPerspectiveProjection(project);
@@ -309,12 +300,26 @@ void gui::render(const rendererPipeline &pipeline) {
     gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
 
     int method = -1;
-    for (auto &it : m_batches) {
-        if (it.texture)
-            it.texture->bind(GL_TEXTURE0);
-        if (it.method != method)
-            m_methods[method = it.method].enable();
-        gl::DrawArrays(GL_TRIANGLES, it.start, it.count);
+    batch *b = &m_batches[0];
+    gl::Disable(GL_SCISSOR_TEST);
+    for (auto &it : ::gui::commands()()) {
+        if (it.type ==  ::gui::kCommandScissor) {
+            if (it.flags) {
+                gl::Enable(GL_SCISSOR_TEST);
+                gl::Scissor(it.asScissor.x, it.asScissor.y, it.asScissor.w, it.asScissor.h);
+            } else {
+                gl::Disable(GL_SCISSOR_TEST);
+            }
+        } else {
+            if (b->texture)
+                b->texture->bind(GL_TEXTURE0);
+            if (b->method != method) {
+                method = b->method;
+                m_methods[method].enable();
+            }
+            gl::DrawArrays(GL_TRIANGLES, b->start, b->count);
+            b++;
+        }
     }
 
     // Reset the batches and vertices each frame
