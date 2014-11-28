@@ -308,27 +308,18 @@ void gui::render(const rendererPipeline &pipeline) {
     gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
     gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
 
-    m_methods[kMethodNormal].enable();
-    for (auto &it : m_batches[kMethodNormal])
-        gl::DrawArrays(GL_TRIANGLES, it.start, it.count);
-
-    m_methods[kMethodImage].enable();
-    for (auto &it : m_batches[kMethodImage]) {
-        it.texture->bind(GL_TEXTURE0);
+    int method = -1;
+    for (auto &it : m_batches) {
+        if (it.texture)
+            it.texture->bind(GL_TEXTURE0);
+        if (it.method != method)
+            m_methods[method = it.method].enable();
         gl::DrawArrays(GL_TRIANGLES, it.start, it.count);
     }
 
-    // Font last as it renders atop of everything
-    m_methods[kMethodFont].enable();
-    m_font.bind(GL_TEXTURE0);
-    for (auto &it : m_batches[kMethodFont])
-        gl::DrawArrays(GL_TRIANGLES, it.start, it.count);
-
     // Reset the batches and vertices each frame
     m_vertices.destroy();
-    m_batches[kMethodNormal].destroy();
-    m_batches[kMethodFont].destroy();
-    m_batches[kMethodImage].destroy();
+    m_batches.destroy();
 
 #ifdef DEBUG_GUI
     u::printf(">> COMPLETE GUI FRAME\n\n");
@@ -401,7 +392,9 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
         m_vertices.push_back({coords[i*2],     coords[i*2+1],     0, 0, R,G,B,A});
     }
     b.count = m_vertices.size() - b.start;
-    m_batches[kMethodNormal].push_back(b);
+    b.method = kMethodNormal;
+    b.texture = nullptr;
+    m_batches.push_back(b);
 }
 
 void gui::drawRectangle(float x, float y, float w, float h, float fth, uint32_t color) {
@@ -543,7 +536,9 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
         m_vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
     }
     b.count = m_vertices.size() - b.start;
-    m_batches[kMethodFont].push_back(b);
+    b.texture = &m_font;
+    b.method = kMethodFont;
+    m_batches.push_back(b);
 }
 
 void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
@@ -567,7 +562,8 @@ void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
     m_vertices.push_back({ x+0.5f,   y+h-0.5f, 0.0f, 0.0f, 0,0,0,0 });
     b.count = m_vertices.size() - b.start;
     b.texture = m_textures[path];
-    m_batches[kMethodImage].push_back(b);
+    b.method = kMethodImage;
+    m_batches.push_back(b);
 }
 
 }

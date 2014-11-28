@@ -78,11 +78,12 @@ private:
     struct batch {
         size_t start;
         size_t count;
+        int method;
         texture2D *texture;
     };
 
     u::vector<vertex> m_vertices;
-    u::vector<batch> m_batches[3];
+    u::vector<batch> m_batches;
 
     static constexpr size_t kCoordCount = 100;
     static constexpr size_t kCircleVertices = 8 * 4;
