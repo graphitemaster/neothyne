@@ -41,6 +41,8 @@ protected:
     void drawImage(float x, float y, float w, float h, const u::string &path);
 
 private:
+    void setAttribs();
+
     struct glyphQuad {
         float x0, y0;
         float x1, y1;

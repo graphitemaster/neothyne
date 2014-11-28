@@ -163,6 +163,12 @@ bool gui::load(const u::string &font) {
     return true;
 }
 
+void gui::setAttribs() {
+    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(0));
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
+    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
+}
+
 bool gui::upload() {
     if (!m_font.upload())
         return false;
@@ -181,9 +187,7 @@ bool gui::upload() {
 
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
     gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertex), 0, GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(0));
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
-    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
+    setAttribs();
 
     // Rendering methods for GUI
     if (!m_methods[kMethodNormal].init())
@@ -370,6 +374,7 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
     gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
     gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_DYNAMIC_DRAW);
+    setAttribs();
     gl::DrawArrays(GL_TRIANGLES, 0, vertices.size());
 }
 
@@ -516,6 +521,7 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
     gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
     gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_DYNAMIC_DRAW);
+    setAttribs();
     gl::DrawArrays(GL_TRIANGLES, 0, vertices.size());
 }
 
@@ -543,6 +549,7 @@ void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
     gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
     gl::BufferData(GL_ARRAY_BUFFER, 6 * sizeof(vertex), vertices, GL_DYNAMIC_DRAW);
+    setAttribs();
     gl::DrawArrays(GL_TRIANGLES, 0, 6);
 }
 
