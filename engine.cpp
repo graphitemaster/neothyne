@@ -367,6 +367,8 @@ int main(int argc, char **argv) {
     neoSetVSyncOption(vSyncOption(vid_vsync.get()));
     gTimer.cap(vid_maxfps.get());
 
+    SDL_ShowCursor(0);
+
     gl::init();
 
     // back face culling
