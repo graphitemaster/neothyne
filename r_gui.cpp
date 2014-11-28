@@ -289,8 +289,8 @@ void gui::render(const rendererPipeline &pipeline) {
                 m_methods[kMethodImage].setPerspectiveProjection(project);
                 drawImage(float(it.asImage.x) * kScale + 0.5f,
                           float(it.asImage.y) * kScale + 0.5f,
-                          float(it.asImage.w) * kScale - 1,
-                          float(it.asImage.h) * kScale - 1,
+                          float(it.asImage.w) * kScale + 1,
+                          float(it.asImage.h) * kScale + 1,
                           it.asImage.path);
                 break;
         }
@@ -532,12 +532,12 @@ void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
     m_textures[path]->bind(GL_TEXTURE0);
 
     vertex vertices[6] = {
-        { x-0.5f,   y-0.5f,   0.0f, 1.0f, 0,0,0,0 },
-        { x+w-0.5f, y-0.5f,   1.0f, 1.0f, 0,0,0,0 },
+        { x+0.5f,   y+0.5f,   0.0f, 1.0f, 0,0,0,0 },
+        { x+w-0.5f, y+0.5f,   1.0f, 1.0f, 0,0,0,0 },
         { x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 },
-        { x-0.5f,   y-0.5f,   0.0f, 1.0f, 0,0,0,0 },
+        { x+0.5f,   y+0.5f,   0.0f, 1.0f, 0,0,0,0 },
         { x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 },
-        { x-0.5f,   y+h-0.5f, 0.0f, 0.0f, 0,0,0,0 }
+        { x+0.5f,   y+h-0.5f, 0.0f, 0.0f, 0,0,0,0 }
     };
 
     gl::BindVertexArray(m_vao);
