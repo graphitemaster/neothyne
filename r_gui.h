@@ -41,8 +41,6 @@ protected:
     void drawImage(float x, float y, float w, float h, const u::string &path);
 
 private:
-    void setAttribs();
-
     struct glyphQuad {
         float x0, y0;
         float x1, y1;
@@ -75,6 +73,16 @@ private:
     };
 
     u::vector<glyph> m_glyphs;
+
+    // Batch by texture/shader
+    struct batch {
+        size_t start;
+        size_t count;
+        texture2D *texture;
+    };
+
+    u::vector<vertex> m_vertices;
+    u::vector<batch> m_batches[3];
 
     static constexpr size_t kCoordCount = 100;
     static constexpr size_t kCircleVertices = 8 * 4;

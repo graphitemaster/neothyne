@@ -163,12 +163,6 @@ bool gui::load(const u::string &font) {
     return true;
 }
 
-void gui::setAttribs() {
-    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(0));
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
-    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
-}
-
 bool gui::upload() {
     if (!m_font.upload())
         return false;
@@ -187,7 +181,9 @@ bool gui::upload() {
 
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
     gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertex), 0, GL_DYNAMIC_DRAW);
-    setAttribs();
+    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(0));
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
+    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
 
     // Rendering methods for GUI
     if (!m_methods[kMethodNormal].init())
@@ -218,6 +214,10 @@ void gui::render(const rendererPipeline &pipeline) {
 
     m_methods[kMethodNormal].enable();
     m_methods[kMethodNormal].setPerspectiveProjection(project);
+    m_methods[kMethodFont].enable();
+    m_methods[kMethodFont].setPerspectiveProjection(project);
+    m_methods[kMethodImage].enable();
+    m_methods[kMethodImage].setPerspectiveProjection(project);
 
     gl::Disable(GL_SCISSOR_TEST);
     for (auto &it : ::gui::commands()()) {
@@ -299,6 +299,37 @@ void gui::render(const rendererPipeline &pipeline) {
                 break;
         }
     }
+
+    // Blast it all out in one giant shot
+    gl::BindVertexArray(m_vao);
+    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(vertex), &m_vertices[0], GL_DYNAMIC_DRAW);
+    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(0));
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
+    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
+
+    m_methods[kMethodNormal].enable();
+    for (auto &it : m_batches[kMethodNormal])
+        gl::DrawArrays(GL_TRIANGLES, it.start, it.count);
+
+    m_methods[kMethodImage].enable();
+    for (auto &it : m_batches[kMethodImage]) {
+        it.texture->bind(GL_TEXTURE0);
+        gl::DrawArrays(GL_TRIANGLES, it.start, it.count);
+    }
+
+    // Font last as it renders atop of everything
+    m_methods[kMethodFont].enable();
+    m_font.bind(GL_TEXTURE0);
+    for (auto &it : m_batches[kMethodFont])
+        gl::DrawArrays(GL_TRIANGLES, it.start, it.count);
+
+    // Reset the batches and vertices each frame
+    m_vertices.destroy();
+    m_batches[kMethodNormal].destroy();
+    m_batches[kMethodFont].destroy();
+    m_batches[kMethodImage].destroy();
+
 #ifdef DEBUG_GUI
     u::printf(">> COMPLETE GUI FRAME\n\n");
 #endif
@@ -353,29 +384,24 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
     float B = float((color >> 16) & 0xFF) / 255.0f;
     float A = float((color >> 24) & 0xFF) / 255.0f;
 
-    u::vector<vertex> vertices;
-    vertices.reserve(numCoords);
+    batch b;
+    b.start = m_vertices.size();
+    m_vertices.reserve(b.start + numCoords);
     for (size_t i = 0, j = numCoords - 1; i < numCoords; j = i++) {
-        vertices.push_back({coords[i*2], coords[i*2+1], 0, 0, R,G,B,A});
-        vertices.push_back({coords[j*2], coords[j*2+1], 0, 0, R,G,B,A});
+        m_vertices.push_back({coords[i*2], coords[i*2+1], 0, 0, R,G,B,A});
+        m_vertices.push_back({coords[j*2], coords[j*2+1], 0, 0, R,G,B,A});
         for (size_t k = 0; k < 2; k++)
-            vertices.push_back({m_coords[j*2], m_coords[j*2+1], 0, 0, R,G,B,0.0f}); // No alpha
-        vertices.push_back({m_coords[i*2], m_coords[i*2+1], 0, 0, R,G,B,0.0f}); // No alpha
-        vertices.push_back({coords[i*2], coords[i*2+1], 0, 0, R,G,B,A});
+            m_vertices.push_back({m_coords[j*2], m_coords[j*2+1], 0, 0, R,G,B,0.0f}); // No alpha
+        m_vertices.push_back({m_coords[i*2], m_coords[i*2+1], 0, 0, R,G,B,0.0f}); // No alpha
+        m_vertices.push_back({coords[i*2], coords[i*2+1], 0, 0, R,G,B,A});
     }
     for (size_t i = 2; i < numCoords; ++i) {
-        vertices.push_back({coords[0],       coords[1],         0, 0, R,G,B,A});
-        vertices.push_back({coords[(i-1)*2], coords[(i-1)*2+1], 0, 0, R,G,B,A});
-        vertices.push_back({coords[i*2],     coords[i*2+1],     0, 0, R,G,B,A});
+        m_vertices.push_back({coords[0],       coords[1],         0, 0, R,G,B,A});
+        m_vertices.push_back({coords[(i-1)*2], coords[(i-1)*2+1], 0, 0, R,G,B,A});
+        m_vertices.push_back({coords[i*2],     coords[i*2+1],     0, 0, R,G,B,A});
     }
-
-    m_methods[kMethodNormal].enable();
-
-    gl::BindVertexArray(m_vao);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_DYNAMIC_DRAW);
-    setAttribs();
-    gl::DrawArrays(GL_TRIANGLES, 0, vertices.size());
+    b.count = m_vertices.size() - b.start;
+    m_batches[kMethodNormal].push_back(b);
 }
 
 void gui::drawRectangle(float x, float y, float w, float h, float fth, uint32_t color) {
@@ -501,28 +527,23 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
     const float B = float((color >> 16) & 0xFF) / 255.0f;
     const float A = float((color >> 24) & 0xFF) / 255.0f;
 
-    m_font.bind(GL_TEXTURE0);
-
-    u::vector<vertex> vertices;
-    vertices.reserve(6 * contents.size());
+    batch b;
+    b.start = m_vertices.size();
+    m_vertices.reserve(m_vertices.size() + 6 * contents.size());
     for (size_t i = 0; i < contents.size(); i++) {
         auto quad = getGlyphQuad(512, 512, contents[i] - 32, x, y);
         if (!quad)
             continue;
         const auto q = *quad;
-        vertices.push_back({q.x0, q.y0, q.s0, q.t0, R,G,B,A});
-        vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
-        vertices.push_back({q.x1, q.y0, q.s1, q.t0, R,G,B,A});
-        vertices.push_back({q.x0, q.y0, q.s0, q.t0, R,G,B,A});
-        vertices.push_back({q.x0, q.y1, q.s0, q.t1, R,G,B,A});
-        vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
+        m_vertices.push_back({q.x0, q.y0, q.s0, q.t0, R,G,B,A});
+        m_vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
+        m_vertices.push_back({q.x1, q.y0, q.s1, q.t0, R,G,B,A});
+        m_vertices.push_back({q.x0, q.y0, q.s0, q.t0, R,G,B,A});
+        m_vertices.push_back({q.x0, q.y1, q.s0, q.t1, R,G,B,A});
+        m_vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
     }
-
-    gl::BindVertexArray(m_vao);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_DYNAMIC_DRAW);
-    setAttribs();
-    gl::DrawArrays(GL_TRIANGLES, 0, vertices.size());
+    b.count = m_vertices.size() - b.start;
+    m_batches[kMethodFont].push_back(b);
 }
 
 void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
@@ -535,22 +556,18 @@ void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
             m_textures[path] = tex.release();
     }
 
-    m_textures[path]->bind(GL_TEXTURE0);
-
-    vertex vertices[6] = {
-        { x+0.5f,   y+0.5f,   0.0f, 1.0f, 0,0,0,0 },
-        { x+w-0.5f, y+0.5f,   1.0f, 1.0f, 0,0,0,0 },
-        { x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 },
-        { x+0.5f,   y+0.5f,   0.0f, 1.0f, 0,0,0,0 },
-        { x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 },
-        { x+0.5f,   y+h-0.5f, 0.0f, 0.0f, 0,0,0,0 }
-    };
-
-    gl::BindVertexArray(m_vao);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, 6 * sizeof(vertex), vertices, GL_DYNAMIC_DRAW);
-    setAttribs();
-    gl::DrawArrays(GL_TRIANGLES, 0, 6);
+    batch b;
+    b.start = m_vertices.size();
+    m_vertices.reserve(m_vertices.size() + 6);
+    m_vertices.push_back({ x+0.5f,   y+0.5f,   0.0f, 1.0f, 0,0,0,0 });
+    m_vertices.push_back({ x+w-0.5f, y+0.5f,   1.0f, 1.0f, 0,0,0,0 });
+    m_vertices.push_back({ x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 });
+    m_vertices.push_back({ x+0.5f,   y+0.5f,   0.0f, 1.0f, 0,0,0,0 });
+    m_vertices.push_back({ x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 });
+    m_vertices.push_back({ x+0.5f,   y+h-0.5f, 0.0f, 0.0f, 0,0,0,0 });
+    b.count = m_vertices.size() - b.start;
+    b.texture = m_textures[path];
+    m_batches[kMethodImage].push_back(b);
 }
 
 }
