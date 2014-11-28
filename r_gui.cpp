@@ -284,8 +284,8 @@ void gui::render(const rendererPipeline &pipeline) {
                 m_methods[kMethodImage].setPerspectiveProjection(project);
                 drawImage(float(it.asImage.x) * kScale + 0.5f,
                           float(it.asImage.y) * kScale + 0.5f,
-                          float(it.asImage.w) * kScale + 1,
-                          float(it.asImage.h) * kScale + 1,
+                          float(it.asImage.w) * kScale - 1,
+                          float(it.asImage.h) * kScale - 1,
                           it.asImage.path);
                 break;
         }
@@ -303,7 +303,7 @@ void gui::render(const rendererPipeline &pipeline) {
     batch *b = &m_batches[0];
     gl::Disable(GL_SCISSOR_TEST);
     for (auto &it : ::gui::commands()()) {
-        if (it.type ==  ::gui::kCommandScissor) {
+        if (it.type == ::gui::kCommandScissor) {
             if (it.flags) {
                 gl::Enable(GL_SCISSOR_TEST);
                 gl::Scissor(it.asScissor.x, it.asScissor.y, it.asScissor.w, it.asScissor.h);
@@ -559,12 +559,12 @@ void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
     batch b;
     b.start = m_vertices.size();
     m_vertices.reserve(m_vertices.size() + 6);
-    m_vertices.push_back({ x+0.5f,   y+0.5f,   0.0f, 1.0f, 0,0,0,0 });
-    m_vertices.push_back({ x+w-0.5f, y+0.5f,   1.0f, 1.0f, 0,0,0,0 });
+    m_vertices.push_back({ x-0.5f,   y-0.5f,   0.0f, 1.0f, 0,0,0,0 });
+    m_vertices.push_back({ x+w-0.5f, y-0.5f,   1.0f, 1.0f, 0,0,0,0 });
     m_vertices.push_back({ x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 });
-    m_vertices.push_back({ x+0.5f,   y+0.5f,   0.0f, 1.0f, 0,0,0,0 });
+    m_vertices.push_back({ x-0.5f,   y-0.5f,   0.0f, 1.0f, 0,0,0,0 });
     m_vertices.push_back({ x+w-0.5f, y+h-0.5f, 1.0f, 0.0f, 0,0,0,0 });
-    m_vertices.push_back({ x+0.5f,   y+h-0.5f, 0.0f, 0.0f, 0,0,0,0 });
+    m_vertices.push_back({ x-0.5f,   y+h-0.5f, 0.0f, 0.0f, 0,0,0,0 });
     b.count = m_vertices.size() - b.start;
     b.texture = m_textures[path];
     b.method = kMethodImage;
