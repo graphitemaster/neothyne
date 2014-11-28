@@ -37,7 +37,7 @@ protected:
     void drawRectangle(float x, float y, float w, float h, float r, float fth, uint32_t color);
     void drawLine(float x0, float y0, float x1, float y1, float r, float fth, uint32_t color);
     void drawText(float x, float y, const u::string &contents, int align, uint32_t color);
-    void drawImage(int x, int y, int w, int h, const u::string &path);
+    void drawImage(float x, float y, float w, float h, const u::string &path);
 
 private:
     struct glyphQuad {

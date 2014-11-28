@@ -285,7 +285,11 @@ void gui::render(const rendererPipeline &pipeline) {
             case ::gui::kCommandImage:
                 m_methods[kMethodImage].enable();
                 m_methods[kMethodImage].setPerspectiveProjection(project);
-                drawImage(it.asImage.x, it.asImage.y, it.asImage.w, it.asImage.h, it.asImage.path);
+                drawImage(float(it.asImage.x) * kScale + 0.5f,
+                          float(it.asImage.y) * kScale + 1.0f,
+                          float(it.asImage.w) * kScale - 1,
+                          float(it.asImage.h) * kScale - 1,
+                          it.asImage.path);
                 break;
         }
     }
@@ -506,7 +510,7 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
     gl::DrawArrays(GL_TRIANGLES, 0, vertices.size());
 }
 
-void gui::drawImage(int x, int y, int w, int h, const u::string &path) {
+void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
     // Deal with loading of textures
     if (m_textures.find(path) == m_textures.end()) {
         auto tex = u::unique_ptr<texture2D>(new texture2D);
