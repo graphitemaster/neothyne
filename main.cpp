@@ -412,7 +412,8 @@ int neoMain(frameTimer &timer, int, char **) {
         }
 
         // Cursor above all else
-        gui::drawImage(mouse[0], mouse[1] - (32 - 3), 32, 32, "<nocompress>textures/ui/cursor");
+        if (!playing)
+            gui::drawImage(mouse[0], mouse[1] - (32 - 3), 32, 32, "<nocompress>textures/ui/cursor");
 
         gui::finish();
     }
