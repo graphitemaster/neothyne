@@ -307,7 +307,7 @@ static constexpr int kButtonHeight = 20;
 static constexpr int kSliderHeight = 15;
 static constexpr int kSliderMarkerWidth = 10;
 static constexpr int kCollapseSize = 8;
-static constexpr int kCheckBoxSize = 18;
+static constexpr int kCheckBoxSize = 20;
 static constexpr int kDefaultSpacing = 6;
 static constexpr int kTextHeight = 8;
 static constexpr int kScrollAreaPadding = 6;
@@ -416,13 +416,13 @@ bool button(const u::string &contents, bool enabled) {
         RGBA(128, 128, 128, S.isActive(id) ? 196 : 96));*/
     if (enabled) {
         if (S.isHot(id)) {
-            Q.addImage(x, y, 5, kButtonHeight, "<nocompress>textures/ui/button_1l");
-            Q.addImage(x+4, y, w-8, kButtonHeight, "<nocompress>textures/ui/button_1m");
-            Q.addImage(x+w-5, y, 5, kButtonHeight, "<nocompress>textures/ui/button_1r");
+            Q.addImage(x, y, 6, kButtonHeight, "<nocompress>textures/ui/button_1l");
+            Q.addImage(x+5, y, w-10, kButtonHeight, "<nocompress>textures/ui/button_1m");
+            Q.addImage(x+w-6, y, 6, kButtonHeight, "<nocompress>textures/ui/button_1r");
         } else {
-            Q.addImage(x, y, 5, kButtonHeight, "<nocompress>textures/ui/button_0l");
-            Q.addImage(x+4, y, w-8, kButtonHeight, "<nocompress>textures/ui/button_0m");
-            Q.addImage(x+w-5, y, 5, kButtonHeight, "<nocompress>textures/ui/button_0r");
+            Q.addImage(x, y, 6, kButtonHeight, "<nocompress>textures/ui/button_0l");
+            Q.addImage(x+5, y, w-10, kButtonHeight, "<nocompress>textures/ui/button_0m");
+            Q.addImage(x+w-6, y, 6, kButtonHeight, "<nocompress>textures/ui/button_0r");
         }
         Q.addText(x+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
@@ -478,12 +478,12 @@ bool check(const u::string &contents, bool checked, bool enabled) {
 
     if (checked) {
         if (enabled) {
-            Q.addImage(cx-2, cy, kCheckBoxSize, kCheckBoxSize, "<nocompress>textures/ui/check_1");
+            Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "<nocompress>textures/ui/check_1");
         } else {
             // TODO: disabled check box image
         }
     } else {
-        Q.addImage(cx-2, cy, kCheckBoxSize, kCheckBoxSize, "<nocompress>textures/ui/check_0");
+        Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "<nocompress>textures/ui/check_0");
     }
     if (enabled) {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
