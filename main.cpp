@@ -387,7 +387,7 @@ int neoMain(frameTimer &timer, int, char **) {
 
         // Must come first as we want the menu to go over the cross hair if it's
         // launched after playing
-        if (gPlaying) {
+        if (gPlaying && !(gMenuState & ~kMenuConsole)) {
             gui::drawLine(neoWidth() / 2, neoHeight() / 2 - 10, neoWidth() / 2, neoHeight() / 2 - 4, 2, 0xFFFFFFE1);
             gui::drawLine(neoWidth() / 2, neoHeight() / 2 + 4, neoWidth() / 2, neoHeight() / 2 + 10, 2, 0xFFFFFFE1);
             gui::drawLine(neoWidth() / 2 + 10, neoHeight() / 2, neoWidth() / 2 + 4, neoHeight() / 2, 2, 0xFFFFFFE1);
