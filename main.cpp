@@ -15,6 +15,7 @@
 
 #include "u_file.h"
 #include "u_misc.h"
+#include "u_pair.h"
 
 // we load assets in a different thread
 enum {
@@ -184,6 +185,17 @@ VAR(float, cl_farp, "far plane", 128.0f, 4096.0f, 2048.0f);
 
 bool gRunning = true;
 bool gPlaying = false;
+
+static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t h) {
+    float ratio = float(iw) / float(ih);
+    size_t ow = w;
+    size_t oh = h;
+    if (w > h)
+        oh = size_t(float(ow) / ratio);
+    else
+        ow = size_t(float(oh) * ratio);
+    return { ow, oh };
+}
 
 int neoMain(frameTimer &timer, int, char **) {
     r::splashScreen gSplash;
@@ -393,8 +405,14 @@ int neoMain(frameTimer &timer, int, char **) {
             gui::drawLine(neoWidth() / 2 + 10, neoHeight() / 2, neoWidth() / 2 + 4, neoHeight() / 2, 2, 0xFFFFFFE1);
             gui::drawLine(neoWidth() / 2 - 10, neoHeight() / 2, neoWidth() / 2 - 4, neoHeight() / 2, 2, 0xFFFFFFE1);
         }
-        if (!gPlaying)
-            gui::drawImage(neoWidth()/2-320, neoHeight()/2+50, 640, 200, "<nocompress>textures/menu_logo");
+        if (!gPlaying) {
+            const size_t w = (neoWidth() - 640) / 2; // Half the width
+            const size_t h = (neoHeight() - 200) / 2; // Half the height
+            const size_t x = neoWidth() / 2 - w / 2; // Center on X
+            const size_t y = neoHeight() / 2 + h / 4; // 1/4th on Y (from the top)
+            auto size = scaleImage(640, 200, w, h); // resize (while preserving aspect ratio)
+            gui::drawImage(x, y, u::get<0>(size), u::get<1>(size), "<nocompress>textures/menu_logo", true);
+        }
 
         menuUpdate();
 

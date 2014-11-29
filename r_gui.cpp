@@ -284,7 +284,8 @@ void gui::render(const rendererPipeline &pipeline) {
                           it.asImage.y,
                           it.asImage.w,
                           it.asImage.h,
-                          it.asImage.path);
+                          it.asImage.path,
+                          it.flags);
                 break;
         }
     }
@@ -544,10 +545,10 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
     m_batches.push_back(b);
 }
 
-void gui::drawImage(float x, float y, float w, float h, const u::string &path) {
+void gui::drawImage(float x, float y, float w, float h, const u::string &path, bool mipmaps) {
     // Deal with loading of textures
     if (m_textures.find(path) == m_textures.end()) {
-        auto tex = u::unique_ptr<texture2D>(new texture2D(false, 0));
+        auto tex = u::unique_ptr<texture2D>(new texture2D(mipmaps, kFilterBilinear));
         if (!tex->load(path) || !tex->upload())
             m_textures[path] = &m_notex;
         else

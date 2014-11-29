@@ -81,7 +81,7 @@ struct queue {
     void addRectangle(int x, int y, int w, int h, int r, uint32_t color);
     void addTriangle(int x, int y, int w, int h, int flags, uint32_t color);
     void addText(int x, int y, int align, const u::string &contents, uint32_t color);
-    void addImage(int x, int y, int w, int h, const u::string &path);
+    void addImage(int x, int y, int w, int h, const u::string &path, bool mipmaps = false);
 private:
     u::stack<command, kCommandQueueSize> m_commands;
 };
@@ -140,7 +140,7 @@ void drawRectangle(int x, int y, int w, int h, uint32_t color);
 void drawRectangle(int x, int y, int w, int h, int r, uint32_t color);
 void drawText(int x, int y, int align, const u::string &contents, uint32_t color);
 void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color);
-void drawImage(int x, int y, int w, int h, const u::string &path);
+void drawImage(int x, int y, int w, int h, const u::string &path, bool mipmaps = false);
 
 const queue &commands();
 

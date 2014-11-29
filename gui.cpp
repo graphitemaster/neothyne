@@ -83,11 +83,11 @@ void queue::addText(int x, int y, int align, const u::string &contents, uint32_t
     cmd.asText.contents = contents;
 }
 
-void queue::addImage(int x, int y, int w, int h, const u::string &path) {
+void queue::addImage(int x, int y, int w, int h, const u::string &path, bool mipmaps) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandImage;
-    cmd.flags = 0;
+    cmd.flags = mipmaps;
     cmd.color = 0;
     cmd.asImage.x = x;
     cmd.asImage.y = y;
@@ -334,10 +334,10 @@ bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value
     B.focusTop = y-header;
     B.focusBottom = y-header+h;
     B.inside = S.inRectangle(x, y, w, h, false);
-    
+
     int totalHeight = int(neoHeight());
     int totalWidth = int(neoWidth());
-    
+
     S.m_insideCurrentScroll = B.inside;
     if (style) {
         if (x == 0 && y == totalHeight-h && w == totalWidth) {
@@ -703,8 +703,8 @@ void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
     Q.addTriangle(x, y, w, h, flags, color);
 }
 
-void drawImage(int x, int y, int w, int h, const u::string &path) {
-    Q.addImage(x, y, w, h, path);
+void drawImage(int x, int y, int w, int h, const u::string &path, bool mipmaps) {
+    Q.addImage(x, y, w, h, path, mipmaps);
 }
 
 const queue &commands() {
