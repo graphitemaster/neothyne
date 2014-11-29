@@ -383,13 +383,16 @@ void areaFinish(int inc, bool autoScroll) {
                 }
             }
             // Background
-            Q.addRectangle(x, y, w, h, float(w)/2-1, RGBA(0, 0, 0, 196));
+            Q.addImage(x, y+h, w, 6, "<nocompress>textures/ui/scrollbar_t");
+            Q.addImage(x, y+6, w, h-6, "<nocompress>textures/ui/scrollbar_m");
+            Q.addImage(x, y, w, 6, "<nocompress>textures/ui/scrollbar_b");
             // Bar
             if (S.isActive(id)) {
-                Q.addRectangle(hx, hy, hw, hh, float(w)/2-1, RGBA(255, 0, 225, 196));
+                // TODO: scrollbar hover knob
             } else {
-                Q.addRectangle(hx, hy, hw, hh, float(w)/2-1,
-                    S.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
+                Q.addImage(hx, hy, hw, hh, "<nocompress>textures/ui/scrollbarknob");
+                //Q.addRectangle(hx, hy, hw, hh, float(w)/2-1,
+                //    S.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
             }
             // Scrolling
             if (B.inside)
@@ -412,8 +415,6 @@ bool button(const u::string &contents, bool enabled) {
     const bool over = enabled && S.inRectangle(x, y, w, h);
     const bool result = S.buttonLogic(id, over);
 
-    /*Q.addRectangle(x, y, w, h, float(kButtonHeight)/2-1,
-        RGBA(128, 128, 128, S.isActive(id) ? 196 : 96));*/
     if (enabled) {
         if (S.isHot(id)) {
             Q.addImage(x, y, 6, kButtonHeight, "<nocompress>textures/ui/button_1l");
@@ -480,7 +481,7 @@ bool check(const u::string &contents, bool checked, bool enabled) {
         if (enabled) {
             Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "<nocompress>textures/ui/check_1");
         } else {
-            // TODO: disabled check box image
+            Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "<nocompress>textures/ui/check_2");
         }
     } else {
         Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "<nocompress>textures/ui/check_0");
