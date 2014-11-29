@@ -393,6 +393,8 @@ int neoMain(frameTimer &timer, int, char **) {
             gui::drawLine(neoWidth() / 2 + 10, neoHeight() / 2, neoWidth() / 2 + 4, neoHeight() / 2, 2, 0xFFFFFFE1);
             gui::drawLine(neoWidth() / 2 - 10, neoHeight() / 2, neoWidth() / 2 - 4, neoHeight() / 2, 2, 0xFFFFFFE1);
         }
+        if (!gPlaying)
+            gui::drawImage(neoWidth()/2-320, neoHeight()/2+50, 640, 200, "<nocompress>textures/menu_logo");
 
         menuUpdate();
 

@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "gui.h"
+#include "engine.h"
 #include "u_misc.h"
 #include "m_const.h"
 
@@ -304,17 +305,17 @@ static state S; // [S]tate
 
 // Constants
 static constexpr int kButtonHeight = 20;
-static constexpr int kSliderHeight = 15;
-static constexpr int kSliderMarkerWidth = 10;
+static constexpr int kSliderHeight = 16;
+static constexpr int kSliderMarkerWidth = 12;
 static constexpr int kCollapseSize = 8;
 static constexpr int kCheckBoxSize = 20;
 static constexpr int kDefaultSpacing = 6;
 static constexpr int kTextHeight = 8;
-static constexpr int kScrollAreaPadding = 6;
+static constexpr int kScrollAreaPadding = 8;
 static constexpr int kIndentationSize = 16;
 static constexpr int kAreaHeader = 28;
 
-bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value, float round) {
+bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value, bool style) {
     A++;
     W.id = 0;
     B.id = (A << 16) | W.id;
@@ -333,10 +334,36 @@ bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value
     B.focusTop = y-header;
     B.focusBottom = y-header+h;
     B.inside = S.inRectangle(x, y, w, h, false);
-
+    
+    int totalHeight = int(neoHeight());
+    int totalWidth = int(neoWidth());
+    
     S.m_insideCurrentScroll = B.inside;
-
-    Q.addRectangle(x, y, w, h, round, RGBA(0, 0, 0, 192));
+    if (style) {
+        if (x == 0 && y == totalHeight-h && w == totalWidth) {
+            Q.addImage(0, y, w, 25, "<nocompress>textures/ui/menu_b");
+            Q.addImage(0, y+25, w, h-25, "<nocompress>textures/ui/menu_c");
+        } else if (x == 0 && y == 0 && w == totalWidth) {
+            Q.addImage(0, h-25, w, 25, "<nocompress>textures/ui/menu_t");
+            Q.addImage(0, 0, w, h-25, "<nocompress>textures/ui/menu_c");
+        } else if (x == 0 && y == 0 && h == totalHeight) {
+            Q.addImage(w-25, 0, 25, h, "<nocompress>textures/ui/menu_l");
+            Q.addImage(0, 0, w-25, h, "<nocompress>textures/ui/menu_c");
+        } else if (x == totalWidth-w && y == 0 && h == totalHeight) {
+            Q.addImage(x, 0, 25, h, "<nocompress>textures/ui/menu_r");
+            Q.addImage(x+25, y, w-25, h, "<nocompress>textures/ui/menu_c");
+        } else {
+            Q.addImage(x, y+h-25, 25, 25, "<nocompress>textures/ui/menu_tl");
+            Q.addImage(x+w-25, y+h-25, 25, 25, "<nocompress>textures/ui/menu_tr");
+            Q.addImage(x, y, 25, 25, "<nocompress>textures/ui/menu_bl");
+            Q.addImage(x+w-25, y, 25, 25, "<nocompress>textures/ui/menu_br");
+            Q.addImage(x+25, y+h-25, w-50, 25, "<nocompress>textures/ui/menu_t");
+            Q.addImage(x+25, y, w-50, 25, "<nocompress>textures/ui/menu_b");
+            Q.addImage(x, y+25, 25, h-50, "<nocompress>textures/ui/menu_l");
+            Q.addImage(x+w-25, y+25, 25, h-50, "<nocompress>textures/ui/menu_r");
+            Q.addImage(x+25, y+25, w-50, h-50, "<nocompress>textures/ui/menu_c");
+        }
+    }
     Q.addText(x+header/2, y+h-header/2-kTextHeight/2, kAlignLeft,
         contents, RGBA(255, 255, 255, 128));
     Q.addScissor(x+kScrollAreaPadding, y+kScrollAreaPadding, w-kScrollAreaPadding*4,
@@ -383,14 +410,18 @@ void areaFinish(int inc, bool autoScroll) {
                 }
             }
             // Background
-            Q.addImage(x, y+h, w, 6, "<nocompress>textures/ui/scrollbar_t");
-            Q.addImage(x, y+6, w, h-6, "<nocompress>textures/ui/scrollbar_m");
-            Q.addImage(x, y, w, 6, "<nocompress>textures/ui/scrollbar_b");
+            Q.addImage(x, y+h-6, w, 6, "<nocompress>textures/ui/scrollbar_vt");
+            Q.addImage(x, y+6, w, h-12, "<nocompress>textures/ui/scrollbar_vm");
+            Q.addImage(x, y, w, 6, "<nocompress>textures/ui/scrollbar_vb");
             // Bar
             if (S.isActive(id)) {
-                // TODO: scrollbar hover knob
+                Q.addImage(hx, hy+hh-6, hw, 6, "<nocompress>textures/ui/scrollbarknob_v1t");
+                Q.addImage(hx, hy+6, hw, hh-12, "<nocompress>textures/ui/scrollbarknob_vm");
+                Q.addImage(hx, hy, hw, 6, "<nocompress>textures/ui/scrollbarknob_v1b");
             } else {
-                Q.addImage(hx, hy, hw, hh, "<nocompress>textures/ui/scrollbarknob");
+                Q.addImage(hx, hy+hh-6, hw, 6, "<nocompress>textures/ui/scrollbarknob_v0t");
+                Q.addImage(hx, hy+6, hw, hh-12, "<nocompress>textures/ui/scrollbarknob_vm");
+                Q.addImage(hx, hy, hw, 6, "<nocompress>textures/ui/scrollbarknob_v0b");
                 //Q.addRectangle(hx, hy, hw, hh, float(w)/2-1,
                 //    S.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
             }
@@ -564,7 +595,9 @@ bool slider(const u::string &contents, T &value, T min, T max, T inc, bool enabl
 
     W.y -= kSliderHeight + kDefaultSpacing;
 
-    Q.addRectangle(x, y, w, h, 4.0f, RGBA(0, 0, 0, 128));
+    Q.addImage(x, y, 6, h, "<nocompress>textures/ui/scrollbar_hl");
+    Q.addImage(x+6, y, w-12, h, "<nocompress>textures/ui/scrollbar_hm");
+    Q.addImage(x+w-6, y, 6, h, "<nocompress>textures/ui/scrollbar_hr");
 
     const int range = w - kSliderMarkerWidth;
     const float u = m::clamp((float(value) - min) / float(max - min), 0.0f, 1.0f);
@@ -590,11 +623,15 @@ bool slider(const u::string &contents, T &value, T min, T max, T inc, bool enabl
     }
 
     if (S.isActive(id)) {
-        Q.addRectangle(float(x+m), y, kSliderMarkerWidth, kSliderHeight, 4.0f,
-            RGBA(255, 255, 255, 255));
+        Q.addImage(float(x+m), y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h1l");
+        if (kSliderMarkerWidth > 12)
+            Q.addImage(float(x+m)+6, y, y+6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
+        Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h1r");
     } else {
-        Q.addRectangle(float(x+m), y, kSliderMarkerWidth, kSliderHeight, 4.0f,
-            S.isHot(id) ? RGBA(255, 0, 225, 128) : RGBA(255, 255, 255, 64));
+        Q.addImage(float(x+m), y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h0l");
+        if (kSliderMarkerWidth > 12)
+            Q.addImage(float(x+m)+6, y, y+6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
+        Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h0r");
     }
 
     const int digits = int(ceilf(log10f(inc)));

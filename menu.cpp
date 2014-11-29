@@ -203,7 +203,7 @@ static void menuConsole() {
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() - h;
 
-    gui::areaBegin("", x, y, w, h, D(scroll), 0.0f);
+    gui::areaBegin("", x, y, w, h, D(scroll), false);
     for (auto &it : gMenuConsole)
         gui::label(it);
     gui::areaFinish(30, true);

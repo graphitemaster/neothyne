@@ -126,7 +126,7 @@ void heading();
 /// Construct a menu of name `contents' at position `x,y' of size `w,h', `value
 /// is a reference to a variable which contains the amount of "scroll" of the
 /// area if the contents exceed the vertical size specified by `h'.
-bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value, float round = 6.0f);
+bool areaBegin(const u::string& contents, int x, int y, int w, int h, int& value, bool style = true);
 /// Called when finished the menu, `inc' is the value of which to increase the
 /// the `value' as previous referenced in the parent `areaBegin' call when
 /// scrolling in the area, while autoScroll will enable automatic scrolling of
