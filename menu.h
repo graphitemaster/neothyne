@@ -19,8 +19,4 @@ extern u::stack<u::string, kMenuConsoleHistorySize> gMenuConsole;
 void menuUpdate();
 void menuReset();
 
-// Register variable with menu
-void menuRegister(const u::string &name, int &ref);
-void menuRegister(const u::string &name, bool &ref);
-
 #endif

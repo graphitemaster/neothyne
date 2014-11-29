@@ -3,16 +3,17 @@
 #include "gui.h"
 #include "c_var.h"
 
+extern bool gPlaying;
+extern bool gRunning;
+
 int gMenuState = kMenuMain | kMenuConsole; // Default state
 
-u::map<u::string, int*> gMenuReferences; // References to external data
 u::stack<u::string, kMenuConsoleHistorySize> gMenuConsole; // The console text buffer
 
 static u::map<u::string, int> gMenuData;
 
 
 #define D(X) gMenuData[u::format("%s_%s", __func__, #X)]
-#define R(X) *gMenuReferences[#X]
 
 #define PP_COUNT(X) (sizeof(X)/sizeof(*X))
 
@@ -39,7 +40,7 @@ static void menuMain() {
     gui::areaBegin("Main", x, y, w, h, D(scroll));
         gui::heading();
         if (gui::button("Play")) {
-            R(playing) = true;
+            gPlaying = true;
             gMenuState &= ~kMenuMain;
             neoRelativeMouse(true);
         }
@@ -52,7 +53,7 @@ static void menuMain() {
             gMenuState &= ~kMenuMain;
         }
         if (gui::button("Exit")) {
-            R(running) = false;
+            gRunning = false;
         }
     gui::areaFinish();
 }
@@ -206,15 +207,6 @@ static void menuConsole() {
     for (auto &it : gMenuConsole)
         gui::label(it);
     gui::areaFinish(30, true);
-}
-
-void menuRegister(const u::string &name, int &ref) {
-    if (gMenuReferences.find(name) == gMenuReferences.end())
-        gMenuReferences[name] = &ref;
-}
-
-void menuRegister(const u::string &name, bool &ref) {
-    menuRegister(name, (int &)ref);
 }
 
 void menuReset() {

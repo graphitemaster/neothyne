@@ -182,6 +182,9 @@ VAR(float, cl_fov, "field of view", 45.0f, 270.0f, 90.0f);
 VAR(float, cl_nearp, "near plane", 0.0f, 10.0f, 1.0f);
 VAR(float, cl_farp, "far plane", 128.0f, 4096.0f, 2048.0f);
 
+bool gRunning = true;
+bool gPlaying = false;
+
 int neoMain(frameTimer &timer, int, char **) {
     r::splashScreen gSplash;
     if (!gSplash.load("textures/logo"))
@@ -224,19 +227,15 @@ int neoMain(frameTimer &timer, int, char **) {
     // Now render the menu
     client gClient;
 
-    bool running = true;
-    bool playing = false;
     bool input = false;
     u::string inputString = "";
 
-    menuRegister("running", running);
-    menuRegister("playing", playing);
     menuReset(); // To initialize
 
     neoSetWindowTitle("Neothyne");
     neoCenterMouse();
     int mouse[4] = {0}; // X, Y, Scroll, Button
-    while (running) {
+    while (gRunning) {
         if (!input)
             gClient.update(loadData.gMap, timer.delta());
 
@@ -244,7 +243,7 @@ int neoMain(frameTimer &timer, int, char **) {
         pipeline.setPosition(gClient.getPosition());
         pipeline.setTime(timer.ticks());
 
-        if (playing) {
+        if (gPlaying) {
             loadData.gWorld.upload(projection);
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
             loadData.gWorld.render(pipeline);
@@ -260,7 +259,7 @@ int neoMain(frameTimer &timer, int, char **) {
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
                 case SDL_QUIT:
-                    running = false;
+                    gRunning = false;
                     break;
                 case SDL_WINDOWEVENT:
                     switch (e.window.event) {
@@ -281,7 +280,7 @@ int neoMain(frameTimer &timer, int, char **) {
                             // should always bring you to main menu, except while
                             // in game and in menu and already at main menu then
                             // ESC should bring you back in game.
-                            if (playing && gMenuState & kMenuMain) {
+                            if (gPlaying && gMenuState & kMenuMain) {
                                 if (gMenuState & kMenuConsole) {
                                     gMenuState = kMenuConsole;
                                 } else {
@@ -294,7 +293,7 @@ int neoMain(frameTimer &timer, int, char **) {
                                     ? kMenuMain | kMenuConsole
                                     : kMenuMain;
                             }
-                            if (playing && !(gMenuState & kMenuMain))
+                            if (gPlaying && !(gMenuState & kMenuMain))
                                 neoRelativeMouse(true);
                             else
                                 neoRelativeMouse(false);
@@ -388,7 +387,7 @@ int neoMain(frameTimer &timer, int, char **) {
 
         // Must come first as we want the menu to go over the cross hair if it's
         // launched after playing
-        if (playing) {
+        if (gPlaying) {
             gui::drawLine(neoWidth() / 2, neoHeight() / 2 - 10, neoWidth() / 2, neoHeight() / 2 - 4, 2, 0xFFFFFFE1);
             gui::drawLine(neoWidth() / 2, neoHeight() / 2 + 4, neoWidth() / 2, neoHeight() / 2 + 10, 2, 0xFFFFFFE1);
             gui::drawLine(neoWidth() / 2 + 10, neoHeight() / 2, neoWidth() / 2 + 4, neoHeight() / 2, 2, 0xFFFFFFE1);
