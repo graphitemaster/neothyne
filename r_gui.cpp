@@ -506,7 +506,7 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
                 continue;
             auto &b = m_glyphs[it - 32];
             const int round = int(floorf(position + b.xoff) + 0.5f);
-            length = round + b.x1 - b.x0 + 0.5f;
+            length = round + b.x1 - b.x0;
             position += b.xadvance;
         }
         return length;

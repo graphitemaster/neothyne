@@ -59,7 +59,7 @@ static void menuMain() {
 }
 
 static void menuOptions() {
-    const size_t w = neoWidth() / 4;
+    const size_t w = neoWidth() / 3;
     const size_t h = neoHeight() / 2;
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() / 2 - h / 2;

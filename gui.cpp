@@ -326,7 +326,7 @@ bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value
     W.w = w - kScrollAreaPadding*4;
 
     B.top = y-header+h;
-    B.bottom = y+kScrollAreaPadding;
+    B.bottom = y+kScrollAreaPadding/2;
     B.right = x+w-kScrollAreaPadding*3;
     B.value = &value;
     B.areaTop = W.y;
@@ -631,16 +631,16 @@ void dedent() {
 }
 
 void separator() {
-    W.y -= kDefaultSpacing*3;
+    W.y -= kDefaultSpacing*2;
 }
 
 void heading() {
     const int x = W.x;
-    const int y = W.y - kDefaultSpacing*2;
+    const int y = W.y - kDefaultSpacing;
     const int w = W.w;
     const int h = 1;
 
-    W.y -= kDefaultSpacing*4;
+    W.y -= kDefaultSpacing*2;
 
     Q.addRectangle(x, y, w, h, RGBA(255, 255, 255, 32));
 }

@@ -397,7 +397,7 @@ int neoMain(frameTimer &timer, int, char **) {
         menuUpdate();
 
         // Render FPS/MSPF
-        gui::drawText(neoWidth() - 10, 10, gui::kAlignRight,
+        gui::drawText(neoWidth(), 10, gui::kAlignRight,
             u::format("%d fps : %.2f mspf\n", timer.fps(), timer.mspf()),
             gui::RGBA(255, 255, 255, 255));
 
