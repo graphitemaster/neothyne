@@ -8,7 +8,6 @@
 #include "engine.h"
 
 #include "r_world.h"
-#include "r_splash.h"
 #include "r_gui.h"
 
 #include "c_var.h"
@@ -16,36 +15,6 @@
 #include "u_file.h"
 #include "u_misc.h"
 #include "u_pair.h"
-
-// we load assets in a different thread
-enum {
-    kLoadInProgress, // loading in progress
-    kLoadFailed,     // loading failed
-    kLoadSucceeded   // loading succeeded
-};
-
-struct loadThreadData {
-    kdMap gMap;
-    r::world gWorld;
-    SDL_atomic_t done;
-};
-
-static bool loadThread(void *threadData) {
-    loadThreadData *data = (loadThreadData*)threadData;
-
-    auto read = u::read(neoGamePath() + "maps/garden.kdgz", "rb");
-    if (read) {
-        if (!data->gMap.load(*read))
-            goto error;
-        if (!data->gWorld.load(data->gMap))
-            goto error;
-        SDL_AtomicSet(&data->done, kLoadSucceeded);
-        return true;
-    }
-error:
-    SDL_AtomicSet(&data->done, kLoadFailed);
-    return false;
-}
 
 template <typename T>
 static inline void memput(unsigned char *&store, const T &data) {
@@ -198,17 +167,13 @@ static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t
 }
 
 int neoMain(frameTimer &timer, int, char **) {
-    r::splashScreen gSplash;
-    if (!gSplash.load("textures/logo"))
-        neoFatal("failed to load splash screen");
-    gSplash.upload();
-
     r::gui gGui;
     if (!gGui.load("fonts/droidsans"))
         neoFatal("failed to load font");
     if (!gGui.upload())
         neoFatal("failed to initialize GUI rendering method\n");
 
+    // Setup rendering pipeline
     r::rendererPipeline pipeline;
     m::perspectiveProjection projection;
     projection.fov = cl_fov;
@@ -220,45 +185,43 @@ int neoMain(frameTimer &timer, int, char **) {
     pipeline.setPerspectiveProjection(projection);
     pipeline.setWorldPosition(m::vec3::origin);
 
-    // create a loader thread
-    loadThreadData loadData;
-    SDL_AtomicSet(&loadData.done, kLoadInProgress);
-    SDL_CreateThread((SDL_ThreadFunction)&loadThread, nullptr, (void*)&loadData);
+    // Setup window and menu
+    menuReset();
+    neoSetWindowTitle("Neothyne");
+    neoCenterMouse();
 
-    // while that thread is running render the loading screen
-    while (SDL_AtomicGet(&loadData.done) == kLoadInProgress) {
-        gl::Clear(GL_COLOR_BUFFER_BIT);
-        pipeline.setTime(timer.ticks() / 500.0f);
-        gSplash.render(pipeline);
-        neoSwap();
+    // Load map and create world
+    kdMap map;
+    r::world world;
+    auto read = u::read(neoGamePath() + "maps/garden.kdgz", "rb");
+    if (read) {
+        if (!map.load(*read))
+            neoFatal("failed to load map");
+        if (!world.load(map))
+            neoFatal("failed to create world");
+    } else {
+        neoFatal("failed to read map");
     }
 
-    if (SDL_AtomicGet(&loadData.done) != kLoadSucceeded)
-        return 1;
-
-    // Now render the menu
+    // Now render
     client gClient;
 
     bool input = false;
     u::string inputString = "";
 
-    menuReset(); // To initialize
-
-    neoSetWindowTitle("Neothyne");
-    neoCenterMouse();
     int mouse[4] = {0}; // X, Y, Scroll, Button
     while (gRunning) {
         if (!input)
-            gClient.update(loadData.gMap, timer.delta());
+            gClient.update(map, timer.delta());
 
         pipeline.setRotation(gClient.getRotation());
         pipeline.setPosition(gClient.getPosition());
         pipeline.setTime(timer.ticks());
 
         if (gPlaying) {
-            loadData.gWorld.upload(projection);
+            world.upload(projection);
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            loadData.gWorld.render(pipeline);
+            world.render(pipeline);
         } else {
             gl::ClearColor(40/255.0f, 30/255.0f, 50/255.0f, 0.1f);
             gl::Clear(GL_COLOR_BUFFER_BIT);

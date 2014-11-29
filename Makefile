@@ -38,7 +38,6 @@ RENDERER_SOURCES = \
 	r_geom.cpp \
 	r_skybox.cpp \
 	r_ssao.cpp \
-	r_splash.cpp \
 	r_texture.cpp \
 	r_world.cpp \
 	r_gui.cpp
