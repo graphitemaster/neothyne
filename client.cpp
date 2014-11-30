@@ -2,9 +2,6 @@
 #include "engine.h"
 #include "c_var.h"
 
-VAR(float, cl_mouse_sens, "mouse sensitivity", 0.01f, 1.0f, 0.1f);
-VAR(int, cl_mouse_invert, "invert mouse", 0, 1, 0);
-
 static constexpr float kClientMaxVelocity = 120.0f;
 static constexpr m::vec3 kClientGravity(0.0f, -98.0f, 0.0f);
 static constexpr float kClientRadius = 5.0f; // client sphere radius (ft / 2pi)
@@ -16,6 +13,12 @@ static constexpr float kClientStopSpeed = 90.0f; // -cm/s
 static constexpr float kClientCrouchHeight = 3.0f; // ft
 static constexpr float kClientCrouchTransitionSpeed = 24.0f; // -m/s
 static constexpr float kClientViewHeight = 6.0f; // ft
+
+VAR(float, cl_mouse_sens, "mouse sensitivity", 0.01f, 1.0f, 0.1f);
+VAR(int, cl_mouse_invert, "invert mouse", 0, 1, 0);
+VAR(int, cl_edit, "edit mode", 0, 0, 1);
+VAR(float, cl_edit_speed, "edit speed", kClientSpeed, kClientSpeed, kClientSpeed * 10.0f);
+
 
 client::client()
     : m_mouseLat(0.0f)
@@ -205,11 +208,11 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
     for (auto &it : commands) {
         switch (it) {
             case kCommandForward:
-                newDirection += direction + up;
+                newDirection += direction + (cl_edit ? m::vec3::origin : up);
                 needSlowDown = false;
                 break;
             case kCommandBackward:
-                newDirection -= direction + up;
+                newDirection -= direction + (cl_edit ? m::vec3::origin : up);
                 needSlowDown = false;
                 break;
             case kCommandLeft:
@@ -231,35 +234,41 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
         }
     }
 
-    if (crouchReleased)
-        m_isCrouching = false;
-
-    float clientSpeed;
-    float crouchTransitionSpeed = kClientCrouchTransitionSpeed * dt;
-    if (m_isCrouching) {
-        clientSpeed = kClientCrouchSpeed;
-        m_viewHeight = m::clamp(m_viewHeight - crouchTransitionSpeed,
-            kClientCrouchHeight, m_viewHeight - crouchTransitionSpeed);
+    if (cl_edit) {
+        if (newDirection.absSquared() > 0.1f)
+            newDirection.setLength(cl_edit_speed);
+        m_velocity = newDirection;
     } else {
-        clientSpeed = kClientSpeed;
-        if (m_viewHeight < kClientViewHeight)
-            m_viewHeight = m::clamp(m_viewHeight + crouchTransitionSpeed,
-                m_viewHeight + crouchTransitionSpeed, kClientViewHeight);
-    }
+        if (crouchReleased)
+            m_isCrouching = false;
 
-    newDirection.y = 0.0f;
-    if (newDirection.absSquared() > 0.1f)
-        newDirection.setLength(clientSpeed);
-    newDirection.y += velocity.y;
-    if (m_isOnGround)
-        newDirection += jump * powf(kClientJumpSpeed, kClientJumpExponent);
-    if (needSlowDown) {
-        m::vec3 slowDown = m_velocity * kClientStopSpeed * ((1.0f - dt) * 0.01f);
-        slowDown.y = 0.0f;
-        newDirection += slowDown;
+        float clientSpeed;
+        float crouchTransitionSpeed = kClientCrouchTransitionSpeed * dt;
+        if (m_isCrouching) {
+            clientSpeed = kClientCrouchSpeed;
+            m_viewHeight = m::clamp(m_viewHeight - crouchTransitionSpeed,
+                kClientCrouchHeight, m_viewHeight - crouchTransitionSpeed);
+        } else {
+            clientSpeed = kClientSpeed;
+            if (m_viewHeight < kClientViewHeight)
+                m_viewHeight = m::clamp(m_viewHeight + crouchTransitionSpeed,
+                    m_viewHeight + crouchTransitionSpeed, kClientViewHeight);
+        }
+
+        newDirection.y = 0;
+        if (newDirection.absSquared() > 0.1f)
+            newDirection.setLength(clientSpeed);
+        newDirection.y += velocity.y;
+        if (m_isOnGround)
+            newDirection += jump * powf(kClientJumpSpeed, kClientJumpExponent);
+        if (needSlowDown) {
+            m::vec3 slowDown = m_velocity * kClientStopSpeed * ((1.0f - dt) * 0.01f);
+            slowDown.y = 0.0f;
+            newDirection += slowDown;
+        }
+        m_lastDirection = direction;
+        m_velocity = newDirection;
     }
-    m_lastDirection = direction;
-    m_velocity = newDirection;
 }
 
 void client::inputMouseMove() {

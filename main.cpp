@@ -283,6 +283,9 @@ int neoMain(frameTimer &timer, int, char **) {
                         case SDLK_F11:
                             gMenuState ^= kMenuConsole;
                             break;
+                        case SDLK_e:
+                            c::varGet<int>("cl_edit").toggle();
+                            break;
                         case SDLK_BACKSPACE:
                             if (input)
                                 inputString.pop_back();
