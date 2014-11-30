@@ -10,7 +10,7 @@ enum varType {
     kVarString
 };
 
-enum varFlags {
+enum {
     kVarPersist = 1 << 0,
     kVarReadOnly = 1 << 1
 };
@@ -55,9 +55,9 @@ struct var {
     typedef T type;
     typedef void (*command)(T&);
 
-    var(varFlags flags, const char *name, const char *desc, const T &min, const T &max);
-    var(varFlags flags, const char *name, const char *desc, const T &min, const T &max, const T &def);
-    var(varFlags flags, const char *name, const char *desc, const T &min, const T &max, const T &def, command cb);
+    var(int flags, const char *name, const char *desc, const T &min, const T &max);
+    var(int flags, const char *name, const char *desc, const T &min, const T &max, const T &def);
+    var(int flags, const char *name, const char *desc, const T &min, const T &max, const T &def, command cb);
 
     operator T&();
     T &get();
@@ -65,7 +65,7 @@ struct var {
     const T max() const;
     varStatus set(const T &value);
     void operator()();
-    varFlags flags() const;
+    int flags() const;
     void toggle();
 
 private:
@@ -74,7 +74,7 @@ private:
     const T m_default;
     T m_current;
     command m_callback;
-    varFlags m_flags;
+    int m_flags;
 };
 
 template <>
@@ -82,26 +82,26 @@ struct var<u::string> {
     typedef u::string type;
     typedef void (*command)(u::string &value);
 
-    var(varFlags flags, const char *name, const char *desc);
-    var(varFlags flags, const char *name, const char *desc, const u::string &def);
-    var(varFlags flags, const char *name, const char *desc, const u::string &def, command cb);
+    var(int flags, const char *name, const char *desc);
+    var(int flags, const char *name, const char *desc, const u::string &def);
+    var(int flags, const char *name, const char *desc, const u::string &def, command cb);
 
     operator u::string&();
     u::string &get();
     varStatus set(const u::string &value);
     void operator()();
-    varFlags flags() const;
+    int flags() const;
 
 private:
     const u::string m_default;
     u::string m_current;
     command m_callback;
-    varFlags m_flags;
+    int m_flags;
 };
 
 /// var<T>
 template <typename T>
-inline var<T>::var(varFlags flags,
+inline var<T>::var(int flags,
                    const char *name,
                    const char *desc,
                    const T &min,
@@ -115,7 +115,7 @@ inline var<T>::var(varFlags flags,
 }
 
 template <typename T>
-inline var<T>::var(varFlags flags,
+inline var<T>::var(int flags,
                    const char *name,
                    const char *desc,
                    const T &min,
@@ -132,7 +132,7 @@ inline var<T>::var(varFlags flags,
 }
 
 template <typename T>
-inline var<T>::var(varFlags flags,
+inline var<T>::var(int flags,
                    const char *name,
                    const char *desc,
                    const T &min,
@@ -188,7 +188,7 @@ inline void var<T>::operator()() {
 }
 
 template <typename T>
-inline varFlags var<T>::flags() const {
+inline int var<T>::flags() const {
     return m_flags;
 }
 
@@ -198,7 +198,7 @@ inline void var<T>::toggle() {
 }
 
 /// var<u::string>
-inline var<u::string>::var(varFlags flags,
+inline var<u::string>::var(int flags,
                            const char *name,
                            const char *desc,
                            const u::string &def)
@@ -210,7 +210,7 @@ inline var<u::string>::var(varFlags flags,
     varDefine(name, desc, this);
 }
 
-inline var<u::string>::var(varFlags flags,
+inline var<u::string>::var(int flags,
                            const char *name,
                            const char *desc)
     : m_callback(nullptr)
@@ -219,7 +219,7 @@ inline var<u::string>::var(varFlags flags,
     varDefine(name, desc, this);
 }
 
-inline var<u::string>::var(varFlags flags,
+inline var<u::string>::var(int flags,
                            const char *name,
                            const char *desc,
                            const u::string &def,
@@ -252,7 +252,7 @@ inline void var<u::string>::operator()() {
         m_callback(m_current);
 }
 
-inline varFlags var<u::string>::flags() const {
+inline int var<u::string>::flags() const {
     return m_flags;
 }
 
@@ -261,6 +261,9 @@ var<T> &varGet(const char *name);
 
 #define VAR(TYPE, NAME, ...) \
     static c::var<TYPE> NAME(c::kVarPersist, #NAME, __VA_ARGS__)
+
+#define NVAR(TYPE, NAME, ...) \
+    static c::var<TYPE> NAME(0, #NAME, __VA_ARGS__);
 
 bool writeConfig();
 bool readConfig();

@@ -16,8 +16,8 @@ static constexpr float kClientViewHeight = 6.0f; // ft
 
 VAR(float, cl_mouse_sens, "mouse sensitivity", 0.01f, 1.0f, 0.1f);
 VAR(int, cl_mouse_invert, "invert mouse", 0, 1, 0);
-VAR(int, cl_edit, "edit mode", 0, 0, 1);
-VAR(float, cl_edit_speed, "edit speed", kClientSpeed, kClientSpeed, kClientSpeed * 10.0f);
+NVAR(int, cl_edit, "edit mode", 0, 1, 0);
+NVAR(float, cl_edit_speed, "edit speed", kClientSpeed, kClientSpeed, kClientSpeed * 10.0f);
 
 
 client::client()
