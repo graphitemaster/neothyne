@@ -229,9 +229,9 @@ static void menuEdit() {
                 gui::dedent();
                 gui::label("Direction");
                 gui::indent();
-                    gui::slider("X", x.get(), x.min(), x.max(), 0.01f);
-                    gui::slider("Y", y.get(), y.min(), y.max(), 0.01f);
-                    gui::slider("Z", z.get(), z.min(), z.max(), 0.01f);
+                    gui::slider("X", x.get(), x.min(), x.max(), 0.001f);
+                    gui::slider("Y", y.get(), y.min(), y.max(), 0.001f);
+                    gui::slider("Z", z.get(), z.min(), z.max(), 0.001f);
                 gui::dedent();
                 // Set the color again
                 color.set((R << 16) | (G << 8) | B);

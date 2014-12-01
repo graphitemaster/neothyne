@@ -167,6 +167,11 @@ static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t
 }
 
 int neoMain(frameTimer &timer, int, char **) {
+    // Clear the screen as soon as possible
+    gl::ClearColor(40/255.0f, 30/255.0f, 50/255.0f, 0.1f);
+    gl::Clear(GL_COLOR_BUFFER_BIT);
+    neoSwap();
+
     r::gui gGui;
     if (!gGui.load("fonts/droidsans"))
         neoFatal("failed to load font");
@@ -378,10 +383,10 @@ int neoMain(frameTimer &timer, int, char **) {
             gui::drawLine(neoWidth() / 2 - 10, neoHeight() / 2, neoWidth() / 2 - 4, neoHeight() / 2, 2, 0xFFFFFFE1);
         }
         if (!gPlaying) {
-            const size_t w = (neoWidth() - 640) / 2; // Half the width
-            const size_t h = (neoHeight() - 200) / 2; // Half the height
+            const size_t w = (neoWidth() / 3); // 1/3rd the screen width
+            const size_t h = (neoHeight() / 3); // 1/3rd the screen height
             const size_t x = neoWidth() / 2 - w / 2; // Center on X
-            const size_t y = neoHeight() / 2 + h / 4; // 1/4th on Y (from the top)
+            const size_t y = neoHeight() - h;
             auto size = scaleImage(640, 200, w, h); // resize (while preserving aspect ratio)
             gui::drawImage(x, y, u::get<0>(size), u::get<1>(size), "<nocompress>textures/menu_logo", true);
         }
