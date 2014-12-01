@@ -197,6 +197,49 @@ static void menuCredits() {
     gui::areaFinish();
 }
 
+static void menuEdit() {
+    // Menu against the right hand side
+    const size_t w = neoWidth() / 4;
+    const size_t h = neoHeight() - 50;
+    const size_t x = neoWidth() - w;
+    const size_t y = neoHeight() - h - 50/2;
+
+    gui::areaBegin("Edit", x, y, w, h, D(scroll));
+        gui::heading();
+        if (gui::collapse("Ambient light", "", D(dlight)))
+            D(dlight) = !D(dlight);
+        if (D(dlight)) {
+            gui::indent();
+                auto &ambient = c::varGet<float>("map_dlight_ambient");
+                auto &diffuse = c::varGet<float>("map_dlight_diffuse");
+                auto &color = c::varGet<int>("map_dlight_color");
+                auto &x = c::varGet<float>("map_dlight_directionx");
+                auto &y = c::varGet<float>("map_dlight_directiony");
+                auto &z = c::varGet<float>("map_dlight_directionz");
+                int R = (color.get() >> 16) & 0xFF;
+                int G = (color.get() >> 8) & 0xFF;
+                int B = color.get() & 0xFF;
+                gui::slider("Ambient", ambient.get(), ambient.min(), ambient.max(), 0.01f);
+                gui::slider("Diffuse", diffuse.get(), diffuse.min(), diffuse.max(), 0.01f);
+                gui::label("Color");
+                gui::indent();
+                    gui::slider("Red", R, 0, 0xFF, 1);
+                    gui::slider("Green", G, 0, 0xFF, 1);
+                    gui::slider("Blue", B, 0, 0xFF, 1);
+                gui::dedent();
+                gui::label("Direction");
+                gui::indent();
+                    gui::slider("X", x.get(), x.min(), x.max(), 0.01f);
+                    gui::slider("Y", y.get(), y.min(), y.max(), 0.01f);
+                    gui::slider("Z", z.get(), z.min(), z.max(), 0.01f);
+                gui::dedent();
+                // Set the color again
+                color.set((R << 16) | (G << 8) | B);
+            gui::dedent();
+        }
+    gui::areaFinish();
+}
+
 static void menuConsole() {
     const size_t w = neoWidth();
     const size_t h = neoHeight() / 5;
@@ -213,6 +256,8 @@ void menuReset() {
     gMenuData["menuCredits_engine"] = true;
     gMenuData["menuCredits_design"] = true;
     gMenuData["menuCredits_special"] = true;
+
+    gMenuData["menuEdit_dlight"] = true;
 }
 
 void menuUpdate() {
@@ -224,4 +269,12 @@ void menuUpdate() {
         menuCredits();
     if (gMenuState & kMenuConsole)
         menuConsole();
+    if (gMenuState & kMenuEdit) {
+        // A little notification to toggle the cursor
+        if (neoRelativeMouse()) {
+            gui::drawText(neoWidth() / 2, neoHeight() - 20, gui::kAlignCenter, "F12 to toggle cursor",
+                gui::RGBA(0, 0, 0, 255));
+        }
+        menuEdit();
+    }
 }

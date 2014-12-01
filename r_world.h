@@ -169,7 +169,7 @@ private:
 };
 
 struct ssaoMethod : method {
-    bool init();
+    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     // Note if you change this you'll need to update the shader since all
     // of the `kKernelSize' iterations are unrolled
@@ -241,14 +241,6 @@ struct world {
     world();
     ~world();
 
-    enum billboardType {
-        kBillboardRail,
-        kBillboardLightning,
-        kBillboardRocket,
-        kBillboardShotgun,
-        kBillboardMax
-    };
-
     bool load(const kdMap &map);
     bool upload(const m::perspectiveProjection &p);
 
@@ -282,6 +274,17 @@ private:
     quad m_quad;
     sphere m_sphere;
     u::vector<billboard> m_billboards;
+    u::vector<model> m_models; // All models
+
+    struct mapModel {
+        model *mesh;
+        m::vec3 scale;
+        m::vec3 rotate;
+        m::vec3 origin;
+    };
+
+    u::vector<mapModel> m_mapModels;
+    size_t m_weapon;
 
     // The world itself
     u::vector<uint32_t> m_indices;
@@ -300,7 +303,6 @@ private:
 
     m::mat4 m_identity;
     m::frustum m_frustum;
-    u::vector<model> m_models;
 
     bool m_uploaded;
 };

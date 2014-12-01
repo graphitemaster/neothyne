@@ -145,6 +145,10 @@ void neoRelativeMouse(bool state) {
     SDL_SetRelativeMouseMode(state ? SDL_TRUE : SDL_FALSE);
 }
 
+bool neoRelativeMouse() {
+    return SDL_GetRelativeMouseMode() == SDL_TRUE;
+}
+
 void neoCenterMouse() {
     SDL_WarpMouseInWindow(gScreen, gScreenWidth / 2, gScreenHeight / 2);
 }

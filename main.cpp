@@ -260,7 +260,6 @@ int neoMain(frameTimer &timer, int, char **) {
                                     gMenuState = kMenuConsole;
                                 } else {
                                     gMenuState &= ~kMenuMain;
-                                    //neoRelativeMouse(true);
                                 }
                             } else {
                                 // If the console is opened leave it open
@@ -283,8 +282,15 @@ int neoMain(frameTimer &timer, int, char **) {
                         case SDLK_F11:
                             gMenuState ^= kMenuConsole;
                             break;
+                        case SDLK_F12:
+                            neoRelativeMouse(!neoRelativeMouse());
+                            break;
                         case SDLK_e:
-                            c::varGet<int>("cl_edit").toggle();
+                            if (gPlaying) {
+                                c::varGet<int>("cl_edit").toggle();
+                                gMenuState ^= kMenuEdit;
+                                neoRelativeMouse(true); // Stay relative unless F12 is pressed
+                            }
                             break;
                         case SDLK_BACKSPACE:
                             if (input)
@@ -397,7 +403,7 @@ int neoMain(frameTimer &timer, int, char **) {
         }
 
         // Cursor above all else
-        if (gMenuState & ~kMenuConsole)
+        if ((gMenuState & ~kMenuConsole || gMenuState & kMenuEdit) && !neoRelativeMouse())
             gui::drawImage(mouse[0], mouse[1] - (32 - 3), 32, 32, "<nocompress>textures/ui/cursor");
 
         gui::finish();

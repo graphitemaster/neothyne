@@ -228,9 +228,12 @@ void geomMethod::setSpecPower(float power) {
 }
 
 ///! SSAO Method
-bool ssaoMethod::init() {
+bool ssaoMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
+
+    for (auto &it : defines)
+        method::define(it);
 
     if (gl::has(ARB_texture_rectangle))
         method::define("HAS_TEXTURE_RECTANGLE");
@@ -425,63 +428,18 @@ GLuint finalComposite::texture() const {
     return m_texture;
 }
 
+NVAR(float, map_dlight_ambient, "map directional light ambient term", 0.0f, 1.0f, 0.50f);
+NVAR(float, map_dlight_diffuse, "map directional light diffuse term", 0.0f, 1.0f, 0.75f);
+NVAR(int, map_dlight_color, "map directional light color", 0, 0x00FFFFFF, 0x00CCCCCC);
+NVAR(float, map_dlight_directionx, "map directional light direction", -1.0f, 1.0f, 1.0f);
+NVAR(float, map_dlight_directiony, "map directional light direction", -1.0f, 1.0f, 1.0f);
+NVAR(float, map_dlight_directionz, "map directional light direction", -1.0f, 1.0f, 1.0f);
+
 ///! renderer
 world::world()
-    : m_uploaded(false)
+    : m_weapon(0)
+    , m_uploaded(false)
 {
-    m_directionalLight.color = m::vec3(0.8f, 0.8f, 0.8f);
-    m_directionalLight.direction = m::vec3(-1.0f, 1.0f, 0.0f);
-    m_directionalLight.ambient = 0.50f;
-    m_directionalLight.diffuse = 0.75f;
-
-    const m::vec3 places[] = {
-        m::vec3(153.04, 105.02, 197.67),
-        m::vec3(-64.14, 105.02, 328.36),
-        m::vec3(-279.83, 105.02, 204.61),
-        m::vec3(-458.72, 101.02, 189.58),
-        m::vec3(-664.53, 75.02, -1.75),
-        m::vec3(-580.69, 68.02, -184.89),
-        m::vec3(-104.43, 84.02, -292.99),
-        m::vec3(-23.59, 84.02, -292.40),
-        m::vec3(333.00, 101.02, 194.46),
-        m::vec3(167.13, 101.02, 0.32),
-        m::vec3(-63.36, 37.20, 2.30),
-        m::vec3(459.97, 68.02, -181.60),
-        m::vec3(536.75, 75.01, 2.80),
-        m::vec3(-4.61, 117.02, -91.74),
-        m::vec3(-2.33, 117.02, 86.34),
-        m::vec3(-122.92, 117.02, 84.58),
-        m::vec3(-123.44, 117.02, -86.57),
-        m::vec3(-300.24, 101.02, -0.15),
-        m::vec3(-448.34, 101.02, -156.27),
-        m::vec3(-452.94, 101.02, 23.58),
-        m::vec3(-206.59, 101.02, -209.52),
-        m::vec3(62.59, 101.02, -207.53)
-    };
-
-    m_billboards.resize(kBillboardMax);
-
-    pointLight light;
-    light.diffuse = 1.0f;
-    light.ambient = 1.0f;
-    light.radius = 30.0f;
-    for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
-        switch (rand() % 4) {
-            case 0: m_billboards[kBillboardRail].add(places[i]); break;
-            case 1: m_billboards[kBillboardLightning].add(places[i]); break;
-            case 2: m_billboards[kBillboardRocket].add(places[i]); break;
-            case 3: m_billboards[kBillboardShotgun].add(places[i]); break;
-        }
-        light.color = { float(rand()) / float(RAND_MAX),
-                        float(rand()) / float(RAND_MAX),
-                        float(rand()) / float(RAND_MAX) };
-        light.position = places[i];
-        light.position.y -= 10.0f;
-        m_pointLights.push_back(light);
-    }
-
-    light.position = { 0, 110, 0 };
-    m_pointLights.push_back(light);
 }
 
 world::~world() {
@@ -629,30 +587,15 @@ bool world::load(const kdMap &map) {
     if (!m_skybox.load("textures/sky01"))
         return false;
 
-    // Load a model
-    m_models.resize(1);
-    if (!m_models[0].load(m_textures2D, "models/test"))
+    // Weapon models always loaded first
+    m_models.resize(2);
+    if (!m_models[0].load(m_textures2D, "models/lg"))
+        return false;
+    if (!m_models[1].load(m_textures2D, "models/rl"))
         return false;
     // Figure out the model's material's permutation
     geomCalculatePermutation(m_models[0].mat);
-
-    static const struct {
-        const char *name;
-        const char *file;
-        billboardType type;
-    } billboards[] = {
-        { "railgun",         "textures/railgun",   kBillboardRail },
-        { "lightning gun",   "textures/lightgun",  kBillboardLightning },
-        { "rocket launcher", "textures/rocketgun", kBillboardRocket },
-        { "shotgun",         "textures/shotgun",   kBillboardShotgun }
-    };
-
-    for (size_t i = 0; i < sizeof(billboards)/sizeof(*billboards); i++) {
-        auto &billboard = billboards[i];
-        if (m_billboards[billboard.type].load(billboard.file))
-            continue;
-        neoFatal("failed to load billboard for `%s'", billboard.name);
-    }
+    geomCalculatePermutation(m_models[1].mat);
 
     // make rendering batches for triangles which share the same texture
     for (size_t i = 0; i < map.textures.size(); i++) {
@@ -704,6 +647,52 @@ bool world::load(const kdMap &map) {
         geomCalculatePermutation(it.mat);
     }
 
+    // PRIME SOME DEFAULTS
+    const m::vec3 places[] = {
+        m::vec3(153.04, 105.02, 197.67),
+        m::vec3(-64.14, 105.02, 328.36),
+        m::vec3(-279.83, 105.02, 204.61),
+        m::vec3(-458.72, 101.02, 189.58),
+        m::vec3(-664.53, 75.02, -1.75),
+        m::vec3(-580.69, 68.02, -184.89),
+        m::vec3(-104.43, 84.02, -292.99),
+        m::vec3(-23.59, 84.02, -292.40),
+        m::vec3(333.00, 101.02, 194.46),
+        m::vec3(167.13, 101.02, 0.32),
+        m::vec3(-63.36, 37.20, 2.30),
+        m::vec3(459.97, 68.02, -181.60),
+        m::vec3(536.75, 75.01, 2.80),
+        m::vec3(-4.61, 117.02, -91.74),
+        m::vec3(-2.33, 117.02, 86.34),
+        m::vec3(-122.92, 117.02, 84.58),
+        m::vec3(-123.44, 117.02, -86.57),
+        m::vec3(-300.24, 101.02, -0.15),
+        m::vec3(-448.34, 101.02, -156.27),
+        m::vec3(-452.94, 101.02, 23.58),
+        m::vec3(-206.59, 101.02, -209.52),
+        m::vec3(62.59, 101.02, -207.53)
+    };
+
+    pointLight light;
+    light.diffuse = 1.0f;
+    light.ambient = 1.0f;
+    light.radius = 30.0f;
+    for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
+        switch (rand() % 2) {
+            case 0: m_mapModels.push_back({&m_models[0], {1,1,1}, {0,0,0}, places[i]}); break;
+            case 1: m_mapModels.push_back({&m_models[1], {1,1,1}, {0,0,0}, places[i]}); break;
+        }
+        light.color = { float(rand()) / float(RAND_MAX),
+                        float(rand()) / float(RAND_MAX),
+                        float(rand()) / float(RAND_MAX) };
+        light.position = places[i];
+        light.position.y -= 10.0f;
+        m_pointLights.push_back(light);
+    }
+
+    light.position = { 0, 110, 0 };
+    m_pointLights.push_back(light);
+
     m_vertices = u::move(map.vertices);
     u::print("[world] => loaded\n");
     return true;
@@ -724,10 +713,9 @@ bool world::upload(const m::perspectiveProjection &project) {
         neoFatal("failed to upload sphere");
 
     // upload the model
-    if (!m_models[0].upload())
-        neoFatal("failed to upload model");
-    else
-        u::print("[model] => loaded %s\n", m_models[0].name());
+    for (auto &it : m_models)
+        if (!it.upload())
+            neoFatal("failed to upload model");
 
     // upload billboards
     for (auto &it : m_billboards) {
@@ -896,14 +884,12 @@ void world::scenePass(const rendererPipeline &pipeline) {
     }
 
     // Render map models
-    for (auto &it : m_models) {
-        // TODO: model properties adjust this
-        p.setWorldPosition({0, 120, 0});
-        p.setScale(it.scale * m::vec3(1.0f, 1.0f, -1.0f));
-        p.setRotate(it.rotate);
-
-        setup(it.mat, p);
-        it.render();
+    for (auto &it : m_mapModels) {
+        p.setWorldPosition(it.origin);
+        p.setScale(it.mesh->scale); // TODO: scale
+        p.setRotate(it.mesh->rotate); // TODO: rotate
+        setup(it.mesh->mat, p);
+        it.mesh->render();
     }
 
     // Only the scene pass needs to write to the depth buffer
@@ -927,7 +913,7 @@ void world::scenePass(const rendererPipeline &pipeline) {
         gl::ActiveTexture(GL_TEXTURE0 + ssaoMethod::kRandom);
         gl::BindTexture(format, m_ssao.texture(ssao::kRandom));
 
-        // do SSAO pass
+        // Do real SSAO pass now
         m_ssaoMethod.enable();
         m_ssaoMethod.setPerspectiveProjection(p.getPerspectiveProjection());
         m_ssaoMethod.setInverse(p.getInverseTransform());
@@ -1062,6 +1048,15 @@ void world::lightPass(const rendererPipeline &pipeline) {
 
     // Directional Lighting
     {
+        const float R = ((map_dlight_color >> 16) & 0xFF) / 255.0f;
+        const float G = ((map_dlight_color >> 8) & 0xFF) / 255.0f;
+        const float B = (map_dlight_color & 0xFF) / 255.0f;
+
+        m_directionalLight.ambient = map_dlight_ambient;
+        m_directionalLight.diffuse = map_dlight_diffuse;
+        m_directionalLight.color = { R, G, B };
+        m_directionalLight.direction = { map_dlight_directionx, map_dlight_directiony, map_dlight_directionz };
+
         auto &method = m_directionalLightMethods[lightCalculatePermutation()];
         method.enable();
         method.setLight(m_directionalLight);

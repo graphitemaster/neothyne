@@ -55,6 +55,7 @@ void neoSwap();
 size_t neoWidth();
 size_t neoHeight();
 void neoRelativeMouse(bool state);
+bool neoRelativeMouse();
 void neoCenterMouse();
 void neoSetWindowTitle(const char *title);
 void neoResize(size_t width, size_t height);

@@ -546,6 +546,8 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
     while (auto line = u::getline(fp)) {
         auto get = *line;
         auto split = u::split(get);
+        if (split.size() < 2)
+            continue;
         auto key = split[0];
         auto value = split[1];
         if (key == "diffuse")
