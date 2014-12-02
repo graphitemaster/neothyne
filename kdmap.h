@@ -30,7 +30,7 @@ struct kdMap {
     u::vector<kdBinEnt>      entities;
     u::vector<kdBinLeaf>     leafs;
 
-    static constexpr float kDistEpsilon = 0.05f; // 5cm epsilon for triangle collisions
+    static constexpr float kDistEpsilon = 0.02f; // 2cm epsilon for triangle collisions
     static constexpr float kMinFraction = 0.005f; // no less than 0.5% movement along a direction vector
     static constexpr size_t kMaxClippingPlanes = 5; // maximum number of clipping planes to test
     static constexpr size_t kMaxBumps = 4; // Maximum collision bump iterations

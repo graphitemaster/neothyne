@@ -92,6 +92,10 @@ struct world : geom {
     bool load(const kdMap &map);
     bool upload(const m::perspectiveProjection &p);
 
+    void addPoint(m::vec3 &thing) {
+        m_mapModels.push_back({&m_models[0], {0,0,0}, {0,0,0}, thing});
+    }
+
     void render(const rendererPipeline &p);
 
 private:

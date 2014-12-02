@@ -349,6 +349,19 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_MOUSEBUTTONDOWN:
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
+                            if (gPlaying) {
+                                kdSphereTrace trace;
+                                trace.radius = 0.01f;
+                                trace.start = gClient.getPosition();
+                                m::vec3 direction;
+                                gClient.getDirection(&direction, nullptr, nullptr);
+                                //direction = -direction;
+                                trace.dir = direction.normalized() * 4098.0f;
+                                map.traceSphere(&trace);
+                                auto where = trace.start + trace.fraction*trace.dir;
+                                world.addPoint(where);
+                                u::print("{%f,%f,%f}\n", where.x, where.y, where.z);
+                            }
                             mouse[3] |= gui::kMouseButtonLeft;
                             break;
                         case SDL_BUTTON_RIGHT:

@@ -1,6 +1,5 @@
 #ifndef CLIENT_HDR
 #define CLIENT_HDR
-
 #include "u_vector.h"
 
 #include "m_vec3.h"

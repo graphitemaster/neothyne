@@ -221,7 +221,7 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
     *fraction = kdTree::kMaxTraceDistance;
 
     // triangle face check
-    float fractional;
+    float fractional = 0.0f;
     const bool notParallel = plane.getIntersection(&fractional, spherePosition, direction);
     if (notParallel && fractional >= 0.0f) {
         // calculate hit point
@@ -296,7 +296,7 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
         const size_t leafIndex = -node - 1;
         const size_t triangleCount = leafs[leafIndex].triangles.size();
 
-        float fraction;
+        float fraction = 0.0f;
         float minFraction = trace->fraction;
         m::plane hitPlane;
         m::vec3 hitNormal;
@@ -311,7 +311,7 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
                 // safely shift along the traced path, keeping the sphere kDistEpsilon
                 // away from the plane along the planes normal.
                 fraction += kDistEpsilon / (hitNormal * trace->dir);
-                if (fraction <= kMinFraction)
+                if (fraction < kMinFraction)
                     fraction = 0.0f; // prevent small noise
                 if (fraction < minFraction) {
                     hitPlane.setupPlane(hitPoint, hitNormal);
@@ -332,7 +332,7 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
     checkPlane.d -= trace->radius;
     start = checkPlane.classify(trace->start, kdTree::kEpsilon);
     end = checkPlane.classify(trace->start + trace->dir, kdTree::kEpsilon);
-    if (start >= m::kPointPlaneOnPlane && end > m::kPointPlaneOnPlane) {
+    if (start > m::kPointPlaneOnPlane && end > m::kPointPlaneOnPlane) {
         traceSphere(trace, nodes[node].children[0]);
         return;
     }
