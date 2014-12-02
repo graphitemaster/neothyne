@@ -11,7 +11,7 @@ which is also named `u`. The following namespaces and file prefixes exist:
 | u_     | u         | utility     |
 | m_     | m         | math        |
 | r_     | r         | renderer    |
-| c_     | c         | console     |
+| c_     | c         | client      |
 
 ## Utility library
 Neothyne doesn't use the C++ standard library, instead it rolls it's own

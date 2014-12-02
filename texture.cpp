@@ -1,14 +1,12 @@
-#define __STDC_LIMIT_MACROS
 #include "engine.h"
 #include "texture.h"
+#include "cvar.h"
 
 #include "u_zlib.h"
 #include "u_file.h"
 #include "u_sha512.h"
 #include "u_algorithm.h"
 #include "u_misc.h"
-
-#include "c_var.h"
 
 #include "m_const.h"
 

@@ -1,12 +1,11 @@
+#include "engine.h"
+#include "cvar.h"
+
 #include "r_texture.h"
 
 #include "u_file.h"
 #include "u_algorithm.h"
 #include "u_misc.h"
-
-#include "c_var.h"
-
-#include "engine.h"
 
 VAR(int, r_texcomp, "texture compression", 0, 1, 1);
 VAR(int, r_texcompcache, "cache compressed textures", 0, 1, 1);

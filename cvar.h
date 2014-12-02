@@ -1,8 +1,6 @@
-#ifndef C_VAR_HDR
-#define C_VAR_HDR
+#ifndef CVAR_HDR
+#define CVAR_HDR
 #include "u_string.h"
-
-namespace c {
 
 enum varType {
     kVarInt,
@@ -260,13 +258,12 @@ template <typename T>
 var<T> &varGet(const char *name);
 
 #define VAR(TYPE, NAME, ...) \
-    static c::var<TYPE> NAME(c::kVarPersist, #NAME, __VA_ARGS__)
+    static var<TYPE> NAME(kVarPersist, #NAME, __VA_ARGS__)
 
 #define NVAR(TYPE, NAME, ...) \
-    static c::var<TYPE> NAME(0, #NAME, __VA_ARGS__);
+    static var<TYPE> NAME(0, #NAME, __VA_ARGS__);
 
 bool writeConfig();
 bool readConfig();
 
-}
 #endif

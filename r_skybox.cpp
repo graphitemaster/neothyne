@@ -1,4 +1,7 @@
 #include "r_skybox.h"
+#include "r_pipeline.h"
+
+#include "u_string.h"
 
 namespace r {
 ///! method

@@ -1,10 +1,12 @@
+#include "engine.h"
+#include "gui.h"
+
 #include "r_gui.h"
+#include "r_pipeline.h"
 
 #include "u_file.h"
 #include "u_misc.h"
 #include "u_algorithm.h"
-
-#include "engine.h"
 
 namespace r {
 

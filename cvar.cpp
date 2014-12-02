@@ -1,15 +1,7 @@
-#include <stdlib.h>
-
 #include "engine.h"
-
-#include "c_var.h"
+#include "cvar.h"
 
 #include "u_file.h"
-#include "u_vector.h"
-#include "u_misc.h"
-#include "u_string.h"
-
-namespace c {
 
 struct varReference;
 static u::map<u::string, varReference> *vars = nullptr;
@@ -138,6 +130,4 @@ bool readConfig() {
             return false;
     }
     return true;
-}
-
 }

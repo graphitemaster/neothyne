@@ -1,9 +1,11 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "gui.h"
 #include "engine.h"
+#include "gui.h"
+
 #include "u_misc.h"
+
 #include "m_const.h"
 
 namespace gui {

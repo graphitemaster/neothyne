@@ -1,6 +1,7 @@
-#include "client.h"
 #include "engine.h"
-#include "c_var.h"
+#include "client.h"
+#include "kdmap.h"
+#include "cvar.h"
 
 static constexpr float kClientMaxVelocity = 120.0f;
 static constexpr m::vec3 kClientGravity(0.0f, -98.0f, 0.0f);

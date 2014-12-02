@@ -3,11 +3,10 @@
 
 #include "r_model.h"
 
-#include "u_map.h"
+#include "engine.h"
+
 #include "u_misc.h"
 #include "u_file.h"
-
-#include "engine.h"
 
 namespace r {
 

@@ -40,7 +40,15 @@ RENDERER_SOURCES = \
 	r_ssao.cpp \
 	r_texture.cpp \
 	r_world.cpp \
-	r_gui.cpp
+	r_gui.cpp \
+	r_light.cpp
+
+UTIL_SOURCES = \
+	u_new.cpp \
+	u_file.cpp \
+	u_sha512.cpp \
+	u_string.cpp \
+	u_zlib.cpp
 
 ENGINE_SOURCES = \
 	gui.cpp \
@@ -48,12 +56,8 @@ ENGINE_SOURCES = \
 	kdmap.cpp \
 	kdtree.cpp \
 	texture.cpp \
-	c_var.cpp \
-	u_new.cpp \
-	u_file.cpp \
-	u_zlib.cpp \
-	u_sha512.cpp \
-	u_string.cpp \
+	cvar.cpp \
+	$(UTIL_SOURCES) \
 	$(MATH_SOURCES) \
 	$(RENDERER_SOURCES)
 

@@ -1,14 +1,24 @@
 #ifndef R_BILLBOARD_HDR
 #define R_BILLBOARD_HDR
 #include "r_common.h"
-#include "r_pipeline.h"
 #include "r_texture.h"
 #include "r_method.h"
 
 #include "u_vector.h"
-#include "u_string.h"
+
+#include "m_vec3.h"
+
+namespace u {
+    struct string;
+}
+
+namespace m {
+    struct mat4;
+}
 
 namespace r {
+
+struct rendererPipeline;
 
 struct billboardMethod : method {
     bool init();

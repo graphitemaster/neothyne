@@ -3,10 +3,9 @@
 #include <SDL2/SDL_stdinc.h>
 
 #include "engine.h"
+#include "cvar.h"
 
 #include "r_common.h"
-
-#include "c_var.h"
 
 #include "u_file.h"
 #include "u_misc.h"
@@ -364,7 +363,7 @@ extern int neoMain(frameTimer &timer, int argc, char **argv);
 int main(int argc, char **argv) {
     neoVerifyPaths(argc, argv);
 
-    c::readConfig();
+    readConfig();
 
     gScreen = getContext();
 

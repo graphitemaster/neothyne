@@ -1,161 +1,20 @@
+#include "engine.h"
+#include "cvar.h"
+
 #include "r_world.h"
 #include "r_model.h"
+#include "r_pipeline.h"
 
 #include "u_algorithm.h"
 #include "u_memory.h"
 #include "u_misc.h"
 #include "u_file.h"
 
-#include "c_var.h"
-
-#include "engine.h"
-
 VAR(int, r_fxaa, "fast approximate anti-aliasing", 0, 1, 1);
 VAR(int, r_parallax, "parallax mapping", 0, 1, 1);
 VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 
 namespace r {
-///! methods
-
-///! Light Rendering Method
-bool lightMethod::init(const char *vs, const char *fs, const u::vector<const char *> &defines) {
-    if (!method::init())
-        return false;
-
-    if (gl::has(ARB_texture_rectangle))
-        method::define("HAS_TEXTURE_RECTANGLE");
-
-    for (auto &it : defines)
-        method::define(it);
-
-    if (!addShader(GL_VERTEX_SHADER, vs))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, fs))
-        return false;
-    if (!finalize())
-        return false;
-
-    // matrices
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_inverseLocation = getUniformLocation("gInverse");
-
-    // samplers
-    m_colorTextureUnitLocation = getUniformLocation("gColorMap");
-    m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
-    m_occlusionTextureUnitLocation = getUniformLocation("gOcclusionMap");
-    m_depthTextureUnitLocation = getUniformLocation("gDepthMap");
-
-    // specular lighting
-    m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
-
-    // device uniforms
-    m_screenSizeLocation = getUniformLocation("gScreenSize");
-    m_screenFrustumLocation = getUniformLocation("gScreenFrustum");
-
-    return true;
-}
-
-void lightMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat*)wvp.m);
-}
-
-void lightMethod::setInverse(const m::mat4 &inverse) {
-    gl::UniformMatrix4fv(m_inverseLocation, 1, GL_TRUE, (const GLfloat*)inverse.m);
-}
-
-void lightMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorTextureUnitLocation, unit);
-}
-
-void lightMethod::setNormalTextureUnit(int unit) {
-    gl::Uniform1i(m_normalTextureUnitLocation, unit);
-}
-
-void lightMethod::setDepthTextureUnit(int unit) {
-    gl::Uniform1i(m_depthTextureUnitLocation, unit);
-}
-
-void lightMethod::setOcclusionTextureUnit(int unit) {
-    gl::Uniform1i(m_occlusionTextureUnitLocation, unit);
-}
-
-void lightMethod::setEyeWorldPos(const m::vec3 &position) {
-    gl::Uniform3fv(m_eyeWorldPositionLocation, 1, &position.x);
-}
-
-void lightMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
-    gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
-    gl::Uniform2f(m_screenFrustumLocation, project.nearp, project.farp);
-}
-
-///! Directional Light Rendering Method
-bool directionalLightMethod::init(const u::vector<const char *> &defines) {
-    if (!lightMethod::init("shaders/dlight.vs", "shaders/dlight.fs", defines))
-        return false;
-
-    m_directionalLightLocation.color = getUniformLocation("gDirectionalLight.base.color");
-    m_directionalLightLocation.ambient = getUniformLocation("gDirectionalLight.base.ambient");
-    m_directionalLightLocation.diffuse = getUniformLocation("gDirectionalLight.base.diffuse");
-    m_directionalLightLocation.direction = getUniformLocation("gDirectionalLight.direction");
-
-    return true;
-}
-
-void directionalLightMethod::setLight(const directionalLight &light) {
-    m::vec3 direction = light.direction.normalized();
-    gl::Uniform3fv(m_directionalLightLocation.color, 1, &light.color.x);
-    gl::Uniform1f(m_directionalLightLocation.ambient, light.ambient);
-    gl::Uniform3fv(m_directionalLightLocation.direction, 1, &direction.x);
-    gl::Uniform1f(m_directionalLightLocation.diffuse, light.diffuse);
-}
-
-///! Point Light Rendering Method
-bool pointLightMethod::init(const u::vector<const char *> &defines) {
-    if (!lightMethod::init("shaders/plight.vs", "shaders/plight.fs", defines))
-        return false;
-
-    m_pointLightLocation.color = getUniformLocation("gPointLight.base.color");
-    m_pointLightLocation.ambient = getUniformLocation("gPointLight.base.ambient");
-    m_pointLightLocation.diffuse = getUniformLocation("gPointLight.base.diffuse");
-    m_pointLightLocation.position = getUniformLocation("gPointLight.position");
-    m_pointLightLocation.radius = getUniformLocation("gPointLight.radius");
-
-    return true;
-}
-
-void pointLightMethod::setLight(const pointLight &light) {
-    gl::Uniform3fv(m_pointLightLocation.color, 1, &light.color.x);
-    gl::Uniform1f(m_pointLightLocation.ambient, light.ambient);
-    gl::Uniform1f(m_pointLightLocation.diffuse, light.diffuse);
-    gl::Uniform3fv(m_pointLightLocation.position, 1, &light.position.x);
-    gl::Uniform1f(m_pointLightLocation.radius, light.radius);
-}
-
-///! Spot Light Rendering Method
-bool spotLightMethod::init(const u::vector<const char *> &defines) {
-    if (!lightMethod::init("shaders/slight.vs", "shaders/slight.fs", defines))
-        return false;
-
-    m_spotLightLocation.color = getUniformLocation("gSpotLight.base.base.color");
-    m_spotLightLocation.ambient = getUniformLocation("gSpotLight.base.base.ambient");
-    m_spotLightLocation.diffuse = getUniformLocation("gSpotLight.base.base.diffuse");
-    m_spotLightLocation.position = getUniformLocation("gSpotLight.base.position");
-    m_spotLightLocation.radius = getUniformLocation("gSpotLight.base.radius");
-    m_spotLightLocation.direction = getUniformLocation("gSpotLight.direction");
-    m_spotLightLocation.cutOff = getUniformLocation("gSpotLight.cutOfff");
-
-    return true;
-}
-
-void spotLightMethod::setLight(const spotLight &light) {
-    gl::Uniform3fv(m_spotLightLocation.color, 1, &light.color.x);
-    gl::Uniform1f(m_spotLightLocation.ambient, light.ambient);
-    gl::Uniform1f(m_spotLightLocation.diffuse, light.diffuse);
-    gl::Uniform3fv(m_spotLightLocation.position, 1, &light.position.x);
-    gl::Uniform1f(m_spotLightLocation.radius, light.radius);
-    gl::Uniform3fv(m_spotLightLocation.direction, 1, &light.direction.x);
-    gl::Uniform1f(m_spotLightLocation.cutOff, light.cutOff);
-}
 
 ///! Geomety Rendering Method
 bool geomMethod::init(const u::vector<const char *> &defines) {
@@ -225,97 +84,6 @@ void geomMethod::setSpecIntensity(float intensity) {
 
 void geomMethod::setSpecPower(float power) {
     gl::Uniform1f(m_specPowerLocation, power);
-}
-
-///! SSAO Method
-bool ssaoMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init())
-        return false;
-
-    for (auto &it : defines)
-        method::define(it);
-
-    if (gl::has(ARB_texture_rectangle))
-        method::define("HAS_TEXTURE_RECTANGLE");
-
-    method::define("kKernelSize", kKernelSize);
-    method::define("kKernelFactor", sinf(m::kPi / float(kKernelSize)));
-    method::define("kKernelOffset", 1.0f / kKernelSize);
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/ssao.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/ssao.fs"))
-        return false;
-    if (!finalize())
-        return false;
-
-    m_occluderBiasLocation = getUniformLocation("gOccluderBias");
-    m_samplingRadiusLocation = getUniformLocation("gSamplingRadius");
-    m_attenuationLocation = getUniformLocation("gAttenuation");
-    m_inverseLocation = getUniformLocation("gInverse");
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_screenFrustumLocation = getUniformLocation("gScreenFrustum");
-    m_screenSizeLocation = getUniformLocation("gScreenSize");
-    m_normalTextureLocation = getUniformLocation("gNormalMap");
-    m_depthTextureLocation = getUniformLocation("gDepthMap");
-    m_randomTextureLocation = getUniformLocation("gRandomMap");
-
-    for (size_t i = 0; i < kKernelSize; i++)
-        m_kernelLocation[i] = getUniformLocation(u::format("gKernel[%zu]", i));
-
-    // Setup the kernel
-    // Note: This must be changed as well if kKernelSize changes
-    static const float kernel[kKernelSize * 2] = {
-        0.0f, 1.0f,
-        1.0f, 0.0f,
-        0.0f, -1.0f,
-        -1.0f, 0.0f
-    };
-    enable();
-    for (size_t i = 0; i < kKernelSize; i++)
-        gl::Uniform2f(m_kernelLocation[i], kernel[2 * i + 0], kernel[2 * i + 1]);
-
-    return true;
-}
-
-void ssaoMethod::setOccluderBias(float bias) {
-    gl::Uniform1f(m_occluderBiasLocation, bias);
-}
-
-void ssaoMethod::setSamplingRadius(float radius) {
-    gl::Uniform1f(m_samplingRadiusLocation, radius);
-}
-
-void ssaoMethod::setAttenuation(float constant, float linear) {
-    gl::Uniform2f(m_attenuationLocation, constant, linear);
-}
-
-void ssaoMethod::setInverse(const m::mat4 &inverse) {
-    // This is the inverse projection matrix used to reconstruct position from
-    // depth in the SSAO pass
-    gl::UniformMatrix4fv(m_inverseLocation, 1, GL_TRUE, (const GLfloat *)inverse.m);
-}
-
-void ssaoMethod::setWVP(const m::mat4 &wvp) {
-    // Will set an identity matrix as this will be a screen space QUAD
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
-}
-
-void ssaoMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
-    gl::Uniform2f(m_screenFrustumLocation, project.nearp, project.farp);
-    gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
-}
-
-void ssaoMethod::setNormalTextureUnit(int unit) {
-    gl::Uniform1i(m_normalTextureLocation, unit);
-}
-
-void ssaoMethod::setDepthTextureUnit(int unit) {
-    gl::Uniform1i(m_depthTextureLocation, unit);
-}
-
-void ssaoMethod::setRandomTextureUnit(int unit) {
-    gl::Uniform1i(m_randomTextureLocation, unit);
 }
 
 ///! Final Composite Method
@@ -443,9 +211,6 @@ world::world()
 }
 
 world::~world() {
-    gl::DeleteBuffers(2, m_buffers);
-    gl::DeleteVertexArrays(1, &m_vao);
-
     for (auto &it : m_textures2D)
         delete it.second;
 }
@@ -729,12 +494,10 @@ bool world::upload(const m::perspectiveProjection &project) {
         if (!it.mat.upload())
             neoFatal("failed to upload world materials");
 
-    gl::GenVertexArrays(1, &m_vao);
-    gl::BindVertexArray(m_vao);
+    geom::upload();
 
-    gl::GenBuffers(2, m_buffers);
-
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    gl::BindVertexArray(vao);
+    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(kdBinVertex), &m_vertices[0], GL_STATIC_DRAW);
     gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(0));  // vertex
     gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(3));  // normals
@@ -748,7 +511,7 @@ bool world::upload(const m::perspectiveProjection &project) {
     gl::EnableVertexAttribArray(4);
 
     // upload data
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
 
     // final shader permutations
@@ -876,7 +639,7 @@ void world::scenePass(const rendererPipeline &pipeline) {
     };
 
     // Render the map
-    gl::BindVertexArray(m_vao);
+    gl::BindVertexArray(vao);
     for (auto &it : m_textureBatches) {
         setup(it.mat, p);
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,

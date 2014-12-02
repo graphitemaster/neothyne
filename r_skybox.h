@@ -1,14 +1,20 @@
 #ifndef R_SKYBOX_HDR
 #define R_SKYBOX_HDR
-
 #include "r_common.h"
-#include "r_pipeline.h"
 #include "r_texture.h"
 #include "r_method.h"
 
-#include "u_string.h"
+namespace u {
+    struct string;
+}
+
+namespace m {
+    struct mat4;
+}
 
 namespace r {
+
+struct rendererPipeline;
 
 struct skyboxMethod : method {
     bool init();

@@ -1,7 +1,10 @@
 #ifndef R_GBUFFER_HDR
 #define R_GBUFFER_HDR
 #include "r_common.h"
-#include "m_mat4.h"
+
+namespace m {
+    struct perspectiveProjection;
+}
 
 namespace r {
 

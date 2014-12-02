@@ -2,16 +2,17 @@
 #define R_GUI_HDR
 #include "r_method.h"
 #include "r_texture.h"
-#include "r_pipeline.h"
-
-#include "m_mat4.h"
 
 #include "u_map.h"
 #include "u_optional.h"
 
-#include "gui.h"
+namespace m {
+    struct perspectiveProjection;
+}
 
 namespace r {
+
+struct rendererPipeline;
 
 struct guiMethod : method {
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());

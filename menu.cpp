@@ -1,7 +1,7 @@
 #include "engine.h"
 #include "menu.h"
 #include "gui.h"
-#include "c_var.h"
+#include "cvar.h"
 
 extern bool gPlaying;
 extern bool gRunning;
@@ -70,11 +70,11 @@ static void menuOptions() {
             D(video) = !D(video);
         if (D(video)) {
             gui::indent();
-                auto &fullscreen = c::varGet<int>("vid_fullscreen");
+                auto &fullscreen = varGet<int>("vid_fullscreen");
                 if (gui::check("Fullscreen", fullscreen))
                     fullscreen.toggle();
                 gui::label("Vsync");
-                auto &vsync = c::varGet<int>("vid_vsync");
+                auto &vsync = varGet<int>("vid_vsync");
                 if (gui::check("Late swap tearing", vsync.get() == kSyncTear) && vsync.get() != kSyncTear)
                     vsync.set(kSyncTear);
                 if (gui::check("Disabled", vsync.get() == kSyncNone) && vsync.get() != kSyncNone)
@@ -84,8 +84,8 @@ static void menuOptions() {
                 if (gui::check("Guess", vsync.get() == kSyncRefresh) && vsync.get() != kSyncRefresh)
                     vsync.set(kSyncRefresh);
                 gui::label("Resolution");
-                auto &width = c::varGet<int>("vid_width");
-                auto &height = c::varGet<int>("vid_height");
+                auto &width = varGet<int>("vid_width");
+                auto &height = varGet<int>("vid_height");
                 gui::slider("Width", width.get(), width.min(), width.max(), 1);
                 gui::slider("Height", height.get(), height.min(), height.max(), 1);
             gui::dedent();
@@ -94,16 +94,16 @@ static void menuOptions() {
         if (gui::collapse("Graphics", "", D(graphics)))
             D(graphics) = !D(graphics);
         if (D(graphics)) {
-            auto &aniso = c::varGet<int>("r_aniso");
-            auto &trilinear = c::varGet<int>("r_trilinear");
-            auto &bilinear = c::varGet<int>("r_bilinear");
-            auto &mipmaps = c::varGet<int>("r_mipmaps");
-            auto &ssao = c::varGet<int>("r_ssao");
-            auto &fxaa = c::varGet<int>("r_fxaa");
-            auto &parallax = c::varGet<int>("r_parallax");
-            auto &texcomp = c::varGet<int>("r_texcomp");
-            auto &texcompcache = c::varGet<int>("r_texcompcache");
-            auto &texquality = c::varGet<float>("r_texquality");
+            auto &aniso = varGet<int>("r_aniso");
+            auto &trilinear = varGet<int>("r_trilinear");
+            auto &bilinear = varGet<int>("r_bilinear");
+            auto &mipmaps = varGet<int>("r_mipmaps");
+            auto &ssao = varGet<int>("r_ssao");
+            auto &fxaa = varGet<int>("r_fxaa");
+            auto &parallax = varGet<int>("r_parallax");
+            auto &texcomp = varGet<int>("r_texcomp");
+            auto &texcompcache = varGet<int>("r_texcompcache");
+            auto &texquality = varGet<float>("r_texquality");
             gui::indent();
                 if (gui::collapse("Texture filtering", "", D(filtering)))
                     D(filtering) = !D(filtering);
@@ -136,8 +136,8 @@ static void menuOptions() {
             D(input) = !D(input);
         if (D(input)) {
             gui::indent();
-                auto &mouse_sens = c::varGet<float>("cl_mouse_sens");
-                auto &mouse_invert = c::varGet<int>("cl_mouse_invert");
+                auto &mouse_sens = varGet<float>("cl_mouse_sens");
+                auto &mouse_invert = varGet<int>("cl_mouse_invert");
                 gui::label("Mouse");
                 if (gui::check("Invert", mouse_invert.get()))
                     mouse_invert.toggle();
@@ -148,9 +148,9 @@ static void menuOptions() {
             D(game) = !D(game);
         if (D(game)) {
             gui::indent();
-                auto &fov = c::varGet<float>("cl_fov");
-                auto &nearp = c::varGet<float>("cl_nearp");
-                auto &farp = c::varGet<float>("cl_farp");
+                auto &fov = varGet<float>("cl_fov");
+                auto &nearp = varGet<float>("cl_nearp");
+                auto &farp = varGet<float>("cl_farp");
                 gui::label("Distance");
                 gui::indent();
                     gui::slider("Field of view", fov.get(), fov.min(), fov.max(), 0.01f);
@@ -210,12 +210,12 @@ static void menuEdit() {
             D(dlight) = !D(dlight);
         if (D(dlight)) {
             gui::indent();
-                auto &ambient = c::varGet<float>("map_dlight_ambient");
-                auto &diffuse = c::varGet<float>("map_dlight_diffuse");
-                auto &color = c::varGet<int>("map_dlight_color");
-                auto &x = c::varGet<float>("map_dlight_directionx");
-                auto &y = c::varGet<float>("map_dlight_directiony");
-                auto &z = c::varGet<float>("map_dlight_directionz");
+                auto &ambient = varGet<float>("map_dlight_ambient");
+                auto &diffuse = varGet<float>("map_dlight_diffuse");
+                auto &color = varGet<int>("map_dlight_color");
+                auto &x = varGet<float>("map_dlight_directionx");
+                auto &y = varGet<float>("map_dlight_directiony");
+                auto &z = varGet<float>("map_dlight_directionz");
                 int R = (color.get() >> 16) & 0xFF;
                 int G = (color.get() >> 8) & 0xFF;
                 int B = color.get() & 0xFF;

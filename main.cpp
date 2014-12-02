@@ -1,16 +1,16 @@
 #include <time.h>
-#include <SDL2/SDL.h>
 
+#include "engine.h"
+#include "gui.h"
 #include "kdmap.h"
 #include "kdtree.h"
 #include "client.h"
 #include "menu.h"
-#include "engine.h"
+#include "cvar.h"
 
 #include "r_world.h"
+#include "r_pipeline.h"
 #include "r_gui.h"
-
-#include "c_var.h"
 
 #include "u_file.h"
 #include "u_misc.h"
@@ -292,7 +292,7 @@ int neoMain(frameTimer &timer, int, char **) {
                             break;
                         case SDLK_e:
                             if (gPlaying) {
-                                c::varGet<int>("cl_edit").toggle();
+                                varGet<int>("cl_edit").toggle();
                                 gMenuState ^= kMenuEdit;
                                 neoRelativeMouse(true); // Stay relative unless F12 is pressed
                             }
@@ -313,20 +313,20 @@ int neoMain(frameTimer &timer, int, char **) {
                         case SDLK_RETURN:
                             if (input) {
                                 auto split = u::split(inputString);
-                                switch (c::varChange(split[0], split[1], true)) {
-                                    case c::kVarNotFoundError:
+                                switch (varChange(split[0], split[1], true)) {
+                                    case kVarNotFoundError:
                                         u::print("'%s' not found\n", split[0]);
                                         break;
-                                    case c::kVarRangeError:
+                                    case kVarRangeError:
                                         u::print("invalid range '%s' for '%s'\n", split[1], split[0]);
                                         break;
-                                    case c::kVarReadOnlyError:
+                                    case kVarReadOnlyError:
                                         u::print("'%s' is read only\n", split[0]);
                                         break;
-                                    case c::kVarTypeError:
+                                    case kVarTypeError:
                                         u::print("value '%s' wrong type for '%s'\n", split[1], split[0]);
                                         break;
-                                    case c::kVarSuccess:
+                                    case kVarSuccess:
                                         u::print("'%s' changed\n", split[0]);
                                         break;
                                 }
@@ -414,7 +414,7 @@ int neoMain(frameTimer &timer, int, char **) {
         gui::finish();
     }
 
-    c::writeConfig();
+    writeConfig();
 
     SDL_Quit();
     return 0;

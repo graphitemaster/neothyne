@@ -1,4 +1,5 @@
 #include "r_billboard.h"
+#include "r_pipeline.h"
 
 namespace r {
 

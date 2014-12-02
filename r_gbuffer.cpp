@@ -2,6 +2,8 @@
 
 #include "r_gbuffer.h"
 
+#include "m_mat4.h"
+
 namespace r {
 
 gBuffer::gBuffer()
