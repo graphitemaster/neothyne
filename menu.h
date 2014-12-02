@@ -12,6 +12,7 @@ enum {
 };
 
 static constexpr size_t kMenuConsoleHistorySize = 100;
+static constexpr size_t kMenuConsoleShiftSize = 25;
 
 extern int gMenuState;
 extern u::map<u::string, int*> gMenuReferences;

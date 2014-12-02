@@ -651,8 +651,8 @@ void world::scenePass(const rendererPipeline &pipeline) {
     // Render map models
     for (auto &it : m_mapModels) {
         p.setWorldPosition(it.origin);
-        p.setScale(it.mesh->scale); // TODO: scale
-        p.setRotate(it.mesh->rotate); // TODO: rotate
+        p.setScale(it.scale + it.mesh->scale);
+        p.setRotate(it.rotate + it.mesh->rotate);
         setup(it.mesh->mat, p);
         it.mesh->render();
         if (varGet<int>("cl_edit").get()) {

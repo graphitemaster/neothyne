@@ -19,6 +19,7 @@ struct stack {
     void reset();
     size_t size() const;
     bool full() const;
+    void shift(size_t count);
 private:
     T m_data[E];
     size_t m_size;
@@ -89,6 +90,15 @@ inline size_t stack<T, E>::size() const {
 template <typename T, size_t E>
 inline bool stack<T, E>::full() const {
     return m_size >= E;
+}
+
+template <typename T, size_t E>
+inline void stack<T, E>::shift(size_t elements) {
+    if (elements >= m_size || elements == 0)
+        return;
+    for (size_t i = 0; i < elements; i++)
+        m_data[i] = m_data[m_size - elements + i];
+    m_size = elements;
 }
 
 }

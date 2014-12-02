@@ -111,6 +111,8 @@ inline void fprint(FILE *fp, const char *fmt, const Ts&... ts) {
     for (auto &it : u::split(contents, '\n')) {
         if (it.empty())
             continue;
+        if (gMenuConsole.full())
+            gMenuConsole.shift(kMenuConsoleShiftSize);
         gMenuConsole.push_back(it);
     }
 }
