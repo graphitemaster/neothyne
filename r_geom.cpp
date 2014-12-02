@@ -120,4 +120,45 @@ void sphere::render() {
     gl::DrawElements(GL_TRIANGLES, m_indices, GL_UNSIGNED_SHORT, 0);
 }
 
+bool bbox::upload() {
+    geom::upload();
+
+    // 1x1x1 cube (centered on origin)
+    static const float vertices[] = {
+        -0.5f, -0.5f, -0.5f, 1.0f,
+         0.5f, -0.5f, -0.5f, 1.0f,
+         0.5f,  0.5f, -0.5f, 1.0f,
+        -0.5f,  0.5f, -0.5f, 1.0f,
+        -0.5f, -0.5f,  0.5f, 1.0f,
+         0.5f, -0.5f,  0.5f, 1.0f,
+         0.5f,  0.5f,  0.5f, 1.0f,
+        -0.5f,  0.5f,  0.5f, 1.0f
+    };
+
+    static const unsigned char indices[] = {
+        0, 1, 2, 3,
+        4, 5, 6, 7,
+        0, 4, 1, 5, 2, 6, 3, 7
+    };
+
+    gl::BindVertexArray(vao);
+
+    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    gl::VertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
+    gl::EnableVertexAttribArray(0);
+
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    return true;
+}
+
+void bbox::render() {
+    gl::BindVertexArray(vao);
+    gl::DrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_BYTE, 0);
+    gl::DrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_BYTE, (void*)4);
+    gl::DrawElements(GL_LINES, 8, GL_UNSIGNED_BYTE, (void*)8);
+}
+
 }

@@ -171,6 +171,10 @@ struct model : geom {
     m::vec3 scale;
     m::vec3 rotate;
 
+    // Bounding box
+    m::vec3 bbsize;
+    m::vec3 bbcenter;
+
 private:
     friend struct obj;
 

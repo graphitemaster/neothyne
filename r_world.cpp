@@ -476,6 +476,8 @@ bool world::upload(const m::perspectiveProjection &project) {
         neoFatal("failed to upload quad");
     if (!m_sphere.upload())
         neoFatal("failed to upload sphere");
+    if (!m_bbox.upload())
+        neoFatal("failed to upload bbox");
 
     // upload the model
     for (auto &it : m_models)
@@ -653,6 +655,15 @@ void world::scenePass(const rendererPipeline &pipeline) {
         p.setRotate(it.mesh->rotate); // TODO: rotate
         setup(it.mesh->mat, p);
         it.mesh->render();
+        if (varGet<int>("cl_edit").get()) {
+            // Render bounding box of map model (while in edit mode)
+            rendererPipeline bp;
+            bp.setWorldPosition(it.mesh->bbcenter);
+            bp.setScale(it.mesh->bbsize);
+            m_geomMethods[0].enable();
+            m_geomMethods[0].setWVP(p.getWVPTransform() * bp.getWorldTransform());
+            m_bbox.render();
+        }
     }
 
     // Only the scene pass needs to write to the depth buffer

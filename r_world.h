@@ -116,6 +116,7 @@ private:
     skybox m_skybox;
     quad m_quad;
     sphere m_sphere;
+    bbox m_bbox;
     u::vector<billboard> m_billboards;
     u::vector<model> m_models; // All models
 

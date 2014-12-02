@@ -33,6 +33,11 @@ private:
     static constexpr size_t kStacks = 4;
 };
 
+struct bbox : geom {
+    bool upload();
+    void render();
+};
+
 }
 
 #endif

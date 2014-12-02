@@ -677,6 +677,18 @@ bool model::upload() {
         entry.t = 1.0f - coordinates[i].y;
     }
 
+    // Calculate bounding box
+    m::vec3 bbmin = positions[0];
+    m::vec3 bbmax = positions[0];
+    for (auto &it : positions) {
+        for (size_t i = 0; i < 3; i++) {
+            if (it[i] > bbmin[i]) bbmin[i] = it[i];
+            if (it[i] < bbmax[i]) bbmax[i] = it[i];
+        }
+    }
+    bbsize = bbmax - bbmin;
+    bbcenter = (bbmin + bbmax) / 2.0f;
+
     // Copy out of size_t format into GLuint format
     u::vector<GLuint> finalIndices;
     finalIndices.reserve(indices.size());
