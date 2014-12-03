@@ -1,6 +1,7 @@
 #ifndef CVAR_HDR
 #define CVAR_HDR
 #include "u_string.h"
+#include "u_optional.h"
 
 enum varType {
     kVarInt,
@@ -256,6 +257,9 @@ inline int var<u::string>::flags() const {
 
 template <typename T>
 var<T> &varGet(const char *name);
+
+u::optional<u::string> varValue(const u::string &name);
+
 
 #define VAR(TYPE, NAME, ...) \
     static var<TYPE> NAME(kVarPersist, #NAME, __VA_ARGS__)

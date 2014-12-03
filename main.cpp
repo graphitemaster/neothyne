@@ -166,6 +166,38 @@ static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t
     return { ow, oh };
 }
 
+static void changeVariable(const u::string &inputString) {
+    const auto &split = u::split(inputString);
+    const auto &name = split[0];
+    const auto &value = varValue(split[0]);
+
+    if (!value)
+        return u::print("variable '%s' not found\n", name);
+    if (split.size() == 1)
+        return u::print("'%s' is '%s'\n", name, *value);
+
+    const auto &newvalue = split[1];
+    const auto &oldvalue = *value;
+    switch (varChange(name, newvalue, true)) {
+        case kVarNotFoundError:
+            u::print("'%s' not found\n", name);
+            break;
+        case kVarRangeError:
+            u::print("invalid range '%s' for '%s'\n", newvalue, name);
+            break;
+        case kVarReadOnlyError:
+            u::print("'%s' is read only\n", name);
+            break;
+        case kVarTypeError:
+            u::print("newvalue '%s' wrong type for '%s'\n", newvalue, name);
+            break;
+        case kVarSuccess:
+            u::print("'%s' changed from '%s' to '%s'\n", name,
+                oldvalue, newvalue);
+            break;
+    }
+}
+
 int neoMain(frameTimer &timer, int, char **) {
     // Clear the screen as soon as possible
     gl::ClearColor(40/255.0f, 30/255.0f, 50/255.0f, 0.1f);
@@ -289,12 +321,15 @@ int neoMain(frameTimer &timer, int, char **) {
                             break;
                         case SDLK_F12:
                             neoRelativeMouse(!neoRelativeMouse());
+                            if (varGet<int>("cl_edit").get()) {
+                                neoRelativeMouse(true);
+                                gMenuState ^= kMenuEdit;
+                            }
                             break;
                         case SDLK_e:
                             if (gPlaying) {
                                 varGet<int>("cl_edit").toggle();
-                                gMenuState ^= kMenuEdit;
-                                neoRelativeMouse(true); // Stay relative unless F12 is pressed
+                                gMenuState &= ~kMenuEdit;
                             }
                             break;
                         case SDLK_BACKSPACE:
@@ -312,27 +347,11 @@ int neoMain(frameTimer &timer, int, char **) {
                             break;
                         case SDLK_RETURN:
                             if (input) {
-                                auto split = u::split(inputString);
-                                switch (varChange(split[0], split[1], true)) {
-                                    case kVarNotFoundError:
-                                        u::print("'%s' not found\n", split[0]);
-                                        break;
-                                    case kVarRangeError:
-                                        u::print("invalid range '%s' for '%s'\n", split[1], split[0]);
-                                        break;
-                                    case kVarReadOnlyError:
-                                        u::print("'%s' is read only\n", split[0]);
-                                        break;
-                                    case kVarTypeError:
-                                        u::print("value '%s' wrong type for '%s'\n", split[1], split[0]);
-                                        break;
-                                    case kVarSuccess:
-                                        u::print("'%s' changed\n", split[0]);
-                                        break;
-                                }
+                                changeVariable(inputString);
                                 input = false;
                                 inputString.reset();
                             }
+                            break;
                     }
                     neoKeyState(e.key.keysym.sym, true);
                     break;

@@ -48,6 +48,24 @@ var<T> &varGet(const char *name) {
 template var<int> &varGet<int>(const char *name);
 template var<float> &varGet<float>(const char *name);
 
+u::optional<u::string> varValue(const u::string &name) {
+    if (variables().find(name) == variables().end())
+        return u::none;
+
+    auto &ref = variables()[name];
+
+    switch (ref.type) {
+        case kVarFloat:
+            return u::format("%.2f", ((var<float>*)ref.self)->get());
+        case kVarInt:
+            return u::format("%d", ((var<int>*)ref.self)->get());
+        case kVarString:
+            return u::format("%s", ((var<u::string>*)ref.self)->get());
+    }
+
+    return u::none;
+}
+
 template <typename T>
 static inline varStatus varSet(const u::string &name, const T &value, bool callback) {
     if (variables().find(name) == variables().end())

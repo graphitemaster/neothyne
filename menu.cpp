@@ -269,12 +269,6 @@ void menuUpdate() {
         menuCredits();
     if (gMenuState & kMenuConsole)
         menuConsole();
-    if (gMenuState & kMenuEdit) {
-        // A little notification to toggle the cursor
-        if (neoRelativeMouse()) {
-            gui::drawText(neoWidth() / 2, neoHeight() - 20, gui::kAlignCenter, "F12 to toggle cursor",
-                gui::RGBA(0, 0, 0, 255));
-        }
+    if (gMenuState & kMenuEdit)
         menuEdit();
-    }
 }
