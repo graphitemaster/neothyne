@@ -320,16 +320,18 @@ int neoMain(frameTimer &timer, int, char **) {
                             gMenuState ^= kMenuConsole;
                             break;
                         case SDLK_F12:
-                            neoRelativeMouse(!neoRelativeMouse());
-                            if (varGet<int>("cl_edit").get()) {
-                                neoRelativeMouse(true);
+                            // If in edit mode then F12 will toggle the edit menu
+                            if (varGet<int>("cl_edit").get())
                                 gMenuState ^= kMenuEdit;
-                            }
+                            neoRelativeMouse(!(gMenuState & kMenuEdit));
                             break;
                         case SDLK_e:
-                            if (gPlaying) {
+                            if (gPlaying && !input) {
                                 varGet<int>("cl_edit").toggle();
                                 gMenuState &= ~kMenuEdit;
+                                // Need the mouse cursor when working with the editing menu
+                                if (gMenuState & kMenuEdit)
+                                    neoRelativeMouse(false);
                             }
                             break;
                         case SDLK_BACKSPACE:
