@@ -430,6 +430,11 @@ int neoMain(frameTimer &timer, int, char **) {
             u::format("%d fps : %.2f mspf\n", timer.fps(), timer.mspf()),
             gui::RGBA(255, 255, 255, 255));
 
+        if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit)) {
+            gui::drawText(neoWidth() / 2, neoHeight() - 20, gui::kAlignCenter, "F12 to toggle edit menu",
+                gui::RGBA(0, 0, 0, 255));
+        }
+
         if (input) {
             if (inputString[0] == '/')
                 inputString.pop_front();
