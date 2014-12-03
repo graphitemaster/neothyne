@@ -329,9 +329,7 @@ int neoMain(frameTimer &timer, int, char **) {
                             if (gPlaying && !input) {
                                 varGet<int>("cl_edit").toggle();
                                 gMenuState &= ~kMenuEdit;
-                                // Need the mouse cursor when working with the editing menu
-                                if (gMenuState & kMenuEdit)
-                                    neoRelativeMouse(false);
+                                neoRelativeMouse(!(gMenuState & kMenuEdit));
                             }
                             break;
                         case SDLK_BACKSPACE:
