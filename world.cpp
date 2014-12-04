@@ -56,13 +56,21 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
                 position = it.asMapModel.position;
                 radius = 100.0f; // TODO: calculate sphere radius from bounding box
                 break;
+            //case entity::kPointLight:
+            //    position = it.asPointLight.position;
+            //    radius = it.asPointLight.radius;
+            //    break;
+            //case entity::kSpotLight:
+            //    position = it.asSpotLight.position;
+            //    radius = it.asSpotLight.radius;
+            //    break;
         }
 
         // Entity too small or too far away
         if (radius <= 0.0f || (position - q.start).abs() > maxDistance)
             continue;
 
-        float fraction;
+        float fraction = 0.0f;
         if (!m::vec3::raySphereIntersect(q.start, q.direction, position, radius, &fraction))
             continue;
 
@@ -76,7 +84,8 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
         h->position = q.start + min*q.direction;
         h->normal = (h->position - position).normalized();
         h->object = obj;
-        h->fraction = min;
+        h->fraction = m::clamp(min, 0.0f, 1.0f);
+        return true;
     } else {
         h->object = nullptr;
     }

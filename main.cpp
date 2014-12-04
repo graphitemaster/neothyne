@@ -20,7 +20,7 @@ static inline void memput(unsigned char *&store, const T &data) {
   store += sizeof(T);
 }
 
-bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) {
+static bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) {
     struct {
         char bfType[2];
         int32_t bfSize;
@@ -405,7 +405,23 @@ int neoMain(frameTimer &timer, int, char **) {
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
                             if (gPlaying) {
-                                // TODO:
+                                world::trace::hit h;
+                                world::trace::query q;
+                                q.start = gClient.getPosition();
+                                q.radius = 0.01f;
+                                m::vec3 direction;
+                                gClient.getDirection(&direction, nullptr, nullptr);
+                                q.direction = direction.normalized();
+                                gWorld.trace(q, &h, 4096.0f);
+
+                                light.position = h.position;
+                                light.color = { float(rand()) / float(RAND_MAX),
+                                                float(rand()) / float(RAND_MAX),
+                                                float(rand()) / float(RAND_MAX) };
+                                entity e;
+                                e.type = entity::kPointLight;
+                                memcpy(&e.asPointLight, &light, sizeof(pointLight));
+                                gWorld.insert(e);
                             }
                             mouse[3] |= gui::kMouseButtonLeft;
                             break;

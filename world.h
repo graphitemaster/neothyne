@@ -78,6 +78,9 @@ struct entity {
         mapModel asMapModel;
         playerStart asPlayerStart;
     };
+
+private:
+    friend struct world;
     size_t index; // Real index
 };
 
