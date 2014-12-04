@@ -303,6 +303,21 @@ int neoMain(frameTimer &timer, int, char **) {
         pipeline.setPosition(gClient.getPosition());
         pipeline.setTime(timer.ticks());
 
+        // Update dragging/moving entity
+        if (mouse[3] & gui::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit)) {
+            m::vec3 direction;
+            gClient.getDirection(&direction, nullptr, nullptr);
+            direction *= 50.0f; // Keep everything this far away
+            if (gSelected->type == entity::kMapModel) {
+                auto &mapModel = gWorld.getMapModel(gSelected->index);
+                mapModel.position = direction + gClient.getPosition();
+            }
+            if (gSelected->type == entity::kPointLight) {
+                auto &pointLight = gWorld.getPointLight(gSelected->index);
+                pointLight.position = direction + gClient.getPosition();
+            }
+        }
+
         if (gPlaying) {
             gWorld.upload(projection);
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -411,19 +426,6 @@ int neoMain(frameTimer &timer, int, char **) {
                     neoKeyState(e.key.keysym.sym, false, true);
                     break;
                 case SDL_MOUSEMOTION:
-                    if (mouse[3] & gui::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit)) {
-                        m::vec3 direction;
-                        gClient.getDirection(&direction, nullptr, nullptr);
-                        direction *= 50.0f; // Keep everything this far away
-                        if (gSelected->type == entity::kMapModel) {
-                            auto &mapModel = gWorld.getMapModel(gSelected->index);
-                            mapModel.position = direction + gClient.getPosition();
-                        }
-                        if (gSelected->type == entity::kPointLight) {
-                            auto &pointLight = gWorld.getPointLight(gSelected->index);
-                            pointLight.position = direction + gClient.getPosition();
-                        }
-                    }
                     mouse[0] = e.motion.x;
                     mouse[1] = neoHeight() - e.motion.y;
                     break;
