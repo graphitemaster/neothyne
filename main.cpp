@@ -290,6 +290,8 @@ int neoMain(frameTimer &timer, int, char **) {
     bool input = false;
     u::string inputString = "";
 
+    world::descriptor *selected = nullptr;
+
     int mouse[4] = {0}; // X, Y, Scroll, Button
     while (gRunning) {
         if (!input)
@@ -403,6 +405,24 @@ int neoMain(frameTimer &timer, int, char **) {
                     neoKeyState(e.key.keysym.sym, false, true);
                     break;
                 case SDL_MOUSEMOTION:
+                    if (mouse[3] & gui::kMouseButtonLeft && selected) {
+                        // Get new view position
+                        world::trace::hit h;
+                        world::trace::query q;
+                        q.start = gClient.getPosition();
+                        q.radius = 0.01f;
+                        m::vec3 direction;
+                        gClient.getDirection(&direction, nullptr, nullptr);
+                        q.direction = direction.normalized();
+                        if (gWorld.trace(q, &h, 1024.0f, selected)) { // Ignore ourselfs
+                            // Move it
+                            if (selected->type == entity::kMapModel) {
+                                auto &mapModel = gWorld.getMapModel(selected->index);
+                                mapModel.position = h.position;
+                                mapModel.highlight = true;
+                            }
+                        }
+                    }
                     mouse[0] = e.motion.x;
                     mouse[1] = neoHeight() - e.motion.y;
                     break;
@@ -421,21 +441,11 @@ int neoMain(frameTimer &timer, int, char **) {
                                 gClient.getDirection(&direction, nullptr, nullptr);
                                 q.direction = direction.normalized();
                                 if (gWorld.trace(q, &h, 4096.0f) && h.ent) {
-                                    // Hit a mapmodel, highlight it
-                                    if (h.ent->type == entity::kMapModel) {
-                                        auto &m = gWorld.getMapModel(h.ent->index);
-                                        m.highlight = !m.highlight;
-                                    }
+                                    if (selected)
+                                        selected = nullptr;
+                                    else
+                                        selected = h.ent;
                                 }
-
-                                //light.position = h.position;
-                                //light.color = { float(rand()) / float(RAND_MAX),
-                                                //float(rand()) / float(RAND_MAX),
-                                                //float(rand()) / float(RAND_MAX) };
-                                //entity e;
-                                //e.type = entity::kPointLight;
-                                //memcpy(&e.asPointLight, &light, sizeof(pointLight));
-                                //gWorld.insert(e);
                             }
                             mouse[3] |= gui::kMouseButtonLeft;
                             break;
@@ -447,6 +457,8 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_MOUSEBUTTONUP:
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
+                            if (selected && selected->type == entity::kMapModel)
+                                gWorld.getMapModel(selected->index).highlight = false;
                             mouse[3] &= ~gui::kMouseButtonLeft;
                             break;
                         case SDL_BUTTON_RIGHT:

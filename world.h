@@ -98,7 +98,7 @@ struct world {
         };
     };
 
-    bool trace(const trace::query &q, trace::hit *result, float maxDistance);
+    bool trace(const trace::query &q, trace::hit *result, float maxDistance, descriptor *ignore = nullptr);
 
     void insert(const directionalLight &it);
     size_t insert(const spotLight &it);

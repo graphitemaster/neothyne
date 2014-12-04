@@ -61,7 +61,7 @@ void world::render(const r::rendererPipeline &pipeline) {
     m_renderer.render(pipeline, this);
 }
 
-bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxDistance) {
+bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxDistance, descriptor *ignore) {
     float min = kMaxTraceDistance;
     m::vec3 position;
     descriptor *ent = nullptr;
@@ -71,6 +71,9 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
     for (auto &it : m_entities) {
         // Get position and radius of entity
         float radius = 0.0f;
+        if (ignore && (ignore->type == it.type && ignore->index == it.index))
+            continue;
+
         switch (it.type) {
             case entity::kMapModel:
                 position = m_mapModels[it.index]->position;
