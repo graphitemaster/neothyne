@@ -412,24 +412,16 @@ int neoMain(frameTimer &timer, int, char **) {
                     break;
                 case SDL_MOUSEMOTION:
                     if (mouse[3] & gui::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit)) {
-                        // Get new view position
-                        world::trace::hit h;
-                        world::trace::query q;
-                        q.start = gClient.getPosition();
-                        q.radius = 0.01f;
                         m::vec3 direction;
                         gClient.getDirection(&direction, nullptr, nullptr);
-                        q.direction = direction.normalized();
-                        if (gWorld.trace(q, &h, 1024.0f, gSelected)) { // Ignore ourselfs
-                            // Move it
-                            if (gSelected->type == entity::kMapModel) {
-                                auto &mapModel = gWorld.getMapModel(gSelected->index);
-                                mapModel.position = h.position;
-                            }
-                            if (gSelected->type == entity::kPointLight) {
-                                auto &pointLight = gWorld.getPointLight(gSelected->index);
-                                pointLight.position = h.position;
-                            }
+                        direction *= 50.0f; // Keep everything this far away
+                        if (gSelected->type == entity::kMapModel) {
+                            auto &mapModel = gWorld.getMapModel(gSelected->index);
+                            mapModel.position = direction + gClient.getPosition();
+                        }
+                        if (gSelected->type == entity::kPointLight) {
+                            auto &pointLight = gWorld.getPointLight(gSelected->index);
+                            pointLight.position = direction + gClient.getPosition();
                         }
                     }
                     mouse[0] = e.motion.x;
