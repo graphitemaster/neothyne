@@ -215,10 +215,10 @@ int neoMain(frameTimer &timer, int, char **) {
     r::rendererPipeline pipeline;
     m::perspectiveProjection projection;
     projection.fov = cl_fov;
-    projection.width = neoWidth();
-    projection.height = neoHeight();
     projection.nearp = cl_nearp;
     projection.farp = cl_farp;
+    projection.width = neoWidth();
+    projection.height = neoHeight();
 
     pipeline.setPerspectiveProjection(projection);
     pipeline.setWorldPosition(m::vec3::origin);
@@ -298,6 +298,10 @@ int neoMain(frameTimer &timer, int, char **) {
     while (gRunning) {
         if (!input)
             gClient.update(gWorld, timer.delta());
+
+        projection.fov = cl_fov;
+        projection.nearp = cl_nearp;
+        projection.farp = cl_farp;
 
         pipeline.setRotation(gClient.getRotation());
         pipeline.setPosition(gClient.getPosition());
