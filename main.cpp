@@ -457,7 +457,17 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_MOUSEBUTTONDOWN:
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
-                            if (varGet<int>("cl_edit").get()) {
+                            if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit)) {
+                                if (gSelected) {
+                                    // Unhighlight old selection
+                                    if (gSelected->type == entity::kMapModel)
+                                        gWorld.getMapModel(gSelected->index).highlight = false;
+                                    else if (gSelected->type == entity::kPointLight)
+                                        gWorld.getPointLight(gSelected->index).highlight = false;
+                                    else if (gSelected->type == entity::kSpotLight)
+                                        gWorld.getSpotLight(gSelected->index).highlight = false;
+                                    gSelected = nullptr;
+                                }
                                 world::trace::hit h;
                                 world::trace::query q;
                                 q.start = gClient.getPosition();
@@ -473,15 +483,6 @@ int neoMain(frameTimer &timer, int, char **) {
                                         gWorld.getPointLight(gSelected->index).highlight = true;
                                     else if (gSelected->type == entity::kSpotLight)
                                         gWorld.getSpotLight(gSelected->index).highlight = true;
-                                } else if (gSelected) {
-                                    // Unhighlight old selection
-                                    if (gSelected->type == entity::kMapModel)
-                                        gWorld.getMapModel(gSelected->index).highlight = false;
-                                    else if (gSelected->type == entity::kPointLight)
-                                        gWorld.getPointLight(gSelected->index).highlight = false;
-                                    else if (gSelected->type == entity::kSpotLight)
-                                        gWorld.getSpotLight(gSelected->index).highlight = false;
-                                    gSelected = nullptr;
                                 }
                             }
                             mouse[3] |= gui::kMouseButtonLeft;
