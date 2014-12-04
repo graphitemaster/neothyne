@@ -6,6 +6,7 @@ CXXFLAGS = \
 	-ffast-math \
 	-fno-exceptions \
 	-fno-rtti \
+	-I. \
 	-DDEBUG_GL \
 	-O3
 
@@ -18,9 +19,9 @@ ENGINE_LDFLAGS = \
 	`sdl2-config --libs`
 
 GAME_SOURCES = \
-	menu.cpp \
-	client.cpp \
-	main.cpp
+	game/menu.cpp \
+	game/client.cpp \
+	game/main.cpp
 
 MATH_SOURCES = \
 	m_mat4.cpp \
@@ -51,14 +52,14 @@ UTIL_SOURCES = \
 	u_zlib.cpp
 
 ENGINE_SOURCES = \
-	gui.cpp \
 	engine.cpp \
 	kdmap.cpp \
 	kdtree.cpp \
-	texture.cpp \
-	cvar.cpp \
 	world.cpp \
 	mesh.cpp \
+	texture.cpp \
+	cvar.cpp \
+	gui.cpp \
 	$(UTIL_SOURCES) \
 	$(MATH_SOURCES) \
 	$(RENDERER_SOURCES)
@@ -80,8 +81,7 @@ $(GAME_BIN): $(GAME_OBJECTS)
 		rm -f $*.d
 
 clean:
-	rm -f $(GAME_OBJECTS)
+	rm -f $(GAME_OBJECTS) $(GAME_OBJECTS:.o=.P)
 	rm -f $(GAME_BIN)
-	rm -f *.P
 
 -include *.P
