@@ -387,5 +387,8 @@ int main(int argc, char **argv) {
     u::print("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\n",
         vendor, renderer, version, shader);
     u::print("Game: %s\nUser: %s\n", neoGamePath(), neoUserPath());
-    return neoMain(gTimer, argc, argv);
+
+    int status = neoMain(gTimer, argc, argv);
+    SDL_Quit();
+    return status;
 }

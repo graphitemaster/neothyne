@@ -5,45 +5,16 @@
 
 #include "m_vec3.h"
 
+struct directionalLight;
+struct pointLight;
+struct spotLight;
+
 namespace m {
     struct mat4;
     struct perspectiveProjection;
 }
 
 namespace r {
-
-struct baseLight {
-    m::vec3 color;
-    float ambient;
-    union {
-        float diffuse;
-        float intensity;
-    };
-};
-
-// a directional light (local ambiance and diffuse)
-struct directionalLight : baseLight {
-    m::vec3 direction;
-};
-
-// a point light
-struct pointLight : baseLight {
-    pointLight()
-        : radius(0.0f)
-    {
-    }
-    m::vec3 position;
-    float radius;
-};
-
-struct spotLight : pointLight {
-    spotLight()
-        : cutOff(0.0f)
-    {
-    }
-    m::vec3 direction;
-    float cutOff;
-};
 
 struct lightMethod : method {
     bool init(const char *vs, const char *fs, const u::vector<const char *> &defines = u::vector<const char *>());

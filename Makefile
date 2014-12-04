@@ -57,6 +57,7 @@ ENGINE_SOURCES = \
 	kdtree.cpp \
 	texture.cpp \
 	cvar.cpp \
+	world.cpp \
 	$(UTIL_SOURCES) \
 	$(MATH_SOURCES) \
 	$(RENDERER_SOURCES)

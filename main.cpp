@@ -2,13 +2,11 @@
 
 #include "engine.h"
 #include "gui.h"
-#include "kdmap.h"
-#include "kdtree.h"
+#include "world.h"
 #include "client.h"
 #include "menu.h"
 #include "cvar.h"
 
-#include "r_world.h"
 #include "r_pipeline.h"
 #include "r_gui.h"
 
@@ -227,21 +225,59 @@ int neoMain(frameTimer &timer, int, char **) {
     neoSetWindowTitle("Neothyne");
     neoCenterMouse();
 
-    // Load map and create world
-    kdMap map;
-    r::world world;
-    auto read = u::read(neoGamePath() + "maps/garden.kdgz", "rb");
-    if (read) {
-        if (!map.load(*read))
-            neoFatal("failed to load map");
-        if (!world.load(map))
-            neoFatal("failed to create world");
-    } else {
-        neoFatal("failed to read map");
-    }
-
     // Now render
     client gClient;
+    world gWorld;
+
+    // Setup some lights
+    const m::vec3 places[] = {
+        m::vec3(153.04, 105.02, 197.67),
+        m::vec3(-64.14, 105.02, 328.36),
+        m::vec3(-279.83, 105.02, 204.61),
+        m::vec3(-458.72, 101.02, 189.58),
+        m::vec3(-664.53, 75.02, -1.75),
+        m::vec3(-580.69, 68.02, -184.89),
+        m::vec3(-104.43, 84.02, -292.99),
+        m::vec3(-23.59, 84.02, -292.40),
+        m::vec3(333.00, 101.02, 194.46),
+        m::vec3(167.13, 101.02, 0.32),
+        m::vec3(-63.36, 37.20, 2.30),
+        m::vec3(459.97, 68.02, -181.60),
+        m::vec3(536.75, 75.01, 2.80),
+        m::vec3(-4.61, 117.02, -91.74),
+        m::vec3(-2.33, 117.02, 86.34),
+        m::vec3(-122.92, 117.02, 84.58),
+        m::vec3(-123.44, 117.02, -86.57),
+        m::vec3(-300.24, 101.02, -0.15),
+        m::vec3(-448.34, 101.02, -156.27),
+        m::vec3(-452.94, 101.02, 23.58),
+        m::vec3(-206.59, 101.02, -209.52),
+        m::vec3(62.59, 101.02, -207.53)
+    };
+
+    pointLight light;
+    light.diffuse = 1.0f;
+    light.ambient = 1.0f;
+    light.radius = 30.0f;
+    for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
+        light.color = { float(rand()) / float(RAND_MAX),
+                        float(rand()) / float(RAND_MAX),
+                        float(rand()) / float(RAND_MAX) };
+        light.position = places[i];
+        light.position.y -= 10.0f;
+        entity e;
+        e.type = entity::kPointLight;
+        memcpy(&e.asPointLight, &light, sizeof(pointLight));
+        gWorld.insert(e);
+    }
+    light.position = { 0, 110, 0 };
+    entity e;
+    e.type = entity::kPointLight;
+    memcpy(&e.asPointLight, &light, sizeof(pointLight));
+    gWorld.insert(e);
+
+    if (!gWorld.load("garden.kdgz"))
+        neoFatal("failed to load world");
 
     bool input = false;
     u::string inputString = "";
@@ -249,16 +285,16 @@ int neoMain(frameTimer &timer, int, char **) {
     int mouse[4] = {0}; // X, Y, Scroll, Button
     while (gRunning) {
         if (!input)
-            gClient.update(map, timer.delta());
+            gClient.update(gWorld, timer.delta());
 
         pipeline.setRotation(gClient.getRotation());
         pipeline.setPosition(gClient.getPosition());
         pipeline.setTime(timer.ticks());
 
         if (gPlaying) {
-            world.upload(projection);
+            gWorld.upload(projection);
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            world.render(pipeline);
+            gWorld.render(pipeline);
         } else {
             gl::ClearColor(40/255.0f, 30/255.0f, 50/255.0f, 0.1f);
             gl::Clear(GL_COLOR_BUFFER_BIT);
@@ -369,17 +405,7 @@ int neoMain(frameTimer &timer, int, char **) {
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
                             if (gPlaying) {
-                                kdSphereTrace trace;
-                                trace.radius = 0.01f;
-                                trace.start = gClient.getPosition();
-                                m::vec3 direction;
-                                gClient.getDirection(&direction, nullptr, nullptr);
-                                //direction = -direction;
-                                trace.dir = direction.normalized() * 4098.0f;
-                                map.traceSphere(&trace);
-                                auto where = trace.start + trace.fraction*trace.dir;
-                                world.addPoint(where);
-                                u::print("{%f,%f,%f}\n", where.x, where.y, where.z);
+                                // TODO:
                             }
                             mouse[3] |= gui::kMouseButtonLeft;
                             break;
@@ -453,6 +479,5 @@ int neoMain(frameTimer &timer, int, char **) {
 
     writeConfig();
 
-    SDL_Quit();
     return 0;
 }

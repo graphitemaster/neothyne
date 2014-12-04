@@ -1,7 +1,7 @@
 #include "engine.h"
+#include "world.h"
 #include "cvar.h"
 
-#include "r_world.h"
 #include "r_model.h"
 #include "r_pipeline.h"
 
@@ -196,17 +196,9 @@ GLuint finalComposite::texture() const {
     return m_texture;
 }
 
-NVAR(float, map_dlight_ambient, "map directional light ambient term", 0.0f, 1.0f, 0.50f);
-NVAR(float, map_dlight_diffuse, "map directional light diffuse term", 0.0f, 1.0f, 0.75f);
-NVAR(int, map_dlight_color, "map directional light color", 0, 0x00FFFFFF, 0x00CCCCCC);
-NVAR(float, map_dlight_directionx, "map directional light direction", -1.0f, 1.0f, 1.0f);
-NVAR(float, map_dlight_directiony, "map directional light direction", -1.0f, 1.0f, 1.0f);
-NVAR(float, map_dlight_directionz, "map directional light direction", -1.0f, 1.0f, 1.0f);
-
 ///! renderer
 world::world()
-    : m_weapon(0)
-    , m_uploaded(false)
+    : m_uploaded(false)
 {
 }
 
@@ -352,16 +344,6 @@ bool world::load(const kdMap &map) {
     if (!m_skybox.load("textures/sky01"))
         return false;
 
-    // Weapon models always loaded first
-    m_models.resize(2);
-    if (!m_models[0].load(m_textures2D, "models/lg"))
-        return false;
-    if (!m_models[1].load(m_textures2D, "models/rl"))
-        return false;
-    // Figure out the model's material's permutation
-    geomCalculatePermutation(m_models[0].mat);
-    geomCalculatePermutation(m_models[1].mat);
-
     // make rendering batches for triangles which share the same texture
     for (size_t i = 0; i < map.textures.size(); i++) {
         renderTextureBatch batch;
@@ -412,52 +394,6 @@ bool world::load(const kdMap &map) {
         geomCalculatePermutation(it.mat);
     }
 
-    // PRIME SOME DEFAULTS
-    const m::vec3 places[] = {
-        m::vec3(153.04, 105.02, 197.67),
-        m::vec3(-64.14, 105.02, 328.36),
-        m::vec3(-279.83, 105.02, 204.61),
-        m::vec3(-458.72, 101.02, 189.58),
-        m::vec3(-664.53, 75.02, -1.75),
-        m::vec3(-580.69, 68.02, -184.89),
-        m::vec3(-104.43, 84.02, -292.99),
-        m::vec3(-23.59, 84.02, -292.40),
-        m::vec3(333.00, 101.02, 194.46),
-        m::vec3(167.13, 101.02, 0.32),
-        m::vec3(-63.36, 37.20, 2.30),
-        m::vec3(459.97, 68.02, -181.60),
-        m::vec3(536.75, 75.01, 2.80),
-        m::vec3(-4.61, 117.02, -91.74),
-        m::vec3(-2.33, 117.02, 86.34),
-        m::vec3(-122.92, 117.02, 84.58),
-        m::vec3(-123.44, 117.02, -86.57),
-        m::vec3(-300.24, 101.02, -0.15),
-        m::vec3(-448.34, 101.02, -156.27),
-        m::vec3(-452.94, 101.02, 23.58),
-        m::vec3(-206.59, 101.02, -209.52),
-        m::vec3(62.59, 101.02, -207.53)
-    };
-
-    pointLight light;
-    light.diffuse = 1.0f;
-    light.ambient = 1.0f;
-    light.radius = 30.0f;
-    for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
-        switch (rand() % 2) {
-            case 0: m_mapModels.push_back({&m_models[0], {1,1,1}, {0,0,0}, places[i]}); break;
-            case 1: m_mapModels.push_back({&m_models[1], {1,1,1}, {0,0,0}, places[i]}); break;
-        }
-        light.color = { float(rand()) / float(RAND_MAX),
-                        float(rand()) / float(RAND_MAX),
-                        float(rand()) / float(RAND_MAX) };
-        light.position = places[i];
-        light.position.y -= 10.0f;
-        m_pointLights.push_back(light);
-    }
-
-    light.position = { 0, 110, 0 };
-    m_pointLights.push_back(light);
-
     m_vertices = u::move(map.vertices);
     u::print("[world] => loaded\n");
     return true;
@@ -478,18 +414,6 @@ bool world::upload(const m::perspectiveProjection &project) {
         neoFatal("failed to upload sphere");
     if (!m_bbox.upload())
         neoFatal("failed to upload bbox");
-
-    // upload the model
-    for (auto &it : m_models)
-        if (!it.upload())
-            neoFatal("failed to upload model");
-
-    // upload billboards
-    for (auto &it : m_billboards) {
-        if (it.upload())
-            continue;
-        neoFatal("failed to upload billboard");
-    }
 
     // upload materials
     for (auto &it : m_textureBatches)
@@ -599,7 +523,7 @@ bool world::upload(const m::perspectiveProjection &project) {
     return m_uploaded = true;
 }
 
-void world::scenePass(const rendererPipeline &pipeline) {
+void world::geometryPass(const rendererPipeline &pipeline, ::world *map) {
     auto p = pipeline;
 
     // The scene pass will be writing into the gbuffer
@@ -649,17 +573,21 @@ void world::scenePass(const rendererPipeline &pipeline) {
     }
 
     // Render map models
-    for (auto &it : m_mapModels) {
-        p.setWorldPosition(it.origin);
-        p.setScale(it.scale + it.mesh->scale);
-        p.setRotate(it.rotate + it.mesh->rotate);
-        setup(it.mesh->mat, p);
-        it.mesh->render();
+    for (auto &it : map->m_mapModels) {
+        auto &mdl = map->m_models[it.index];
+        p.setWorldPosition(it.position);
+        p.setScale(it.scale + mdl.scale);
+        p.setRotate(it.rotate + mdl.rotate);
+
+        setup(mdl.mat, p);
+
+        mdl.render();
+
         if (varGet<int>("cl_edit").get()) {
             // Render bounding box of map model (while in edit mode)
             rendererPipeline bp;
-            bp.setWorldPosition(it.mesh->bbcenter);
-            bp.setScale(it.mesh->bbsize);
+            bp.setWorldPosition(mdl.bbcenter);
+            bp.setScale(mdl.bbsize);
             m_geomMethods[0].enable();
             m_geomMethods[0].setWVP(p.getWVPTransform() * bp.getWorldTransform());
             m_bbox.render();
@@ -695,7 +623,7 @@ void world::scenePass(const rendererPipeline &pipeline) {
     }
 }
 
-void world::lightPass(const rendererPipeline &pipeline) {
+void world::lightingPass(const rendererPipeline &pipeline, ::world *map) {
     auto p = pipeline;
 
     // Write to the final composite
@@ -741,7 +669,7 @@ void world::lightPass(const rendererPipeline &pipeline) {
         static constexpr float kLightRadiusTweak = 1.11f;
         gl::Enable(GL_DEPTH_TEST);
         gl::DepthMask(GL_FALSE);
-        for (auto &it : m_pointLights) {
+        for (auto &it : map->m_pointLights) {
             float scale = it.radius * kLightRadiusTweak;
 
             // Frustum cull lights
@@ -789,7 +717,7 @@ void world::lightPass(const rendererPipeline &pipeline) {
         static constexpr float kLightRadiusTweak = 1.11f;
         gl::Enable(GL_DEPTH_TEST);
         gl::DepthMask(GL_FALSE);
-        for (auto &it : m_spotLights) {
+        for (auto &it : map->m_spotLights) {
             float scale = it.radius * kLightRadiusTweak;
 
             // Frustum cull lights
@@ -822,18 +750,9 @@ void world::lightPass(const rendererPipeline &pipeline) {
 
     // Directional Lighting
     {
-        const float R = ((map_dlight_color >> 16) & 0xFF) / 255.0f;
-        const float G = ((map_dlight_color >> 8) & 0xFF) / 255.0f;
-        const float B = (map_dlight_color & 0xFF) / 255.0f;
-
-        m_directionalLight.ambient = map_dlight_ambient;
-        m_directionalLight.diffuse = map_dlight_diffuse;
-        m_directionalLight.color = { R, G, B };
-        m_directionalLight.direction = { map_dlight_directionx, map_dlight_directiony, map_dlight_directionz };
-
         auto &method = m_directionalLightMethods[lightCalculatePermutation()];
         method.enable();
-        method.setLight(m_directionalLight);
+        method.setLight(map->m_directionalLight);
         method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
         method.setEyeWorldPos(pipeline.getPosition());
         method.setInverse(p.getInverseTransform());
@@ -841,7 +760,7 @@ void world::lightPass(const rendererPipeline &pipeline) {
     }
 }
 
-void world::otherPass(const rendererPipeline &pipeline) {
+void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
     m_final.bindWriting();
 
     // Forward rendering takes place here, reenable depth testing
@@ -850,17 +769,19 @@ void world::otherPass(const rendererPipeline &pipeline) {
     // Forward render skybox
     m_skybox.render(pipeline);
 
+#if 0
     // World billboards
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    for (auto &it : m_billboards)
+    for (auto &it : map->m_billboards)
         it.render(pipeline);
+#endif
 
     // Don't need depth testing or blending anymore
     gl::Disable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
 }
 
-void world::finalPass(const rendererPipeline &pipeline) {
+void world::compositePass(const rendererPipeline &pipeline) {
     // We're going to be reading from the final composite
     m_final.update(pipeline.getPerspectiveProjection(), m_gBuffer.texture(gBuffer::kDepth));
 
@@ -880,11 +801,11 @@ void world::finalPass(const rendererPipeline &pipeline) {
     m_quad.render();
 }
 
-void world::render(const rendererPipeline &pipeline) {
-    scenePass(pipeline);
-    lightPass(pipeline);
-    otherPass(pipeline);
-    finalPass(pipeline);
+void world::render(const rendererPipeline &pipeline, ::world *map) {
+    geometryPass(pipeline, map);
+    lightingPass(pipeline, map);
+    forwardPass(pipeline, map);
+    compositePass(pipeline);
 }
 
 }

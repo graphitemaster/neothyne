@@ -307,10 +307,12 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
         for (size_t i = 0; i < triangleCount; i++) {
             const size_t triangleIndex = leafs[leafIndex].triangles[i];
             // did we collide against a triangle in this leaf?
-            if (sphereTriangleIntersect(triangleIndex, trace->start, trace->radius, trace->dir, &fraction, &hitNormal, &hitPoint)) {
+            if (sphereTriangleIntersect(triangleIndex, trace->start, trace->radius,
+                    trace->direction, &fraction, &hitNormal, &hitPoint))
+            {
                 // safely shift along the traced path, keeping the sphere kDistEpsilon
                 // away from the plane along the planes normal.
-                fraction += kDistEpsilon / (hitNormal * trace->dir);
+                fraction += kDistEpsilon / (hitNormal * trace->direction);
                 if (fraction < kMinFraction)
                     fraction = 0.0f; // prevent small noise
                 if (fraction < minFraction) {
@@ -331,7 +333,7 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
     m::plane checkPlane = planes[nodes[node].plane];
     checkPlane.d -= trace->radius;
     start = checkPlane.classify(trace->start, kdTree::kEpsilon);
-    end = checkPlane.classify(trace->start + trace->dir, kdTree::kEpsilon);
+    end = checkPlane.classify(trace->start + trace->direction, kdTree::kEpsilon);
     if (start > m::kPointPlaneOnPlane && end > m::kPointPlaneOnPlane) {
         traceSphere(trace, nodes[node].children[0]);
         return;
@@ -340,7 +342,7 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
     // check if everything is behind of the splitting plane
     checkPlane.d = planes[nodes[node].plane].d + trace->radius;
     start = checkPlane.classify(trace->start, kdTree::kEpsilon);
-    end = checkPlane.classify(trace->start + trace->dir, kdTree::kEpsilon);
+    end = checkPlane.classify(trace->start + trace->direction, kdTree::kEpsilon);
     if (start < m::kPointPlaneOnPlane && end < m::kPointPlaneOnPlane) {
         traceSphere(trace, nodes[node].children[1]);
         return;

@@ -167,11 +167,8 @@ struct model : geom {
     // The material for this model (TODO: many materials)
     material mat;
 
-    // TODO: not part of the model but rather a place for the model to be
     m::vec3 scale;
     m::vec3 rotate;
-
-    // Bounding box
     m::vec3 bbsize;
     m::vec3 bbcenter;
 

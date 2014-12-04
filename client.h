@@ -5,7 +5,7 @@
 #include "m_vec3.h"
 #include "m_quat.h"
 
-struct kdMap;
+struct world;
 
 enum clientCommands {
     kCommandForward,
@@ -19,7 +19,7 @@ enum clientCommands {
 struct client {
     client();
 
-    void update(const kdMap &map, float dt);
+    void update(world &map, float dt);
     void getDirection(m::vec3 *direction, m::vec3 *up, m::vec3 *side) const;
     m::vec3 getPosition() const;
     void setRotation(const m::quat &rotation);

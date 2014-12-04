@@ -1,6 +1,7 @@
 #include "engine.h"
 #include "client.h"
 #include "kdmap.h"
+#include "world.h"
 #include "cvar.h"
 
 static constexpr float kClientMaxVelocity = 120.0f;
@@ -37,9 +38,10 @@ enum {
     kCollideGround = 1 << 1
 };
 
-void client::update(const kdMap &map, float dt) {
-    kdSphereTrace trace;
-    trace.radius = kClientRadius;
+void client::update(world &map, float dt) {
+    // Do a trace against the world
+    world::trace::query q;
+    q.radius = kClientRadius;
 
     m::vec3 velocity = m_velocity;
     m::vec3 originalVelocity = m_velocity;
@@ -63,27 +65,27 @@ void client::update(const kdMap &map, float dt) {
             break;
 
         // Begin the movement trace
-        trace.start = pos;
-        trace.dir = timeLeft * velocity;
-        map.traceSphere(&trace);
+        q.start = pos;
+        q.direction = timeLeft * velocity;
 
-        float f = m::clamp(trace.fraction, 0.0f, 1.0f);
+        world::trace::hit h;
+        map.trace(q, &h, 1.0f);
 
         // Moved some distance
-        if (f > 0.0f) {
-            pos += trace.dir * f * kdMap::kFractionScale;
+        if (h.fraction > 0.0f) {
+            pos += q.direction * h.fraction * kdMap::kFractionScale;
             originalVelocity = velocity;
             numPlanes = 0;
         }
 
         // Moved the entire distance
-        if (f == 1.0f)
+        if (h.fraction == 1.0f)
             break;
 
-        timeLeft *= (1.0f - f);
+        timeLeft *= (1.0f - h.fraction);
 
         // We assume a high value in Y to be ground
-        if (trace.plane.n[1] > 0.7f)
+        if (h.normal.y > 0.7f)
             collide |= kCollideGround;
 
         // If we made it this far it also means we're hitting a wall
@@ -98,8 +100,8 @@ void client::update(const kdMap &map, float dt) {
         // away from the plane to deal with non-axial plane sticking
         size_t i;
         for (i = 0; i < numPlanes; i++) {
-            if ((trace.plane.n * planes[i]) > 0.99f)
-                velocity += trace.plane.n;
+            if ((h.normal * planes[i]) > 0.99f)
+                velocity += h.normal;
         }
         // If we didn't make it through the entire plane set, apply the nudged
         // velocity and try again.
@@ -107,7 +109,7 @@ void client::update(const kdMap &map, float dt) {
             continue;
 
         // next clipping plane
-        planes[numPlanes++] = trace.plane.n;
+        planes[numPlanes++] = h.normal;
 
         // Find a plane that it enters
         for (size_t i = 0; i < numPlanes; i++) {

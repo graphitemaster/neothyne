@@ -4,7 +4,7 @@
 
 struct kdSphereTrace {
     m::vec3 start;
-    m::vec3 dir;
+    m::vec3 direction;
     float radius;
     float fraction;
     m::plane plane;

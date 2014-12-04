@@ -1,5 +1,7 @@
 #ifndef R_WORLD_HDR
 #define R_WORLD_HDR
+#include "kdmap.h"
+
 #include "r_ssao.h"
 #include "r_skybox.h"
 #include "r_billboard.h"
@@ -9,7 +11,7 @@
 
 #include "u_map.h"
 
-#include "kdmap.h"
+struct world;
 
 namespace r {
 
@@ -92,17 +94,13 @@ struct world : geom {
     bool load(const kdMap &map);
     bool upload(const m::perspectiveProjection &p);
 
-    void addPoint(m::vec3 &thing) {
-        m_mapModels.push_back({&m_models[0], {0,0,0}, {0,0,0}, thing});
-    }
-
-    void render(const rendererPipeline &p);
+    void render(const rendererPipeline &p, ::world *map);
 
 private:
-    void scenePass(const rendererPipeline &pipeline);
-    void lightPass(const rendererPipeline &pipeline);
-    void finalPass(const rendererPipeline &pipeline);
-    void otherPass(const rendererPipeline &pipeline);
+    void geometryPass(const rendererPipeline &pipeline, ::world *map);
+    void lightingPass(const rendererPipeline &pipeline, ::world *map);
+    void forwardPass(const rendererPipeline &pipeline, ::world *map);
+    void compositePass(const rendererPipeline &pipeline);
 
     // world shading methods and permutations
     u::vector<geomMethod> m_geomMethods;
@@ -117,29 +115,12 @@ private:
     quad m_quad;
     sphere m_sphere;
     bbox m_bbox;
-    u::vector<billboard> m_billboards;
-    u::vector<model> m_models; // All models
-
-    struct mapModel {
-        model *mesh;
-        m::vec3 scale;
-        m::vec3 rotate;
-        m::vec3 origin;
-    };
-
-    u::vector<mapModel> m_mapModels;
-    size_t m_weapon;
 
     // The world itself
     u::vector<uint32_t> m_indices;
     u::vector<kdBinVertex> m_vertices;
     u::vector<renderTextureBatch> m_textureBatches;
     u::map<u::string, texture2D*> m_textures2D;
-
-    // World lights
-    directionalLight m_directionalLight;
-    u::vector<pointLight> m_pointLights;
-    u::vector<spotLight> m_spotLights;
 
     gBuffer m_gBuffer;
     ssao m_ssao;
