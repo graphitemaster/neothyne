@@ -58,6 +58,7 @@ ENGINE_SOURCES = \
 	texture.cpp \
 	cvar.cpp \
 	world.cpp \
+	mesh.cpp \
 	$(UTIL_SOURCES) \
 	$(MATH_SOURCES) \
 	$(RENDERER_SOURCES)

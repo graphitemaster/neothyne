@@ -205,6 +205,8 @@ world::world()
 world::~world() {
     for (auto &it : m_textures2D)
         delete it.second;
+    for (auto &it : m_models)
+        delete it.second;
 }
 
 /// shader permutations
@@ -574,23 +576,35 @@ void world::geometryPass(const rendererPipeline &pipeline, ::world *map) {
 
     // Render map models
     for (auto &it : map->m_mapModels) {
-        auto &mdl = map->m_models[it.index];
-        p.setWorldPosition(it.position);
-        p.setScale(it.scale + mdl.scale);
-        p.setRotate(it.rotate + mdl.rotate);
+        // Load map models on demand
+        if (m_models.find(it.name) == m_models.end()) {
+            u::unique_ptr<model> next(new model);
+            if (!next->load(m_textures2D, it.name))
+                neoFatal("failed to load model '%s'\n", it.name);
+            if (!next->upload())
+                neoFatal("failed to upload model '%s'\n", it.name);
+            m_models[it.name] = next.release();
+        } else {
+            auto &mdl = m_models[it.name];
+            auto &mesh = mdl->getMesh();
 
-        setup(mdl.mat, p);
+            p.setWorldPosition(it.position);
+            p.setScale(it.scale + mdl->scale);
+            p.setRotate(it.rotate + mdl->rotate);
 
-        mdl.render();
+            setup(mdl->mat, p);
 
-        if (varGet<int>("cl_edit").get()) {
-            // Render bounding box of map model (while in edit mode)
-            rendererPipeline bp;
-            bp.setWorldPosition(mdl.bbcenter);
-            bp.setScale(mdl.bbsize);
-            m_geomMethods[0].enable();
-            m_geomMethods[0].setWVP(p.getWVPTransform() * bp.getWorldTransform());
-            m_bbox.render();
+            mdl->render();
+
+            if (varGet<int>("cl_edit").get()) {
+                // Render bounding box
+                rendererPipeline bp;
+                bp.setWorldPosition(mesh.getBBCenter());
+                bp.setScale(mesh.getBBSize());
+                m_geomMethods[0].enable();
+                m_geomMethods[0].setWVP(p.getWVPTransform() * bp.getWorldTransform());
+                m_bbox.render();
+            }
         }
     }
 

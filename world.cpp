@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "engine.h"
 #include "world.h"
 #include "cvar.h"
@@ -145,24 +147,19 @@ size_t world::insert(entity &ent) {
 
 void world::erase(size_t where) {
     auto &it = m_entities[where];
-
-    #define ERASE(WHAT) \
-        (WHAT).erase((WHAT).begin() + it.index, (WHAT).begin() + it.index + 1)
-
     switch (it.type) {
         case entity::kMapModel:
-            ERASE(m_mapModels);
+            m_mapModels.erase(m_mapModels.begin() + it.index);
             break;
         case entity::kPlayerStart:
-            ERASE(m_playerStarts);
+            m_playerStarts.erase(m_playerStarts.begin() + it.index);
             break;
         case entity::kPointLight:
-            ERASE(m_pointLights);
+            m_pointLights.erase(m_pointLights.begin() + it.index);
             break;
         case entity::kSpotLight:
-            ERASE(m_spotLights);
+            m_spotLights.erase(m_spotLights.begin() + it.index);
             break;
     }
-
-    m_entities.erase(m_entities.begin() + where, m_entities.begin() + where + 1);
+    m_entities.erase(m_entities.begin() + where);
 }

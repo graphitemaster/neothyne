@@ -276,12 +276,19 @@ int neoMain(frameTimer &timer, int, char **) {
     memcpy(&e.asPointLight, &light, sizeof(pointLight));
     gWorld.insert(e);
 
+    e.type = entity::kMapModel;
+    e.asMapModel.name = "models/lg";
+    e.asMapModel.position = { 0, 120, 0 };
+    e.asMapModel.rotate = { 90, 90, 90 };
+    gWorld.insert(e);
+
     if (!gWorld.load("garden.kdgz"))
         neoFatal("failed to load world");
 
     bool input = false;
     u::string inputString = "";
 
+    size_t last = 0;
     int mouse[4] = {0}; // X, Y, Scroll, Button
     while (gRunning) {
         if (!input)
@@ -421,7 +428,7 @@ int neoMain(frameTimer &timer, int, char **) {
                                 entity e;
                                 e.type = entity::kPointLight;
                                 memcpy(&e.asPointLight, &light, sizeof(pointLight));
-                                gWorld.insert(e);
+                                last = gWorld.insert(e);
                             }
                             mouse[3] |= gui::kMouseButtonLeft;
                             break;

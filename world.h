@@ -42,17 +42,11 @@ inline spotLight::spotLight()
 
 // a map model
 struct mapModel {
-    mapModel();
     m::vec3 position;
     m::vec3 scale;
     m::vec3 rotate;
-    size_t index; // m_models index
+    u::string name;
 };
-
-inline mapModel::mapModel()
-    : index(0)
-{
-}
 
 // player start
 struct playerStart {
@@ -75,9 +69,9 @@ struct entity {
         directionalLight asDirectionalLight;
         pointLight asPointLight;
         spotLight asSpotLight;
-        mapModel asMapModel;
         playerStart asPlayerStart;
     };
+    mapModel asMapModel;
 
 private:
     friend struct world;
@@ -111,12 +105,10 @@ struct world {
 
     bool trace(const trace::query &q, trace::hit *result, float maxDistance);
 
-    size_t addModel(const u::string &file);
-
     size_t insert(entity &ent); // Insert an entity
     void erase(size_t where); // Erase an entity
 
-private:
+protected:
     friend struct r::world;
 
     static constexpr float kMaxTraceDistance = 99999.9f;
@@ -124,11 +116,10 @@ private:
     // Load from compressed data
     bool load(const u::vector<unsigned char> &data);
 
-    r::world m_renderer; // World renderer
-    u::vector<r::model> m_models; // TODO: free-standing (without renderer)
+private:
+    kdMap m_map; // The map for this world
 
-    kdMap m_map;
-
+    r::world m_renderer;
     u::vector<entity> m_entities; // World entities
 
     // The following are populated via insert/erase

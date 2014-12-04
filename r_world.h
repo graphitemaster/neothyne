@@ -115,6 +115,7 @@ private:
     quad m_quad;
     sphere m_sphere;
     bbox m_bbox;
+    u::map<u::string, model*> m_models;
 
     // The world itself
     u::vector<uint32_t> m_indices;
