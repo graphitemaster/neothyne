@@ -389,8 +389,7 @@ static void menuEdit() {
                 if (gui::item(it)) {
                     mapModel m;
                     m.name = it;
-                    m.position = gClient.getPosition();
-                    m.position.x += 10.0f;
+                    m.position = looking();
                     gWorld.insert(m);
                     D(model) = false;
                 }
