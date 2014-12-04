@@ -819,6 +819,29 @@ void world::lightingPass(const rendererPipeline &pipeline, ::world *map) {
         gl::DepthMask(GL_TRUE);
         gl::DepthFunc(GL_LESS);
         gl::CullFace(GL_BACK);
+
+        if (varGet<int>("cl_edit").get()) {
+            gl::Disable(GL_CULL_FACE);
+            gl::PolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            for (auto &it : map->m_spotLights) {
+                // Render bounding sphere
+                float scale = it->radius * kLightRadiusTweak;
+
+                p.setWorldPosition(it->position);
+                p.setScale({scale, scale, scale});
+
+                m_bboxMethod.enable();
+                if (it->highlight)
+                    m_bboxMethod.setColor({1.0f, 0.0f, 0.0f});
+                else
+                    m_bboxMethod.setColor({0.0f, 0.0f, 1.0f});
+                m_bboxMethod.setWVP(p.getWVPTransform());
+                m_sphere.render();
+            }
+            gl::Enable(GL_CULL_FACE);
+            gl::PolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
+
         gl::Disable(GL_DEPTH_TEST);
     }
 

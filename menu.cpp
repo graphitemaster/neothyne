@@ -38,6 +38,25 @@ static const char *kCreditsSpecialThanks[] = {
     "Forest 'LordHavoc' Hale"
 };
 
+static m::vec3 looking() {
+    world::trace::hit h;
+    world::trace::query q;
+    q.start = gClient.getPosition();
+    q.radius = 0.01f;
+    m::vec3 direction;
+    gClient.getDirection(&direction, nullptr, nullptr);
+    q.direction = direction.normalized();
+    gWorld.trace(q, &h, 1024.0f);
+    return h.position;
+}
+
+static m::vec3 randomColor() {
+    int R = rand() % 0xFF;
+    int G = rand() % 0xFF;
+    int B = rand() % 0xFF;
+    return { R / 255.0f, G / 255.0f, B / 255.0f };
+}
+
 static void menuMain() {
     const size_t w = neoWidth() / 8;
     const size_t h = neoHeight() / 4.5;
@@ -217,7 +236,7 @@ static void menuEdit() {
         if (gSelected) {
             if (gSelected->type == entity::kMapModel) {
                 auto &mm = gWorld.getMapModel(gSelected->index);
-                gui::value("Mapmodel");
+                gui::value("Model");
                 gui::label("Scale");
                 gui::indent();
                     gui::slider("X", mm.scale.x, 0.0f, 10.0f, 0.1f);
@@ -240,7 +259,7 @@ static void menuEdit() {
                 int R = pl.color.x * 255.0f;
                 int G = pl.color.y * 255.0f;
                 int B = pl.color.z * 255.0f;
-                gui::value("Pointlight");
+                gui::value("Point light");
                 gui::label("Color");
                 gui::indent();
                     gui::slider("Red", R, 0, 0xFF, 1);
@@ -255,6 +274,38 @@ static void menuEdit() {
                 gui::separator();
                 gui::slider("Radius", pl.radius, 1.0f, 1024.0f, 1.0f);
                 pl.color = { R / 255.0f, G / 255.0f, B / 255.0f };
+                gui::separator();
+                if (gui::button("Delete")) {
+                    gWorld.erase(gSelected->where);
+                    gSelected = nullptr;
+                }
+            } else if (gSelected->type == entity::kSpotLight) {
+                auto &sl = gWorld.getSpotLight(gSelected->index);
+                int R = sl.color.x * 255.0f;
+                int G = sl.color.y * 255.0f;
+                int B = sl.color.z * 255.0f;
+                gui::value("Spot light");
+                gui::label("Color");
+                gui::indent();
+                    gui::slider("Red", R, 0, 0xFF, 1);
+                    gui::slider("Green", G, 0, 0xFF, 1);
+                    gui::slider("Blue", B, 0, 0xFF, 1);
+                gui::dedent();
+                gui::label("Term");
+                gui::indent();
+                    gui::slider("Ambient", sl.ambient, 0.0f, 1.0f, 0.1f);
+                    gui::slider("Diffuse", sl.diffuse, 0.0f, 1.0f, 0.1f);
+                gui::dedent();
+                gui::label("Direction");
+                gui::indent();
+                    gui::slider("X", sl.direction.x, 0.0f, 360.0f, 1.0f);
+                    gui::slider("Y", sl.direction.y, 0.0f, 360.0f, 1.0f);
+                    gui::slider("Z", sl.direction.z, 0.0f, 360.0f, 1.0f);
+                gui::dedent();
+                gui::separator();
+                gui::slider("Radius", sl.radius, 1.0f, 1024.0f, 1.0f);
+                gui::slider("Cutoff", sl.cutOff, 0.0f, 1024.0f, 1.0f);
+                sl.color = { R / 255.0f, G / 255.0f, B / 255.0f };
                 gui::separator();
                 if (gui::button("Delete")) {
                     gWorld.erase(gSelected->where);
@@ -301,13 +352,20 @@ static void menuEdit() {
                         D(model) = true;
                     else if (gui::item("Point light")) {
                         pointLight pl;
-                        pl.position = gClient.getPosition();
-                        pl.position.x += 10.0f;
+                        pl.position = looking();
+                        pl.ambient = 0.5f;
+                        pl.diffuse = 0.5f;
+                        pl.radius = 30;
+                        pl.color = randomColor();
                         gWorld.insert(pl);
                     } else if (gui::item("Spot light")) {
                         spotLight sl;
-                        sl.position = gClient.getPosition();
-                        sl.position.x += 10.0f;
+                        sl.position = looking();
+                        sl.ambient = 0.5f;
+                        sl.diffuse = 0.5f;
+                        gClient.getDirection(&sl.direction, nullptr, nullptr);
+                        sl.radius = 30;
+                        sl.color = randomColor();
                         gWorld.insert(sl);
                     }
                 gui::dedent();
@@ -325,19 +383,20 @@ static void menuEdit() {
         u::set<u::string> models;
         for (auto &it : gWorld.getMapModels())
             models.insert(it->name);
-
-        gui::areaBegin("Mapmodels", x, y, w, h, D(modelScroll));
-        for (auto &it : models) {
-            if (gui::item(it)) {
-                mapModel m;
-                m.name = it;
-                m.position = gClient.getPosition();
-                m.position.x += 10.0f;
-                gWorld.insert(m);
-                D(model) = false;
+        if (models.size()) {
+            gui::areaBegin("Mapmodels", x, y, w, h, D(modelScroll));
+            for (auto &it : models) {
+                if (gui::item(it)) {
+                    mapModel m;
+                    m.name = it;
+                    m.position = gClient.getPosition();
+                    m.position.x += 10.0f;
+                    gWorld.insert(m);
+                    D(model) = false;
+                }
             }
+            gui::areaFinish();
         }
-        gui::areaFinish();
     }
 }
 

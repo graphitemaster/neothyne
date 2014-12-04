@@ -311,10 +311,12 @@ int neoMain(frameTimer &timer, int, char **) {
             if (gSelected->type == entity::kMapModel) {
                 auto &mapModel = gWorld.getMapModel(gSelected->index);
                 mapModel.position = direction + gClient.getPosition();
-            }
-            if (gSelected->type == entity::kPointLight) {
+            } else if (gSelected->type == entity::kPointLight) {
                 auto &pointLight = gWorld.getPointLight(gSelected->index);
                 pointLight.position = direction + gClient.getPosition();
+            } else if (gSelected->type == entity::kSpotLight) {
+                auto &spotLight = gWorld.getSpotLight(gSelected->index);
+                spotLight.position = direction + gClient.getPosition();
             }
         }
 
@@ -450,15 +452,19 @@ int neoMain(frameTimer &timer, int, char **) {
                                         // Unhighlight old selection
                                         if (gSelected->type == entity::kMapModel)
                                             gWorld.getMapModel(gSelected->index).highlight = false;
-                                        if (gSelected->type == entity::kPointLight)
+                                        else if (gSelected->type == entity::kPointLight)
                                             gWorld.getPointLight(gSelected->index).highlight = false;
+                                        else if (gSelected->type == entity::kSpotLight)
+                                            gWorld.getSpotLight(gSelected->index).highlight = false;
                                         gSelected = nullptr;
                                     } else {
                                         gSelected = h.ent;
                                         if (gSelected->type == entity::kMapModel)
                                             gWorld.getMapModel(gSelected->index).highlight = true;
-                                        if (gSelected->type == entity::kPointLight)
+                                        else if (gSelected->type == entity::kPointLight)
                                             gWorld.getPointLight(gSelected->index).highlight = true;
+                                        else if (gSelected->type == entity::kSpotLight)
+                                            gWorld.getSpotLight(gSelected->index).highlight = true;
                                     }
                                 }
                             }

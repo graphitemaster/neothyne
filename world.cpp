@@ -83,12 +83,12 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
                 position = m_pointLights[it.index]->position;
                 radius = m_pointLights[it.index]->radius;
                 break;
+            case entity::kSpotLight:
+                position = m_spotLights[it.index]->position;
+                radius = m_spotLights[it.index]->radius;
+                break;
             default:
                 break;
-            //case entity::kSpotLight:
-            //    position = it.asSpotLight.position;
-            //    radius = it.asSpotLight.radius;
-            //    break;
         }
 
         // Entity too small or too far away
