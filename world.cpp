@@ -61,47 +61,49 @@ void world::render(const r::rendererPipeline &pipeline) {
     m_renderer.render(pipeline, this);
 }
 
-bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxDistance, descriptor *ignore) {
+bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxDistance, bool entities, descriptor *ignore) {
     float min = kMaxTraceDistance;
     m::vec3 position;
     descriptor *ent = nullptr;
 
     // Note: The following tests all entites in the world.
     // Todo: Use a BIH
-    for (auto &it : m_entities) {
-        // Get position and radius of entity
-        float radius = 0.0f;
-        if (ignore && (ignore->type == it.type && ignore->index == it.index))
-            continue;
+    if (entities) {
+        for (auto &it : m_entities) {
+            // Get position and radius of entity
+            float radius = 0.0f;
+            if (ignore && (ignore->type == it.type && ignore->index == it.index))
+                continue;
 
-        switch (it.type) {
-            case entity::kMapModel:
-                position = m_mapModels[it.index]->position;
-                radius = 10.0f; // TODO: calculate sphere radius from bounding box
-                break;
-            case entity::kPointLight:
-                position = m_pointLights[it.index]->position;
-                radius = m_pointLights[it.index]->radius;
-                break;
-            case entity::kSpotLight:
-                position = m_spotLights[it.index]->position;
-                radius = m_spotLights[it.index]->radius;
-                break;
-            default:
-                break;
-        }
+            switch (it.type) {
+                case entity::kMapModel:
+                    position = m_mapModels[it.index]->position;
+                    radius = 10.0f; // TODO: calculate sphere radius from bounding box
+                    break;
+                case entity::kPointLight:
+                    position = m_pointLights[it.index]->position;
+                    radius = m_pointLights[it.index]->radius;
+                    break;
+                case entity::kSpotLight:
+                    position = m_spotLights[it.index]->position;
+                    radius = m_spotLights[it.index]->radius;
+                    break;
+                default:
+                    break;
+            }
 
-        // Entity too small or too far away
-        if (radius <= 0.0f || (position - q.start).abs() > maxDistance)
-            continue;
+            // Entity too small or too far away
+            if (radius <= 0.0f || (position - q.start).abs() > maxDistance)
+                continue;
 
-        float fraction = 0.0f;
-        if (!m::vec3::raySphereIntersect(q.start, q.direction, position, radius, &fraction))
-            continue;
+            float fraction = 0.0f;
+            if (!m::vec3::raySphereIntersect(q.start, q.direction, position, radius, &fraction))
+                continue;
 
-        if (fraction >= 0.0f && fraction < min) {
-            min = fraction;
-            ent = &it;
+            if (fraction >= 0.0f && fraction < min) {
+                min = fraction;
+                ent = &it;
+            }
         }
     }
 

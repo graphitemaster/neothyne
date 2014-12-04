@@ -46,7 +46,7 @@ static m::vec3 looking() {
     m::vec3 direction;
     gClient.getDirection(&direction, nullptr, nullptr);
     q.direction = direction.normalized();
-    gWorld.trace(q, &h, 1024.0f);
+    gWorld.trace(q, &h, 1024.0f, false);
     return h.position;
 }
 

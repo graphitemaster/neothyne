@@ -307,7 +307,18 @@ int neoMain(frameTimer &timer, int, char **) {
         if (mouse[3] & gui::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit)) {
             m::vec3 direction;
             gClient.getDirection(&direction, nullptr, nullptr);
-            direction *= 50.0f; // Keep everything this far away
+
+            // Trace to world
+            world::trace::hit h;
+            world::trace::query q;
+            q.start = gClient.getPosition();
+            q.radius = 0.01f;
+            q.direction = direction.normalized();
+
+            // Don't collide with anything but geometry for this trace
+            gWorld.trace(q, &h, 1024.0f, false);
+            direction *= (1024.0f * h.fraction);
+
             if (gSelected->type == entity::kMapModel) {
                 auto &mapModel = gWorld.getMapModel(gSelected->index);
                 mapModel.position = direction + gClient.getPosition();
