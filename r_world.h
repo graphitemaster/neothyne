@@ -15,6 +15,17 @@ struct world;
 
 namespace r {
 
+struct bboxMethod : method {
+    bool init();
+
+    void setWVP(const m::mat4 &wvp);
+    void setColor(const m::vec3 &color);
+
+private:
+    GLint m_WVPLocation;
+    GLint m_colorLocation;
+};
+
 struct geomMethod : method {
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
@@ -109,6 +120,7 @@ private:
     pointLightMethod m_pointLightMethod;
     spotLightMethod m_spotLightMethod;
     ssaoMethod m_ssaoMethod;
+    bboxMethod m_bboxMethod;
 
     // Other things in the world to render
     skybox m_skybox;

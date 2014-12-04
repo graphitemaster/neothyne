@@ -13,6 +13,23 @@ NVAR(float, map_dlight_directionx, "map directional light direction", -1.0f, 1.0
 NVAR(float, map_dlight_directiony, "map directional light direction", -1.0f, 1.0f, 1.0f);
 NVAR(float, map_dlight_directionz, "map directional light direction", -1.0f, 1.0f, 1.0f);
 
+world::world()
+    : m_directionalLight(nullptr)
+{
+}
+
+world::~world() {
+    delete m_directionalLight;
+    for (auto &it : m_spotLights)
+        delete it;
+    for (auto &it : m_pointLights)
+        delete it;
+    for (auto &it : m_mapModels)
+        delete it;
+    for (auto &it : m_playerStarts)
+        delete it;
+}
+
 bool world::load(const u::vector<unsigned char> &data) {
     return m_map.load(data);
 }
@@ -27,26 +44,27 @@ bool world::upload(const m::perspectiveProjection &project) {
 }
 
 void world::render(const r::rendererPipeline &pipeline) {
-    const float R = ((map_dlight_color >> 16) & 0xFF) / 255.0f;
-    const float G = ((map_dlight_color >> 8) & 0xFF) / 255.0f;
-    const float B = (map_dlight_color & 0xFF) / 255.0f;
+    if (m_directionalLight) {
+        const float R = ((map_dlight_color >> 16) & 0xFF) / 255.0f;
+        const float G = ((map_dlight_color >> 8) & 0xFF) / 255.0f;
+        const float B = (map_dlight_color & 0xFF) / 255.0f;
 
-    m_directionalLight.ambient = map_dlight_ambient;
-    m_directionalLight.diffuse = map_dlight_diffuse;
-    m_directionalLight.color = { R, G, B };
-    m_directionalLight.direction = {
-        map_dlight_directionx,
-        map_dlight_directiony,
-        map_dlight_directionz
-    };
-
+        m_directionalLight->ambient = map_dlight_ambient;
+        m_directionalLight->diffuse = map_dlight_diffuse;
+        m_directionalLight->color = { R, G, B };
+        m_directionalLight->direction = {
+            map_dlight_directionx,
+            map_dlight_directiony,
+            map_dlight_directionz
+        };
+    }
     m_renderer.render(pipeline, this);
 }
 
 bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxDistance) {
     float min = kMaxTraceDistance;
-    entity *obj = nullptr;
     m::vec3 position;
+    descriptor *ent = nullptr;
 
     // Note: The following tests all entites in the world.
     // Todo: Use a BIH
@@ -55,8 +73,10 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
         float radius = 0.0f;
         switch (it.type) {
             case entity::kMapModel:
-                position = it.asMapModel.position;
-                radius = 100.0f; // TODO: calculate sphere radius from bounding box
+                position = m_mapModels[it.index]->position;
+                radius = 10.0f; // TODO: calculate sphere radius from bounding box
+                break;
+            default:
                 break;
             //case entity::kPointLight:
             //    position = it.asPointLight.position;
@@ -78,18 +98,18 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
 
         if (fraction >= 0.0f && fraction < min) {
             min = fraction;
-            obj = &it;
+            ent = &it;
         }
     }
 
-    if (obj) {
+    if (ent) {
         h->position = q.start + min*q.direction;
         h->normal = (h->position - position).normalized();
-        h->object = obj;
+        h->ent = ent;
         h->fraction = m::clamp(min, 0.0f, 1.0f);
         return true;
     } else {
-        h->object = nullptr;
+        h->ent = nullptr;
     }
 
     // Check the level geometry now
@@ -106,8 +126,8 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
     // Hit level geometry
     if (h->fraction < 1.0f) {
         const m::vec3 position = sphereTrace.start + sphereTrace.fraction * sphereTrace.direction;
-        // Hit an object earlier
-        if (h->object) {
+        // Hit an entity earlier
+        if (ent) {
             // Only when the object is nearer than the level geometry
             if ((h->position - q.start).abs() < (position - q.start).abs())
                 return true;
@@ -115,34 +135,51 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
         h->position = position;
         return true;
     }
-    return h->object;
+    return ent;
 }
 
-size_t world::insert(entity &ent) {
-    size_t where = m_entities.size();
-    switch (ent.type) {
-        case entity::kMapModel:
-            ent.index = m_mapModels.size();
-            m_mapModels.push_back(ent.asMapModel);
-            break;
-        case entity::kPlayerStart:
-            ent.index = m_playerStarts.size();
-            m_playerStarts.push_back(ent.asPlayerStart);
-            break;
-        case entity::kPointLight:
-            ent.index = m_pointLights.size();
-            m_pointLights.push_back(ent.asPointLight);
-            break;
-        case entity::kSpotLight:
-            ent.index = m_spotLights.size();
-            m_spotLights.push_back(ent.asSpotLight);
-            break;
-        case entity::kDirectionalLight:
-            m_directionalLight = ent.asDirectionalLight;
-            return entity::kDirectionalLight;
-    }
-    m_entities.push_back(ent);
-    return where;
+template <typename T>
+static inline T *copy(const T &other) {
+    T *o = new T;
+    *o = other;
+    return o;
+}
+
+void world::insert(const directionalLight &it) {
+    delete m_directionalLight;
+    m_directionalLight = copy(it);
+}
+
+size_t world::insert(const pointLight &it) {
+    size_t index = m_pointLights.size();
+    m_pointLights.push_back(copy(it));
+    const size_t size = m_entities.size();
+    m_entities.push_back({ entity::kPointLight, index });
+    return size;
+}
+
+size_t world::insert(const spotLight &it) {
+    size_t index = m_spotLights.size();
+    m_spotLights.push_back(copy(it));
+    const size_t size = m_entities.size();
+    m_entities.push_back({ entity::kSpotLight, index });
+    return size;
+}
+
+size_t world::insert(const mapModel &it) {
+    size_t index = m_mapModels.size();
+    m_mapModels.push_back(copy(it));
+    const size_t size = m_entities.size();
+    m_entities.push_back({ entity::kMapModel, index });
+    return size;
+}
+
+size_t world::insert(const playerStart &it) {
+    size_t index = m_playerStarts.size();
+    m_playerStarts.push_back(copy(it));
+    const size_t size = m_entities.size();
+    m_entities.push_back({ entity::kPlayerStart, index });
+    return size;
 }
 
 void world::erase(size_t where) {
@@ -160,6 +197,28 @@ void world::erase(size_t where) {
         case entity::kSpotLight:
             m_spotLights.erase(m_spotLights.begin() + it.index);
             break;
+        default:
+            break;
     }
     m_entities.erase(m_entities.begin() + where);
+}
+
+directionalLight &world::getDirectionalLight() {
+    return *m_directionalLight;
+}
+
+spotLight &world::getSpotLight(size_t index) {
+    return *m_spotLights[index];
+}
+
+pointLight &world::getPointLight(size_t index) {
+    return *m_pointLights[index];
+}
+
+mapModel &world::getMapModel(size_t index) {
+    return *m_mapModels[index];
+}
+
+playerStart &world::getPlayerStart(size_t index) {
+    return *m_playerStarts[index];
 }

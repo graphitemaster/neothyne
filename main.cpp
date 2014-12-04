@@ -265,22 +265,24 @@ int neoMain(frameTimer &timer, int, char **) {
                         float(rand()) / float(RAND_MAX) };
         light.position = places[i];
         light.position.y -= 10.0f;
-        entity e;
-        e.type = entity::kPointLight;
-        memcpy(&e.asPointLight, &light, sizeof(pointLight));
-        gWorld.insert(e);
+        gWorld.insert(light);
     }
     light.position = { 0, 110, 0 };
-    entity e;
-    e.type = entity::kPointLight;
-    memcpy(&e.asPointLight, &light, sizeof(pointLight));
-    gWorld.insert(e);
+    gWorld.insert(light);
 
-    e.type = entity::kMapModel;
-    e.asMapModel.name = "models/lg";
-    e.asMapModel.position = { 0, 120, 0 };
-    e.asMapModel.rotate = { 90, 90, 90 };
-    gWorld.insert(e);
+    directionalLight dlight;
+    dlight.color = { 0.7, 0.7, 0.7 };
+    dlight.ambient = 0.75f;
+    dlight.diffuse = 0.75f;
+    dlight.direction = { -1.0f, 0.0f, 0.0f };
+
+    gWorld.insert(dlight);
+
+    mapModel m;
+    m.name = "models/lg";
+    m.position = { 0, 120, 0 };
+    m.rotate = { 0, 90, 0 };
+    gWorld.insert(m);
 
     if (!gWorld.load("garden.kdgz"))
         neoFatal("failed to load world");
@@ -288,7 +290,6 @@ int neoMain(frameTimer &timer, int, char **) {
     bool input = false;
     u::string inputString = "";
 
-    size_t last = 0;
     int mouse[4] = {0}; // X, Y, Scroll, Button
     while (gRunning) {
         if (!input)
@@ -411,7 +412,7 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_MOUSEBUTTONDOWN:
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
-                            if (gPlaying) {
+                            if (varGet<int>("cl_edit").get()) {
                                 world::trace::hit h;
                                 world::trace::query q;
                                 q.start = gClient.getPosition();
@@ -419,16 +420,22 @@ int neoMain(frameTimer &timer, int, char **) {
                                 m::vec3 direction;
                                 gClient.getDirection(&direction, nullptr, nullptr);
                                 q.direction = direction.normalized();
-                                gWorld.trace(q, &h, 4096.0f);
+                                if (gWorld.trace(q, &h, 4096.0f) && h.ent) {
+                                    // Hit a mapmodel, highlight it
+                                    if (h.ent->type == entity::kMapModel) {
+                                        auto &m = gWorld.getMapModel(h.ent->index);
+                                        m.highlight = !m.highlight;
+                                    }
+                                }
 
-                                light.position = h.position;
-                                light.color = { float(rand()) / float(RAND_MAX),
-                                                float(rand()) / float(RAND_MAX),
-                                                float(rand()) / float(RAND_MAX) };
-                                entity e;
-                                e.type = entity::kPointLight;
-                                memcpy(&e.asPointLight, &light, sizeof(pointLight));
-                                last = gWorld.insert(e);
+                                //light.position = h.position;
+                                //light.color = { float(rand()) / float(RAND_MAX),
+                                                //float(rand()) / float(RAND_MAX),
+                                                //float(rand()) / float(RAND_MAX) };
+                                //entity e;
+                                //e.type = entity::kPointLight;
+                                //memcpy(&e.asPointLight, &light, sizeof(pointLight));
+                                //gWorld.insert(e);
                             }
                             mouse[3] |= gui::kMouseButtonLeft;
                             break;

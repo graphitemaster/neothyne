@@ -16,6 +16,33 @@ VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 
 namespace r {
 
+///! Bounding box Rendering method
+bool bboxMethod::init() {
+    if (!method::init())
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/bbox.vs"))
+        return false;
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/bbox.fs"))
+        return false;
+
+    if (!finalize())
+        return false;
+
+    m_WVPLocation = getUniformLocation("gWVP");
+    m_colorLocation = getUniformLocation("gColor");
+
+    return true;
+}
+
+void bboxMethod::setWVP(const m::mat4 &wvp) {
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+}
+
+void bboxMethod::setColor(const m::vec3 &color) {
+    gl::Uniform3fv(m_colorLocation, 1, &color.x);
+}
+
 ///! Geomety Rendering Method
 bool geomMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
@@ -500,6 +527,12 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_spotLightMethod.setNormalTextureUnit(lightMethod::kNormal);
     m_spotLightMethod.setDepthTextureUnit(lightMethod::kDepth);
 
+    // bbox method
+    if (!m_bboxMethod.init())
+        neoFatal("failed to initialize bounding box rendering method");
+    m_bboxMethod.enable();
+    m_bboxMethod.setColor({1.0f, 1.0f, 1.0f}); // White by default
+
     // setup g-buffer
     if (!m_gBuffer.init(project))
         neoFatal("failed to initialize world renderer");
@@ -577,20 +610,20 @@ void world::geometryPass(const rendererPipeline &pipeline, ::world *map) {
     // Render map models
     for (auto &it : map->m_mapModels) {
         // Load map models on demand
-        if (m_models.find(it.name) == m_models.end()) {
+        if (m_models.find(it->name) == m_models.end()) {
             u::unique_ptr<model> next(new model);
-            if (!next->load(m_textures2D, it.name))
-                neoFatal("failed to load model '%s'\n", it.name);
+            if (!next->load(m_textures2D, it->name))
+                neoFatal("failed to load model '%s'\n", it->name);
             if (!next->upload())
-                neoFatal("failed to upload model '%s'\n", it.name);
-            m_models[it.name] = next.release();
+                neoFatal("failed to upload model '%s'\n", it->name);
+            m_models[it->name] = next.release();
         } else {
-            auto &mdl = m_models[it.name];
+            auto &mdl = m_models[it->name];
             auto &mesh = mdl->getMesh();
 
-            p.setWorldPosition(it.position);
-            p.setScale(it.scale + mdl->scale);
-            p.setRotate(it.rotate + mdl->rotate);
+            p.setWorldPosition(it->position);
+            p.setScale(it->scale + mdl->scale);
+            p.setRotate(it->rotate + mdl->rotate);
 
             setup(mdl->mat, p);
 
@@ -601,8 +634,12 @@ void world::geometryPass(const rendererPipeline &pipeline, ::world *map) {
                 rendererPipeline bp;
                 bp.setWorldPosition(mesh.getBBCenter());
                 bp.setScale(mesh.getBBSize());
-                m_geomMethods[0].enable();
-                m_geomMethods[0].setWVP(p.getWVPTransform() * bp.getWorldTransform());
+                m_bboxMethod.enable();
+                if (it->highlight)
+                    m_bboxMethod.setColor({1.0f, 0.0f, 0.0f});
+                else
+                    m_bboxMethod.setColor({0.0f, 0.0f, 1.0f});
+                m_bboxMethod.setWVP(p.getWVPTransform() * bp.getWorldTransform());
                 m_bbox.render();
             }
         }
@@ -684,20 +721,20 @@ void world::lightingPass(const rendererPipeline &pipeline, ::world *map) {
         gl::Enable(GL_DEPTH_TEST);
         gl::DepthMask(GL_FALSE);
         for (auto &it : map->m_pointLights) {
-            float scale = it.radius * kLightRadiusTweak;
+            float scale = it->radius * kLightRadiusTweak;
 
             // Frustum cull lights
-            m_frustum.setup(it.position, p.getRotation(), p.getPerspectiveProjection());
+            m_frustum.setup(it->position, p.getRotation(), p.getPerspectiveProjection());
             if (!m_frustum.testSphere(p.getPosition(), scale))
                 continue;
 
-            p.setWorldPosition(it.position);
+            p.setWorldPosition(it->position);
             p.setScale({scale, scale, scale});
 
-            method.setLight(it);
+            method.setLight(*it);
             method.setWVP(p.getWVPTransform());
 
-            const m::vec3 dist = it.position - p.getPosition();
+            const m::vec3 dist = it->position - p.getPosition();
             scale += project.nearp + 1;
             if (dist*dist >= scale*scale) {
                 gl::DepthFunc(GL_LESS);
@@ -732,20 +769,20 @@ void world::lightingPass(const rendererPipeline &pipeline, ::world *map) {
         gl::Enable(GL_DEPTH_TEST);
         gl::DepthMask(GL_FALSE);
         for (auto &it : map->m_spotLights) {
-            float scale = it.radius * kLightRadiusTweak;
+            float scale = it->radius * kLightRadiusTweak;
 
             // Frustum cull lights
-            m_frustum.setup(it.position, p.getRotation(), p.getPerspectiveProjection());
+            m_frustum.setup(it->position, p.getRotation(), p.getPerspectiveProjection());
             if (!m_frustum.testSphere(p.getPosition(), scale))
                 continue;
 
-            p.setWorldPosition(it.position);
+            p.setWorldPosition(it->position);
             p.setScale({scale, scale, scale});
 
-            method.setLight(it);
+            method.setLight(*it);
             method.setWVP(p.getWVPTransform());
 
-            const m::vec3 dist = it.position - p.getPosition();
+            const m::vec3 dist = it->position - p.getPosition();
             scale += project.nearp + 1;
             if (dist*dist >= scale*scale) {
                 gl::DepthFunc(GL_LESS);
@@ -762,11 +799,11 @@ void world::lightingPass(const rendererPipeline &pipeline, ::world *map) {
         gl::Disable(GL_DEPTH_TEST);
     }
 
-    // Directional Lighting
-    {
+    // Directional Lighting (optional)
+    if (map->m_directionalLight) {
         auto &method = m_directionalLightMethods[lightCalculatePermutation()];
         method.enable();
-        method.setLight(map->m_directionalLight);
+        method.setLight(*map->m_directionalLight);
         method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
         method.setEyeWorldPos(pipeline.getPosition());
         method.setInverse(p.getInverseTransform());
