@@ -82,6 +82,7 @@ struct world {
     struct descriptor {
         entity type;
         size_t index;
+        size_t where;
     };
 
     struct trace {
@@ -101,12 +102,12 @@ struct world {
     bool trace(const trace::query &q, trace::hit *result, float maxDistance, descriptor *ignore = nullptr);
 
     void insert(const directionalLight &it);
-    size_t insert(const spotLight &it);
-    size_t insert(const pointLight &it);
-    size_t insert(const mapModel &it);
-    size_t insert(const playerStart &it);
+    void insert(const spotLight &it);
+    void insert(const pointLight &it);
+    void insert(const mapModel &it);
+    void insert(const playerStart &it);
 
-    void erase(size_t ent); // Erase an entity
+    void erase(size_t where); // Erase an entity
 
     directionalLight &getDirectionalLight();
     spotLight &getSpotLight(size_t index);

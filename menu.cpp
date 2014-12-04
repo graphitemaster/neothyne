@@ -225,6 +225,11 @@ static void menuEdit() {
                     gui::slider("Y", mm.rotate.y, 0.0f, 360.0f, 0.1f);
                     gui::slider("Z", mm.rotate.z, 0.0f, 360.0f, 0.1f);
                 gui::dedent();
+                gui::separator();
+                if (gui::button("Delete")) {
+                    gWorld.erase(gSelected->where);
+                    gSelected = nullptr;
+                }
             }
         } else {
             if (gui::collapse("Ambient light", "", D(dlight)))

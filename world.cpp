@@ -153,39 +153,34 @@ void world::insert(const directionalLight &it) {
     m_directionalLight = copy(it);
 }
 
-size_t world::insert(const pointLight &it) {
+void world::insert(const pointLight &it) {
     size_t index = m_pointLights.size();
     m_pointLights.push_back(copy(it));
-    const size_t size = m_entities.size();
-    m_entities.push_back({ entity::kPointLight, index });
-    return size;
+    m_entities.push_back({ entity::kPointLight, index, m_entities.size() });
 }
 
-size_t world::insert(const spotLight &it) {
+void world::insert(const spotLight &it) {
     size_t index = m_spotLights.size();
     m_spotLights.push_back(copy(it));
-    const size_t size = m_entities.size();
-    m_entities.push_back({ entity::kSpotLight, index });
-    return size;
+    m_entities.push_back({ entity::kSpotLight, index, m_entities.size() });
 }
 
-size_t world::insert(const mapModel &it) {
+void world::insert(const mapModel &it) {
     size_t index = m_mapModels.size();
     m_mapModels.push_back(copy(it));
-    const size_t size = m_entities.size();
-    m_entities.push_back({ entity::kMapModel, index });
-    return size;
+    m_entities.push_back({ entity::kMapModel, index, m_entities.size() });
 }
 
-size_t world::insert(const playerStart &it) {
+void world::insert(const playerStart &it) {
     size_t index = m_playerStarts.size();
     m_playerStarts.push_back(copy(it));
-    const size_t size = m_entities.size();
-    m_entities.push_back({ entity::kPlayerStart, index });
-    return size;
+    m_entities.push_back({ entity::kPlayerStart, index, m_entities.size() });
 }
 
 void world::erase(size_t where) {
+    if (where >= m_entities.size())
+        return;
+
     auto &it = m_entities[where];
     switch (it.type) {
         case entity::kMapModel:
