@@ -152,6 +152,9 @@ VAR(float, cl_farp, "far plane", 128.0f, 4096.0f, 2048.0f);
 
 bool gRunning = true;
 bool gPlaying = false;
+world::descriptor *gSelected = nullptr; // Selected world entity
+client gClient;
+world gWorld;
 
 static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t h) {
     float ratio = float(iw) / float(ih);
@@ -225,10 +228,6 @@ int neoMain(frameTimer &timer, int, char **) {
     neoSetWindowTitle("Neothyne");
     neoCenterMouse();
 
-    // Now render
-    client gClient;
-    world gWorld;
-
     // Setup some lights
     const m::vec3 places[] = {
         m::vec3(153.04, 105.02, 197.67),
@@ -278,10 +277,15 @@ int neoMain(frameTimer &timer, int, char **) {
 
     gWorld.insert(dlight);
 
+    // and some map models
     mapModel m;
     m.name = "models/lg";
     m.position = { 0, 120, 0 };
     m.rotate = { 0, 90, 0 };
+    gWorld.insert(m);
+
+    m.name = "models/rl";
+    m.position.x += 40.0f;
     gWorld.insert(m);
 
     if (!gWorld.load("garden.kdgz"))
@@ -289,8 +293,6 @@ int neoMain(frameTimer &timer, int, char **) {
 
     bool input = false;
     u::string inputString = "";
-
-    world::descriptor *selected = nullptr;
 
     int mouse[4] = {0}; // X, Y, Scroll, Button
     while (gRunning) {
@@ -405,7 +407,7 @@ int neoMain(frameTimer &timer, int, char **) {
                     neoKeyState(e.key.keysym.sym, false, true);
                     break;
                 case SDL_MOUSEMOTION:
-                    if (mouse[3] & gui::kMouseButtonLeft && selected) {
+                    if (mouse[3] & gui::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit)) {
                         // Get new view position
                         world::trace::hit h;
                         world::trace::query q;
@@ -414,12 +416,11 @@ int neoMain(frameTimer &timer, int, char **) {
                         m::vec3 direction;
                         gClient.getDirection(&direction, nullptr, nullptr);
                         q.direction = direction.normalized();
-                        if (gWorld.trace(q, &h, 1024.0f, selected)) { // Ignore ourselfs
+                        if (gWorld.trace(q, &h, 1024.0f, gSelected)) { // Ignore ourselfs
                             // Move it
-                            if (selected->type == entity::kMapModel) {
-                                auto &mapModel = gWorld.getMapModel(selected->index);
+                            if (gSelected->type == entity::kMapModel) {
+                                auto &mapModel = gWorld.getMapModel(gSelected->index);
                                 mapModel.position = h.position;
-                                mapModel.highlight = true;
                             }
                         }
                     }
@@ -440,11 +441,17 @@ int neoMain(frameTimer &timer, int, char **) {
                                 m::vec3 direction;
                                 gClient.getDirection(&direction, nullptr, nullptr);
                                 q.direction = direction.normalized();
-                                if (gWorld.trace(q, &h, 4096.0f) && h.ent) {
-                                    if (selected)
-                                        selected = nullptr;
-                                    else
-                                        selected = h.ent;
+                                if (gWorld.trace(q, &h, 1024.0f) && h.ent) {
+                                    if (gSelected && !(gMenuState & kMenuEdit)) {
+                                        // Unhighlight old selection
+                                        if (gSelected->type == entity::kMapModel)
+                                            gWorld.getMapModel(gSelected->index).highlight = false;
+                                        gSelected = nullptr;
+                                    } else {
+                                        gSelected = h.ent;
+                                        if (gSelected->type == entity::kMapModel)
+                                            gWorld.getMapModel(gSelected->index).highlight = true;
+                                    }
                                 }
                             }
                             mouse[3] |= gui::kMouseButtonLeft;
@@ -457,8 +464,6 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_MOUSEBUTTONUP:
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
-                            if (selected && selected->type == entity::kMapModel)
-                                gWorld.getMapModel(selected->index).highlight = false;
                             mouse[3] &= ~gui::kMouseButtonLeft;
                             break;
                         case SDL_BUTTON_RIGHT:

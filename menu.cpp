@@ -1,10 +1,13 @@
 #include "engine.h"
+#include "world.h"
 #include "menu.h"
 #include "gui.h"
 #include "cvar.h"
 
 extern bool gPlaying;
 extern bool gRunning;
+extern world::descriptor *gSelected;
+extern world gWorld;
 
 int gMenuState = kMenuMain | kMenuConsole; // Default state
 
@@ -206,36 +209,55 @@ static void menuEdit() {
 
     gui::areaBegin("Edit", x, y, w, h, D(scroll));
         gui::heading();
-        if (gui::collapse("Ambient light", "", D(dlight)))
-            D(dlight) = !D(dlight);
-        if (D(dlight)) {
-            gui::indent();
-                auto &ambient = varGet<float>("map_dlight_ambient");
-                auto &diffuse = varGet<float>("map_dlight_diffuse");
-                auto &color = varGet<int>("map_dlight_color");
-                auto &x = varGet<float>("map_dlight_directionx");
-                auto &y = varGet<float>("map_dlight_directiony");
-                auto &z = varGet<float>("map_dlight_directionz");
-                int R = (color.get() >> 16) & 0xFF;
-                int G = (color.get() >> 8) & 0xFF;
-                int B = color.get() & 0xFF;
-                gui::slider("Ambient", ambient.get(), ambient.min(), ambient.max(), 0.01f);
-                gui::slider("Diffuse", diffuse.get(), diffuse.min(), diffuse.max(), 0.01f);
-                gui::label("Color");
+        // If there is something selected, render the GUI for it
+        if (gSelected) {
+            if (gSelected->type == entity::kMapModel) {
+                auto &mm = gWorld.getMapModel(gSelected->index);
+                gui::label("Scale");
                 gui::indent();
-                    gui::slider("Red", R, 0, 0xFF, 1);
-                    gui::slider("Green", G, 0, 0xFF, 1);
-                    gui::slider("Blue", B, 0, 0xFF, 1);
+                    gui::slider("X", mm.scale.x, 0.0f, 10.0f, 0.1f);
+                    gui::slider("Y", mm.scale.y, 0.0f, 10.0f, 0.1f);
+                    gui::slider("Z", mm.scale.z, 0.0f, 10.0f, 0.1f);
                 gui::dedent();
-                gui::label("Direction");
+                gui::label("Rotate");
                 gui::indent();
-                    gui::slider("X", x.get(), x.min(), x.max(), 0.001f);
-                    gui::slider("Y", y.get(), y.min(), y.max(), 0.001f);
-                    gui::slider("Z", z.get(), z.min(), z.max(), 0.001f);
+                    gui::slider("X", mm.rotate.x, 0.0f, 360.0f, 0.1f);
+                    gui::slider("Y", mm.rotate.y, 0.0f, 360.0f, 0.1f);
+                    gui::slider("Z", mm.rotate.z, 0.0f, 360.0f, 0.1f);
                 gui::dedent();
-                // Set the color again
-                color.set((R << 16) | (G << 8) | B);
-            gui::dedent();
+            }
+        } else {
+            if (gui::collapse("Ambient light", "", D(dlight)))
+                D(dlight) = !D(dlight);
+            if (D(dlight)) {
+                gui::indent();
+                    auto &ambient = varGet<float>("map_dlight_ambient");
+                    auto &diffuse = varGet<float>("map_dlight_diffuse");
+                    auto &color = varGet<int>("map_dlight_color");
+                    auto &x = varGet<float>("map_dlight_directionx");
+                    auto &y = varGet<float>("map_dlight_directiony");
+                    auto &z = varGet<float>("map_dlight_directionz");
+                    int R = (color.get() >> 16) & 0xFF;
+                    int G = (color.get() >> 8) & 0xFF;
+                    int B = color.get() & 0xFF;
+                    gui::slider("Ambient", ambient.get(), ambient.min(), ambient.max(), 0.01f);
+                    gui::slider("Diffuse", diffuse.get(), diffuse.min(), diffuse.max(), 0.01f);
+                    gui::label("Color");
+                    gui::indent();
+                        gui::slider("Red", R, 0, 0xFF, 1);
+                        gui::slider("Green", G, 0, 0xFF, 1);
+                        gui::slider("Blue", B, 0, 0xFF, 1);
+                    gui::dedent();
+                    gui::label("Direction");
+                    gui::indent();
+                        gui::slider("X", x.get(), x.min(), x.max(), 0.001f);
+                        gui::slider("Y", y.get(), y.min(), y.max(), 0.001f);
+                        gui::slider("Z", z.get(), z.min(), z.max(), 0.001f);
+                    gui::dedent();
+                    // Set the color again
+                    color.set((R << 16) | (G << 8) | B);
+                gui::dedent();
+            }
         }
     gui::areaFinish();
 }
