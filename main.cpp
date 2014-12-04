@@ -400,8 +400,10 @@ int neoMain(frameTimer &timer, int, char **) {
                                 inputString.pop_back();
                             break;
                         case SDLK_DELETE:
-                            if (gSelected)
+                            if (gSelected) {
                                 gWorld.erase(gSelected->where);
+                                gSelected = nullptr;
+                            }
                             break;
                         case SDLK_SLASH:
                             input = !input;

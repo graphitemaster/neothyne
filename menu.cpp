@@ -1,13 +1,17 @@
 #include "engine.h"
 #include "world.h"
+#include "client.h"
 #include "menu.h"
 #include "gui.h"
 #include "cvar.h"
+
+#include "u_set.h"
 
 extern bool gPlaying;
 extern bool gRunning;
 extern world::descriptor *gSelected;
 extern world gWorld;
+extern client gClient;
 
 int gMenuState = kMenuMain | kMenuConsole; // Default state
 
@@ -202,10 +206,10 @@ static void menuCredits() {
 
 static void menuEdit() {
     // Menu against the right hand side
-    const size_t w = neoWidth() / 4;
-    const size_t h = neoHeight() - 50;
-    const size_t x = neoWidth() - w;
-    const size_t y = neoHeight() - h - 50/2;
+    size_t w = neoWidth() / 4;
+    size_t h = neoHeight() - 50;
+    size_t x = neoWidth() - w;
+    size_t y = neoHeight() - h - 50/2;
 
     gui::areaBegin("Edit", x, y, w, h, D(scroll));
         gui::heading();
@@ -289,8 +293,52 @@ static void menuEdit() {
                     color.set((R << 16) | (G << 8) | B);
                 gui::dedent();
             }
+            if (gui::collapse("New", "", D(newent)))
+                D(newent) = !D(newent);
+            if (D(newent)) {
+                gui::indent();
+                    if (gui::item("Model"))
+                        D(model) = true;
+                    else if (gui::item("Point light")) {
+                        pointLight pl;
+                        pl.position = gClient.getPosition();
+                        pl.position.x += 10.0f;
+                        gWorld.insert(pl);
+                    } else if (gui::item("Spot light")) {
+                        spotLight sl;
+                        sl.position = gClient.getPosition();
+                        sl.position.x += 10.0f;
+                        gWorld.insert(sl);
+                    }
+                gui::dedent();
+            }
         }
     gui::areaFinish();
+
+    // Centered menu for new entities
+    w = neoWidth() / 4;
+    h = neoHeight() / 3;
+    x = neoWidth() / 2 - w / 2;
+    y = neoHeight() / 2 - h / 2;
+    if (D(model)) {
+        // Find all the model by name
+        u::set<u::string> models;
+        for (auto &it : gWorld.getMapModels())
+            models.insert(it->name);
+
+        gui::areaBegin("Mapmodels", x, y, w, h, D(modelScroll));
+        for (auto &it : models) {
+            if (gui::item(it)) {
+                mapModel m;
+                m.name = it;
+                m.position = gClient.getPosition();
+                m.position.x += 10.0f;
+                gWorld.insert(m);
+                D(model) = false;
+            }
+        }
+        gui::areaFinish();
+    }
 }
 
 static void menuConsole() {
@@ -311,6 +359,8 @@ void menuReset() {
     gMenuData["menuCredits_special"] = true;
 
     gMenuData["menuEdit_dlight"] = true;
+    gMenuData["menuEdit_newent"] = true;
+    gMenuData["menuEdit_light"] = true;
 }
 
 void menuUpdate() {

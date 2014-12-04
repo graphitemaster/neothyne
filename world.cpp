@@ -178,27 +178,38 @@ void world::insert(const playerStart &it) {
 }
 
 void world::erase(size_t where) {
-    if (where >= m_entities.size())
-        return;
-
     auto &it = m_entities[where];
+    size_t index = it.index;
     switch (it.type) {
         case entity::kMapModel:
-            m_mapModels.erase(m_mapModels.begin() + it.index);
+            m_mapModels.erase(m_mapModels.begin() + index);
             break;
         case entity::kPlayerStart:
-            m_playerStarts.erase(m_playerStarts.begin() + it.index);
+            m_playerStarts.erase(m_playerStarts.begin() + index);
             break;
         case entity::kPointLight:
-            m_pointLights.erase(m_pointLights.begin() + it.index);
+            m_pointLights.erase(m_pointLights.begin() + index);
             break;
         case entity::kSpotLight:
-            m_spotLights.erase(m_spotLights.begin() + it.index);
+            m_spotLights.erase(m_spotLights.begin() + index);
             break;
         default:
-            break;
+            return;
     }
     m_entities.erase(m_entities.begin() + where);
+
+    if (m_entities.size() <= where)
+        return;
+
+    // Starting from the entity we just removed. Shift the index down
+    // for all others into place
+    for (size_t i = where; i < m_entities.size(); ++i) {
+        m_entities[i].where--;
+        if (m_entities[i].type == it.type) {
+            m_entities[i].index = m_entities[i].index
+                ? m_entities[i].index - 1 : 0;
+        }
+    }
 }
 
 directionalLight &world::getDirectionalLight() {
@@ -219,4 +230,8 @@ mapModel &world::getMapModel(size_t index) {
 
 playerStart &world::getPlayerStart(size_t index) {
     return *m_playerStarts[index];
+}
+
+const u::vector<mapModel*> &world::getMapModels() const {
+    return m_mapModels;
 }

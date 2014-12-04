@@ -122,6 +122,8 @@ struct world {
     mapModel &getMapModel(size_t index);
     playerStart &getPlayerStart(size_t index);
 
+    const u::vector<mapModel*> &getMapModels() const;
+
 protected:
     friend struct r::world;
 
