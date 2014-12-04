@@ -3,13 +3,20 @@
 #include "r_world.h"
 
 struct baseLight {
+    baseLight();
     m::vec3 color;
     float ambient;
     union {
         float diffuse;
         float intensity;
     };
+    bool highlight;
 };
+
+inline baseLight::baseLight()
+    : highlight(false)
+{
+}
 
 // a directional light (local ambiance and diffuse)
 struct directionalLight : baseLight {

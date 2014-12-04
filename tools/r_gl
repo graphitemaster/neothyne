@@ -66,3 +66,4 @@ void: GetCompressedTexImage(GLenum: target, GLint: lod, GLvoid*: img);
 void: CompressedTexImage2D(GLenum: target, GLint: level, GLenum: internalformat, GLsizei: width, GLsizei: height, GLint: border, GLsizei: imageSize, const GLvoid*: data);
 void: PixelStorei(GLenum: pname, GLint: param);
 void: Scissor(GLint: x, GLint: y, GLsizei: width, GLsizei: height);
+void: PolygonMode(GLenum: face, GLenum: mode);

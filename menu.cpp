@@ -213,6 +213,7 @@ static void menuEdit() {
         if (gSelected) {
             if (gSelected->type == entity::kMapModel) {
                 auto &mm = gWorld.getMapModel(gSelected->index);
+                gui::value("Mapmodel");
                 gui::label("Scale");
                 gui::indent();
                     gui::slider("X", mm.scale.x, 0.0f, 10.0f, 0.1f);
@@ -225,6 +226,31 @@ static void menuEdit() {
                     gui::slider("Y", mm.rotate.y, 0.0f, 360.0f, 0.1f);
                     gui::slider("Z", mm.rotate.z, 0.0f, 360.0f, 0.1f);
                 gui::dedent();
+                gui::separator();
+                if (gui::button("Delete")) {
+                    gWorld.erase(gSelected->where);
+                    gSelected = nullptr;
+                }
+            } else if (gSelected->type == entity::kPointLight) {
+                auto &pl = gWorld.getPointLight(gSelected->index);
+                int R = pl.color.x * 255.0f;
+                int G = pl.color.y * 255.0f;
+                int B = pl.color.z * 255.0f;
+                gui::value("Pointlight");
+                gui::label("Color");
+                gui::indent();
+                    gui::slider("Red", R, 0, 0xFF, 1);
+                    gui::slider("Green", G, 0, 0xFF, 1);
+                    gui::slider("Blue", B, 0, 0xFF, 1);
+                gui::dedent();
+                gui::label("Term");
+                gui::indent();
+                    gui::slider("Ambient", pl.ambient, 0.0f, 1.0f, 0.1f);
+                    gui::slider("Diffuse", pl.diffuse, 0.0f, 1.0f, 0.1f);
+                gui::dedent();
+                gui::separator();
+                gui::slider("Radius", pl.radius, 1.0f, 1024.0f, 1.0f);
+                pl.color = { R / 255.0f, G / 255.0f, B / 255.0f };
                 gui::separator();
                 if (gui::button("Delete")) {
                     gWorld.erase(gSelected->where);

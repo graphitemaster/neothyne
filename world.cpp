@@ -79,12 +79,12 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
                 position = m_mapModels[it.index]->position;
                 radius = 10.0f; // TODO: calculate sphere radius from bounding box
                 break;
+            case entity::kPointLight:
+                position = m_pointLights[it.index]->position;
+                radius = m_pointLights[it.index]->radius;
+                break;
             default:
                 break;
-            //case entity::kPointLight:
-            //    position = it.asPointLight.position;
-            //    radius = it.asPointLight.radius;
-            //    break;
             //case entity::kSpotLight:
             //    position = it.asSpotLight.position;
             //    radius = it.asSpotLight.radius;

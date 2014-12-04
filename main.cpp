@@ -426,6 +426,10 @@ int neoMain(frameTimer &timer, int, char **) {
                                 auto &mapModel = gWorld.getMapModel(gSelected->index);
                                 mapModel.position = h.position;
                             }
+                            if (gSelected->type == entity::kPointLight) {
+                                auto &pointLight = gWorld.getPointLight(gSelected->index);
+                                pointLight.position = h.position;
+                            }
                         }
                     }
                     mouse[0] = e.motion.x;
@@ -450,11 +454,15 @@ int neoMain(frameTimer &timer, int, char **) {
                                         // Unhighlight old selection
                                         if (gSelected->type == entity::kMapModel)
                                             gWorld.getMapModel(gSelected->index).highlight = false;
+                                        if (gSelected->type == entity::kPointLight)
+                                            gWorld.getPointLight(gSelected->index).highlight = false;
                                         gSelected = nullptr;
                                     } else {
                                         gSelected = h.ent;
                                         if (gSelected->type == entity::kMapModel)
                                             gWorld.getMapModel(gSelected->index).highlight = true;
+                                        if (gSelected->type == entity::kPointLight)
+                                            gWorld.getPointLight(gSelected->index).highlight = true;
                                     }
                                 }
                             }
