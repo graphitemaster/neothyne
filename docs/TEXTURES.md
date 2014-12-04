@@ -1,8 +1,8 @@
 ## Texture
-Neothyne rolls it's own texture loaders, the support of each loader is specified
+Neothyne rolls its own texture loaders, the support of each loader is specified
 below:
 
-* JPG (baseline)
+* JPEG (baseline)
   * Baseline only (not progressive nor lossless)
   * Supports 8-bit greyscale colorspace
   * Supports YCbCr colorspace

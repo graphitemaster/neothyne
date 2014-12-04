@@ -14,7 +14,7 @@ which is also named `u`. The following namespaces and file prefixes exist:
 | c_     | c         | client      |
 
 ## Utility library
-Neothyne doesn't use the C++ standard library, instead it rolls it's own
+Neothyne doesn't use the C++ standard library, instead it rolls its own
 implementation of common containers. They're not meant to be compatible with the
 standard in any way, even if they share a similar API. The following containers
 exist.
