@@ -363,22 +363,19 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_KEYDOWN:
                     switch (e.key.keysym.sym) {
                         case SDLK_ESCAPE:
-                            // The effect of the ESC key is strange. When in game
-                            // it should bring up the menu. While in the menu it
-                            // should always bring you to main menu, except while
-                            // in game and in menu and already at main menu then
-                            // ESC should bring you back in game.
                             if (gPlaying && gMenuState & kMenuMain) {
                                 if (gMenuState & kMenuConsole) {
                                     gMenuState = kMenuConsole;
                                 } else {
                                     gMenuState &= ~kMenuMain;
                                 }
-                            } else {
+                            } else if (!(gMenuState & kMenuEdit)) {
                                 // If the console is opened leave it open
                                 gMenuState = (gMenuState & kMenuConsole)
                                     ? kMenuMain | kMenuConsole
                                     : kMenuMain;
+                            } else {
+                                gMenuState &= ~kMenuEdit;
                             }
                             if (gPlaying && !(gMenuState & kMenuMain))
                                 neoRelativeMouse(true);
