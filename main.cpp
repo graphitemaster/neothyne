@@ -396,6 +396,16 @@ int neoMain(frameTimer &timer, int, char **) {
                                 gMenuState &= ~kMenuEdit;
                                 neoRelativeMouse(!(gMenuState & kMenuEdit));
                             }
+                            // Unhighlight old selection
+                            if (gSelected) {
+                                if (gSelected->type == entity::kMapModel)
+                                    gWorld.getMapModel(gSelected->index).highlight = false;
+                                else if (gSelected->type == entity::kPointLight)
+                                    gWorld.getPointLight(gSelected->index).highlight = false;
+                                else if (gSelected->type == entity::kSpotLight)
+                                    gWorld.getSpotLight(gSelected->index).highlight = false;
+                                gSelected = nullptr;
+                            }
                             break;
                         case SDLK_BACKSPACE:
                             if (input)
@@ -448,24 +458,22 @@ int neoMain(frameTimer &timer, int, char **) {
                                 gClient.getDirection(&direction, nullptr, nullptr);
                                 q.direction = direction.normalized();
                                 if (gWorld.trace(q, &h, 1024.0f) && h.ent) {
-                                    if (gSelected && !(gMenuState & kMenuEdit)) {
-                                        // Unhighlight old selection
-                                        if (gSelected->type == entity::kMapModel)
-                                            gWorld.getMapModel(gSelected->index).highlight = false;
-                                        else if (gSelected->type == entity::kPointLight)
-                                            gWorld.getPointLight(gSelected->index).highlight = false;
-                                        else if (gSelected->type == entity::kSpotLight)
-                                            gWorld.getSpotLight(gSelected->index).highlight = false;
-                                        gSelected = nullptr;
-                                    } else {
-                                        gSelected = h.ent;
-                                        if (gSelected->type == entity::kMapModel)
-                                            gWorld.getMapModel(gSelected->index).highlight = true;
-                                        else if (gSelected->type == entity::kPointLight)
-                                            gWorld.getPointLight(gSelected->index).highlight = true;
-                                        else if (gSelected->type == entity::kSpotLight)
-                                            gWorld.getSpotLight(gSelected->index).highlight = true;
-                                    }
+                                    gSelected = h.ent;
+                                    if (gSelected->type == entity::kMapModel)
+                                        gWorld.getMapModel(gSelected->index).highlight = true;
+                                    else if (gSelected->type == entity::kPointLight)
+                                        gWorld.getPointLight(gSelected->index).highlight = true;
+                                    else if (gSelected->type == entity::kSpotLight)
+                                        gWorld.getSpotLight(gSelected->index).highlight = true;
+                                } else if (gSelected) {
+                                    // Unhighlight old selection
+                                    if (gSelected->type == entity::kMapModel)
+                                        gWorld.getMapModel(gSelected->index).highlight = false;
+                                    else if (gSelected->type == entity::kPointLight)
+                                        gWorld.getPointLight(gSelected->index).highlight = false;
+                                    else if (gSelected->type == entity::kSpotLight)
+                                        gWorld.getSpotLight(gSelected->index).highlight = false;
+                                    gSelected = nullptr;
                                 }
                             }
                             mouse[3] |= gui::kMouseButtonLeft;
