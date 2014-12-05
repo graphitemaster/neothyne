@@ -357,7 +357,7 @@ static void menuEdit() {
                         pl.diffuse = 0.5f;
                         pl.radius = 30;
                         pl.color = randomColor();
-                        gWorld.insert(pl);
+                        gSelected = gWorld.insert(pl);
                     } else if (gui::item("Spot light")) {
                         spotLight sl;
                         sl.position = looking();
@@ -366,7 +366,7 @@ static void menuEdit() {
                         gClient.getDirection(&sl.direction, nullptr, nullptr);
                         sl.radius = 30;
                         sl.color = randomColor();
-                        gWorld.insert(sl);
+                        gSelected = gWorld.insert(sl);
                     }
                 gui::dedent();
             }
@@ -390,7 +390,7 @@ static void menuEdit() {
                     mapModel m;
                     m.name = it;
                     m.position = looking();
-                    gWorld.insert(m);
+                    gSelected = gWorld.insert(m);
                     D(model) = false;
                 }
             }

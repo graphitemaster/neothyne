@@ -109,10 +109,10 @@ struct world {
     bool trace(const trace::query &q, trace::hit *result, float maxDistance, bool entities = true, descriptor *ignore = nullptr);
 
     void insert(const directionalLight &it);
-    void insert(const spotLight &it);
-    void insert(const pointLight &it);
-    void insert(const mapModel &it);
-    void insert(const playerStart &it);
+    descriptor *insert(const spotLight &it);
+    descriptor *insert(const pointLight &it);
+    descriptor *insert(const mapModel &it);
+    descriptor *insert(const playerStart &it);
 
     void erase(size_t where); // Erase an entity
 

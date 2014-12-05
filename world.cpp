@@ -155,28 +155,32 @@ void world::insert(const directionalLight &it) {
     m_directionalLight = copy(it);
 }
 
-void world::insert(const pointLight &it) {
+world::descriptor *world::insert(const pointLight &it) {
     size_t index = m_pointLights.size();
     m_pointLights.push_back(copy(it));
     m_entities.push_back({ entity::kPointLight, index, m_entities.size() });
+    return &m_entities.back();
 }
 
-void world::insert(const spotLight &it) {
+world::descriptor *world::insert(const spotLight &it) {
     size_t index = m_spotLights.size();
     m_spotLights.push_back(copy(it));
     m_entities.push_back({ entity::kSpotLight, index, m_entities.size() });
+    return &m_entities.back();
 }
 
-void world::insert(const mapModel &it) {
+world::descriptor *world::insert(const mapModel &it) {
     size_t index = m_mapModels.size();
     m_mapModels.push_back(copy(it));
     m_entities.push_back({ entity::kMapModel, index, m_entities.size() });
+    return &m_entities.back();
 }
 
-void world::insert(const playerStart &it) {
+world::descriptor *world::insert(const playerStart &it) {
     size_t index = m_playerStarts.size();
     m_playerStarts.push_back(copy(it));
     m_entities.push_back({ entity::kPlayerStart, index, m_entities.size() });
+    return &m_entities.back();
 }
 
 void world::erase(size_t where) {
