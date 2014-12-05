@@ -297,7 +297,6 @@ int neoMain(frameTimer &timer, int, char **) {
     u::string inputString = "";
 
     int mouse[4] = {0}; // X, Y, Scroll, Button
-    u::print("%lu\n", timer.ticks());
 
     uint32_t lastTime = timer.ticks();;
     while (gRunning) {
