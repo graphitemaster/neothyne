@@ -42,14 +42,14 @@ struct triangle : box { };
 struct scissor : box { };
 
 struct image : box {
-    u::string path;
+    const char *path;
 };
 
 struct text {
     int x;
     int y;
     int align;
-    u::string contents;
+    const char *contents;
 };
 
 struct line {
@@ -67,9 +67,9 @@ struct command {
         rectangle asRectangle;
         scissor asScissor;
         triangle asTriangle;
+        text asText;
+        image asImage;
     };
-    text asText; // Because of u::string
-    image asImage; // Because of u::string
 };
 
 struct queue {
@@ -81,8 +81,8 @@ struct queue {
     void addLine(int x0, int y0, int x1, int y1, int r, uint32_t color);
     void addRectangle(int x, int y, int w, int h, int r, uint32_t color);
     void addTriangle(int x, int y, int w, int h, int flags, uint32_t color);
-    void addText(int x, int y, int align, const u::string &contents, uint32_t color);
-    void addImage(int x, int y, int w, int h, const u::string &path, bool mipmaps = false);
+    void addText(int x, int y, int align, const char *contents, uint32_t color);
+    void addImage(int x, int y, int w, int h, const char *path, bool mipmaps = false);
 private:
     u::stack<command, kCommandQueueSize> m_commands;
 };
@@ -100,22 +100,22 @@ inline constexpr uint32_t RGBA(unsigned char R, unsigned char G, unsigned char B
 }
 
 /// Returns true when clicked, false otherwise
-bool button(const u::string &contents, bool enabled = true);
+bool button(const char *contents, bool enabled = true);
 /// Returns true when clicked, false otherwise
-bool item(const u::string &contents, bool enabled = true);
+bool item(const char *contents, bool enabled = true);
 /// Returns true when clicked, false otherwise
-bool check(const u::string &contents, bool checked, bool enabled = true);
+bool check(const char *contents, bool checked, bool enabled = true);
 /// Returns true when clicked, false otherwise
-bool collapse(const u::string &contents, const char *subtext, bool checked, bool enabled = true);
+bool collapse(const char *contents, const char *subtext, bool checked, bool enabled = true);
 /// A label is left justified text
-void label(const u::string &contents);
+void label(const char *contents);
 /// A value is right justified text
-void value(const u::string &contents);
+void value(const char *contents);
 /// Returns true when updated, false otherwise, `value' is a reference to the value
 /// which is changed, `min' and `'max' define the applicable range for the slider,
 /// while `inc' specifies how much the value should increment when sliding or scrolling.
 template <typename T>
-bool slider(const u::string &contents, T &value, T min, T max, T inc, bool enabled = true);
+bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled = true);
 /// Indent the widget space so that any widgets after the call will be indented
 void indent();
 /// Dedent the widget space so that any widgets after the vall will be dedented
@@ -127,7 +127,7 @@ void heading();
 /// Construct a menu of name `contents' at position `x,y' of size `w,h', `value
 /// is a reference to a variable which contains the amount of "scroll" of the
 /// area if the contents exceed the vertical size specified by `h'.
-bool areaBegin(const u::string& contents, int x, int y, int w, int h, int& value, bool style = true);
+bool areaBegin(const char *contents, int x, int y, int w, int h, int& value, bool style = true);
 /// Called when finished the menu, `inc' is the value of which to increase the
 /// the `value' as previous referenced in the parent `areaBegin' call when
 /// scrolling in the area, while autoScroll will enable automatic scrolling of
@@ -139,14 +139,15 @@ void drawLine(int x0, int y0, int x1, int y1, int r, uint32_t color);
 void drawLine(int x0, int y0, int x1, int y1, int r, uint32_t color);
 void drawRectangle(int x, int y, int w, int h, uint32_t color);
 void drawRectangle(int x, int y, int w, int h, int r, uint32_t color);
-void drawText(int x, int y, int align, const u::string &contents, uint32_t color);
+void drawText(int x, int y, int align, const char *contents, uint32_t color);
 void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color);
-void drawImage(int x, int y, int w, int h, const u::string &path, bool mipmaps = false);
+void drawImage(int x, int y, int w, int h, const char *path, bool mipmaps = false);
 
 const queue &commands();
 
 void begin(int (&mouse)[4]);
 void finish();
+void collect(size_t &active);
 
 }
 #endif

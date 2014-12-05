@@ -199,6 +199,8 @@ static void changeVariable(const u::string &inputString) {
     }
 }
 
+static constexpr size_t kCollectTime = 5; // Garbage collect phase for string pool in seconds
+
 int neoMain(frameTimer &timer, int, char **) {
     // Clear the screen as soon as possible
     gl::ClearColor(40/255.0f, 30/255.0f, 50/255.0f, 0.1f);
@@ -295,6 +297,9 @@ int neoMain(frameTimer &timer, int, char **) {
     u::string inputString = "";
 
     int mouse[4] = {0}; // X, Y, Scroll, Button
+    u::print("%lu\n", timer.ticks());
+
+    uint32_t lastTime = timer.ticks();;
     while (gRunning) {
         if (!input)
             gClient.update(gWorld, timer.delta());
@@ -535,7 +540,7 @@ int neoMain(frameTimer &timer, int, char **) {
 
         // Render FPS/MSPF
         gui::drawText(neoWidth(), 10, gui::kAlignRight,
-            u::format("%d fps : %.2f mspf\n", timer.fps(), timer.mspf()),
+            u::format("%d fps : %.2f mspf\n", timer.fps(), timer.mspf()).c_str(),
             gui::RGBA(255, 255, 255, 255));
 
         if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit)) {
@@ -549,7 +554,7 @@ int neoMain(frameTimer &timer, int, char **) {
             // Accepting console commands
             gui::drawTriangle(5, 10, 10, 10, 1, gui::RGBA(155, 155, 155, 255));
             gui::drawText(20, 10, gui::kAlignLeft,
-                inputString, gui::RGBA(255, 255, 255, 255));
+                inputString.c_str(), gui::RGBA(255, 255, 255, 255));
         }
 
         // Cursor above all else
@@ -557,6 +562,15 @@ int neoMain(frameTimer &timer, int, char **) {
             gui::drawImage(mouse[0], mouse[1] - (32 - 3), 32, 32, "<nocompress>textures/ui/cursor");
 
         gui::finish();
+
+        // Collect unused strings
+        if (timer.ticks() > lastTime + (1000 * kCollectTime)) {
+            size_t active = 0;
+            lastTime = timer.ticks();
+            gui::collect(active);
+            // DEBUG code
+            //u::print("%zu active strings\n", active);
+        }
     }
 
     writeConfig();

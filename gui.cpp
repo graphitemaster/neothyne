@@ -5,10 +5,75 @@
 #include "gui.h"
 
 #include "u_misc.h"
+#include "u_map.h"
 
 #include "m_const.h"
 
 namespace gui {
+
+static struct stringPool {
+    static constexpr size_t kTableSize = 1024;
+    static constexpr size_t kThreshold = 25; // Anything less is destroyed during collect phase
+
+    ~stringPool() {
+        for (size_t i = 0; i < kTableSize; i++) {
+            if (!m_table[i])
+                continue;
+            free((void *)m_table[i]->m_data);
+            free((void *)m_table[i]);
+        }
+    }
+
+    stringPool()
+        : m_active(0)
+    {
+        for (size_t i = 0; i < kTableSize; i++)
+            m_table[i] = nullptr;
+    }
+
+    const char *operator()(const char *data) {
+        const size_t length = strlen(data) + 1;
+        size_t hash = u::detail::sdbm((const void *)data, length) & (kTableSize - 1);
+        while (m_table[hash] && memcmp((const void *)m_table[hash]->m_data, (const void *)data, length))
+            hash = (hash + 1) & (kTableSize - 1);
+        if (m_table[hash]) {
+            m_table[hash]->m_count++;
+            return m_table[hash]->m_data;
+        }
+        m_table[hash] = (entry *)malloc(sizeof(entry));
+        m_table[hash]->m_data = (char *)memcpy(malloc(length), (const void *)data, length);
+        m_table[hash]->m_count = 1;
+        m_active++;
+        return m_table[hash]->m_data;
+    }
+
+    void collect(size_t &active) {
+        for (size_t i = 0; i < kTableSize; i++) {
+            if (m_table[i] && m_table[i]->m_count < kThreshold) {
+                free((void *)m_table[i]->m_data);
+                free((void *)m_table[i]);
+                m_table[i] = nullptr;
+                m_active--;
+            }
+        }
+        active = m_active;
+    }
+
+private:
+    struct entry {
+        entry(const char *data) {
+            const size_t length = strlen(data) + 1;
+            m_data = (char *)memcpy(malloc(length), data, length);
+        }
+    private:
+        friend struct stringPool;
+        char *m_data;
+        size_t m_count;
+    };
+    entry *m_table[kTableSize];
+    size_t m_active;
+
+} gStringPool;
 
 void queue::addScissor(int x, int y, int w, int h) {
     if (m_commands.full()) return;
@@ -73,7 +138,7 @@ void queue::addTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
     cmd.asTriangle.h = h;
 }
 
-void queue::addText(int x, int y, int align, const u::string &contents, uint32_t color) {
+void queue::addText(int x, int y, int align, const char *contents, uint32_t color) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandText;
@@ -82,10 +147,10 @@ void queue::addText(int x, int y, int align, const u::string &contents, uint32_t
     cmd.asText.x = x;
     cmd.asText.y = y;
     cmd.asText.align = align;
-    cmd.asText.contents = contents;
+    cmd.asText.contents = gStringPool(contents);
 }
 
-void queue::addImage(int x, int y, int w, int h, const u::string &path, bool mipmaps) {
+void queue::addImage(int x, int y, int w, int h, const char *path, bool mipmaps) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandImage;
@@ -95,7 +160,7 @@ void queue::addImage(int x, int y, int w, int h, const u::string &path, bool mip
     cmd.asImage.y = y;
     cmd.asImage.w = w;
     cmd.asImage.h = h;
-    cmd.asImage.path = path;
+    cmd.asImage.path = gStringPool(path);
 }
 
 // A reference to something in the gui
@@ -317,12 +382,12 @@ static constexpr int kScrollAreaPadding = 8;
 static constexpr int kIndentationSize = 16;
 static constexpr int kAreaHeader = 28;
 
-bool areaBegin(const u::string &contents, int x, int y, int w, int h, int &value, bool style) {
+bool areaBegin(const char *contents, int x, int y, int w, int h, int &value, bool style) {
     A++;
     W.id = 0;
     B.id = (A << 16) | W.id;
 
-    const size_t header = contents.empty() ? 0 : kAreaHeader;
+    const size_t header = (!contents || !*contents) ? 0 : kAreaHeader;
 
     W.x = x + kScrollAreaPadding;
     W.y = y+h-header + value;
@@ -435,7 +500,7 @@ void areaFinish(int inc, bool autoScroll) {
     S.m_insideCurrentScroll = false;
 }
 
-bool button(const u::string &contents, bool enabled) {
+bool button(const char *contents, bool enabled) {
     const auto id = (A << 16) | ++W.id;
 
     const int x = W.x;
@@ -468,7 +533,7 @@ bool button(const u::string &contents, bool enabled) {
     return result;
 }
 
-bool item(const u::string &contents, bool enabled) {
+bool item(const char *contents, bool enabled) {
     const auto id = (A << 16) | ++W.id;
 
     const int x = W.x;
@@ -494,7 +559,7 @@ bool item(const u::string &contents, bool enabled) {
     return result;
 }
 
-bool check(const u::string &contents, bool checked, bool enabled) {
+bool check(const char *contents, bool checked, bool enabled) {
     const auto id = (A << 16) | ++W.id;
 
     const int x = W.x;
@@ -530,7 +595,7 @@ bool check(const u::string &contents, bool checked, bool enabled) {
     return result;
 }
 
-bool collapse(const u::string &contents, const char *subtext, bool checked, bool enabled) {
+bool collapse(const char *contents, const char *subtext, bool checked, bool enabled) {
     const auto id = (A << 16) | ++W.id;
 
     const int x = W.x;
@@ -565,7 +630,7 @@ bool collapse(const u::string &contents, const char *subtext, bool checked, bool
     return result;
 }
 
-void label(const u::string &contents) {
+void label(const char *contents) {
     const int x = W.x;
     const int y = W.y - kButtonHeight;
 
@@ -575,7 +640,7 @@ void label(const u::string &contents) {
         RGBA(255, 255, 255, 255));
 }
 
-void value(const u::string &contents) {
+void value(const char *contents) {
     const int x = W.x;
     const int y = W.y - kButtonHeight;
     const int w = W.w;
@@ -587,7 +652,7 @@ void value(const u::string &contents) {
 }
 
 template <typename T>
-bool slider(const u::string &contents, T &value, T min, T max, T inc, bool enabled) {
+bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
     const auto id = (A << 16) | ++W.id;
 
     const int x = W.x;
@@ -645,19 +710,19 @@ bool slider(const u::string &contents, T &value, T min, T max, T inc, bool enabl
         Q.addText(x+kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignLeft,
             contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
         Q.addText(x+w-kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignRight,
-            msg, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
+            msg.c_str(), S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
     } else {
         Q.addText(x+kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignLeft,
             contents, RGBA(128, 128, 128, 200));
         Q.addText(x+w-kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignRight,
-            msg, RGBA(128, 128, 128, 200));
+            msg.c_str(), RGBA(128, 128, 128, 200));
     }
 
     return result || changed;
 }
 
-template bool slider<float>(const u::string &contents, float &value, float min, float max, float inc, bool enabled);
-template bool slider<int>(const u::string &contents, int &value, int min, int max, int inc, bool enabled);
+template bool slider<float>(const char *contents, float &value, float min, float max, float inc, bool enabled);
+template bool slider<int>(const char *contents, int &value, int min, int max, int inc, bool enabled);
 
 void indent() {
     W.x += kIndentationSize;
@@ -697,7 +762,7 @@ void drawRectangle(int x, int y, int w, int h, int r, uint32_t color) {
     Q.addRectangle(x, y, w, h, r, color);
 }
 
-void drawText(int x, int y, int align, const u::string &contents, uint32_t color) {
+void drawText(int x, int y, int align, const char *contents, uint32_t color) {
     Q.addText(x, y, align, contents, color);
 }
 
@@ -705,7 +770,7 @@ void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
     Q.addTriangle(x, y, w, h, flags, color);
 }
 
-void drawImage(int x, int y, int w, int h, const u::string &path, bool mipmaps) {
+void drawImage(int x, int y, int w, int h, const char *path, bool mipmaps) {
     Q.addImage(x, y, w, h, path, mipmaps);
 }
 
@@ -733,6 +798,10 @@ void begin(int (&mouse)[4]) {
 
 void finish() {
     S.clearInput();
+}
+
+void collect(size_t &active) {
+    gStringPool.collect(active);
 }
 
 }

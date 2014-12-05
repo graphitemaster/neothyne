@@ -386,7 +386,7 @@ static void menuEdit() {
         if (models.size()) {
             gui::areaBegin("Mapmodels", x, y, w, h, D(modelScroll));
             for (auto &it : models) {
-                if (gui::item(it)) {
+                if (gui::item(it.c_str())) {
                     mapModel m;
                     m.name = it;
                     m.position = looking();
@@ -407,7 +407,7 @@ static void menuConsole() {
 
     gui::areaBegin("", x, y, w, h, D(scroll), false);
     for (auto &it : gMenuConsole)
-        gui::label(it);
+        gui::label(it.c_str());
     gui::areaFinish(30, true);
 }
 
