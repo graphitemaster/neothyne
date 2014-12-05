@@ -178,7 +178,8 @@ def genHeader(functionList, extensionList, headerFile):
         # Finish the wrapper macros
         header.write(textwrap.dedent("""\
         #endif
-        #endif"""))
+        #endif
+        """))
 
 def genSource(functionList, extensionList, sourceFile):
     with open(sourceFile, 'w') as source:
