@@ -1,6 +1,6 @@
 # Materials
 Material files contain space-delimited key-value lines which represent a material.
-The easiest material contains just a diffuse texture. More sophistopcated materials
+The easiest material contains just a diffuse texture. More sophisticated materials
 are possible with the use of the appropriate key-value associations.
 
 ## Keys
@@ -20,7 +20,7 @@ R component consists of the power term for specularity, while the G component
 consists of the intensity term.
 
 ##### specparams
-The following key cannot be used in conjuction with spec. This gives the entire
+The following key cannot be used in conjunction with spec. This gives the entire
 material the following specular power and intensity for all pixels.
 
 ##### displacement
@@ -30,7 +30,7 @@ A height map used for displacement mapping.
 Scale and bias used for displacement mapping. Bias is optional.
 
 ## Tags
-The texture value for a material key can be prefixed with a serise of tags. A
+The texture value for a material key can be prefixed with a series of tags. A
 tag is a way of indicating a task for which the engine will interpret and carry
 out on the texture before handing it off to the GPU.
 
