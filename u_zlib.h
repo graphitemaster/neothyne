@@ -5,9 +5,6 @@
 
 namespace u {
 
-template <typename T>
-struct vector;
-
 struct zlib {
     bool decompress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in);
 
