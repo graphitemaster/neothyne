@@ -16,9 +16,9 @@ struct method {
 
     bool init();
 
-    void define(const u::string &string);
-    void define(const u::string &string, size_t value);
-    void define(const u::string &string, float value);
+    void define(const char *string);
+    void define(const char *string, size_t value);
+    void define(const char *string, float value);
 
 protected:
     bool addShader(GLenum shaderType, const char *shaderText);

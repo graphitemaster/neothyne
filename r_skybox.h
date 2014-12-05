@@ -1,6 +1,5 @@
 #ifndef R_SKYBOX_HDR
 #define R_SKYBOX_HDR
-#include "r_common.h"
 #include "r_texture.h"
 #include "r_method.h"
 

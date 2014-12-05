@@ -2,10 +2,12 @@
 #define M_PLANE_HDR
 #include <math.h>
 
-#include "m_mat4.h"
 #include "m_vec3.h"
 
 namespace m {
+
+struct quat;
+struct perspectiveProjection;
 
 enum pointPlane {
     kPointPlaneBack,

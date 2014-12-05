@@ -3,8 +3,6 @@
 #include "r_method.h"
 #include "r_gbuffer.h"
 
-#include "m_vec3.h"
-
 struct directionalLight;
 struct pointLight;
 struct spotLight;

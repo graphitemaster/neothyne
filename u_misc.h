@@ -72,7 +72,7 @@ template <typename T>
 inline constexpr typename u::enable_if<u::is_pointer<T>::value, T>::type
 formatNormalize(T argument) { return argument; }
 
-inline const char * formatNormalize(const u::string &argument) {
+inline const char *formatNormalize(const u::string &argument) {
     return argument.c_str();
 }
 
