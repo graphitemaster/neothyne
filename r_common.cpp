@@ -92,6 +92,7 @@ typedef void (APIENTRYP MYPFNGLCOMPRESSEDTEXIMAGE2DPROC)(GLenum, GLint, GLenum, 
 typedef void (APIENTRYP MYPFNGLPIXELSTOREIPROC)(GLenum, GLint);
 typedef void (APIENTRYP MYPFNGLSCISSORPROC)(GLint, GLint, GLsizei, GLsizei);
 typedef void (APIENTRYP MYPFNGLPOLYGONMODEPROC)(GLenum, GLenum);
+typedef void (APIENTRYP MYPFNGLHINTPROC)(GLenum, GLenum);
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -162,6 +163,7 @@ static MYPFNGLCOMPRESSEDTEXIMAGE2DPROC      glCompressedTexImage2D_     = nullpt
 static MYPFNGLPIXELSTOREIPROC               glPixelStorei_              = nullptr;
 static MYPFNGLSCISSORPROC                   glScissor_                  = nullptr;
 static MYPFNGLPOLYGONMODEPROC               glPolygonMode_              = nullptr;
+static MYPFNGLHINTPROC                      glHint_                     = nullptr;
 
 #ifdef DEBUG_GL
 template <char C, typename T>
@@ -417,6 +419,7 @@ void init() {
     glPixelStorei_              = (MYPFNGLPIXELSTOREIPROC)SDL_GL_GetProcAddress("glPixelStorei");
     glScissor_                  = (MYPFNGLSCISSORPROC)SDL_GL_GetProcAddress("glScissor");
     glPolygonMode_              = (MYPFNGLPOLYGONMODEPROC)SDL_GL_GetProcAddress("glPolygonMode");
+    glHint_                     = (MYPFNGLHINTPROC)SDL_GL_GetProcAddress("glHint");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -784,6 +787,11 @@ void Scissor(GLint x, GLint y, GLsizei width, GLsizei height GL_INFOP) {
 void PolygonMode(GLenum face, GLenum mode GL_INFOP) {
     glPolygonMode_(face, mode);
     GL_CHECK("22", face, mode);
+}
+
+void Hint(GLenum target, GLenum mode GL_INFOP) {
+    glHint_(target, mode);
+    GL_CHECK("22", target, mode);
 }
 
 }

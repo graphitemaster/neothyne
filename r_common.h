@@ -93,6 +93,7 @@ void CompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLs
 void PixelStorei(GLenum pname, GLint param GL_INFOP);
 void Scissor(GLint x, GLint y, GLsizei width, GLsizei height GL_INFOP);
 void PolygonMode(GLenum face, GLenum mode GL_INFOP);
+void Hint(GLenum target, GLenum mode GL_INFOP);
 
 }
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -165,5 +166,6 @@ void PolygonMode(GLenum face, GLenum mode GL_INFOP);
 #   define PixelStorei(...)              PixelStorei(__VA_ARGS__, __FILE__, __LINE__)
 #   define Scissor(...)                  Scissor(__VA_ARGS__, __FILE__, __LINE__)
 #   define PolygonMode(...)              PolygonMode(__VA_ARGS__, __FILE__, __LINE__)
+#   define Hint(...)                     Hint(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif

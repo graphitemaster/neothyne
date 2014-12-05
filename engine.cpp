@@ -379,6 +379,9 @@ int main(int argc, char **argv) {
     gl::CullFace(GL_BACK);
     gl::Enable(GL_CULL_FACE);
 
+    gl::Enable(GL_LINE_SMOOTH);
+    gl::Hint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
     const char *vendor = (const char *)gl::GetString(GL_VENDOR);
     const char *renderer = (const char *)gl::GetString(GL_RENDERER);
     const char *version = (const char *)gl::GetString(GL_VERSION);
