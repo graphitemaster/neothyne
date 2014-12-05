@@ -619,7 +619,6 @@ void world::geometryPass(const rendererPipeline &pipeline, ::world *map) {
             m_models[it->name] = next.release();
         } else {
             auto &mdl = m_models[it->name];
-            auto &mesh = mdl->getMesh();
 
             p.setWorldPosition(it->position);
             p.setScale(it->scale + mdl->scale);
