@@ -792,8 +792,6 @@ void world::lightingPass(const rendererPipeline &pipeline, ::world *map) {
 }
 
 void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
-    rendererPipeline p = pipeline;
-
     m_final.bindWriting();
 
     // Forward rendering takes place here, reenable depth testing
@@ -812,12 +810,15 @@ void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
     // Editing aids
     static constexpr m::vec3 kHighlighted = { 1.0f, 0.0f, 0.0f };
     static constexpr m::vec3 kOutline = { 0.0f, 0.0f, 1.0f };
+
+    gl::DepthMask(GL_FALSE);
     if (varGet<int>("cl_edit").get()) {
         // Map models
         for (auto &it : map->m_mapModels) {
             auto &mdl = m_models[it->name];
             auto &mesh = mdl->getMesh();
 
+            rendererPipeline p = pipeline;
             p.setWorldPosition(it->position);
             p.setScale(it->scale + mdl->scale);
             p.setRotate(it->rotate + mdl->rotate);
@@ -839,6 +840,7 @@ void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
             // Render bounding sphere
             float scale = it->radius * kLightRadiusTweak;
 
+            rendererPipeline p = pipeline;
             p.setWorldPosition(it->position);
             p.setScale({scale, scale, scale});
 
@@ -852,6 +854,7 @@ void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
             // Render bounding sphere
             float scale = it->radius * kLightRadiusTweak;
 
+            rendererPipeline p = pipeline;
             p.setWorldPosition(it->position);
             p.setScale({scale, scale, scale});
 
@@ -864,6 +867,7 @@ void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
         gl::Enable(GL_CULL_FACE);
         gl::PolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
+    gl::DepthMask(GL_TRUE);
 
     // Don't need depth testing or blending anymore
     gl::Disable(GL_DEPTH_TEST);
