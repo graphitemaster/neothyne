@@ -38,8 +38,8 @@ protected:
     void drawRectangle(float x, float y, float w, float h, float fth, uint32_t color);
     void drawRectangle(float x, float y, float w, float h, float r, float fth, uint32_t color);
     void drawLine(float x0, float y0, float x1, float y1, float r, float fth, uint32_t color);
-    void drawText(float x, float y, const u::string &contents, int align, uint32_t color);
-    void drawImage(float x, float y, float w, float h, const u::string &path, bool mipmaps = false);
+    void drawText(float x, float y, const char *contents, int align, uint32_t color);
+    void drawImage(float x, float y, float w, float h, const char *path, bool mipmaps = false);
 
 private:
     struct glyphQuad {

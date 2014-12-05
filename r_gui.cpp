@@ -499,12 +499,14 @@ void gui::drawLine(float x0, float y0, float x1, float y1, float r, float fth, u
     drawPolygon(vertices, fth, color);
 }
 
-void gui::drawText(float x, float y, const u::string &contents, int align, uint32_t color) {
+void gui::drawText(float x, float y, const char *contents, int align, uint32_t color) {
     // Calculate length of text
-    auto textLength = [this](const u::string &contents) -> float {
+    const size_t size = strlen(contents);
+    auto textLength = [this](const char *contents, size_t size) -> float {
         float position = 0;
         float length = 0;
-        for (int it : contents) {
+        for (size_t i = 0; i < size; i++) {
+            const int it = contents[i];
             if (it < 32 || m_glyphs.size() <= size_t(it - 32))
                 continue;
             auto &b = m_glyphs[it - 32];
@@ -517,9 +519,9 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
 
     // Alignment of text
     if (align == ::gui::kAlignCenter)
-        x -= textLength(contents) / 2;
+        x -= textLength(contents, size) / 2;
     else if (align == ::gui::kAlignRight)
-        x -= textLength(contents);
+        x -= textLength(contents, size);
 
     const float R = float(color & 0xFF) / 255.0f;
     const float G = float((color >> 8) & 0xFF) / 255.0f;
@@ -528,8 +530,8 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
 
     batch b;
     b.start = m_vertices.size();
-    m_vertices.reserve(m_vertices.size() + 6 * contents.size());
-    for (size_t i = 0; i < contents.size(); i++) {
+    m_vertices.reserve(m_vertices.size() + 6 * size);
+    for (size_t i = 0; i < size; i++) {
         auto quad = getGlyphQuad(512, 512, contents[i] - 32, x, y);
         if (!quad)
             continue;
@@ -547,7 +549,7 @@ void gui::drawText(float x, float y, const u::string &contents, int align, uint3
     m_batches.push_back(b);
 }
 
-void gui::drawImage(float x, float y, float w, float h, const u::string &path, bool mipmaps) {
+void gui::drawImage(float x, float y, float w, float h, const char *path, bool mipmaps) {
     // Deal with loading of textures
     if (m_textures.find(path) == m_textures.end()) {
         auto tex = u::unique_ptr<texture2D>(new texture2D(mipmaps, kFilterBilinear));
