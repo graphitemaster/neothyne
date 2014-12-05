@@ -1,6 +1,6 @@
 #ifndef ENGINE_HDR
 #define ENGINE_HDR
-#include <SDL2/SDL.h>
+#include <stdint.h>
 
 #include "u_map.h"
 #include "u_string.h"
@@ -61,11 +61,11 @@ void neoResize(size_t width, size_t height);
 const u::string &neoUserPath();
 const u::string &neoGamePath();
 
+void neoFatalError(const char *error);
+
 template <typename... Ts>
 inline void neoFatal(const char *fmt, const Ts&... ts) {
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error",
-        u::format(fmt, ts...).c_str(), nullptr);
-    abort();
+    neoFatalError(u::format(fmt, ts...).c_str());
 }
 
 void neoSetVSyncOption(vSyncOption option);

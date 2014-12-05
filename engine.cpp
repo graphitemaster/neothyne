@@ -1,5 +1,6 @@
 #include <stdarg.h>
 
+#include <SDL2/SDL.h>
 #include <SDL2/SDL_stdinc.h>
 
 #include "engine.h"
@@ -275,6 +276,11 @@ static SDL_Window *getContext() {
 
 const u::string &neoUserPath() { return gUserPath; }
 const u::string &neoGamePath() { return gGamePath; }
+
+void neoFatalError(const char *error) {
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error", error, nullptr);
+    abort();
+}
 
 // So we don't need to depend on SDL_main we provide our own
 #ifdef _WIN32

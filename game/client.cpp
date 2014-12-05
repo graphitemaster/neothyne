@@ -1,3 +1,5 @@
+#include <SDL2/SDL.h>
+
 #include "engine.h"
 #include "client.h"
 #include "kdmap.h"
