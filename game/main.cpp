@@ -308,6 +308,7 @@ int neoMain(frameTimer &timer, int, char **) {
         perspective.nearp = cl_nearp;
         perspective.farp = cl_farp;
 
+        pipeline.setPerspective(perspective);
         pipeline.setRotation(gClient.getRotation());
         pipeline.setPosition(gClient.getPosition());
         pipeline.setTime(timer.ticks());
