@@ -325,18 +325,19 @@ int neoMain(frameTimer &timer, int, char **) {
             q.direction = direction.normalized();
 
             // Don't collide with anything but geometry for this trace
-            gWorld.trace(q, &h, 1024.0f, false);
-            direction *= (1024.0f * h.fraction);
-
-            if (gSelected->type == entity::kMapModel) {
-                auto &mapModel = gWorld.getMapModel(gSelected->index);
-                mapModel.position = direction + gClient.getPosition();
-            } else if (gSelected->type == entity::kPointLight) {
-                auto &pointLight = gWorld.getPointLight(gSelected->index);
-                pointLight.position = direction + gClient.getPosition();
-            } else if (gSelected->type == entity::kSpotLight) {
-                auto &spotLight = gWorld.getSpotLight(gSelected->index);
-                spotLight.position = direction + gClient.getPosition();
+            static constexpr float kMaxTraceDistance = 1024.0f;
+            if (gWorld.trace(q, &h, kMaxTraceDistance, false) && h.fraction > 0.01f) {
+                direction *= (kMaxTraceDistance * h.fraction);
+                if (gSelected->type == entity::kMapModel) {
+                    auto &mapModel = gWorld.getMapModel(gSelected->index);
+                    mapModel.position = direction + gClient.getPosition();
+                } else if (gSelected->type == entity::kPointLight) {
+                    auto &pointLight = gWorld.getPointLight(gSelected->index);
+                    pointLight.position = direction + gClient.getPosition();
+                } else if (gSelected->type == entity::kSpotLight) {
+                    auto &spotLight = gWorld.getSpotLight(gSelected->index);
+                    spotLight.position = direction + gClient.getPosition();
+                }
             }
         }
 
