@@ -2,97 +2,88 @@
 
 namespace r {
 
-rendererPipeline::rendererPipeline()
+pipeline::pipeline()
     : m_scale(1.0f, 1.0f, 1.0f)
 {
 }
 
-void rendererPipeline::setScale(const m::vec3 &scale) {
+void pipeline::setScale(const m::vec3 &scale) {
     m_scale = scale;
 }
 
-void rendererPipeline::setWorldPosition(const m::vec3 &worldPosition) {
-    m_worldPosition = worldPosition;
+void pipeline::setWorld(const m::vec3 &world) {
+    m_world = world;
 }
 
-void rendererPipeline::setRotate(const m::vec3 &rotate) {
+void pipeline::setRotate(const m::vec3 &rotate) {
     m_rotate = rotate;
 }
 
-void rendererPipeline::setRotation(const m::quat &rotation) {
+void pipeline::setRotation(const m::quat &rotation) {
     m_rotation = rotation;
 }
 
-void rendererPipeline::setPosition(const m::vec3 &position) {
+void pipeline::setPosition(const m::vec3 &position) {
     m_position = position;
 }
 
-void rendererPipeline::setPerspectiveProjection(const m::perspectiveProjection &projection) {
-    m_perspectiveProjection = projection;
+void pipeline::setPerspective(const m::perspective &p) {
+    m_perspective = p;
 }
 
-void rendererPipeline::setTime(float time) {
+void pipeline::setTime(float time) {
     m_time = time;
 }
 
-const m::mat4 &rendererPipeline::getWorldTransform() {
-    m::mat4 scale, rotate, translate;
+const m::mat4 &pipeline::world() {
+    m::mat4 scale;
+    m::mat4 rotate;
+    m::mat4 translate;
     scale.setScaleTrans(m_scale.x, m_scale.y, m_scale.z);
     rotate.setRotateTrans(m_rotate.x, m_rotate.y, m_rotate.z);
-    translate.setTranslateTrans(m_worldPosition.x, m_worldPosition.y, m_worldPosition.z);
-
-    m_worldTransform = translate * rotate * scale;
-    return m_worldTransform;
+    translate.setTranslateTrans(m_world.x, m_world.y, m_world.z);
+    return m_matrices[kWorld] = translate * rotate * scale;
 }
 
-const m::mat4 &rendererPipeline::getVPTransform() {
-    m::mat4 translate, rotate, perspective;
+const m::mat4 &pipeline::view() {
+    m::mat4 translate;
+    m::mat4 rotate;
     translate.setTranslateTrans(-m_position.x, -m_position.y, -m_position.z);
-    rotate.setCameraTrans(getTarget(), getUp());
-    perspective.setPersProjTrans(getPerspectiveProjection());
-    m_VPTransform = perspective * rotate * translate;
-    return m_VPTransform;
+    rotate.setCameraTrans(target(), up());
+    return m_matrices[kView] = rotate * translate;
 }
 
-const m::mat4 &rendererPipeline::getWVPTransform() {
-    getWorldTransform();
-    getVPTransform();
-
-    m_WVPTransform = m_VPTransform * m_worldTransform;
-    return m_WVPTransform;
+const m::mat4 &pipeline::projection() {
+    m::mat4 perspective;
+    perspective.setPerspectiveTrans(m_perspective);
+    return m_matrices[kProjection] = perspective;
 }
 
-const m::mat4 &rendererPipeline::getInverseTransform() {
-    getVPTransform();
-    m_inverseTransform = m_VPTransform.inverse();
-    return m_inverseTransform;
+const m::perspective &pipeline::perspective() const {
+    return m_perspective;
 }
 
-const m::perspectiveProjection &rendererPipeline::getPerspectiveProjection() const {
-    return m_perspectiveProjection;
-}
-
-const m::vec3 rendererPipeline::getTarget() const {
+const m::vec3 pipeline::target() const {
     m::vec3 target;
     m_rotation.getOrient(&target, nullptr, nullptr);
     return target;
 }
 
-const m::vec3 rendererPipeline::getUp() const {
+const m::vec3 pipeline::up() const {
     m::vec3 up;
     m_rotation.getOrient(nullptr, &up, nullptr);
     return up;
 }
 
-const m::vec3 &rendererPipeline::getPosition() const {
+const m::vec3 &pipeline::position() const {
     return m_position;
 }
 
-const m::quat &rendererPipeline::getRotation() const {
+const m::quat &pipeline::rotation() const {
     return m_rotation;
 }
 
-float rendererPipeline::getTime() const {
+float pipeline::time() const {
     return m_time;
 }
 

@@ -6,7 +6,7 @@ namespace m {
 struct vec3;
 struct quat;
 
-struct perspectiveProjection {
+struct perspective {
     float fov;
     float width;
     float height;
@@ -25,7 +25,7 @@ struct mat4 {
     void setTranslateTrans(float x, float y, float z);
     void setCameraTrans(const vec3 &target, const vec3 &up);
     void setCameraTrans(const vec3 &position, const quat &q);
-    void setPersProjTrans(const perspectiveProjection &projection);
+    void setPerspectiveTrans(const perspective &p);
     void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
 };
 

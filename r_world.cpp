@@ -145,10 +145,10 @@ void finalMethod::setColorTextureUnit(int unit) {
     gl::Uniform1i(m_colorMapLocation, unit);
 }
 
-void finalMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
-    gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
+void finalMethod::setPerspective(const m::perspective &p) {
+    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
     // TODO: frustum in final shader to do other things eventually
-    //gl::Uniform2f(m_screenFrustumLocation, project.nearp, project.farp);
+    //gl::Uniform2f(m_screenFrustumLocation, project.nearp, perspective.farp);
 }
 
 finalComposite::finalComposite()
@@ -170,19 +170,19 @@ void finalComposite::destroy() {
         gl::DeleteTextures(1, &m_texture);
 }
 
-void finalComposite::update(const m::perspectiveProjection &project, GLuint depth) {
-    size_t width = project.width;
-    size_t height = project.height;
+void finalComposite::update(const m::perspective &p, GLuint depth) {
+    size_t width = p.width;
+    size_t height = p.height;
 
     if (m_width != width || m_height != height) {
         destroy();
-        init(project, depth);
+        init(p, depth);
     }
 }
 
-bool finalComposite::init(const m::perspectiveProjection &project, GLuint depth) {
-    m_width = project.width;
-    m_height = project.height;
+bool finalComposite::init(const m::perspective &p, GLuint depth) {
+    m_width = p.width;
+    m_height = p.height;
 
     gl::GenFramebuffers(1, &m_fbo);
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
@@ -428,7 +428,7 @@ bool world::load(const kdMap &map) {
     return true;
 }
 
-bool world::upload(const m::perspectiveProjection &project) {
+bool world::upload(const m::perspective &p) {
     if (m_uploaded)
         return true;
 
@@ -534,11 +534,11 @@ bool world::upload(const m::perspectiveProjection &project) {
     m_bboxMethod.setColor({1.0f, 1.0f, 1.0f}); // White by default
 
     // setup g-buffer
-    if (!m_gBuffer.init(project))
+    if (!m_gBuffer.init(p))
         neoFatal("failed to initialize world renderer");
-    if (!m_ssao.init(project))
+    if (!m_ssao.init(p))
         neoFatal("failed to initialize world renderer");
-    if (!m_final.init(project, m_gBuffer.texture(gBuffer::kDepth)))
+    if (!m_final.init(p, m_gBuffer.texture(gBuffer::kDepth)))
         neoFatal("failed to initialize world renderer");
 
     if (!m_ssaoMethod.init())
@@ -558,11 +558,11 @@ bool world::upload(const m::perspectiveProjection &project) {
     return m_uploaded = true;
 }
 
-void world::geometryPass(const rendererPipeline &pipeline, ::world *map) {
-    auto p = pipeline;
+void world::geometryPass(const pipeline &pl, ::world *map) {
+    auto p = pl;
 
     // The scene pass will be writing into the gbuffer
-    m_gBuffer.update(p.getPerspectiveProjection());
+    m_gBuffer.update(p.perspective());
     m_gBuffer.bindWriting();
 
     // Clear the depth and color buffers. This is a new scene pass.
@@ -572,17 +572,17 @@ void world::geometryPass(const rendererPipeline &pipeline, ::world *map) {
     gl::Enable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
 
-    auto setup = [this](material &mat, rendererPipeline &p) {
+    auto setup = [this](material &mat, pipeline &p) {
         // Calculate permutation incase a console variable changes
         geomCalculatePermutation(mat);
 
         auto &permutation = geomPermutations[mat.permute];
         auto &method = m_geomMethods[mat.permute];
         method.enable();
-        method.setWVP(p.getWVPTransform());
-        method.setWorld(p.getWorldTransform());
+        method.setWVP(p.projection() * p.view() * p.world());
+        method.setWorld(p.world());
         if (permutation.permute & kGeomPermParallax) {
-            method.setEyeWorldPos(p.getPosition());
+            method.setEyeWorldPos(p.position());
             method.setParallax(mat.dispScale, mat.dispBias);
         }
         if (permutation.permute & kGeomPermSpecParams) {
@@ -620,7 +620,7 @@ void world::geometryPass(const rendererPipeline &pipeline, ::world *map) {
         } else {
             auto &mdl = m_models[it->name];
 
-            p.setWorldPosition(it->position);
+            p.setWorld(it->position);
             p.setScale(it->scale + mdl->scale);
             p.setRotate(it->rotate + mdl->rotate);
 
@@ -636,7 +636,7 @@ void world::geometryPass(const rendererPipeline &pipeline, ::world *map) {
     // Screen space ambient occlusion pass
     if (r_ssao) {
         // Read from the gbuffer, write to the ssao pass
-        m_ssao.update(p.getPerspectiveProjection());
+        m_ssao.update(p.perspective());
         m_ssao.bindWriting();
 
         // Write to SSAO
@@ -653,16 +653,17 @@ void world::geometryPass(const rendererPipeline &pipeline, ::world *map) {
 
         // Do real SSAO pass now
         m_ssaoMethod.enable();
-        m_ssaoMethod.setPerspectiveProjection(p.getPerspectiveProjection());
-        m_ssaoMethod.setInverse(p.getInverseTransform());
+        m_ssaoMethod.setPerspective(p.perspective());
+        m_ssaoMethod.setInverse((p.projection() * p.view()).inverse());
         m_quad.render();
     }
 }
 
 static constexpr float kLightRadiusTweak = 1.11f;
 
-void world::lightingPass(const rendererPipeline &pipeline, ::world *map) {
-    auto p = pipeline;
+void world::lightingPass(const pipeline &pl, ::world *map) {
+    auto p = pl;
+    auto perspective = pl.perspective();
 
     // Write to the final composite
     m_final.bindWriting();
@@ -696,32 +697,31 @@ void world::lightingPass(const rendererPipeline &pipeline, ::world *map) {
     {
         auto &method = m_pointLightMethod;
         method.enable();
-        method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
-        method.setEyeWorldPos(pipeline.getPosition());
-        method.setInverse(p.getInverseTransform());
+        method.setPerspective(pl.perspective());
+        method.setEyeWorldPos(pl.position());
+        method.setInverse((p.projection() * p.view()).inverse());
 
-        auto project = pipeline.getPerspectiveProjection();
-        rendererPipeline p;
-        p.setPosition(pipeline.getPosition());
-        p.setRotation(pipeline.getRotation());
-        p.setPerspectiveProjection(project);
+        pipeline p;
+        p.setPosition(pl.position());
+        p.setRotation(pl.rotation());
+        p.setPerspective(perspective);
 
         for (auto &it : map->m_pointLights) {
             float scale = it->radius * kLightRadiusTweak;
 
             // Frustum cull lights
-            m_frustum.setup(it->position, p.getRotation(), p.getPerspectiveProjection());
-            if (!m_frustum.testSphere(p.getPosition(), scale))
+            m_frustum.setup(it->position, p.rotation(), p.perspective());
+            if (!m_frustum.testSphere(p.position(), scale))
                 continue;
 
-            p.setWorldPosition(it->position);
+            p.setWorld(it->position);
             p.setScale({scale, scale, scale});
 
             method.setLight(*it);
-            method.setWVP(p.getWVPTransform());
+            method.setWVP(p.projection() * p.view() * p.world());
 
-            const m::vec3 dist = it->position - p.getPosition();
-            scale += project.nearp + 1;
+            const m::vec3 dist = it->position - p.position();
+            scale += perspective.nearp + 1.0f;
             if (dist*dist >= scale*scale) {
                 gl::DepthFunc(GL_LESS);
                 gl::CullFace(GL_BACK);
@@ -737,32 +737,31 @@ void world::lightingPass(const rendererPipeline &pipeline, ::world *map) {
     {
         auto &method = m_spotLightMethod;
         method.enable();
-        method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
-        method.setEyeWorldPos(pipeline.getPosition());
-        method.setInverse(p.getInverseTransform());
+        method.setPerspective(pl.perspective());
+        method.setEyeWorldPos(pl.position());
+        method.setInverse((p.projection() * p.view()).inverse());
 
-        auto project = pipeline.getPerspectiveProjection();
-        rendererPipeline p;
-        p.setPosition(pipeline.getPosition());
-        p.setRotation(pipeline.getRotation());
-        p.setPerspectiveProjection(project);
+        pipeline p;
+        p.setPosition(pl.position());
+        p.setRotation(pl.rotation());
+        p.setPerspective(perspective);
 
         for (auto &it : map->m_spotLights) {
             float scale = it->radius * kLightRadiusTweak;
 
             // Frustum cull lights
-            m_frustum.setup(it->position, p.getRotation(), p.getPerspectiveProjection());
-            if (!m_frustum.testSphere(p.getPosition(), scale))
+            m_frustum.setup(it->position, p.rotation(), p.perspective());
+            if (!m_frustum.testSphere(p.position(), scale))
                 continue;
 
-            p.setWorldPosition(it->position);
+            p.setWorld(it->position);
             p.setScale({scale, scale, scale});
 
             method.setLight(*it);
-            method.setWVP(p.getWVPTransform());
+            method.setWVP(p.projection() * p.view() * p.world());
 
-            const m::vec3 dist = it->position - p.getPosition();
-            scale += project.nearp + 1;
+            const m::vec3 dist = it->position - p.position();
+            scale += perspective.nearp + 1.0f;
             if (dist*dist >= scale*scale) {
                 gl::DepthFunc(GL_LESS);
                 gl::CullFace(GL_BACK);
@@ -783,27 +782,27 @@ void world::lightingPass(const rendererPipeline &pipeline, ::world *map) {
         auto &method = m_directionalLightMethods[lightCalculatePermutation()];
         method.enable();
         method.setLight(*map->m_directionalLight);
-        method.setPerspectiveProjection(pipeline.getPerspectiveProjection());
-        method.setEyeWorldPos(pipeline.getPosition());
-        method.setInverse(p.getInverseTransform());
+        method.setPerspective(pl.perspective());
+        method.setEyeWorldPos(pl.position());
+        method.setInverse((p.projection() * p.view()).inverse());
         m_quad.render();
     }
 }
 
-void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
+void world::forwardPass(const pipeline &pl, ::world *map) {
     m_final.bindWriting();
 
     // Forward rendering takes place here, reenable depth testing
     gl::Enable(GL_DEPTH_TEST);
 
     // Forward render skybox
-    m_skybox.render(pipeline);
+    m_skybox.render(pl);
 
 #if 0
     // World billboards
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for (auto &it : map->m_billboards)
-        it.render(pipeline);
+        it.render(pl);
 #endif
 
     // Editing aids
@@ -817,17 +816,17 @@ void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
             auto &mdl = m_models[it->name];
             auto &mesh = mdl->getMesh();
 
-            rendererPipeline p = pipeline;
-            p.setWorldPosition(it->position);
+            pipeline p = pl;
+            p.setWorld(it->position);
             p.setScale(it->scale + mdl->scale);
             p.setRotate(it->rotate + mdl->rotate);
 
-            rendererPipeline bp;
-            bp.setWorldPosition(mesh.getBBCenter());
+            pipeline bp;
+            bp.setWorld(mesh.getBBCenter());
             bp.setScale(mesh.getBBSize());
             m_bboxMethod.enable();
             m_bboxMethod.setColor(it->highlight ? kHighlighted : kOutline);
-            m_bboxMethod.setWVP(p.getWVPTransform() * bp.getWorldTransform());
+            m_bboxMethod.setWVP((p.projection() * p.view() * p.world()) * bp.world());
             m_bbox.render();
         }
 
@@ -839,13 +838,13 @@ void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
             // Render bounding sphere
             float scale = it->radius * kLightRadiusTweak;
 
-            rendererPipeline p = pipeline;
-            p.setWorldPosition(it->position);
+            pipeline p = pl;
+            p.setWorld(it->position);
             p.setScale({scale, scale, scale});
 
             m_bboxMethod.enable();
             m_bboxMethod.setColor(it->highlight ? kHighlighted : kOutline);
-            m_bboxMethod.setWVP(p.getWVPTransform());
+            m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
             m_sphere.render();
         }
 
@@ -853,13 +852,13 @@ void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
             // Render bounding sphere
             float scale = it->radius * kLightRadiusTweak;
 
-            rendererPipeline p = pipeline;
-            p.setWorldPosition(it->position);
+            pipeline p = pl;
+            p.setWorld(it->position);
             p.setScale({scale, scale, scale});
 
             m_bboxMethod.enable();
             m_bboxMethod.setColor(it->highlight ? kHighlighted : kOutline);
-            m_bboxMethod.setWVP(p.getWVPTransform());
+            m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
             m_sphere.render();
         }
 
@@ -873,9 +872,9 @@ void world::forwardPass(const rendererPipeline &pipeline, ::world *map) {
     gl::Disable(GL_BLEND);
 }
 
-void world::compositePass(const rendererPipeline &pipeline) {
+void world::compositePass(const pipeline &pl) {
     // We're going to be reading from the final composite
-    m_final.update(pipeline.getPerspectiveProjection(), m_gBuffer.texture(gBuffer::kDepth));
+    m_final.update(pl.perspective(), m_gBuffer.texture(gBuffer::kDepth));
 
     // For the final pass it's important we output to the screen
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -889,15 +888,15 @@ void world::compositePass(const rendererPipeline &pipeline) {
     const size_t index = finalCalculatePermutation();
     auto &it = m_finalMethods[index];
     it.enable();
-    it.setPerspectiveProjection(pipeline.getPerspectiveProjection());
+    it.setPerspective(pl.perspective());
     m_quad.render();
 }
 
-void world::render(const rendererPipeline &pipeline, ::world *map) {
-    geometryPass(pipeline, map);
-    lightingPass(pipeline, map);
-    forwardPass(pipeline, map);
-    compositePass(pipeline);
+void world::render(const pipeline &pl, ::world *map) {
+    geometryPass(pl, map);
+    lightingPass(pl, map);
+    forwardPass(pl, map);
+    compositePass(pl);
 }
 
 }

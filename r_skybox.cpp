@@ -85,18 +85,18 @@ bool skybox::upload() {
     return true;
 }
 
-void skybox::render(const rendererPipeline &pipeline) {
+void skybox::render(const pipeline &pl) {
     // Construct the matrix for the skybox
-    rendererPipeline worldPipeline = pipeline;
-    rendererPipeline p;
-    p.setWorldPosition(pipeline.getPosition());
-    p.setPosition(pipeline.getPosition());
-    p.setRotation(pipeline.getRotation());
-    p.setPerspectiveProjection(pipeline.getPerspectiveProjection());
+    pipeline wpl = pl;
+    pipeline p;
+    p.setWorld(pl.position());
+    p.setPosition(pl.position());
+    p.setRotation(pl.rotation());
+    p.setPerspective(pl.perspective());
 
     m_method.enable();
-    m_method.setWVP(p.getWVPTransform());
-    m_method.setWorld(worldPipeline.getWorldTransform());
+    m_method.setWVP(p.projection() * p.view() * p.world());
+    m_method.setWorld(wpl.world());
 
     // render skybox cube
     gl::DepthFunc(GL_LEQUAL);

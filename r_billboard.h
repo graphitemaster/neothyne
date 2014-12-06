@@ -18,7 +18,7 @@ namespace m {
 
 namespace r {
 
-struct rendererPipeline;
+struct pipeline;
 
 struct billboardMethod : method {
     bool init();
@@ -42,7 +42,7 @@ struct billboard {
     bool load(const u::string &billboardTexture);
     bool upload();
 
-    void render(const rendererPipeline &pipeline);
+    void render(const pipeline &pl);
 
     // you must add all positions for this billboard before calling `upload'
     void add(const m::vec3 &position);

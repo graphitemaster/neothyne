@@ -7,17 +7,17 @@
 #include "u_optional.h"
 
 namespace m {
-    struct perspectiveProjection;
+    struct perspective;
 }
 
 namespace r {
 
-struct rendererPipeline;
+struct pipeline;
 
 struct guiMethod : method {
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
-    void setPerspectiveProjection(const m::perspectiveProjection &project);
+    void setPerspective(const m::perspective &p);
     void setColorTextureUnit(int unit);
 
 private:
@@ -30,7 +30,7 @@ struct gui {
     ~gui();
     bool load(const u::string &font);
     bool upload();
-    void render(const rendererPipeline &p);
+    void render(const pipeline &pl);
 
 protected:
     template <size_t E>

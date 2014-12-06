@@ -5,7 +5,7 @@
 
 namespace m {
 
-void frustum::setup(const m::vec3 &origin, const m::quat &orient, const m::perspectiveProjection &project) {
+void frustum::setup(const m::vec3 &origin, const m::quat &orient, const m::perspective &project) {
     m::vec3 direction;
     m::vec3 up;
     m::vec3 side;

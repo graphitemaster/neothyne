@@ -7,7 +7,7 @@
 namespace m {
 
 struct quat;
-struct perspectiveProjection;
+struct perspective;
 
 enum pointPlane {
     kPointPlaneBack,
@@ -106,7 +106,7 @@ struct plane {
 };
 
 struct frustum {
-    void setup(const m::vec3 &origin, const m::quat &orient, const m::perspectiveProjection &project);
+    void setup(const m::vec3 &origin, const m::quat &orient, const m::perspective &project);
     bool testSphere(const m::vec3 &point, float radius) const;
 private:
     enum {

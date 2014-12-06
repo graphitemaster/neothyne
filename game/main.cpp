@@ -215,16 +215,16 @@ int neoMain(frameTimer &timer, int, char **) {
         neoFatal("failed to initialize GUI rendering method\n");
 
     // Setup rendering pipeline
-    r::rendererPipeline pipeline;
-    m::perspectiveProjection projection;
-    projection.fov = cl_fov;
-    projection.nearp = cl_nearp;
-    projection.farp = cl_farp;
-    projection.width = neoWidth();
-    projection.height = neoHeight();
+    r::pipeline pipeline;
+    m::perspective perspective;
+    perspective.fov = cl_fov;
+    perspective.nearp = cl_nearp;
+    perspective.farp = cl_farp;
+    perspective.width = neoWidth();
+    perspective.height = neoHeight();
 
-    pipeline.setPerspectiveProjection(projection);
-    pipeline.setWorldPosition(m::vec3::origin);
+    pipeline.setPerspective(perspective);
+    pipeline.setWorld(m::vec3::origin);
 
     // Setup window and menu
     menuReset();
@@ -304,9 +304,9 @@ int neoMain(frameTimer &timer, int, char **) {
         if (!input)
             gClient.update(gWorld, timer.delta());
 
-        projection.fov = cl_fov;
-        projection.nearp = cl_nearp;
-        projection.farp = cl_farp;
+        perspective.fov = cl_fov;
+        perspective.nearp = cl_nearp;
+        perspective.farp = cl_farp;
 
         pipeline.setRotation(gClient.getRotation());
         pipeline.setPosition(gClient.getPosition());
@@ -342,7 +342,7 @@ int neoMain(frameTimer &timer, int, char **) {
         }
 
         if (gPlaying) {
-            gWorld.upload(projection);
+            gWorld.upload(perspective);
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
             gWorld.render(pipeline);
         } else {
@@ -364,9 +364,9 @@ int neoMain(frameTimer &timer, int, char **) {
                         case SDL_WINDOWEVENT_RESIZED:
                             // Resize the window
                             neoResize(e.window.data1, e.window.data2);
-                            projection.width = neoWidth();
-                            projection.height = neoHeight();
-                            pipeline.setPerspectiveProjection(projection);
+                            perspective.width = neoWidth();
+                            perspective.height = neoHeight();
+                            pipeline.setPerspective(perspective);
                             break;
                     }
                     break;

@@ -24,7 +24,7 @@ struct ssaoMethod : method {
     void setAttenuation(float constant, float linear);
     void setInverse(const m::mat4 &inverse);
     void setWVP(const m::mat4 &wvp);
-    void setPerspectiveProjection(const m::perspectiveProjection &project);
+    void setPerspective(const m::perspective &p);
     void setNormalTextureUnit(int unit);
     void setDepthTextureUnit(int unit);
     void setRandomTextureUnit(int unit);
@@ -52,8 +52,8 @@ struct ssao {
         kRandom
     };
 
-    bool init(const m::perspectiveProjection &project);
-    void update(const m::perspectiveProjection &project);
+    bool init(const m::perspective &p);
+    void update(const m::perspective &p);
     void bindWriting();
 
     GLuint texture(textureType unit) const;

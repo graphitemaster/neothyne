@@ -84,12 +84,12 @@ bool billboard::upload() {
     return true;
 }
 
-void billboard::render(const rendererPipeline &pipeline) {
-    rendererPipeline p = pipeline;
+void billboard::render(const pipeline &pl) {
+    pipeline p = pl;
 
     m_method.enable();
-    m_method.setCamera(p.getPosition());
-    m_method.setVP(p.getVPTransform());
+    m_method.setCamera(p.position());
+    m_method.setVP(p.projection() * p.view());
 
     m_texture.bind(GL_TEXTURE0);
 

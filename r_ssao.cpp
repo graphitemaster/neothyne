@@ -82,9 +82,9 @@ void ssaoMethod::setWVP(const m::mat4 &wvp) {
     gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
 }
 
-void ssaoMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
-    gl::Uniform2f(m_screenFrustumLocation, project.nearp, project.farp);
-    gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
+void ssaoMethod::setPerspective(const m::perspective &p) {
+    gl::Uniform2f(m_screenFrustumLocation, p.nearp, p.farp);
+    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
 }
 
 void ssaoMethod::setNormalTextureUnit(int unit) {
@@ -112,9 +112,9 @@ ssao::~ssao() {
     destroy();
 }
 
-bool ssao::init(const m::perspectiveProjection &project) {
-    m_width = project.width / 2;
-    m_height = project.height / 2;
+bool ssao::init(const m::perspective &p) {
+    m_width = p.width / 2;
+    m_height = p.height / 2;
 
     GLenum format = gl::has(ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
@@ -156,9 +156,9 @@ bool ssao::init(const m::perspectiveProjection &project) {
     return true;
 }
 
-void ssao::update(const m::perspectiveProjection &project) {
-    size_t width = project.width / 2;
-    size_t height = project.height / 2;
+void ssao::update(const m::perspective &p) {
+    size_t width = p.width / 2;
+    size_t height = p.height / 2;
 
     if (m_width != width || m_height != height) {
         GLenum format = gl::has(ARB_texture_rectangle)

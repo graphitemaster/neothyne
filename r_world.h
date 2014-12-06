@@ -58,7 +58,7 @@ struct finalMethod : method {
 
     void setWVP(const m::mat4 &wvp);
     void setColorTextureUnit(int unit);
-    void setPerspectiveProjection(const m::perspectiveProjection &project);
+    void setPerspective(const m::perspective &perspective);
 
 private:
     GLint m_WVPLocation;
@@ -70,8 +70,8 @@ struct finalComposite {
     finalComposite();
     ~finalComposite();
 
-    bool init(const m::perspectiveProjection &project, GLuint depth);
-    void update(const m::perspectiveProjection &project, GLuint depth);
+    bool init(const m::perspective &p, GLuint depth);
+    void update(const m::perspective &p, GLuint depth);
     void bindWriting();
 
     GLuint texture() const;
@@ -90,6 +90,12 @@ private:
     size_t m_height;
 };
 
+struct portal {
+    void render(const pipeline &pl);
+private:
+    model m_mesh;
+};
+
 struct renderTextureBatch {
     int permute;
     size_t start;
@@ -103,15 +109,15 @@ struct world : geom {
     ~world();
 
     bool load(const kdMap &map);
-    bool upload(const m::perspectiveProjection &p);
+    bool upload(const m::perspective &p);
 
-    void render(const rendererPipeline &p, ::world *map);
+    void render(const pipeline &pl, ::world *map);
 
 private:
-    void geometryPass(const rendererPipeline &pipeline, ::world *map);
-    void lightingPass(const rendererPipeline &pipeline, ::world *map);
-    void forwardPass(const rendererPipeline &pipeline, ::world *map);
-    void compositePass(const rendererPipeline &pipeline);
+    void geometryPass(const pipeline &pl, ::world *map);
+    void lightingPass(const pipeline &pl, ::world *map);
+    void forwardPass(const pipeline &pl, ::world *map);
+    void compositePass(const pipeline &pl);
 
     // world shading methods and permutations
     u::vector<geomMethod> m_geomMethods;

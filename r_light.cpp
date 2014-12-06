@@ -70,9 +70,9 @@ void lightMethod::setEyeWorldPos(const m::vec3 &position) {
     gl::Uniform3fv(m_eyeWorldPositionLocation, 1, &position.x);
 }
 
-void lightMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
-    gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
-    gl::Uniform2f(m_screenFrustumLocation, project.nearp, project.farp);
+void lightMethod::setPerspective(const m::perspective &p) {
+    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
+    gl::Uniform2f(m_screenFrustumLocation, p.nearp, p.farp);
 }
 
 ///! Directional Light Rendering Method

@@ -9,7 +9,7 @@ struct spotLight;
 
 namespace m {
     struct mat4;
-    struct perspectiveProjection;
+    struct perspective;
 }
 
 namespace r {
@@ -32,7 +32,7 @@ struct lightMethod : method {
     void setDepthTextureUnit(int unit);
     void setOcclusionTextureUnit(int unit);
     void setEyeWorldPos(const m::vec3 &position);
-    void setPerspectiveProjection(const m::perspectiveProjection &project);
+    void setPerspective(const m::perspective &p);
 
 private:
     GLint m_WVPLocation;

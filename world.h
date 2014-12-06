@@ -82,8 +82,8 @@ struct world {
     ~world();
 
     bool load(const u::string &map);
-    bool upload(const m::perspectiveProjection &project);
-    void render(const r::rendererPipeline &pipeline);
+    bool upload(const m::perspective &p);
+    void render(const r::pipeline &pl);
 
     // World entity descriptor
     struct descriptor {

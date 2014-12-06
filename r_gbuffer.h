@@ -3,7 +3,7 @@
 #include "r_common.h"
 
 namespace m {
-    struct perspectiveProjection;
+    struct perspective;
 }
 
 namespace r {
@@ -20,9 +20,9 @@ struct gBuffer {
     gBuffer();
     ~gBuffer();
 
-    bool init(const m::perspectiveProjection &project);
+    bool init(const m::perspective &p);
 
-    void update(const m::perspectiveProjection &project);
+    void update(const m::perspective &p);
     void bindReading();
     void bindWriting();
 

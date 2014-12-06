@@ -25,9 +25,9 @@ void gBuffer::destroy() {
         gl::DeleteTextures(kMax, m_textures);
 }
 
-void gBuffer::update(const m::perspectiveProjection &project) {
-    size_t width = project.width;
-    size_t height = project.height;
+void gBuffer::update(const m::perspective &p) {
+    size_t width = p.width;
+    size_t height = p.height;
 
     if (m_width != width || m_height != height) {
         GLenum format = gl::has(ARB_texture_rectangle)
@@ -50,9 +50,9 @@ void gBuffer::update(const m::perspectiveProjection &project) {
     }
 }
 
-bool gBuffer::init(const m::perspectiveProjection &project) {
-    m_width = project.width;
-    m_height = project.height;
+bool gBuffer::init(const m::perspective &p) {
+    m_width = p.width;
+    m_height = p.height;
 
     gl::GenFramebuffers(1, &m_fbo);
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);

@@ -13,7 +13,7 @@ namespace m {
 
 namespace r {
 
-struct rendererPipeline;
+struct pipeline;
 
 struct skyboxMethod : method {
     bool init();
@@ -34,7 +34,7 @@ struct skybox {
     bool load(const u::string &skyboxName);
     bool upload();
 
-    void render(const rendererPipeline &pipeline);
+    void render(const pipeline &pl);
 
 private:
     union {

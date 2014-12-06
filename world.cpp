@@ -39,11 +39,11 @@ bool world::load(const u::string &file) {
     return read && load(*read) && m_renderer.load(m_map);
 }
 
-bool world::upload(const m::perspectiveProjection &project) {
-    return m_renderer.upload(project);
+bool world::upload(const m::perspective &p) {
+    return m_renderer.upload(p);
 }
 
-void world::render(const r::rendererPipeline &pipeline) {
+void world::render(const r::pipeline &pl) {
     if (m_directionalLight) {
         const float R = ((map_dlight_color >> 16) & 0xFF) / 255.0f;
         const float G = ((map_dlight_color >> 8) & 0xFF) / 255.0f;
@@ -58,7 +58,7 @@ void world::render(const r::rendererPipeline &pipeline) {
             map_dlight_directionz
         };
     }
-    m_renderer.render(pipeline, this);
+    m_renderer.render(pl, this);
 }
 
 bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxDistance, bool entities, descriptor *ignore) {

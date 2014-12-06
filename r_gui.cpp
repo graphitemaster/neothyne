@@ -100,8 +100,8 @@ bool guiMethod::init(const u::vector<const char *> &defines) {
     return true;
 }
 
-void guiMethod::setPerspectiveProjection(const m::perspectiveProjection &project) {
-    gl::Uniform2f(m_screenSizeLocation, project.width, project.height);
+void guiMethod::setPerspective(const m::perspective &p) {
+    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
 }
 
 void guiMethod::setColorTextureUnit(int unit) {
@@ -204,8 +204,8 @@ bool gui::upload() {
     return true;
 }
 
-void gui::render(const rendererPipeline &pipeline) {
-    auto project = pipeline.getPerspectiveProjection();
+void gui::render(const pipeline &pl) {
+    auto perspective = pl.perspective();
 
     gl::Disable(GL_DEPTH_TEST);
     gl::Disable(GL_CULL_FACE);
@@ -213,11 +213,11 @@ void gui::render(const rendererPipeline &pipeline) {
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     m_methods[kMethodNormal].enable();
-    m_methods[kMethodNormal].setPerspectiveProjection(project);
+    m_methods[kMethodNormal].setPerspective(perspective);
     m_methods[kMethodFont].enable();
-    m_methods[kMethodFont].setPerspectiveProjection(project);
+    m_methods[kMethodFont].setPerspective(perspective);
     m_methods[kMethodImage].enable();
-    m_methods[kMethodImage].setPerspectiveProjection(project);
+    m_methods[kMethodImage].setPerspective(perspective);
 
     for (auto &it : ::gui::commands()()) {
 #ifdef DEBUG_GUI
@@ -276,12 +276,12 @@ void gui::render(const rendererPipeline &pipeline) {
                 break;
             case ::gui::kCommandText:
                 m_methods[kMethodFont].enable();
-                m_methods[kMethodFont].setPerspectiveProjection(project);
+                m_methods[kMethodFont].setPerspective(perspective);
                 drawText(it.asText.x, it.asText.y, it.asText.contents, it.asText.align, it.color);
                 break;
             case ::gui::kCommandImage:
                 m_methods[kMethodImage].enable();
-                m_methods[kMethodImage].setPerspectiveProjection(project);
+                m_methods[kMethodImage].setPerspective(perspective);
                 drawImage(it.asImage.x,
                           it.asImage.y,
                           it.asImage.w,
