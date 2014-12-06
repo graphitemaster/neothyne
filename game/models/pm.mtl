@@ -1,0 +1,12 @@
+# Blender MTL File: 'PMTemp.blend'
+# Material Count: 1
+
+newmtl Material
+Ns 96.078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.307499 0.208971 0.131232
+Ks 0.500000 0.500000 0.500000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd /home/acerspyro/Desktop/Models/player model/pmc_ao.png
