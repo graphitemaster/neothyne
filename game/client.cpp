@@ -7,6 +7,7 @@
 #include "cvar.h"
 
 static constexpr float kClientMaxVelocity = 120.0f;
+static constexpr float kClientMaxEditVelocity = kClientMaxVelocity * 10.0f;
 static constexpr m::vec3 kClientGravity(0.0f, -98.0f, 0.0f);
 static constexpr float kClientRadius = 5.0f; // client sphere radius (ft / 2pi)
 static constexpr float kClientSpeed = 80.0f; // cm/s
@@ -48,7 +49,7 @@ void client::update(world &map, float dt) {
     m::vec3 velocity = m_velocity;
     m::vec3 originalVelocity = m_velocity;
     m::vec3 newVelocity;
-    velocity.maxLength(kClientMaxVelocity);
+    velocity.maxLength(cl_edit ? kClientMaxEditVelocity : kClientMaxVelocity);
 
     m::vec3 planes[kdMap::kMaxClippingPlanes];
     m::vec3 pos = m_origin;
@@ -242,6 +243,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
     if (cl_edit) {
         if (newDirection.absSquared() > 0.1f)
             newDirection.setLength(cl_edit_speed);
+        m_lastDirection = direction;
         m_velocity = newDirection;
     } else {
         if (crouchReleased)
