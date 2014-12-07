@@ -9,7 +9,7 @@ voidptr neoMalloc(size_t size) {
 
 voidptr neoRealloc(voidptr ptr, size_t size) {
     void *resize = realloc(ptr, size);
-    if (!resize) abort();
+    if (!resize && !size) abort();
     return resize;
 }
 
