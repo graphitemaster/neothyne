@@ -72,11 +72,7 @@ void string::reserve(size_t capacity) {
 
     const size_t size = m_last - m_first;
 
-    char *newfirst = neoMalloc(capacity + 1);
-    for (char *it = m_first, *newit = newfirst, *end = m_last; it != end; ++it, ++newit)
-        *newit = *it;
-    neoFree(m_first);
-
+    char *newfirst = neoRealloc(m_first, capacity + 1);
     m_first = newfirst;
     m_last = newfirst + size;
     m_capacity = m_first + capacity;
