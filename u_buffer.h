@@ -97,7 +97,7 @@ inline buffer<T>::buffer()
 template <typename T>
 inline buffer<T>::~buffer() {
     destroy_range(first, last);
-    free(first);
+    neoFree(first);
 }
 
 template <typename T>
@@ -123,7 +123,7 @@ inline void buffer<T>::fill_urange(T *first, T *last, const T &value) {
 template <typename T>
 inline void buffer<T>::destroy() {
     destroy_range(first, last);
-    free(first);
+    neoFree(first);
     first = nullptr;
     last = nullptr;
     capacity = nullptr;
@@ -134,10 +134,10 @@ inline void buffer<T>::reserve(size_t icapacity) {
     if (first + icapacity <= capacity)
         return;
 
+    T *newfirst = neoMalloc(sizeof(T) * icapacity);
     const size_t size = size_t(last - first);
-    T *newfirst = (T*)malloc(sizeof(T) * icapacity);
     move_urange(newfirst, first, last);
-    free(first);
+    neoFree(first);
 
     first = newfirst;
     last = newfirst + size;

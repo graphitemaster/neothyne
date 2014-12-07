@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "u_string.h"
 #include "u_hash.h"
+#include "u_new.h"
 
 namespace u {
 
@@ -40,7 +41,7 @@ string::string(const char *sz, size_t len)
 }
 
 string::~string() {
-    free(m_first);
+    neoFree(m_first);
 }
 
 string& string::operator=(const string& other) {
@@ -62,7 +63,7 @@ bool string::empty() const {
 
 char *string::copy() const {
     const size_t length = size() + 1;
-    return (char *)memcpy(malloc(length), m_first, length);
+    return (char *)memcpy(neoMalloc(length), m_first, length);
 }
 
 void string::reserve(size_t capacity) {
@@ -71,10 +72,10 @@ void string::reserve(size_t capacity) {
 
     const size_t size = m_last - m_first;
 
-    char *newfirst = (char *)malloc(capacity + 1);
+    char *newfirst = neoMalloc(capacity + 1);
     for (char *it = m_first, *newit = newfirst, *end = m_last; it != end; ++it, ++newit)
         *newit = *it;
-    free(m_first);
+    neoFree(m_first);
 
     m_first = newfirst;
     m_last = newfirst + size;

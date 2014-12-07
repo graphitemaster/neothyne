@@ -19,8 +19,8 @@ static struct stringPool {
         for (size_t i = 0; i < kTableSize; i++) {
             if (!m_table[i])
                 continue;
-            free((void *)m_table[i]->m_data);
-            free((void *)m_table[i]);
+            neoFree(m_table[i]->m_data);
+            neoFree(m_table[i]);
         }
     }
 
@@ -40,8 +40,8 @@ static struct stringPool {
             m_table[hash]->m_count++;
             return m_table[hash]->m_data;
         }
-        m_table[hash] = (entry *)malloc(sizeof(entry));
-        m_table[hash]->m_data = (char *)memcpy(malloc(length), (const void *)data, length);
+        m_table[hash] = neoMalloc(sizeof(entry));
+        m_table[hash]->m_data = (char *)memcpy(neoMalloc(length), (const void *)data, length);
         m_table[hash]->m_count = 1;
         m_active++;
         return m_table[hash]->m_data;
@@ -50,8 +50,8 @@ static struct stringPool {
     void collect(size_t &active) {
         for (size_t i = 0; i < kTableSize; i++) {
             if (m_table[i] && m_table[i]->m_count < kThreshold) {
-                free((void *)m_table[i]->m_data);
-                free((void *)m_table[i]);
+                neoFree(m_table[i]->m_data);
+                neoFree(m_table[i]);
                 m_table[i] = nullptr;
                 m_active--;
             }
@@ -63,7 +63,7 @@ private:
     struct entry {
         entry(const char *data) {
             const size_t length = strlen(data) + 1;
-            m_data = (char *)memcpy(malloc(length), data, length);
+            m_data = (char *)memcpy(neoMalloc(length), data, length);
         }
     private:
         friend struct stringPool;

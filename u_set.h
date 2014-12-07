@@ -54,7 +54,7 @@ set<K>::set(const set &other)
     m_buckets.resize(9, 0);
 
     for (pointer* it = *other.m_buckets.first; it; it = it->next) {
-        unsigned char *data = (unsigned char *)malloc(sizeof(hash_node<K, void>));
+        unsigned char *data = neoMalloc(sizeof(hash_node<K, void>));
         hash_node<K, void> *newnode = new(data) hash_node<K, void>(*it);
         newnode->next = newnode->prev = 0;
         hash_node_insert(newnode, hash(*it), m_buckets.first, nbuckets - 1);
@@ -102,7 +102,7 @@ inline void set<K>::clear() {
     while (it) {
         const pointer next = it->next;
         it->~hash_node<K, void>();
-        free(it);
+        neoFree(it);
         it = next;
     }
     m_buckets.last = m_buckets.first;
@@ -123,7 +123,7 @@ inline pair<typename set<K>::iterator, bool> set<K>::insert(const K &key) {
     if (get<0>(result).node != 0)
         return result;
 
-    unsigned char *data = (unsigned char *)malloc(sizeof(hash_node<K, void>));
+    unsigned char *data = neoMalloc(sizeof(hash_node<K, void>));
     hash_node<K, void>* newnode = new(data) hash_node<K, void>(key);
     newnode->next = newnode->prev = 0;
 
@@ -158,7 +158,7 @@ inline void set<K>::erase(iterator where) {
         m_buckets.first, size_t(m_buckets.last - m_buckets.first) - 1);
 
     where.node->~hash_node<K, void>();
-    free(where.node);
+    neoFree(where.node);
     --m_size;
 }
 

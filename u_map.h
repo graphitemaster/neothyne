@@ -62,7 +62,7 @@ map<K, V>::map(const map& other)
     m_buckets.resize(nbuckets, 0);
 
     for (pointer it = *other.m_buckets.first; it; it = it->next) {
-        unsigned char *data = (unsigned char *)malloc(sizeof(hash_node<K, V>));
+        unsigned char *data = neoMalloc(sizeof(hash_node<K, V>));
         hash_node<K, V>* newnode = new(data) hash_node<K, V>(it->first, it->second);
         newnode->next = 0;
         newnode->prev = 0;
@@ -125,7 +125,7 @@ inline void map<K, V>::clear() {
     while (it) {
         const pointer next = it->next;
         it->~hash_node<K, V>();
-        free(it);
+        neoFree(it);
         it = next;
     }
     m_buckets.last = m_buckets.first;
@@ -153,7 +153,7 @@ inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(const pair<K, 
     if (get<0>(result).node != 0)
         return result;
 
-    unsigned char *data = (unsigned char *)malloc(sizeof(hash_node<K, V>));
+    unsigned char *data = neoMalloc(sizeof(hash_node<K, V>));
     hash_node<K, V> *newnode = new(data) hash_node<K, V>(p.first, p.second);
     newnode->next = 0;
     newnode->prev = 0;
@@ -189,7 +189,7 @@ void map<K, V>::erase(const_iterator where) {
     hash_node_erase(where.node, hash(where->first), m_buckets.first,
         size_t(m_buckets.last - m_buckets.first) - 1);
     where->~hash_node<K, V>();
-    free(where.node);
+    neoFree(where.node);
     --m_size;
 }
 
