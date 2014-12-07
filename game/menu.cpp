@@ -263,8 +263,11 @@ static void menuEdit() {
                 gui::label("Color");
                 gui::indent();
                     gui::slider("Red", R, 0, 0xFF, 1);
-                    gui::slider("Green", G, 0, 0xFF, 1);
-                    gui::slider("Blue", B, 0, 0xFF, 1);
+                    gui::slider("Green", D(plightLock) ? R : G, 0, 0xFF, 1);
+                    gui::slider("Blue", D(plightLock) ? R : B, 0, 0xFF, 1);
+                    gui::separator();
+                    if (gui::check("Lock", D(plightLock)))
+                        D(plightLock) = !D(plightLock);
                 gui::dedent();
                 gui::label("Term");
                 gui::indent();
@@ -273,7 +276,11 @@ static void menuEdit() {
                 gui::dedent();
                 gui::separator();
                 gui::slider("Radius", pl.radius, 1.0f, 1024.0f, 1.0f);
-                pl.color = { R / 255.0f, G / 255.0f, B / 255.0f };
+                pl.color = {
+                    R / 255.0f,
+                    (D(plightLock) ? R : G) / 255.0f,
+                    (D(plightLock) ? R : B) / 255.0f
+                };
                 gui::separator();
                 if (gui::button("Delete")) {
                     gWorld.erase(gSelected->where);
@@ -288,8 +295,11 @@ static void menuEdit() {
                 gui::label("Color");
                 gui::indent();
                     gui::slider("Red", R, 0, 0xFF, 1);
-                    gui::slider("Green", G, 0, 0xFF, 1);
-                    gui::slider("Blue", B, 0, 0xFF, 1);
+                    gui::slider("Green", D(slightLock) ? R : G, 0, 0xFF, 1);
+                    gui::slider("Blue", D(slightLock) ? R : B, 0, 0xFF, 1);
+                    gui::separator();
+                    if (gui::check("Lock", D(slightLock)))
+                        D(slightLock) = !D(slightLock);
                 gui::dedent();
                 gui::label("Term");
                 gui::indent();
@@ -305,7 +315,11 @@ static void menuEdit() {
                 gui::separator();
                 gui::slider("Radius", sl.radius, 1.0f, 1024.0f, 1.0f);
                 gui::slider("Cutoff", sl.cutOff, 0.0f, 1024.0f, 1.0f);
-                sl.color = { R / 255.0f, G / 255.0f, B / 255.0f };
+                sl.color = {
+                    R / 255.0f,
+                    (D(slightLock) ? R : G) / 255.0f,
+                    (D(slightLock) ? R : B) / 255.0f
+                };
                 gui::separator();
                 if (gui::button("Delete")) {
                     gWorld.erase(gSelected->where);
@@ -331,8 +345,11 @@ static void menuEdit() {
                     gui::label("Color");
                     gui::indent();
                         gui::slider("Red", R, 0, 0xFF, 1);
-                        gui::slider("Green", G, 0, 0xFF, 1);
-                        gui::slider("Blue", B, 0, 0xFF, 1);
+                        gui::slider("Green", D(dlightLock) ? R : G, 0, 0xFF, 1);
+                        gui::slider("Blue", D(dlightLock) ? R : B, 0, 0xFF, 1);
+                        gui::separator();
+                        if (gui::check("Lock", D(dlightLock)))
+                            D(dlightLock) = !D(dlightLock);
                     gui::dedent();
                     gui::label("Direction");
                     gui::indent();
@@ -341,7 +358,7 @@ static void menuEdit() {
                         gui::slider("Z", z.get(), z.min(), z.max(), 0.001f);
                     gui::dedent();
                     // Set the color again
-                    color.set((R << 16) | (G << 8) | B);
+                    color.set((R << 16) | ((D(dlightLock) ? R : G) << 8) | (D(dlightLock) ? R : B));
                 gui::dedent();
             }
             if (gui::collapse("New", "", D(newent)))
