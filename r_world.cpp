@@ -574,7 +574,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
     gl::Enable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
 
-    auto setup = [this](material &mat, pipeline &p) {
+    auto setup = [this](material &mat, pipeline &p, const m::mat4 &rw) {
         // Calculate permutation incase a console variable changes
         geomCalculatePermutation(mat);
 
@@ -582,7 +582,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
         auto &method = m_geomMethods[mat.permute];
         method.enable();
         method.setWVP(p.projection() * p.view() * p.world());
-        method.setWorld(p.world());
+        method.setWorld(rw);
         if (permutation.permute & kGeomPermParallax) {
             method.setEyeWorldPos(p.position());
             method.setParallax(mat.dispScale, mat.dispBias);
@@ -602,9 +602,10 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
     };
 
     // Render the map
+    const m::mat4 &rw = p.world();
     gl::BindVertexArray(vao);
     for (auto &it : m_textureBatches) {
-        setup(it.mat, p);
+        setup(it.mat, p, rw);
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }
@@ -622,11 +623,12 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
         } else {
             auto &mdl = m_models[it->name];
 
-            p.setWorld(it->position);
-            p.setScale(it->scale + mdl->scale);
-            p.setRotate(it->rotate + mdl->rotate);
+            pipeline pm = p;
+            pm.setWorld(it->position);
+            pm.setScale(it->scale + mdl->scale);
+            pm.setRotate(it->rotate + mdl->rotate);
 
-            setup(mdl->mat, p);
+            setup(mdl->mat, pm, rw);
 
             mdl->render();
         }
