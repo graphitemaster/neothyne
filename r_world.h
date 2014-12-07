@@ -90,12 +90,6 @@ private:
     size_t m_height;
 };
 
-struct portal {
-    void render(const pipeline &pl);
-private:
-    model m_mesh;
-};
-
 struct renderTextureBatch {
     int permute;
     size_t start;
@@ -134,6 +128,7 @@ private:
     sphere m_sphere;
     bbox m_bbox;
     u::map<u::string, model*> m_models;
+    u::map<u::string, billboard*> m_billboards;
 
     // The world itself
     u::vector<uint32_t> m_indices;

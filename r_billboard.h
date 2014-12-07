@@ -42,7 +42,7 @@ struct billboard {
     bool load(const u::string &billboardTexture);
     bool upload();
 
-    void render(const pipeline &pl);
+    void render(const pipeline &pl, float size);
 
     // you must add all positions for this billboard before calling `upload'
     void add(const m::vec3 &position);

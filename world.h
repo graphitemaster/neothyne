@@ -62,10 +62,20 @@ inline mapModel::mapModel()
 {
 }
 
-// player start
 struct playerStart {
     m::vec3 position;
     m::vec3 direction;
+};
+
+struct teleport {
+    m::vec3 position;
+    m::vec3 direction;
+};
+
+struct jumppad {
+    m::vec3 position;
+    m::vec3 direction;
+    m::vec3 velocity;
 };
 
 enum class entity {
@@ -75,6 +85,8 @@ enum class entity {
     kDirectionalLight,
     kPointLight,
     kSpotLight,
+    kTeleport,
+    kJumppad
 };
 
 struct world {
@@ -113,6 +125,8 @@ struct world {
     descriptor *insert(const pointLight &it);
     descriptor *insert(const mapModel &it);
     descriptor *insert(const playerStart &it);
+    descriptor *insert(const teleport &it);
+    descriptor *insert(const jumppad &it);
 
     void erase(size_t where); // Erase an entity
 
@@ -121,6 +135,8 @@ struct world {
     pointLight &getPointLight(size_t index);
     mapModel &getMapModel(size_t index);
     playerStart &getPlayerStart(size_t index);
+    teleport &getTeleport(size_t index);
+    jumppad &getJumppad(size_t index);
 
     const u::vector<mapModel*> &getMapModels() const;
 
@@ -137,7 +153,17 @@ private:
 
     r::world m_renderer;
 
+    struct billboard {
+        const char *name;
+        float size;
+        u::vector<m::vec3> positions;
+        void add(const m::vec3 &position) {
+            positions.push_back(position + m::vec3(0.0f, size, 0.0f));
+        }
+    };
+
     u::vector<descriptor> m_entities;
+    u::vector<billboard> m_billboards;
 
     // The following are populated via insert/erase
     directionalLight *m_directionalLight;
@@ -145,6 +171,8 @@ private:
     u::vector<pointLight*> m_pointLights;
     u::vector<mapModel*> m_mapModels;
     u::vector<playerStart*> m_playerStarts;
+    u::vector<teleport*> m_teleports;
+    u::vector<jumppad*> m_jumppads;
 };
 
 #endif

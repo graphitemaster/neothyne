@@ -72,30 +72,35 @@ bool billboard::upload() {
 
     gl::GenBuffers(1, &m_vbo);
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof(m::vec3) * m_positions.size(), &m_positions[0], GL_STATIC_DRAW);
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof(m::vec3), nullptr, GL_DYNAMIC_DRAW);
 
     gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0));
     gl::EnableVertexAttribArray(0);
 
     m_method.enable();
-    m_method.setSize(16, 16);
     m_method.setTextureUnit(0);
 
     return true;
 }
 
-void billboard::render(const pipeline &pl) {
+void billboard::render(const pipeline &pl, float size) {
     pipeline p = pl;
 
     m_method.enable();
     m_method.setCamera(p.position());
     m_method.setVP(p.projection() * p.view());
+    m_method.setSize(size, size);
 
     m_texture.bind(GL_TEXTURE0);
 
     gl::BindVertexArray(m_vao);
+
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof(m::vec3) * m_positions.size(), &m_positions[0], GL_DYNAMIC_DRAW);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0));
+
     gl::DrawArrays(GL_POINTS, 0, m_positions.size());
-    gl::BindVertexArray(0);
+
+    m_positions.clear();
 }
 
 void billboard::add(const m::vec3 &position) {

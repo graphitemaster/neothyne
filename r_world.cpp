@@ -234,6 +234,8 @@ world::~world() {
         delete it.second;
     for (auto &it : m_models)
         delete it.second;
+    for (auto &it : m_billboards)
+        delete it.second;
 }
 
 /// shader permutations
@@ -798,19 +800,30 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
     // Forward render skybox
     m_skybox.render(pl);
 
-#if 0
-    // World billboards
-    gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    for (auto &it : map->m_billboards)
-        it.render(pl);
-#endif
-
     // Editing aids
     static constexpr m::vec3 kHighlighted = { 1.0f, 0.0f, 0.0f };
     static constexpr m::vec3 kOutline = { 0.0f, 0.0f, 1.0f };
 
     gl::DepthMask(GL_FALSE);
     if (varGet<int>("cl_edit").get()) {
+        // World billboards
+        gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        for (auto &it : map->m_billboards) {
+            // Load billboards on demand
+            if (m_billboards.find(it.name) == m_billboards.end()) {
+                u::unique_ptr<billboard> next(new billboard);
+                if (!next->load(it.name))
+                    neoFatal("failed to load billboard '%s'\n", it.name);
+                if (!next->upload())
+                    neoFatal("failed to upload billboard '%s'\n", it.name);
+                m_billboards[it.name] = next.release();
+            }
+            auto &board = m_billboards[it.name];
+            for (auto &jt : it.positions)
+                board->add(jt);
+            board->render(pl, it.size);
+        }
+
         // Map models
         for (auto &it : map->m_mapModels) {
             auto &mdl = m_models[it->name];
@@ -834,32 +847,28 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
         gl::Disable(GL_CULL_FACE);
         gl::PolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+        m_bboxMethod.enable();
+        m_bboxMethod.setColor(kHighlighted);
         for (auto &it : map->m_pointLights) {
-            // Render bounding sphere
+            if (!it->highlight)
+                continue;
             float scale = it->radius * kLightRadiusTweak;
-
             pipeline p = pl;
             p.setWorld(it->position);
             p.setScale({scale, scale, scale});
-
-            m_bboxMethod.enable();
-            m_bboxMethod.setColor(it->highlight ? kHighlighted : kOutline);
             m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
             m_sphere.render();
         }
-
         for (auto &it : map->m_spotLights) {
-            // Render bounding sphere
+            if (!it->highlight)
+                continue;
             float scale = it->radius * kLightRadiusTweak;
-
             pipeline p = pl;
             p.setWorld(it->position);
             p.setScale({scale, scale, scale});
-
-            m_bboxMethod.enable();
-            m_bboxMethod.setColor(it->highlight ? kHighlighted : kOutline);
             m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
             m_sphere.render();
+
         }
 
         gl::Enable(GL_CULL_FACE);

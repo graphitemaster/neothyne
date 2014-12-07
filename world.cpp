@@ -13,6 +13,14 @@ NVAR(float, map_dlight_directionx, "map directional light direction", -1.0f, 1.0
 NVAR(float, map_dlight_directiony, "map directional light direction", -1.0f, 1.0f, 1.0f);
 NVAR(float, map_dlight_directionz, "map directional light direction", -1.0f, 1.0f, 1.0f);
 
+enum {
+    kBillboardJumpPad,
+    kBillboardLight,
+    kBillboardPlayerStart,
+    kBillboardTeleport,
+    kBillboardCount
+};
+
 world::world()
     : m_directionalLight(nullptr)
 {
@@ -31,7 +39,14 @@ world::~world() {
 }
 
 bool world::load(const u::vector<unsigned char> &data) {
-    return m_map.load(data);
+    if (!m_map.load(data))
+        return false;
+    m_billboards.resize(kBillboardCount);
+    m_billboards[kBillboardJumpPad] = { "textures/icons/jumppad", 16.0f, { } };
+    m_billboards[kBillboardLight] = { "textures/icons/light", 16.0f, { } };
+    m_billboards[kBillboardPlayerStart] = { "textures/icons/playerstart", 16.0f, { } };
+    m_billboards[kBillboardTeleport] = { "textures/icons/teleport", 16.0f, { } };
+    return true;
 }
 
 bool world::load(const u::string &file) {
@@ -58,6 +73,26 @@ void world::render(const r::pipeline &pl) {
             map_dlight_directionz
         };
     }
+
+    // Erase and generate the billboards each and every frame
+    for (auto &it : m_billboards)
+        it.positions.clear();
+    for (auto &it : m_entities) {
+        switch (it.type) {
+            case entity::kPlayerStart:
+                m_billboards[kBillboardPlayerStart].add(m_playerStarts[it.index]->position);
+                break;
+            case entity::kPointLight:
+                m_billboards[kBillboardLight].add(m_pointLights[it.index]->position);
+                break;
+            case entity::kSpotLight:
+                m_billboards[kBillboardLight].add(m_spotLights[it.index]->position);
+                break;
+            default:
+                break;
+        }
+    }
+
     m_renderer.render(pl, this);
 }
 
@@ -156,30 +191,44 @@ void world::insert(const directionalLight &it) {
 }
 
 world::descriptor *world::insert(const pointLight &it) {
-    size_t index = m_pointLights.size();
+    const size_t index = m_pointLights.size();
     m_pointLights.push_back(copy(it));
     m_entities.push_back({ entity::kPointLight, index, m_entities.size() });
     return &m_entities.back();
 }
 
 world::descriptor *world::insert(const spotLight &it) {
-    size_t index = m_spotLights.size();
+    const size_t index = m_spotLights.size();
     m_spotLights.push_back(copy(it));
     m_entities.push_back({ entity::kSpotLight, index, m_entities.size() });
     return &m_entities.back();
 }
 
 world::descriptor *world::insert(const mapModel &it) {
-    size_t index = m_mapModels.size();
+    const size_t index = m_mapModels.size();
     m_mapModels.push_back(copy(it));
     m_entities.push_back({ entity::kMapModel, index, m_entities.size() });
     return &m_entities.back();
 }
 
 world::descriptor *world::insert(const playerStart &it) {
-    size_t index = m_playerStarts.size();
+    const size_t index = m_playerStarts.size();
     m_playerStarts.push_back(copy(it));
     m_entities.push_back({ entity::kPlayerStart, index, m_entities.size() });
+    return &m_entities.back();
+}
+
+world::descriptor *world::insert(const teleport &it) {
+    const size_t index = m_teleports.size();
+    m_teleports.push_back(copy(it));
+    m_entities.push_back({ entity::kTeleport, index, m_entities.size() });
+    return &m_entities.back();
+}
+
+world::descriptor *world::insert(const jumppad &it) {
+    const size_t index = m_jumppads.size();
+    m_jumppads.push_back(copy(it));
+    m_entities.push_back({ entity::kJumppad, index, m_entities.size() });
     return &m_entities.back();
 }
 
@@ -198,6 +247,12 @@ void world::erase(size_t where) {
             break;
         case entity::kSpotLight:
             m_spotLights.erase(m_spotLights.begin() + index);
+            break;
+        case entity::kTeleport:
+            m_teleports.erase(m_teleports.begin() + index);
+            break;
+        case entity::kJumppad:
+            m_jumppads.erase(m_jumppads.begin() + index);
             break;
         default:
             return;
@@ -236,6 +291,14 @@ mapModel &world::getMapModel(size_t index) {
 
 playerStart &world::getPlayerStart(size_t index) {
     return *m_playerStarts[index];
+}
+
+teleport &world::getTeleport(size_t index) {
+    return *m_teleports[index];
+}
+
+jumppad &world::getJumppad(size_t index) {
+    return *m_jumppads[index];
 }
 
 const u::vector<mapModel*> &world::getMapModels() const {
