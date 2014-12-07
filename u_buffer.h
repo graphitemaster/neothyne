@@ -60,8 +60,8 @@ struct buffer {
     void move_urange(T *dest, T *first, T *last);
     void bmove_urange(T *dest, T *first, T *last);
     void fill_urange(T *first, T *last, const T &value);
-    void reserve(size_t icapacity);
     void resize(size_t size, const T &value);
+    void reserve(size_t icapacity);
     void clear();
     template <typename I>
     void insert(T *where, const I *ifirst, const I *ilast);
@@ -70,6 +70,8 @@ struct buffer {
     T *erase(T *ifirst, T*ilast);
 
 private:
+    void reserve_traits(size_t icapacity, detail::is_pod<T, false>);
+    void reserve_traits(size_t icapacity, detail::is_pod<T, true>);
     void destroy_range_traits(T *first, T *last, detail::is_pod<T, false>);
     void destroy_range_traits(T*, T*, detail::is_pod<T, true>);
     void fill_urange_traits(T *first, T *last, const T &value,
@@ -131,17 +133,7 @@ inline void buffer<T>::destroy() {
 
 template <typename T>
 inline void buffer<T>::reserve(size_t icapacity) {
-    if (first + icapacity <= capacity)
-        return;
-
-    T *newfirst = neoMalloc(sizeof(T) * icapacity);
-    const size_t size = size_t(last - first);
-    move_urange(newfirst, first, last);
-    neoFree(first);
-
-    first = newfirst;
-    last = newfirst + size;
-    capacity = newfirst + icapacity;
+    reserve_traits(icapacity, detail::is_pod<T>());
 }
 
 template <typename T>
@@ -186,6 +178,33 @@ inline void buffer<T>::swap(buffer<T> &other) {
     other.first = tfirst;
     other.last = tlast;
     other.capacity = tcapacity;
+}
+
+template <typename T>
+inline void buffer<T>::reserve_traits(size_t icapacity, detail::is_pod<T, false>) {
+    if (first + icapacity <= capacity)
+        return;
+
+    T *newfirst = neoMalloc(sizeof(T) * icapacity);
+    const size_t size = size_t(last - first);
+    move_urange(newfirst, first, last);
+    neoFree(first);
+
+    first = newfirst;
+    last = newfirst + size;
+    capacity = newfirst + icapacity;
+}
+
+template <typename T>
+inline void buffer<T>::reserve_traits(size_t icapacity, detail::is_pod<T, true>) {
+    if (first + icapacity <= capacity)
+        return;
+
+    T *newfirst = neoRealloc(first, sizeof(T) * icapacity);
+    const size_t size = size_t(last - first);
+    first = newfirst;
+    last = newfirst + size;
+    capacity = newfirst + icapacity;
 }
 
 template <typename T>
