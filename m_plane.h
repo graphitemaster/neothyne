@@ -21,11 +21,11 @@ struct plane {
     {
     }
 
-    plane(vec3 p1, vec3 p2, vec3 p3) {
+    plane(const vec3 &p1, const vec3 &p2, const vec3 &p3) {
         setupPlane(p1, p2, p3);
     }
 
-    plane(vec3 pp, vec3 nn) {
+    plane(const vec3 &pp, const vec3 &nn) {
         setupPlane(pp, nn);
     }
 
@@ -33,7 +33,7 @@ struct plane {
         setupPlane(a, b, c, d);
     }
 
-    constexpr plane(const vec3 &nn, float dd)
+    plane(const vec3 &nn, float dd)
         : n(nn)
         , d(dd)
     {
@@ -51,7 +51,7 @@ struct plane {
         d = -n * pp;
     }
 
-    void setupPlane(vec3 nn, float dd) {
+    void setupPlane(const vec3 &nn, float dd) {
         n = nn;
         d = dd;
     }
@@ -72,7 +72,7 @@ struct plane {
     bool getIntersection(float *f, const vec3 &p, const vec3 &v) const {
         const float q = n * v;
         // Plane and line are parallel?
-        if (fabsf(q) < kEpsilon)
+        if (m::abs(q) < kEpsilon)
             return false;
 
         *f = -(n * p + d) / q;
@@ -94,7 +94,7 @@ struct plane {
 
     bool isPlaneBetween(const vec3 &a, const vec3 &b) const {
         const float q = n * (b - a);
-        if (fabsf(q) < kEpsilon)
+        if (m::abs(q) < kEpsilon)
             return true;
 
         const float t = -(n * a + d) / q;

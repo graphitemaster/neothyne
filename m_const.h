@@ -26,6 +26,15 @@ inline T clamp(const T& current, const T &min, const T &max) {
     return (current > max) ? max : ((current < min) ? min : current);
 }
 
+inline float abs(float v) {
+    union {
+        float f;
+        int b;
+    } data = { v };
+    data.b &= 0x7FFFFFFF;
+    return data.f;
+}
+
 enum axis {
     kAxisX,
     kAxisY,

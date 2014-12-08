@@ -2,6 +2,7 @@
 #define U_STACK_HDR
 #include <stddef.h>
 
+#include "u_traits.h"
 namespace u {
 
 template <typename T, size_t E>
@@ -20,7 +21,11 @@ struct stack {
     size_t size() const;
     bool full() const;
     void shift(size_t count);
+
 private:
+    void shift_traits(size_t count, detail::is_pod<T, false>);
+    void shift_traits(size_t count, detail::is_pod<T, true>);
+
     T m_data[E];
     size_t m_size;
 };
@@ -96,11 +101,20 @@ template <typename T, size_t E>
 inline void stack<T, E>::shift(size_t elements) {
     if (elements >= m_size || elements == 0)
         return;
-    for (size_t i = 0; i < elements; i++)
-        m_data[i] = m_data[m_size - elements + i];
+    shift_traits(elements, detail::is_pod<T>());
     m_size = elements;
 }
 
+template <typename T, size_t E>
+inline void stack<T, E>::shift_traits(size_t count, detail::is_pod<T, false>) {
+     for (size_t i = 0; i < count; i++)
+        m_data[i] = m_data[m_size - count + i];
 }
 
+template <typename T, size_t E>
+inline void stack<T, E>::shift_traits(size_t count, detail::is_pod<T, true>) {
+    memmove((void *)m_data, (const void *)&m_data[m_size - count], count);
+}
+
+}
 #endif

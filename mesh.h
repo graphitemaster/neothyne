@@ -1,9 +1,12 @@
 #ifndef MESH_HDR
 #define MESH_HDR
 #include "u_vector.h"
-#include "u_string.h"
 
 #include "m_vec3.h"
+
+namespace u {
+    struct string;
+}
 
 struct obj {
     bool load(const u::string &file);
@@ -34,7 +37,6 @@ struct mesh {
     m::vec3 getBBCenter() const;
 
 private:
-    u::string m_key;
     m::vec3 m_bbsize;
     m::vec3 m_bbcenter;
     obj m_obj; // TO BE EXTENDED

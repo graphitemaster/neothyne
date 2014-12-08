@@ -356,7 +356,7 @@ static void kdBinCalculateTangent(const u::vector<kdBinTriangle> &triangles, con
     float t1 = vertices[triangles[index].v[1]].tv - vertices[triangles[index].v[0]].tv;
     float t2 = vertices[triangles[index].v[2]].tv - vertices[triangles[index].v[0]].tv;
     float det = s1*t2 - s2*t1;
-    if (fabsf(det) <= m::kEpsilon) {
+    if (m::abs(det) <= m::kEpsilon) {
         // Unable to compute tangent + bitangent, default tangent along xAxis and
         // bitangent along yAxis.
         tangent = m::vec3::xAxis;
@@ -431,8 +431,8 @@ static void kdBinCreateTangents(u::vector<kdBinVertex> &vertices, const u::vecto
 
 static bool kdBinCompare(const kdBinVertex &lhs, const kdBinVertex &rhs, float epsilon) {
     return lhs.vertex.equals(rhs.vertex, epsilon)
-        && (fabsf(lhs.tu - rhs.tu) < epsilon)
-        && (fabsf(lhs.tv - rhs.tv) < epsilon);
+        && (m::abs(lhs.tu - rhs.tu) < epsilon)
+        && (m::abs(lhs.tv - rhs.tv) < epsilon);
 }
 
 static int32_t kdBinInsertLeaf(const kdNode *leaf, u::vector<kdBinLeaf> &leafs) {
@@ -452,7 +452,7 @@ static int32_t kdBinGetNodes(const kdTree &tree, const kdNode *node, u::vector<k
     kdBinPlane binPlane;
     binPlane.d = node->splitPlane.d;
     for (size_t i = 0; i < 3; i++) {
-        if (fabsf(node->splitPlane.n[i]) > m::kEpsilon) {
+        if (m::abs(node->splitPlane.n[i]) > m::kEpsilon) {
             binPlane.type = i;
             break;
         }

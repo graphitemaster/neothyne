@@ -109,7 +109,7 @@ inline vec3 vec3::normalized() const {
 }
 
 inline bool vec3::isNormalized() const {
-    return fabsf(abs() - 1.0f) < kEpsilon;
+    return m::abs(abs() - 1.0f) < kEpsilon;
 }
 
 inline bool vec3::isNull() const {
@@ -121,9 +121,9 @@ inline bool vec3::isNullEpsilon(const float epsilon) const {
 }
 
 inline bool vec3::equals(const vec3 &cmp, const float epsilon) const {
-    return (fabsf(x - cmp.x) < epsilon)
-        && (fabsf(y - cmp.y) < epsilon)
-        && (fabsf(z - cmp.z) < epsilon);
+    return (m::abs(x - cmp.x) < epsilon)
+        && (m::abs(y - cmp.y) < epsilon)
+        && (m::abs(z - cmp.z) < epsilon);
 }
 
 inline void vec3::setLength(float scaleLength) {
@@ -226,9 +226,9 @@ inline bool operator==(const vec3 &a, const vec3 &b) {
 }
 
 inline bool operator!=(const vec3 &a, const vec3 &b) {
-    return (fabsf(a.x - b.x) > kEpsilon)
-        || (fabsf(a.y - b.y) > kEpsilon)
-        || (fabsf(a.z - b.z) > kEpsilon);
+    return (m::abs(a.x - b.x) > kEpsilon)
+        || (m::abs(a.y - b.y) > kEpsilon)
+        || (m::abs(a.z - b.z) > kEpsilon);
 }
 
 }

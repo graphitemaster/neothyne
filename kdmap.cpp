@@ -409,7 +409,7 @@ void kdMap::clipVelocity(const m::vec3 &in, const m::vec3 &normal, m::vec3 &out,
 
         // if the velocity gets too small cancel it out to prevent noise in the
         // response
-        if (fabsf(out[i]) < kStopEpsilon)
+        if (m::abs(out[i]) < kStopEpsilon)
             out[i] = 0.0f;
     }
 }
