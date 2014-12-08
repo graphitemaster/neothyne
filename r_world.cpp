@@ -798,6 +798,7 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
 
     // Forward rendering takes place here, reenable depth testing
     gl::Enable(GL_DEPTH_TEST);
+    gl::DepthFunc(GL_LEQUAL);
 
     // Forward render skybox
     m_skybox.render(pl);
