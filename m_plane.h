@@ -1,7 +1,5 @@
 #ifndef M_PLANE_HDR
 #define M_PLANE_HDR
-#include <math.h>
-
 #include "m_vec3.h"
 
 namespace m {

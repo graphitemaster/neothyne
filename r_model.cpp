@@ -1,4 +1,3 @@
-#include <math.h>
 #include <assert.h>
 
 #include "r_model.h"
