@@ -240,8 +240,15 @@ static void menuEdit() {
                 gui::label("Scale");
                 gui::indent();
                     gui::slider("X", mm.scale.x, 0.0f, 10.0f, 0.1f);
-                    gui::slider("Y", mm.scale.y, 0.0f, 10.0f, 0.1f);
-                    gui::slider("Z", mm.scale.z, 0.0f, 10.0f, 0.1f);
+                    gui::slider("Y", D(lockScale) ? mm.scale.x : mm.scale.y, 0.0f, 10.0f, 0.1f);
+                    gui::slider("Z", D(lockScale) ? mm.scale.x : mm.scale.z, 0.0f, 10.0f, 0.1f);
+                    gui::separator();
+                    if (gui::check("Lock", D(lockScale)))
+                        D(lockScale) = !D(lockScale);
+                    if (D(lockScale)) {
+                        mm.scale.y = mm.scale.x;
+                        mm.scale.z = mm.scale.x;
+                    }
                 gui::dedent();
                 gui::label("Rotate");
                 gui::indent();
