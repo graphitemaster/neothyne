@@ -15,6 +15,8 @@ namespace r {
 struct pipeline;
 
 struct guiMethod : method {
+    guiMethod();
+    
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setPerspective(const m::perspective &p);
@@ -24,6 +26,12 @@ private:
     GLint m_screenSizeLocation;
     GLint m_colorMapLocation;
 };
+
+inline guiMethod::guiMethod()
+    : m_screenSizeLocation(-1)
+    , m_colorMapLocation(-1)
+{
+}
 
 struct gui {
     gui();

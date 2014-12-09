@@ -130,7 +130,7 @@ u::optional<u::vector<unsigned char>> read(const u::string &file, const char *mo
     auto size = ftell(fp.get());
     if (size <= 0)
         return u::none;
-    data.resize(ftell(fp.get()));
+    data.resize(size);
     fseek(fp.get(), 0, SEEK_SET);
 
     if (fread(&data[0], data.size(), 1, fp.get()) != 1)

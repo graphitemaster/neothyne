@@ -25,7 +25,11 @@ kdNode::~kdNode() {
     delete back;
 }
 
-kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth) {
+kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth)
+    : front(nullptr)
+    , back(nullptr)
+    , sphereRadius(0.0f)
+{
     size_t triangleCount = tris.size();
 
     if (recursionDepth > tree->depth)
@@ -73,8 +77,6 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth) 
     if (frontList[best]->size() == 0 || backList[best]->size() == 0 || triangleCount <= kdTree::kMaxTrianglesPerLeaf) {
         // create subspace with `triangleCount` polygons
         triangles.insert(triangles.begin(), tris.begin(), tris.end());
-        front = nullptr;
-        back = nullptr;
         tree->leafCount++;
         return;
     }
@@ -337,8 +339,10 @@ static uint32_t kdBinAddTexture(u::vector<kdBinTexture> &textures, const u::stri
         index++;
     }
     kdBinTexture texture;
-    strcpy(texture.name, texturePath.c_str()); // this is not safe, the format will be changed
-    // to use a string table to allow for arbitrary names
+    // Truncate the string if it doesn't fit
+    const size_t length = u::min(sizeof(texture.name) - 1, texturePath.size());
+    memcpy(texture.name, (const void *)texturePath.c_str(), length);
+    texture.name[length] = '\0';
     textures.push_back(texture);
     return textures.size() - 1;
 }

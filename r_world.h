@@ -16,6 +16,8 @@ struct world;
 namespace r {
 
 struct bboxMethod : method {
+    bboxMethod();
+    
     bool init();
 
     void setWVP(const m::mat4 &wvp);
@@ -26,7 +28,15 @@ private:
     GLint m_colorLocation;
 };
 
+inline bboxMethod::bboxMethod()
+    : m_WVPLocation(-1)
+    , m_colorLocation(-1)
+{
+}
+
 struct geomMethod : method {
+    geomMethod();
+    
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setWVP(const m::mat4 &wvp);
@@ -53,7 +63,23 @@ private:
     GLint m_parallaxLocation;
 };
 
+inline geomMethod::geomMethod()
+    : m_WVPLocation(-1)
+    , m_worldLocation(-1)
+    , m_colorTextureUnitLocation(-1)
+    , m_normalTextureUnitLocation(-1)
+    , m_specTextureUnitLocation(-1)
+    , m_dispTextureUnitLocation(-1)
+    , m_specPowerLocation(-1)
+    , m_specIntensityLocation(-1)
+    , m_eyeWorldPositionLocation(-1)
+    , m_parallaxLocation(-1)
+{
+}
+
 struct finalMethod : method {
+    finalMethod();
+    
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setWVP(const m::mat4 &wvp);
@@ -65,6 +91,13 @@ private:
     GLint m_colorMapLocation;
     GLint m_screenSizeLocation;
 };
+
+inline finalMethod::finalMethod()
+    : m_WVPLocation(-1)
+    , m_colorMapLocation(-1)
+    , m_screenSizeLocation(-1)
+{
+}
 
 struct finalComposite {
     finalComposite();
