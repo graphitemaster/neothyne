@@ -51,7 +51,7 @@ billboard::billboard()
 billboard::~billboard() {
     if (m_vbo)
         gl::DeleteBuffers(1, &m_vbo);
-    if (m_vbo)
+    if (m_vao)
         gl::DeleteVertexArrays(1, &m_vao);
 }
 

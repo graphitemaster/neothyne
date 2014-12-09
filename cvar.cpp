@@ -10,6 +10,7 @@ struct varReference {
     varReference()
         : desc(nullptr)
         , self(nullptr)
+        , type(kVarInt)
     {
     }
 

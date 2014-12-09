@@ -315,7 +315,7 @@ private:
             m_error = kMalformatted;
     }
 
-    unsigned short decode16(const unsigned char *m_position) {
+    uint16_t decode16(const unsigned char *m_position) {
         return (m_position[0] << 8) | m_position[1];
     }
 
@@ -1251,7 +1251,7 @@ private:
         bitp++;
     }
 
-    size_t readWord(const unsigned char* buffer) {
+    uint32_t readWord(const unsigned char* buffer) {
         return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
     }
 

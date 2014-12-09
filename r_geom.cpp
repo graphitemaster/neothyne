@@ -58,6 +58,11 @@ void quad::render() {
     gl::DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
 }
 
+sphere::sphere()
+    : m_indices(0)
+{
+}
+
 bool sphere::upload() {
     geom::upload();
 

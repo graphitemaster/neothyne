@@ -30,6 +30,8 @@ struct material {
 };
 
 struct model : geom {
+    model();
+    
     bool load(u::map<u::string, texture2D*> &textures, const u::string &file);
     bool upload();
     void render();

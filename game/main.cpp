@@ -46,7 +46,7 @@ static bool bmpWrite(const u::string &file, int width, int height, unsigned char
     const size_t dataSize = headerSize + imageSize;
 
     // Populate header
-    strncpy(bmph.bfType, "BM", 2);
+    memcpy(bmph.bfType, (const void *)"BM", 2);
     bmph.bfSize = dataSize;
     bmph.bfReserved = 0;
     bmph.bfDataOffset = headerSize;

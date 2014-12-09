@@ -25,8 +25,10 @@ struct quad : geom {
 };
 
 struct sphere : geom {
+    sphere();
     bool upload();
     void render();
+    
 private:
     size_t m_indices;
     static constexpr size_t kSlices = 8;

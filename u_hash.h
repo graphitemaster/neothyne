@@ -37,6 +37,8 @@ template <typename K, typename V>
 hash_node<K, V>::hash_node(const K &key, const V &value)
     : first(key)
     , second(value)
+    , next(nullptr)
+    , prev(nullptr)
 {
 }
 
@@ -52,6 +54,8 @@ struct hash_node<K, void> {
 template <typename K>
 hash_node<K, void>::hash_node(const K& key)
     : first(key)
+    , next(nullptr)
+    , prev(nullptr)
 {
 }
 

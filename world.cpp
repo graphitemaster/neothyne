@@ -142,14 +142,12 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
         }
     }
 
+    h->ent = nullptr;
     if (ent) {
         h->position = q.start + min*q.direction;
         h->normal = (h->position - position).normalized();
         h->ent = ent;
         h->fraction = m::clamp(min, 0.0f, 1.0f);
-        return true;
-    } else {
-        h->ent = nullptr;
     }
 
     // Check the level geometry now
@@ -168,10 +166,11 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
         const m::vec3 position = sphereTrace.start + sphereTrace.fraction * sphereTrace.direction;
         // Hit an entity earlier
         if (ent) {
-            // Only when the object is nearer than the level geometry
+            //Only when the object is nearer than the level geometry
             if ((h->position - q.start).abs() < (position - q.start).abs())
                 return true;
         }
+        h->ent = nullptr;
         h->position = position;
         return true;
     }

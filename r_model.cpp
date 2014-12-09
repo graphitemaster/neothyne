@@ -18,6 +18,10 @@ material::material()
     , spec(nullptr)
     , displacement(nullptr)
     , specParams(false)
+    , specPower(0.0f)
+    , specIntensity(0.0f)
+    , dispScale(0.0f)
+    , dispBias(0.0f)
 {
 }
 
@@ -115,6 +119,11 @@ bool material::upload() {
 }
 
 ///! Model Loading and Rendering
+model::model()
+    : m_indices(0)
+{
+}
+
 bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file) {
     // Open the model file and look for a model configuration
     u::file fp = u::fopen(neoGamePath() + file + ".cfg", "r");

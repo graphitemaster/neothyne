@@ -36,6 +36,12 @@ void skyboxMethod::setWorld(const m::mat4 &worldInverse) {
 }
 
 ///! renderer
+skybox::skybox()
+    : m_vao(0)
+{
+    memset(m_buffers, 0, sizeof(m_buffers));
+}
+
 skybox::~skybox() {
     gl::DeleteBuffers(2, m_buffers);
     gl::DeleteVertexArrays(1, &m_vao);

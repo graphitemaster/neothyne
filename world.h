@@ -14,7 +14,8 @@ struct baseLight {
 };
 
 inline baseLight::baseLight()
-    : highlight(false)
+    : ambient(1.0f)
+    , highlight(false)
 {
 }
 

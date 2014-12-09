@@ -108,7 +108,10 @@ void guiMethod::setColorTextureUnit(int unit) {
     gl::Uniform1i(m_colorMapLocation, unit);
 }
 
-gui::gui() {
+gui::gui()
+    : m_vbo(0)
+    , m_vao(0)
+{
     for (size_t i = 0; i < kCircleVertices; ++i) {
         const float a = float(i) / float(kCircleVertices) * m::kTau;
         m_circleVertices[i*2+0] = cosf(a);

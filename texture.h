@@ -23,7 +23,12 @@ enum textureFormat {
 
 struct texture {
     texture()
-        : m_flags(0)
+        : m_width(0)
+        , m_height(0)
+        , m_bpp(0)
+        , m_pitch(0)
+        , m_flags(0)
+        , m_format(kTexFormatLuminance)
     {
     }
 

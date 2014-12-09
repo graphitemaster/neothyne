@@ -41,7 +41,6 @@ static struct stringPool {
         }
         m_table[hash] = neoMalloc(sizeof(entry));
         m_table[hash]->m_data = (char *)memcpy(neoMalloc(length), (const void *)data, length);
-        m_table[hash]->m_count = 1;
         m_active++;
         return m_table[hash]->m_data;
     }
@@ -60,7 +59,9 @@ static struct stringPool {
 
 private:
     struct entry {
-        entry(const char *data) {
+        entry(const char *data)
+            : m_count(1)
+        {
             const size_t length = strlen(data) + 1;
             m_data = (char *)memcpy(neoMalloc(length), data, length);
         }
@@ -430,8 +431,10 @@ bool areaBegin(const char *contents, int x, int y, int w, int h, int &value, boo
             Q.addImage(x+25, y+25, w-50, h-50, "<nocompress>textures/ui/menu_c");
         }
     }
-    Q.addText(x+header/2, y+h-header/2-kTextHeight/2, kAlignLeft,
-        contents, RGBA(255, 255, 255, 128));
+    if (contents) {
+        Q.addText(x+header/2, y+h-header/2-kTextHeight/2, kAlignLeft,
+            contents, RGBA(255, 255, 255, 128));
+    }
     Q.addScissor(x+kScrollAreaPadding, y+kScrollAreaPadding, w-kScrollAreaPadding*4,
         h-header-kScrollAreaPadding);
 

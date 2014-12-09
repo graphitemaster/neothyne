@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "engine.h"
 #include "cvar.h"
 
@@ -68,6 +70,7 @@ static u::string sizeMetric(size_t size) {
         r = size % 1024;
         size /= 1024;
     }
+    assert(i != sizeof(sizes)/sizeof(*sizes));
     return u::format("%.2f %s", float(size) + float(r) / 1024.0f, sizes[i]);
 }
 

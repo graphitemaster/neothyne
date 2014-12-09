@@ -29,6 +29,7 @@ private:
 };
 
 struct skybox {
+    skybox();
     ~skybox();
 
     bool load(const u::string &skyboxName);

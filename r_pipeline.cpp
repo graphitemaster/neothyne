@@ -4,6 +4,7 @@ namespace r {
 
 pipeline::pipeline()
     : m_scale(1.0f, 1.0f, 1.0f)
+    , m_time(0.0f)
 {
 }
 
