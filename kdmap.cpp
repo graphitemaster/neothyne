@@ -400,7 +400,12 @@ bool kdMap::isSphereStuck(const m::vec3 &position, float radius, int32_t node) c
 void kdMap::clipVelocity(const m::vec3 &in, const m::vec3 &normal, m::vec3 &out, float overBounce) {
     // determine how far along the plane we have to slde based on the incoming direction
     // this is scaled by `overBounce'
-    float backOff = in * normal * overBounce;
+    float backOff = in * normal;
+
+    if (backOff < 0.0f)
+        backOff *= overBounce;
+    else
+        backOff /= overBounce;
 
     // against all axis
     for (size_t i = 0; i < 3; i++) {
