@@ -78,7 +78,6 @@ void client::update(world &map, float dt) {
         if (h.fraction > 0.0f) {
             pos += q.direction * h.fraction * kdMap::kFractionScale;
             originalVelocity = velocity;
-            numPlanes = 0;
         }
 
         // Moved the entire distance
@@ -95,7 +94,7 @@ void client::update(world &map, float dt) {
         collide |= kCollideWall;
 
         if (numPlanes >= kdMap::kMaxClippingPlanes) {
-            velocity = m::vec3(0.0f, 0.0f, 0.0f);
+            velocity = m::vec3::origin;
             break;
         }
 
@@ -103,8 +102,10 @@ void client::update(world &map, float dt) {
         // away from the plane to deal with non-axial plane sticking
         size_t i;
         for (i = 0; i < numPlanes; i++) {
-            if ((h.normal * planes[i]) > 0.99f)
+            if ((h.normal * planes[i]) > 0.99f) {
                 velocity += h.normal;
+                break;
+            }
         }
         // If we didn't make it through the entire plane set, apply the nudged
         // velocity and try again.
