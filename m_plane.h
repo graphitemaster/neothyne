@@ -54,9 +54,9 @@ struct plane {
         d = dd;
     }
 
-    void setupPlane(float a, float b, float c, float d) {
+    void setupPlane(float a, float b, float c, float dd) {
         n = vec3(a, b, c);
-        d = d / n.abs();
+        d = dd / n.abs();
         n.normalize();
     }
 

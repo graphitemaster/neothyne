@@ -28,8 +28,10 @@ struct enable_if<true, T> {
 /// integral_constant
 template <typename T, T v>
 struct integral_constant {
-    static constexpr T value = v;
+    static constexpr const T value = v;
 };
+template <typename T, T v>
+const T integral_constant<T, v>::value;
 
 /// true_type
 typedef integral_constant<bool, true> true_type;

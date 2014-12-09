@@ -8,7 +8,7 @@
 namespace u {
 
 namespace detail {
-    template <typename T, bool pod = is_pod<T>::value>
+    template <typename T, bool pod = u::is_pod<T>::value>
     struct is_pod { };
 
     template <typename T, T value>

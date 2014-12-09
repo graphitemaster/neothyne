@@ -113,7 +113,7 @@ bool method::addShader(GLenum shaderType, const char *shaderFile) {
             shaderSource = &m_geometrySource;
             break;
         default:
-            break;
+            return false;
     }
 
     auto pp = preprocess(shaderFile);

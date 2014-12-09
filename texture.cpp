@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "engine.h"
 #include "texture.h"
 #include "cvar.h"
@@ -378,8 +380,12 @@ private:
             if (c->ssy > ssymax)
                 ssymax = c->ssy;
         }
+        assert(ssxmax);
+        assert(ssymax);
         m_mbsizex = ssxmax << 3;
         m_mbsizey = ssymax << 3;
+        assert(m_mbsizex);
+        assert(m_mbsizey);
         m_mbwidth = (m_width + m_mbsizex - 1) / m_mbsizex;
         m_mbheight = (m_height + m_mbsizey - 1) / m_mbsizey;
         for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
@@ -766,11 +772,9 @@ private:
         u::vector<unsigned char> out;
         out.resize(c->width * c->height);
 
-        unsigned char *lin = &c->pixels[0];
         unsigned char *lout = &out[0];
-
         for (size_t y = 0; y < c->height; ++y) {
-            lin = &c->pixels[(y >> yshift) * c->stride];
+            const unsigned char *lin = &c->pixels[(y >> yshift) * c->stride];
             for (size_t x = 0; x < c->width; ++x)
                 lout[x] = lin[x >> xshift];
             lout += c->width;
@@ -1234,14 +1238,15 @@ private:
         return r;
     }
 
-    size_t readBitsReverse(size_t& bitp, const unsigned char* bits, size_t nbits) {
+    size_t readBitsReverse(size_t &bitp, const unsigned char *bits, size_t nbits) {
         size_t r = 0;
         for (size_t i = nbits - 1; i < nbits; i--)
             r += ((readBitReverse(bitp, bits)) << i);
         return r;
     }
 
-    void setBitReversed(size_t& bitp, unsigned char* bits, size_t bit) {
+    void setBitReversed(size_t &bitp, unsigned char *bits, size_t bit) {
+        assert(bits);
         bits[bitp >> 3] |=  (bit << (7 - (bitp & 0x7)));
         bitp++;
     }
