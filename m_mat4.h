@@ -7,12 +7,22 @@ struct vec3;
 struct quat;
 
 struct perspective {
+    perspective();
     float fov;
     float width;
     float height;
     float nearp;
     float farp;
 };
+
+inline perspective::perspective()
+    : fov(0.0f)
+    , width(0.0f)
+    , height(0.0f)
+    , nearp(0.0f)
+    , farp(0.0f)
+{
+}
 
 struct mat4 {
     float m[4][4];

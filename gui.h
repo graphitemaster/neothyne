@@ -58,9 +58,12 @@ struct line {
 };
 
 struct command {
+    command();
+    
     int type;
     int flags;
     uint32_t color;
+    
     union {
         line asLine;
         rectangle asRectangle;
@@ -70,6 +73,13 @@ struct command {
         image asImage;
     };
 };
+
+inline command::command()
+    : type(-1)
+    , flags(0)
+    , color(0)
+{
+}
 
 struct queue {
     static constexpr size_t kCommandQueueSize = 5000;

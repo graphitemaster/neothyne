@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <assert.h>
+
 #include "u_string.h"
 #include "u_hash.h"
 #include "u_new.h"
@@ -89,6 +91,10 @@ string &string::append(const char *first, const char *last) {
     const size_t newsize = m_last - m_first + last - first + 1;
     if (m_first + newsize > m_capacity)
         reserve((newsize * 3) / 2);
+
+    assert(m_first);
+    assert(m_last);
+    
     for (; first != last; ++m_last, ++first)
         *m_last = *first;
     *m_last = '\0';

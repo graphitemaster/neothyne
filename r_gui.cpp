@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "engine.h"
 #include "gui.h"
 
@@ -223,6 +225,7 @@ void gui::render(const pipeline &pl) {
     m_methods[kMethodImage].setPerspective(perspective);
 
     for (auto &it : ::gui::commands()()) {
+        assert(it.type != -1);
 #ifdef DEBUG_GUI
         printCommand(it);
 #endif
