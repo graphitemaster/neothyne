@@ -21,7 +21,8 @@ ENGINE_LDFLAGS = \
 GAME_SOURCES = \
 	game/menu.cpp \
 	game/client.cpp \
-	game/main.cpp
+	game/main.cpp \
+	game/edit.cpp
 
 MATH_SOURCES = \
 	m_mat4.cpp \

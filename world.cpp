@@ -42,10 +42,10 @@ bool world::load(const u::vector<unsigned char> &data) {
     if (!m_map.load(data))
         return false;
     m_billboards.resize(kBillboardCount);
-    m_billboards[kBillboardJumpPad] = { "textures/icons/jumppad", 16.0f, { } };
-    m_billboards[kBillboardLight] = { "textures/icons/light", 16.0f, { } };
-    m_billboards[kBillboardPlayerStart] = { "textures/icons/playerstart", 16.0f, { } };
-    m_billboards[kBillboardTeleport] = { "textures/icons/teleport", 16.0f, { } };
+    m_billboards[kBillboardJumpPad] = { "textures/icons/jumppad", 16.0f, true, { } };
+    m_billboards[kBillboardLight] = { "textures/icons/light", 16.0f, false, { } };
+    m_billboards[kBillboardPlayerStart] = { "textures/icons/playerstart", 16.0f, true, { } };
+    m_billboards[kBillboardTeleport] = { "textures/icons/teleport", 16.0f, true, { } };
     return true;
 }
 
@@ -76,20 +76,21 @@ void world::render(const r::pipeline &pl) {
 
     // Erase and generate the billboards each and every frame
     for (auto &it : m_billboards)
-        it.positions.clear();
+        it.boards.clear();
     for (auto &it : m_entities) {
-        switch (it.type) {
-            case entity::kPlayerStart:
-                m_billboards[kBillboardPlayerStart].add(m_playerStarts[it.index]->position);
-                break;
-            case entity::kPointLight:
-                m_billboards[kBillboardLight].add(m_pointLights[it.index]->position);
-                break;
-            case entity::kSpotLight:
-                m_billboards[kBillboardLight].add(m_spotLights[it.index]->position);
-                break;
-            default:
-                break;
+        if (it.type == entity::kPlayerStart) {
+            auto &ent = m_playerStarts[it.index];
+            m_billboards[kBillboardPlayerStart].add(ent->position, {0.0f, 8.0f, 0.0f}, ent->highlight);
+        } else if (it.type == entity::kJumppad) {
+            auto &ent = m_jumppads[it.index];
+            m_billboards[kBillboardJumpPad].add(ent->position, {0.0f, 8.0f, 0.0f}, ent->highlight);
+        } else if (it.type == entity::kTeleport) {
+            auto &ent = m_teleports[it.index];
+            m_billboards[kBillboardTeleport].add(ent->position, {0.0f, 8.0f, 0.0f}, ent->highlight);
+        } else if (it.type == entity::kPointLight) {
+            m_billboards[kBillboardLight].add(m_pointLights[it.index]->position, {0.0f, 16.0f, 0.0f}, false);
+        } else if (it.type == entity::kSpotLight) {
+            m_billboards[kBillboardLight].add(m_spotLights[it.index]->position, {0.0f, 16.0f, 0.0f}, false);
         }
     }
 
@@ -123,7 +124,19 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
                     position = m_spotLights[it.index]->position;
                     radius = m_spotLights[it.index]->radius;
                     break;
-                default:
+                case entity::kJumppad:
+                    position = m_jumppads[it.index]->position;
+                    radius = 8.0f;
+                    break;
+                case entity::kTeleport:
+                    position = m_teleports[it.index]->position;
+                    radius = 8.0f;
+                    break;
+                case entity::kPlayerStart:
+                    position = m_playerStarts[it.index]->position;
+                    radius = 8.0f;
+                    break;
+                case entity::kDirectionalLight:
                     break;
             }
 

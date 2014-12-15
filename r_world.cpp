@@ -821,9 +821,26 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
                     neoFatal("failed to upload billboard '%s'\n", it.name);
                 m_billboards[it.name] = next.release();
             }
+
+            if (it.bbox) {
+                for (auto &jt : it.boards) {
+                    if (!jt.highlight)
+                        continue;
+
+                    pipeline p = pl;
+                    pipeline bp;
+                    bp.setWorld(jt.position);
+                    bp.setScale(it.size);
+                    m_bboxMethod.enable();
+                    m_bboxMethod.setColor(kOutline);
+                    m_bboxMethod.setWVP((p.projection() * p.view() * p.world()) * bp.world());
+                    m_bbox.render();
+                }
+            }
+
             auto &board = m_billboards[it.name];
-            for (auto &jt : it.positions)
-                board->add(jt);
+            for (auto &jt : it.boards)
+                board->add(jt.position);
             board->render(pl, it.size);
         }
 

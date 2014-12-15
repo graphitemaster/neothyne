@@ -391,6 +391,21 @@ static void menuEdit() {
                         sl.radius = 30;
                         sl.color = randomColor();
                         gSelected = gWorld.insert(sl);
+                    } else if (gui::item("Playerstart")) {
+                        playerStart ps;
+                        ps.position = looking();
+                        gClient.getDirection(&ps.direction, nullptr, nullptr);
+                        gSelected = gWorld.insert(ps);
+                    } else if (gui::item("Jumppad")) {
+                        jumppad jp;
+                        jp.position = looking();
+                        gClient.getDirection(nullptr, &jp.direction, nullptr);
+                        gSelected = gWorld.insert(jp);
+                    } else if (gui::item("Teleport")) {
+                        teleport tp;
+                        tp.position = looking();
+                        gClient.getDirection(&tp.direction, nullptr, nullptr);
+                        gSelected = gWorld.insert(tp);
                     }
                 gui::dedent();
             }

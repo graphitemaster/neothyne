@@ -66,21 +66,23 @@ inline mapModel::mapModel()
 struct playerStart {
     m::vec3 position;
     m::vec3 direction;
+    bool highlight;
 };
 
 struct teleport {
     m::vec3 position;
     m::vec3 direction;
+    bool highlight;
 };
 
 struct jumppad {
     m::vec3 position;
     m::vec3 direction;
     m::vec3 velocity;
+    bool highlight;
 };
 
 enum class entity {
-    kUnknown,
     kMapModel,
     kPlayerStart,
     kDirectionalLight,
@@ -155,11 +157,16 @@ private:
     r::world m_renderer;
 
     struct billboard {
+        struct board {
+            m::vec3 position;
+            bool highlight;
+        };
         const char *name;
         float size;
-        u::vector<m::vec3> positions;
-        void add(const m::vec3 &position) {
-            positions.push_back(position + m::vec3(0.0f, size, 0.0f));
+        bool bbox;
+        u::vector<board> boards;
+        void add(const m::vec3 &position, const m::vec3 &adjust, bool highlight) {
+            boards.push_back({ position + adjust, highlight });
         }
     };
 

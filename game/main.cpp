@@ -7,6 +7,7 @@
 #include "client.h"
 #include "menu.h"
 #include "cvar.h"
+#include "edit.h"
 
 #include "r_pipeline.h"
 #include "r_gui.h"
@@ -314,33 +315,8 @@ int neoMain(frameTimer &timer, int, char **) {
         pipeline.setTime(timer.ticks());
 
         // Update dragging/moving entity
-        if (mouse[3] & gui::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit)) {
-            m::vec3 direction;
-            gClient.getDirection(&direction, nullptr, nullptr);
-
-            // Trace to world
-            world::trace::hit h;
-            world::trace::query q;
-            q.start = gClient.getPosition();
-            q.radius = 0.01f;
-            q.direction = direction.normalized();
-
-            // Don't collide with anything but geometry for this trace
-            static constexpr float kMaxTraceDistance = 1024.0f;
-            if (gWorld.trace(q, &h, kMaxTraceDistance, false) && h.fraction > 0.01f) {
-                direction *= (kMaxTraceDistance * h.fraction);
-                if (gSelected->type == entity::kMapModel) {
-                    auto &mapModel = gWorld.getMapModel(gSelected->index);
-                    mapModel.position = direction + gClient.getPosition();
-                } else if (gSelected->type == entity::kPointLight) {
-                    auto &pointLight = gWorld.getPointLight(gSelected->index);
-                    pointLight.position = direction + gClient.getPosition();
-                } else if (gSelected->type == entity::kSpotLight) {
-                    auto &spotLight = gWorld.getSpotLight(gSelected->index);
-                    spotLight.position = direction + gClient.getPosition();
-                }
-            }
-        }
+        if (mouse[3] & gui::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit))
+            edit::move();
 
         if (gPlaying) {
             gWorld.upload(perspective);
@@ -415,26 +391,14 @@ int neoMain(frameTimer &timer, int, char **) {
                                 gMenuState &= ~kMenuEdit;
                                 neoRelativeMouse(!(gMenuState & kMenuEdit));
                             }
-                            // Unhighlight old selection
-                            if (gSelected) {
-                                if (gSelected->type == entity::kMapModel)
-                                    gWorld.getMapModel(gSelected->index).highlight = false;
-                                else if (gSelected->type == entity::kPointLight)
-                                    gWorld.getPointLight(gSelected->index).highlight = false;
-                                else if (gSelected->type == entity::kSpotLight)
-                                    gWorld.getSpotLight(gSelected->index).highlight = false;
-                                gSelected = nullptr;
-                            }
+                            edit::deselect();
                             break;
                         case SDLK_BACKSPACE:
                             if (input)
                                 inputString.pop_back();
                             break;
                         case SDLK_DELETE:
-                            if (gSelected) {
-                                gWorld.erase(gSelected->where);
-                                gSelected = nullptr;
-                            }
+                            edit::remove();
                             break;
                         case SDLK_SLASH:
                             input = !input;
@@ -468,34 +432,8 @@ int neoMain(frameTimer &timer, int, char **) {
                 case SDL_MOUSEBUTTONDOWN:
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
-                            if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit)) {
-                                if (gSelected) {
-                                    // Unhighlight old selection
-                                    if (gSelected->type == entity::kMapModel)
-                                        gWorld.getMapModel(gSelected->index).highlight = false;
-                                    else if (gSelected->type == entity::kPointLight)
-                                        gWorld.getPointLight(gSelected->index).highlight = false;
-                                    else if (gSelected->type == entity::kSpotLight)
-                                        gWorld.getSpotLight(gSelected->index).highlight = false;
-                                    gSelected = nullptr;
-                                }
-                                world::trace::hit h;
-                                world::trace::query q;
-                                q.start = gClient.getPosition();
-                                q.radius = 0.01f;
-                                m::vec3 direction;
-                                gClient.getDirection(&direction, nullptr, nullptr);
-                                q.direction = direction.normalized();
-                                if (gWorld.trace(q, &h, 1024.0f) && h.ent) {
-                                    gSelected = h.ent;
-                                    if (gSelected->type == entity::kMapModel)
-                                        gWorld.getMapModel(gSelected->index).highlight = true;
-                                    else if (gSelected->type == entity::kPointLight)
-                                        gWorld.getPointLight(gSelected->index).highlight = true;
-                                    else if (gSelected->type == entity::kSpotLight)
-                                        gWorld.getSpotLight(gSelected->index).highlight = true;
-                                }
-                            }
+                            if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit))
+                                edit::select();
                             mouse[3] |= gui::kMouseButtonLeft;
                             break;
                         case SDL_BUTTON_RIGHT:
