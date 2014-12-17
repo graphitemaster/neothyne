@@ -4,6 +4,7 @@
 namespace m {
 
 struct vec3;
+struct mat4;
 
 struct quat {
     float x;
@@ -22,6 +23,9 @@ struct quat {
 
     // get all 3 axis of the quaternion
     void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
+
+    // get matrix of this quaternion
+    void getMatrix(mat4 *mat) const;
 
     friend quat operator*(const quat &l, const vec3 &v);
     friend quat operator*(const quat &l, const quat &r);

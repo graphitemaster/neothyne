@@ -11,7 +11,7 @@ struct pipeline {
 
     void setScale(const m::vec3 &scale);
     void setWorld(const m::vec3 &worldPosition);
-    void setRotate(const m::vec3 &rotate);
+    void setRotate(const m::mat4 &rotate);
     void setPosition(const m::vec3 &position);
     void setRotation(const m::quat &rotation);
     void setPerspective(const m::perspective &p);
@@ -43,7 +43,7 @@ private:
 
     m::vec3 m_scale;
     m::vec3 m_world;
-    m::vec3 m_rotate;
+    m::mat4 m_rotate;
     m::vec3 m_position;
     m::quat m_rotation;
 

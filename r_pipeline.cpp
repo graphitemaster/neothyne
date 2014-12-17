@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "r_pipeline.h"
 
 namespace r {
@@ -6,6 +8,7 @@ pipeline::pipeline()
     : m_scale(1.0f, 1.0f, 1.0f)
     , m_time(0.0f)
 {
+    m_rotate.setRotateTrans(0.0f, 0.0f, 0.0f);
 }
 
 void pipeline::setScale(const m::vec3 &scale) {
@@ -16,7 +19,7 @@ void pipeline::setWorld(const m::vec3 &world) {
     m_world = world;
 }
 
-void pipeline::setRotate(const m::vec3 &rotate) {
+void pipeline::setRotate(const m::mat4 &rotate) {
     m_rotate = rotate;
 }
 
@@ -38,12 +41,10 @@ void pipeline::setTime(float time) {
 
 const m::mat4 &pipeline::world() {
     m::mat4 scale;
-    m::mat4 rotate;
     m::mat4 translate;
     scale.setScaleTrans(m_scale.x, m_scale.y, m_scale.z);
-    rotate.setRotateTrans(m_rotate.x, m_rotate.y, m_rotate.z);
     translate.setTranslateTrans(m_world.x, m_world.y, m_world.z);
-    return m_matrices[kWorld] = translate * rotate * scale;
+    return m_matrices[kWorld] = translate * m_rotate * scale;
 }
 
 const m::mat4 &pipeline::view() {

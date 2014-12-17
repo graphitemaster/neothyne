@@ -626,7 +626,14 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
             pipeline pm = p;
             pm.setWorld(it->position);
             pm.setScale(it->scale + mdl->scale);
-            pm.setRotate(it->rotate + mdl->rotate);
+
+            const m::vec3 rot = mdl->rotate + it->rotate;
+            m::quat rx(m::vec3::xAxis, m::toRadian(rot.x));
+            m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
+            m::quat rz(m::vec3::zAxis, m::toRadian(rot.z));
+            m::mat4 rotate;
+            (rz * ry * rx).getMatrix(&rotate);
+            pm.setRotate(rotate);
 
             setup(mdl->mat, pm, rw);
 
@@ -852,8 +859,15 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
             pipeline p = pl;
             p.setWorld(it->position);
             p.setScale(it->scale + mdl->scale);
-            p.setRotate(it->rotate + mdl->rotate);
 
+            const m::vec3 rot = mdl->rotate + it->rotate;
+            m::quat rx(m::vec3::xAxis, m::toRadian(rot.x));
+            m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
+            m::quat rz(m::vec3::zAxis, m::toRadian(rot.z));
+            m::mat4 rotate;
+            (rz * ry * rx).getMatrix(&rotate);
+            p.setRotate(rotate);
+            
             pipeline bp;
             bp.setWorld(mesh.getBBCenter());
             bp.setScale(mesh.getBBSize());
