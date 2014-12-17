@@ -1,6 +1,6 @@
 #ifndef U_SHA512_HDR
 #define U_SHA512_HDR
-#include "u_string.h"
+#include <stdint.h>
 
 namespace u {
 
