@@ -38,6 +38,8 @@ void sha512::init() {
     m_state[5] = 0x9b05688c2b3e6c1fULL;
     m_state[6] = 0x1f83d9abfb41bd6bULL;
     m_state[7] = 0x5be0cd19137e2179ULL;
+
+    m_string[512 / 8 * 2] = '\0';
 }
 
 sha512::sha512() {
@@ -136,11 +138,13 @@ void sha512::done() {
         store64(m_state[i], m_out + (8*i));
 }
 
-u::string sha512::hex() {
-    u::string thing;
-    for (size_t i = 0; i != 512 / 8; ++i)
-        thing += u::format("%02x", m_out[i]);
-    return thing;
+const char *sha512::hex() {
+    static const char *kNibbleHexMap = "0123456789abcdef";
+    for (size_t i = 0; i != 512 / 8; ++i) {
+        m_string[2*i+0] = kNibbleHexMap[m_out[i] >> 4];
+        m_string[2*i+1] = kNibbleHexMap[m_out[i] & 0x0F];
+    }
+    return m_string;
 }
 
 }

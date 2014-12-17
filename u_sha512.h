@@ -12,7 +12,7 @@ struct sha512 {
     void process(const unsigned char *src, size_t length);
     void done();
 
-    u::string hex();
+    const char *hex();
 
 private:
     void compress(const unsigned char *buf);
@@ -68,6 +68,7 @@ private:
     uint32_t m_currentLength;
     unsigned char m_buffer[128];
     unsigned char m_out[512 / 8];
+    char m_string[512 / 8 * 2 + 1];
 };
 
 }
