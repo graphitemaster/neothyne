@@ -3,6 +3,7 @@
 #include "u_string.h"
 #include "u_optional.h"
 #include "u_vector.h"
+#include "u_sha512.h"
 
 enum {
     kTexFlagNormal     = 1 << 0,
@@ -91,6 +92,7 @@ private:
     size_t m_pitch;
     int m_flags;
     textureFormat m_format;
+    u::sha512 m_hasher;
 };
 
 #endif

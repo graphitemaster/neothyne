@@ -109,13 +109,13 @@ static bool readCache(texture &tex, GLuint &internal) {
             if (!gl::has(ARB_texture_compression_bptc))
                 return false;
             break;
-            
+
         case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
         case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
             if (!gl::has(EXT_texture_compression_s3tc))
                 return false;
             break;
-            
+
         case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
         case GL_COMPRESSED_RED_RGTC1_EXT:
             if (!gl::has(EXT_texture_compression_rgtc))

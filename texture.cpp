@@ -6,7 +6,6 @@
 
 #include "u_zlib.h"
 #include "u_file.h"
-#include "u_sha512.h"
 #include "u_algorithm.h"
 #include "u_misc.h"
 
@@ -1816,8 +1815,10 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
     }
 
     // Hash the contents as well to generate a hash string
-    u::sha512 hash(&m_data[0], m_data.size());
-    m_hashString = hash.hex();
+    m_hasher.init();
+    m_hasher.process(&m_data[0], m_data.size());
+    m_hasher.done();
+    m_hashString = m_hasher.hex();
 
     return true;
 }
