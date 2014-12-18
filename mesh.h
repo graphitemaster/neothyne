@@ -2,7 +2,7 @@
 #define MESH_HDR
 #include "u_vector.h"
 
-#include "m_vec3.h"
+#include "m_bbox.h"
 
 namespace u {
     struct string;
@@ -33,12 +33,9 @@ struct mesh {
     u::vector<m::vec3> normals() const;
     u::vector<m::vec3> coordinates() const;
 
-    m::vec3 getBBSize() const;
-    m::vec3 getBBCenter() const;
+    m::bbox bbox;
 
 private:
-    m::vec3 m_bbsize;
-    m::vec3 m_bbcenter;
     obj m_obj; // TO BE EXTENDED
 };
 

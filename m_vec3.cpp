@@ -1,4 +1,5 @@
 #include "u_misc.h"
+#include "u_algorithm.h"
 
 #include "m_vec3.h"
 #include "m_quat.h"

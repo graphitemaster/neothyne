@@ -12,17 +12,8 @@ bool mesh::load(const u::string &file) {
 
     // Calculate bounding box
     const auto &p = positions();
-    m::vec3 bbmin = p[0];
-    m::vec3 bbmax = p[0];
-    for (const auto &it : p) {
-        for (size_t i = 0; i < 3; i++) {
-            if (it[i] > bbmin[i]) bbmin[i] = it[i];
-            if (it[i] < bbmax[i]) bbmax[i] = it[i];
-        }
-    }
-    m_bbsize = bbmax - bbmin;
-    m_bbcenter = (bbmin + bbmax) / 2.0f;
-
+    for (const auto &it : p)
+        bbox.expand(it);
     return true;
 }
 
@@ -40,14 +31,6 @@ u::vector<m::vec3> mesh::normals() const {
 
 u::vector<m::vec3> mesh::coordinates() const {
     return m_obj.coordinates();
-}
-
-m::vec3 mesh::getBBSize() const {
-    return m_bbsize;
-}
-
-m::vec3 mesh::getBBCenter() const {
-    return m_bbcenter;
 }
 
 ///! OBJ Model Loading and Rendering

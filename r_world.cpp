@@ -867,10 +867,10 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
             m::mat4 rotate;
             (rz * ry * rx).getMatrix(&rotate);
             p.setRotate(rotate);
-            
+
             pipeline bp;
-            bp.setWorld(mesh.getBBCenter());
-            bp.setScale(mesh.getBBSize());
+            bp.setWorld(mesh.bbox.center());
+            bp.setScale(mesh.bbox.size());
             m_bboxMethod.enable();
             m_bboxMethod.setColor(it->highlight ? kHighlighted : kOutline);
             m_bboxMethod.setWVP((p.projection() * p.view() * p.world()) * bp.world());

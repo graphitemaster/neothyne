@@ -5,6 +5,8 @@
 
 #include "m_const.h"
 
+#include "u_algorithm.h"
+
 namespace m {
 
 struct vec3 {
@@ -60,6 +62,14 @@ struct vec3 {
 
     static bool raySphereIntersect(const vec3 &start, const vec3 &direction,
         const vec3 &sphere, float radius, float *fraction);
+
+    static inline vec3 min(const vec3 &lhs, const vec3 &rhs) {
+        return { u::min(lhs.x, rhs.x), u::min(lhs.y, rhs.y), u::min(lhs.z, rhs.z) };
+    }
+
+    static inline vec3 max(const vec3 &lhs, const vec3 &rhs) {
+        return { u::max(lhs.x, rhs.x), u::max(lhs.y, rhs.y), u::max(lhs.z, rhs.z) };
+    }
 
     static const vec3 xAxis;
     static const vec3 yAxis;
