@@ -15,6 +15,8 @@ struct obj {
     u::vector<m::vec3> positions() const;
     u::vector<m::vec3> normals() const;
     u::vector<m::vec3> coordinates() const;
+    u::vector<m::vec3> tangents() const;
+    u::vector<float> bitangents() const;
 
 private:
     friend struct mesh;
@@ -23,6 +25,8 @@ private:
     u::vector<m::vec3> m_positions;
     u::vector<m::vec3> m_normals;
     u::vector<m::vec3> m_coordinates;
+    u::vector<m::vec3> m_tangents;
+    u::vector<float> m_bitangents; // Sign only
 };
 
 struct mesh {
@@ -32,6 +36,8 @@ struct mesh {
     u::vector<m::vec3> positions() const;
     u::vector<m::vec3> normals() const;
     u::vector<m::vec3> coordinates() const;
+    u::vector<m::vec3> tangents() const;
+    u::vector<float> bitangents() const;
 
     m::bbox bbox;
 

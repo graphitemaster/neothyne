@@ -6,6 +6,94 @@
 #include "u_file.h"
 #include "u_map.h"
 
+static void calculateTangent(const u::vector<m::vec3> &vertices,
+                             const u::vector<m::vec3> &coordinates,
+                             size_t v0,
+                             size_t v1,
+                             size_t v2,
+                             m::vec3 &tangent,
+                             m::vec3 &bitangent)
+{
+    const m::vec3 &x = vertices[v0];
+    const m::vec3 &y = vertices[v1];
+    const m::vec3 &z = vertices[v2];
+    const m::vec3 q1(y - x);
+    const m::vec3 q2(z - x);
+    const float s1 = coordinates[v1].x - coordinates[v0].x;
+    const float s2 = coordinates[v2].x - coordinates[v0].x;
+    const float t1 = coordinates[v1].y - coordinates[v0].y;
+    const float t2 = coordinates[v2].y - coordinates[v0].y;
+    const float det = s1*t2 - s2*t1;
+    if (m::abs(det) <= m::kEpsilon) {
+        // Unable to compute tangent + bitangent, default tangent along xAxis and
+        // bitangent along yAxis.
+        tangent = m::vec3::xAxis;
+        bitangent = m::vec3::yAxis;
+        return;
+    }
+
+    const float inv = 1.0f / det;
+    tangent = m::vec3(inv * (t2 * q1.x - t1 * q2.x),
+                      inv * (t2 * q1.y - t1 * q2.y),
+                      inv * (t2 * q1.z - t1 * q2.z));
+    bitangent = m::vec3(inv * (-s2 * q1.x + s1 * q2.x),
+                        inv * (-s2 * q1.y + s1 * q2.y),
+                        inv * (-s2 * q1.z + s1 * q2.z));
+}
+
+static void createTangents(const u::vector<m::vec3> &vertices,
+                           const u::vector<m::vec3> &coordinates,
+                           const u::vector<m::vec3> &normals,
+                           const u::vector<size_t> &indices,
+                           u::vector<m::vec3> &tangents_,
+                           u::vector<float> &bitangents_)
+{
+    // Computing Tangent Space Basis Vectors for an Arbitrary Mesh (Lengyel’s Method)
+    // Section 7.8 (or in Section 6.8 of the second edition).
+    const size_t vertexCount = vertices.size();
+    u::vector<m::vec3> tangents;
+    u::vector<m::vec3> bitangents;
+
+    tangents.resize(vertexCount);
+    bitangents.resize(vertexCount);
+
+    m::vec3 tangent;
+    m::vec3 bitangent;
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        const size_t x = indices[i+0];
+        const size_t y = indices[i+1];
+        const size_t z = indices[i+2];
+
+        calculateTangent(vertices, coordinates, x, y, z, tangent, bitangent);
+
+        tangents[x] += tangent;
+        tangents[y] += tangent;
+        tangents[z] += tangent;
+        bitangents[x] += bitangent;
+        bitangents[y] += bitangent;
+        bitangents[z] += bitangent;
+    }
+
+    for (size_t i = 0; i < vertexCount; i++) {
+        // Gram-Schmidt orthogonalize
+        // http://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
+        const m::vec3 &n = normals[i];
+        m::vec3 t = tangents[i];
+        tangents_[i] = (t - n * (n * t)).normalized();
+
+        if (!tangents_[i].isNormalized()) {
+            // Couldn't calculate vertex tangent for vertex, so we fill it in along
+            // the x axis.
+            tangents_[i] = m::vec3::xAxis;
+            t = tangents_[i];
+        }
+
+        // bitangents are only stored by handness in the W component (-1.0f or 1.0f).
+        bitangents_[i] = (((n ^ t) * bitangents[i]) < 0.0f) ? -1.0f : 1.0f;
+    }
+}
+
 bool mesh::load(const u::string &file) {
     if (!m_obj.load(file))
         return false;
@@ -33,6 +121,14 @@ u::vector<m::vec3> mesh::coordinates() const {
     return m_obj.coordinates();
 }
 
+u::vector<m::vec3> mesh::tangents() const {
+    return m_obj.tangents();
+}
+
+u::vector<float> mesh::bitangents() const {
+    return m_obj.bitangents();
+}
+
 ///! OBJ Model Loading and Rendering
 bool obj::load(const u::string &file) {
     u::file fp = fopen(neoGamePath() + file + ".obj", "r");
@@ -43,6 +139,8 @@ bool obj::load(const u::string &file) {
     u::vector<m::vec3> vertices;
     u::vector<m::vec3> normals;
     u::vector<m::vec3> coordinates;
+    u::vector<m::vec3> tangents;
+    u::vector<float> bitangents;
 
     // Unique vertices are stored in a map keyed by face.
     u::map<face, size_t> uniques;
@@ -145,6 +243,11 @@ bool obj::load(const u::string &file) {
     for (size_t i = 0; i < m_indices.size(); i += 3)
         u::swap(m_indices[i], m_indices[i + 2]);
 
+    // Calculate tangents
+    m_tangents.resize(count);
+    m_bitangents.resize(count);
+    createTangents(m_positions, m_coordinates, m_normals, m_indices, m_tangents, m_bitangents);
+
     return true;
 }
 
@@ -162,6 +265,14 @@ u::vector<m::vec3> obj::normals() const {
 
 u::vector<m::vec3> obj::coordinates() const {
     return m_coordinates;
+}
+
+u::vector<m::vec3> obj::tangents() const {
+    return m_tangents;
+}
+
+u::vector<float> obj::bitangents() const {
+    return m_bitangents;
 }
 
 ///! vertexCacheData
