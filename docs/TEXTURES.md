@@ -26,6 +26,18 @@ below:
   * Supports RLE compressed color (paletted)
   * Supports RLE compressed (BGRA)
 
+* DDS
+  * Supports the following block-compressed formats only
+    * DXT1
+    * DXT3
+    * DXT5
+    * BC4U
+    * BC4S
+    * BC5U
+    * BC5S
+    * ATI1
+    * ATI2
+
 In addition to those supported texture formats. Neothyne also builds BPTC, DXT1,
 DXT5 and RGTC compressed textures at runtime and caches them to disk. It will
 prefer the cached textures if the hardware supports BPTC, S3TC or RGTC texture
