@@ -67,13 +67,13 @@ bool obj::load(const u::string &file) {
         float z = 0.0f;
         if (u::sscanf(line, "v %f %f %f", &x, &y, &z) == 3) {
             // v float float float
-            vertices.push_back({x, y, z});
+            vertices.push_back({x, y, z * -1.0f});
         } else if (u::sscanf(line, "vn %f %f %f", &x, &y, &z) == 3) {
             // vn float float float
-            normals.push_back({x, y, z});
+            normals.push_back({x * -1.0f, y * -1.0f, z});
         } else if (u::sscanf(line, "vt %f %f", &x, &y) == 2) {
             // vt float float
-            coordinates.push_back({x, y, 0.0f});
+            coordinates.push_back({x, 1.0f - y, 0.0f});
         } else if (line[0] == 'g') {
             group++;
         } else if (line[0] == 'f' && group == 0) { // Only process the first group faces
@@ -140,6 +140,10 @@ bool obj::load(const u::string &file) {
     // Optimize the indices
     vertexCacheOptimizer vco;
     vco.optimize(m_indices);
+
+    // Change winding order
+    for (size_t i = 0; i < m_indices.size(); i += 3)
+        u::swap(m_indices[i], m_indices[i + 2]);
 
     return true;
 }

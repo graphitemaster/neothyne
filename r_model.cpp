@@ -180,7 +180,7 @@ bool model::upload() {
         entry.position = positions[i];
         entry.normal = normals[i];
         entry.s = coordinates[i].x;
-        entry.t = 1.0f - coordinates[i].y;
+        entry.t = coordinates[i].y;
     }
 
     // Copy out of size_t format into GLuint format
