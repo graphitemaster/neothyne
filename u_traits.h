@@ -246,6 +246,12 @@ namespace detail {
 template <typename T>
 struct is_class : integral_constant<bool, sizeof(detail::class_test<T>(0)) == 1 && !is_union<T>::value> {};
 
+/// is_same
+template <typename T, typename U>
+struct is_same : false_type {};
+template <typename T>
+struct is_same<T, T> : true_type {};
+
 /// is_function
 namespace detail {
     template <typename T>

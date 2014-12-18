@@ -9,7 +9,8 @@ enum {
     kTexFlagGrey       = 1 << 1,
     kTexFlagDisk       = 1 << 2,
     kTexFlagPremul     = 1 << 3,
-    kTexFlagNoCompress = 1 << 4
+    kTexFlagNoCompress = 1 << 4,
+    kTexFlagCompressed = 1 << 5
 };
 
 enum textureFormat {
@@ -18,7 +19,14 @@ enum textureFormat {
     kTexFormatBGR,
     kTexFormatBGRA,
     kTexFormatRG,
-    kTexFormatLuminance
+    kTexFormatLuminance,
+    kTexFormatDXT1,
+    kTexFormatDXT3,
+    kTexFormatDXT5,
+    kTexFormatBC4U, // Also ATI1
+    kTexFormatBC4S,
+    kTexFormatBC5U, // also ATI2
+    kTexFormatBC5S
 };
 
 struct texture {
@@ -27,6 +35,7 @@ struct texture {
         , m_height(0)
         , m_bpp(0)
         , m_pitch(0)
+        , m_mips(0)
         , m_flags(0)
         , m_format(kTexFormatLuminance)
     {
@@ -70,6 +79,7 @@ struct texture {
     size_t size() const;
     size_t bpp() const;
     size_t pitch() const;
+    size_t mips() const;
 
     const u::string &hashString() const;
 
@@ -89,6 +99,7 @@ private:
     size_t m_height;
     size_t m_bpp;
     size_t m_pitch;
+    size_t m_mips;
     int m_flags;
     textureFormat m_format;
 };

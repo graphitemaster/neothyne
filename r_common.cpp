@@ -349,6 +349,10 @@ static const char *extensionList[] = {
     "GL_ARB_texture_rectangle"
 };
 
+const char *extensionString(size_t what) {
+    return extensionList[what];
+}
+
 void init() {
     glCreateShader_             = (MYPFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader");
     glShaderSource_             = (MYPFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress("glShaderSource");

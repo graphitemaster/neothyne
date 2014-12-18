@@ -157,6 +157,7 @@ def genHeader(functionList, extensionList, headerFile):
 
         void init();
         bool has(size_t ext);
+        const char *extensionString(size_t ext);
         """))
         # Generate the function prototypes
         for function in functionList:
@@ -322,6 +323,10 @@ def genSource(functionList, extensionList, sourceFile):
             source.write('    "GL_%s"%s\n' % (e, ',' if i != len(extensionList) - 1 else ''))
         source.write(textwrap.dedent("""\
         };
+
+        const char *extensionString(size_t what) {
+            return extensionList[what];
+        }
 
         void init() {
         """))

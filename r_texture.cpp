@@ -75,7 +75,17 @@ static u::string sizeMetric(size_t size) {
 }
 
 static bool readCache(texture &tex, GLuint &internal) {
-    if (!r_texcomp || !(tex.flags() & kTexFlagDisk) || (tex.flags() & kTexFlagNoCompress))
+    if (!r_texcomp)
+        return false;
+
+    // If the texture is not on disk then don't cache the compressed version
+    // of it to disk.
+    if (!(tex.flags() & kTexFlagDisk))
+        return false;
+
+    // If no compression was specified then don't read a cached compressed version
+    // of it.
+    if (tex.flags() & kTexFlagNoCompress)
         return false;
 
     // Do we even have it in cache?
@@ -138,6 +148,10 @@ static bool readCache(texture &tex, GLuint &internal) {
 
 static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     if (!r_texcompcache)
+        return false;
+
+    // Don't cache already disk-compressed textures
+    if (tex.flags() & kTexFlagCompressed)
         return false;
 
     // Only cache compressed textures
@@ -232,6 +246,41 @@ static size_t textureAlignment(const texture &tex) {
 // that texture to the hardware. This function will also favor texture compression
 // if the hardware supports it by converting the texture if it needs to.
 static u::optional<queryFormat> getBestFormat(texture &tex) {
+    auto checkSupport = [](size_t what) {
+        if (!gl::has(what))
+            neoFatal("No support for `%s'", gl::extensionString(what));
+    };
+
+    // The texture is compressed?
+    if (tex.flags() & kTexFlagCompressed) {
+        switch (tex.format()) {
+            case kTexFormatDXT1:
+                checkSupport(EXT_texture_compression_s3tc);
+                return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
+            case kTexFormatDXT3:
+                checkSupport(EXT_texture_compression_s3tc);
+                return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT);
+            case kTexFormatDXT5:
+                checkSupport(EXT_texture_compression_s3tc);
+                return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
+            case kTexFormatBC4U:
+                checkSupport(EXT_texture_compression_rgtc);
+                return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
+            case kTexFormatBC4S:
+                checkSupport(EXT_texture_compression_rgtc);
+                return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_SIGNED_RED_RGTC1_EXT);
+            case kTexFormatBC5U:
+                checkSupport(EXT_texture_compression_rgtc);
+                return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
+            case kTexFormatBC5S:
+                checkSupport(EXT_texture_compression_rgtc);
+                return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT);
+            default:
+                break;
+        }
+        assert(0);
+    }
+
     if (tex.flags() & kTexFlagNormal)
         tex.convert<kTexFormatRG>();
     else if (tex.flags() & kTexFlagGrey)
@@ -281,6 +330,9 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
             return queryFormat(GL_RG,   R_TEX_DATA_RG,        GL_RG8);
         case kTexFormatLuminance:
             return queryFormat(GL_RED,  R_TEX_DATA_LUMINANCE, GL_RED);
+        default:
+            assert(0);
+            break;
     }
     return u::none;
 }
@@ -354,29 +406,80 @@ bool texture2D::upload() {
     gl::GenTextures(1, &m_textureHandle);
     gl::BindTexture(GL_TEXTURE_2D, m_textureHandle);
 
-    queryFormat format;
-    bool needsCache = !useCache();
-    if (needsCache) {
+    // If the texture is compressed on disk then load it in ignoring cache
+    if (m_texture.flags() & kTexFlagCompressed) {
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+            (m_texture.mips() > 1 && r_mipmaps) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        size_t offset = 0;
+        size_t mipWidth = m_texture.width();
+        size_t mipHeight = m_texture.height();
+        size_t blockSize = 0;
+
+        switch (m_texture.format()) {
+            case kTexFormatDXT1:
+            case kTexFormatBC4U:
+            case kTexFormatBC4S:
+                blockSize = 8;
+                break;
+            case kTexFormatDXT3:
+            case kTexFormatDXT5:
+            case kTexFormatBC5U:
+            case kTexFormatBC5S:
+                blockSize = 16;
+                break;
+            default:
+                return false;
+        }
+
+        if (blockSize != 8 && blockSize != 16)
+            return false;
+
         auto query = getBestFormat(m_texture);
         if (!query)
             return false;
-        format = *query;
-        gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_texture));
-        gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_texture.pitch() / m_texture.bpp());
-        gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
-            m_texture.height(), 0, format.format, format.data, m_texture.data());
-        gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-        gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
+
+        queryFormat format = *query;
+
+        // Load all mip levels
+        for (size_t i = 0; i < m_texture.mips(); i++) {
+            size_t mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * blockSize;
+            gl::CompressedTexImage2D(GL_TEXTURE_2D, i, format.internal, mipWidth,
+                mipHeight, 0, mipSize, m_texture.data() + offset);
+            mipWidth = u::max(mipWidth >> 1, size_t(1));
+            mipHeight = u::max(mipHeight >> 1, size_t(1));
+            offset += mipSize;
+        }
+
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    } else {
+        queryFormat format;
+        bool needsCache = !useCache();
+        if (needsCache) {
+            auto query = getBestFormat(m_texture);
+            if (!query)
+                return false;
+            format = *query;
+            gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_texture));
+            gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_texture.pitch() / m_texture.bpp());
+            gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
+                m_texture.height(), 0, format.format, format.data, m_texture.data());
+            gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
+        }
+
+        if (r_mipmaps)
+            gl::GenerateMipmap(GL_TEXTURE_2D);
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        applyFilter();
+
+        if (needsCache)
+            cache(format.internal);
     }
-
-    if (r_mipmaps)
-        gl::GenerateMipmap(GL_TEXTURE_2D);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    applyFilter();
-
-    if (needsCache)
-        cache(format.internal);
 
     m_texture.unload();
     return m_uploaded = true;

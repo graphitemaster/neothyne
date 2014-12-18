@@ -9,6 +9,7 @@
 #include "u_algorithm.h"
 #include "u_misc.h"
 #include "u_sha512.h"
+#include "u_traits.h"
 
 #include "m_const.h"
 
@@ -23,9 +24,12 @@ VAR(int, tex_jpeg_chroma, "chroma filtering method", 0, 1, 0);
 struct decoder {
     decoder()
         : m_error(kSuccess)
+        , m_format(kTexFormatLuminance)
         , m_width(0)
         , m_height(0)
+        , m_pitch(0)
         , m_bpp(0)
+        , m_mips(0)
     {
     }
 
@@ -62,8 +66,20 @@ struct decoder {
         return m_height;
     }
 
+    size_t pitch() const {
+        return m_pitch;
+    }
+
     size_t bpp() const {
         return m_bpp;
+    }
+
+    size_t mips() const {
+        return m_mips;
+    }
+
+    textureFormat format() const {
+        return m_format;
     }
 
     result status() const {
@@ -72,9 +88,12 @@ struct decoder {
 
 protected:
     result m_error;
+    textureFormat m_format;
     size_t m_width;
     size_t m_height;
+    size_t m_pitch;
     size_t m_bpp;
+    size_t m_mips;
 };
 
 ///
@@ -120,6 +139,21 @@ struct jpeg : decoder {
         memset(m_block, 0, sizeof(m_block));
 
         decode(data, chromaFilter(tex_jpeg_chroma.get()));
+
+        switch (m_bpp) {
+            case 1:
+                m_format = kTexFormatLuminance;
+                break;
+            case 3:
+                m_format = kTexFormatRGB;
+                break;
+            case 4:
+                m_format = kTexFormatRGBA;
+                break;
+            default:
+                assert(0);
+                break;
+        }
     }
 
     u::vector<unsigned char> data() {
@@ -955,6 +989,21 @@ struct png : decoder {
 
     png(const u::vector<unsigned char> &data) {
         decode(m_decoded, data);
+
+        switch (m_bpp) {
+            case 1:
+                m_format = kTexFormatLuminance;
+                break;
+            case 3:
+                m_format = kTexFormatRGB;
+                break;
+            case 4:
+                m_format = kTexFormatRGBA;
+                break;
+            default:
+                assert(0);
+                break;
+        }
     }
 
     u::vector<unsigned char> data() {
@@ -1342,6 +1391,21 @@ struct tga : decoder {
 
     tga(const u::vector<unsigned char> &data) {
         decode(data);
+
+        switch (m_bpp) {
+            case 1:
+                m_format = kTexFormatLuminance;
+                break;
+            case 3:
+                m_format = kTexFormatRGB;
+                break;
+            case 4:
+                m_format = kTexFormatRGBA;
+                break;
+            default:
+                assert(0);
+                break;
+        }
     }
 
     u::vector<unsigned char> data() {
@@ -1549,6 +1613,107 @@ private:
         unsigned char pixelSize;
         unsigned char description;
     } m_header;
+
+    const unsigned char *m_position;
+    u::vector<unsigned char> m_data;
+};
+
+static inline constexpr uint32_t fourCC(const char (&four)[5]) {
+    return ((four[3] << 24) & 0xFF000000) | ((four[2] << 16) & 0x00FF0000) |
+           ((four[1] << 8) & 0x0000FF00) | ((four[0] << 0) & 0x000000FF);
+}
+
+struct dds : decoder {
+    static bool test(const u::vector<unsigned char> &data) {
+        return !memcmp(&data[0], (const void *)"DDS ", 4);
+    }
+
+    dds(const u::vector<unsigned char> &data) {
+        decode(data);
+    }
+
+    u::vector<unsigned char> data() {
+        return u::move(m_data);
+    }
+
+    static constexpr uint32_t kDXT1 = fourCC("DXT1");
+    static constexpr uint32_t kDXT3 = fourCC("DXT3");
+    static constexpr uint32_t kDXT5 = fourCC("DXT5");
+    static constexpr uint32_t kBC4U = fourCC("BC4U");
+    static constexpr uint32_t kBC4S = fourCC("BC4S");
+    static constexpr uint32_t kBC5U = fourCC("BC5U");
+    static constexpr uint32_t kBC5S = fourCC("BC5S");
+    static constexpr uint32_t kATI1 = fourCC("ATI1");
+    static constexpr uint32_t kATI2 = fourCC("ATI2");
+
+private:
+    void read(unsigned char *dest, size_t size) {
+        memcpy(dest, m_position, size);
+        m_position += size;
+    }
+
+    void decode(const u::vector<unsigned char> &data) {
+        m_position = &data[0];
+
+        unsigned char magic[4];
+        read(magic, 4);
+
+        if (memcmp((const void*)magic, (const void*)"DDS ", 4))
+            returnResult(kInvalid);
+
+        surfaceDescriptor surface;
+        read((unsigned char*)&surface, sizeof(surface));
+
+        m_data.resize(data.end() - m_position);
+        read(&m_data[0], m_data.size());
+
+        switch (surface.format.fourcc) {
+            case kDXT1: m_format = kTexFormatDXT1; break;
+            case kDXT3: m_format = kTexFormatDXT3; break;
+            case kDXT5: m_format = kTexFormatDXT5; break;
+            case kATI1: m_format = kTexFormatBC4U; break;
+            case kATI2: m_format = kTexFormatBC5U; break;
+            case kBC4U: m_format = kTexFormatBC4U; break;
+            case kBC4S: m_format = kTexFormatBC4S; break;
+            case kBC5U: m_format = kTexFormatBC5U; break;
+            case kBC5S: m_format = kTexFormatBC5S; break;
+            default:
+                returnResult(kUnsupported);
+        }
+
+        m_width = surface.width;
+        m_height = surface.height;
+        m_mips = surface.mipLevel;
+        m_bpp = surface.pitch / surface.width;
+    }
+
+    struct pixelFormat {
+        uint32_t size;
+        uint32_t flags;
+        uint32_t fourcc;
+        uint32_t bpp;
+        uint32_t colorMask[4];
+    };
+
+    struct surfaceDescriptor {
+        uint32_t size;
+        uint32_t flags;
+        uint32_t height;
+        uint32_t width;
+        uint32_t pitch;
+        uint32_t depth;
+        uint32_t mipLevel;
+        uint32_t alphaBitDepth;
+        uint32_t reserved;
+        uint32_t surface;
+        uint32_t dstOverlay[2];
+        uint32_t dstBlit[2];
+        uint32_t srcOverlay[2];
+        uint32_t srcBlit[2];
+        pixelFormat format;
+        uint32_t caps[4];
+        uint32_t textureStage;
+    };
 
     const unsigned char *m_position;
     u::vector<unsigned char> m_data;
@@ -1765,60 +1930,53 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
         return false;
     }
 
-    switch (decode->bpp()) {
-        case 1:
-            m_format = kTexFormatLuminance;
-            break;
-        case 3:
-            m_format = kTexFormatRGB;
-            break;
-        case 4:
-            m_format = kTexFormatRGBA;
-            break;
-    }
-
+    m_format = decode->format();
     m_width = decode->width();
     m_height = decode->height();
+    m_pitch = decode->pitch();
     m_bpp = decode->bpp();
-    m_pitch = m_width * m_bpp;
+    m_mips = decode->mips();
     m_data = u::move(decode->data());
     m_flags |= kTexFlagDisk;
-
-    // Quality will resize the texture accordingly
-    if (quality != 1.0f) {
-        // Add 0.5 to the mantissa then zero it. If the mantissa overflows, let
-        // the carry bit carry into the exponent; thus increasing the exponent.
-        // If the carry happens then the value is rounded up, otherwise it rounds
-        // down. This also works +/- INF as well since INF has zero mantissa.
-        union { float f; uint32_t i; } u = { quality };
-        u.i += 0x00400000;
-        u.i &= 0xFF800000;
-        size_t w = m_width * u.f;
-        size_t h = m_height * u.f;
-        if (w == 0) w = 1;
-        if (h == 0) h = 1;
-        resize(w, h);
-    }
-
-    // Premultiply alpha
-    if ((m_flags & kTexFlagPremul) && (m_format == kTexFormatRGBA || m_format == kTexFormatBGRA)) {
-        u::vector<unsigned char> rework;
-        rework.reserve(m_width * m_height * m_bpp);
-        for (size_t i = 0; i < m_data.size(); i += m_bpp) {
-            const unsigned char A = m_data[i + 3];
-            rework.push_back(m_data[i + 0] * A / 255);
-            rework.push_back(m_data[i + 1] * A / 255);
-            rework.push_back(m_data[i + 2] * A / 255);
-            rework.push_back(A);
+    if (u::is_same<T, dds>::value) {
+        // Don't allow any post-load processes take place on DDS textures
+        m_flags |= kTexFlagCompressed;
+    } else {
+        // Quality will resize the texture accordingly
+        if (quality != 1.0f) {
+            // Add 0.5 to the mantissa then zero it. If the mantissa overflows, let
+            // the carry bit carry into the exponent; thus increasing the exponent.
+            // If the carry happens then the value is rounded up, otherwise it rounds
+            // down. This also works +/- INF as well since INF has zero mantissa.
+            union { float f; uint32_t i; } u = { quality };
+            u.i += 0x00400000;
+            u.i &= 0xFF800000;
+            size_t w = m_width * u.f;
+            size_t h = m_height * u.f;
+            if (w == 0) w = 1;
+            if (h == 0) h = 1;
+            resize(w, h);
         }
-        m_data.destroy();
-        m_data.swap(rework);
+
+        // Premultiply alpha
+        if ((m_flags & kTexFlagPremul) && (m_format == kTexFormatRGBA || m_format == kTexFormatBGRA)) {
+            u::vector<unsigned char> rework;
+            rework.reserve(m_width * m_height * m_bpp);
+            for (size_t i = 0; i < m_data.size(); i += m_bpp) {
+                const unsigned char A = m_data[i + 3];
+                rework.push_back(m_data[i + 0] * A / 255);
+                rework.push_back(m_data[i + 1] * A / 255);
+                rework.push_back(m_data[i + 2] * A / 255);
+                rework.push_back(A);
+            }
+            m_data.destroy();
+            m_data.swap(rework);
+        }
+
+        // Hash the contents as well to generate a hash string
+        u::sha512 hash(&m_data[0], m_data.size());
+        m_hashString = hash.hex();
     }
-
-    // Hash the contents as well to generate a hash string
-    u::sha512 hash(&m_data[0], m_data.size());
-    m_hashString = hash.hex();
-
     return true;
 }
 
@@ -1842,7 +2000,7 @@ u::optional<u::string> texture::find(const u::string &infile) {
         file.erase(beg, end + 1);
     }
 
-    static const char *extensions[] = { "png", "jpg", "jpeg", "tga" };
+    static const char *extensions[] = { "png", "jpg", "jpeg", "tga", "dds" };
     size_t bits = 0;
     for (size_t i = 0; i < sizeof(extensions)/sizeof(*extensions); i++)
         if (u::exists(u::format("%s.%s", file.c_str(), extensions[i])))
@@ -1874,6 +2032,8 @@ bool texture::load(const u::string &file, float quality) {
         return decode<png>(data, fileName, quality);
     else if (tga::test(data))
         return decode<tga>(data, fileName, quality);
+    else if (dds::test(data))
+        return decode<dds>(data, fileName, quality);
     u::print("no decoder found for `%s'\n", fileName);
     return false;
 }
@@ -1901,6 +2061,9 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
             break;
         case kTexFormatLuminance:
             m_bpp = 1;
+            break;
+        default:
+            assert(0);
             break;
     }
     m_pitch = m_width * m_bpp;
@@ -1956,6 +2119,10 @@ size_t texture::size() const {
 
 size_t texture::bpp() const {
     return m_bpp;
+}
+
+size_t texture::mips() const {
+    return m_mips;
 }
 
 size_t texture::pitch() const {
