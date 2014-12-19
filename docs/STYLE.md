@@ -13,7 +13,7 @@ Header files shouldn't contain inline functions unless they're trivial in nature
 and can be expressed in *five-or-fewer* lines.
 
 Templated classes and class functions should favor the *implement-after-define*
-approach opposed to inline style. An example is provided below
+approach opposed to inline style. An example is provided below.
 
     // For trivial classes this is fine
     template <typename T>
@@ -45,14 +45,14 @@ two nesting levels.
 
 Typically most ideas can be categorized into one very vague term, that vague term
 or word would be the name of the namespace; for instance, utilities should go in
-the namespace, appropraitly named "utility".
+the namespace, appropriately named "utility".
 
 Namespace names should be short, concise, and easy to type repeatedly as the
 use of "using namespace" is discouraged.
 
 Don't indent contents of the namespace the same way other scopes are indented,
 everything should stay on the first column in a namespace; however a nested
-namespace's contents should be indented. An example is provided below
+namespace's contents should be indented. An example is provided below.
 
     namespace foo {
 
@@ -82,7 +82,7 @@ in all class constructors initializers-lists. If the member variable cannot be
 initialized in the initializer-list, then it should be initialized in the body of
 the constructor.
 
-The use of the 'explicit' keyword for class constructors is encouraged when ever
+The use of the 'explicit' keyword for class constructors is encouraged whenever
 appropriate.
 
 Use delegating and inheriting constructors when they reduce code duplication.
@@ -93,7 +93,7 @@ the class definition.
 
 The use of private, public and protected is encouraged but not required, if how
 ever it is used, accessor functions should not be prefixed with "get", but mutator
-functions should. An example is provided below
+functions should. An example is provided below.
 
     struct foo {
         void setFoo(int foo) {
@@ -130,7 +130,7 @@ All classes should have a swap function that does a shallow-swap.
 The use of friend classes and functions is allowed within reason. Friends should
 only be used if the encapsulation boundary of the class should be extended to the
 friend, if the use of 'friend' is to simply break the encapsulation boundary of
-the class then just make the members public.
+the class, then just make the members public.
 
 # References and pointers
 All parameters passed by reference must be labeled const.
@@ -152,13 +152,13 @@ used.
 # Const and constexpr
 Use const and constexpr where ever possible.
 
-Constants should always be prefixed with 'k'. An example is provided below
+Constants should always be prefixed with 'k'. An example is provided below.
 
     constexpr size_t kSomething = 1024;
 
 Use const cv-qualification where ever possible except when the function clearly
 breaks cv-q indirectly, the use of 'const' is a good indicator of if the function
-mutates what is passed. If it's marked const but still mutates indirectly than
+mutates what is passed. If it's marked const but still mutates indirectly, then
 the use of the qualifier is inappropriate.
 
 # Integer types
@@ -180,7 +180,7 @@ Function overloading is discouraged if the overload only exists to satisfy a
 different type. Use a templated function instead to suppress implicit type
 conversion rules of the language.
 
-For functions which need to indicate failure or error state use optional<T> instead
+For functions which need to indicate failure or error state, use optional<T> instead
 of indicating error through other means.
 
 The use of default arguments is discouraged if the function's address may be
@@ -191,7 +191,7 @@ Functions which do not return shall be marked [[noreturn]].
 Functions taking arrays should do so in the form of a 'reference to array',
 opposed to pointer-to-array with optional size argument. This gives the compiler
 context for optimization and can help prevent bugs such as overrunning the
-array. A few examples are provided below
+array. A few examples are provided below.
 
     // This is discouraged
     void foo(int *stuff, size_t nstuff) {
@@ -223,7 +223,7 @@ Prefer sizeof(varname) to sizeof(type).
 # Auto
 The use of auto is only encouraged if the typename is long or ends up being written
 more than once. Otherwise the use of it is discouraged as it can break readability.
-Some examples are provided below
+Some examples are provided below.
 
     for (auto &it : foo) // Fine as the alternative is too long
 
@@ -246,17 +246,17 @@ Never use default lambda captures; write all captures explicitly.
 # Memory
 The use of new and delete is discouraged except in the context of unique_ptr.
 
-When implementing container types it's encouraged you utilize raw memory allocation
+When implementing container types, it's encouraged you utilize raw memory allocation
 mechanisms like malloc/realloc/free and use placement new to initialize objects.
 The reason for this is new/delete leave very little room for optimization and
 have an unintended overhead. Things like vector<T> can be made much more efficient
-if it utilizes realloc to resize the memory in favor of throwing away it's
-internal memory every time a resize is needed. To correctly do this the use of
+if it utilizes realloc to resize the memory in favor of throwing away its
+internal memory every time a resize is needed. To correctly do this, the use of
 is_pod<T> is required.
 
-Use unique_ptr<T> when ever possible over T*.
+Use unique_ptr<T> whenever possible over T*.
 
-When not implementing container types and raw memory is needed use
+When not implementing container types and raw memory is needed, use
 vector<unsigned char>.
 
 # Exceptions
@@ -272,7 +272,7 @@ track. You can often achieve the same effect with a tagged union.
 # Casting
 The use of C++ style casts is forbidden. The one notable exception to this
 is when implementing forward or move which requires the use of 'static_cast'.
-In all other situations use C style casts.
+In all other situations, use C style casts.
 
 # Vectors
 The use of vector is encouraged for all tasks that are not key, or key-value
@@ -291,14 +291,14 @@ forbidden.
 
 # Strings
 The use of a managed string type is encouraged if and only if all paths leading
-to it are mutable. If even a single path leading to it is immutable than the use
+to it are mutable. If even a single path leading to it is immutable, then the use
 of a managed string type is discouraged.
 
 Try to avoid using expensive operations like pop_front.
 
 When appending content to an existing string of which the length is known, always
 favor the methods which allow you to specify the length as an optional argument.
-If no such means are possible then utilize the reserve function of the string
+If no such means are possible, then utilize the reserve function of the string
 object.
 
 # Streams
@@ -388,7 +388,7 @@ A small code example is provided below to show the naming
 
 There are exceptions to these naming rules. When naming something analogous to
 an existing C or C++ entity then you can follow the same naming convention scheme.
-For instance if implementing a standard library like entity then the naming
+For instance if implementing a standard library like entity, then the naming
 scheme should be adopted, const_iterator over constIterator or hash_map opposed
 to hashMap.
 
