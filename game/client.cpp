@@ -1,5 +1,3 @@
-#include <SDL2/SDL.h>
-
 #include "engine.h"
 #include "client.h"
 #include "kdmap.h"
@@ -23,7 +21,6 @@ VAR(float, cl_mouse_sens, "mouse sensitivity", 0.01f, 1.0f, 0.1f);
 VAR(int, cl_mouse_invert, "invert mouse", 0, 1, 0);
 NVAR(int, cl_edit, "edit mode", 0, 1, 0);
 NVAR(float, cl_edit_speed, "edit speed", kClientSpeed, kClientSpeed * 10.0f, kClientSpeed);
-
 
 client::client()
     : m_mouseLat(0.0f)
@@ -299,14 +296,14 @@ void client::inputMouseMove() {
 }
 
 void client::inputGetCommands(u::vector<clientCommands> &commands) {
-    u::map<int, int> &keyState = neoKeyState();
+    u::map<u::string, int> &keyState = neoKeyState();
     commands.clear();
-    if (keyState[SDLK_w])      commands.push_back(kCommandForward);
-    if (keyState[SDLK_s])      commands.push_back(kCommandBackward);
-    if (keyState[SDLK_a])      commands.push_back(kCommandLeft);
-    if (keyState[SDLK_d])      commands.push_back(kCommandRight);
-    if (keyState[SDLK_SPACE])  commands.push_back(kCommandJump);
-    if (keyState[SDLK_LSHIFT]) commands.push_back(kCommandCrouch);
+    if (keyState["W"])          commands.push_back(kCommandForward);
+    if (keyState["S"])          commands.push_back(kCommandBackward);
+    if (keyState["A"])          commands.push_back(kCommandLeft);
+    if (keyState["D"])          commands.push_back(kCommandRight);
+    if (keyState["Space"])      commands.push_back(kCommandJump);
+    if (keyState["Left Shift"]) commands.push_back(kCommandCrouch);
 }
 
 void client::setRotation(const m::quat &rotation) {

@@ -231,7 +231,7 @@ struct state {
     const queue &commands() const;
 
     // To update input state
-    void update(int (&mouse)[4]);
+    void update(mouseState &mouse);
 
     void clearInput(); // Clear any input state
     void clearActive(); // Clear any active state (reference to active thing)
@@ -248,7 +248,7 @@ struct state {
     ref m_nextHot; // Reference to hotToBe
     ref m_area; // Reference to root area
 
-    int m_mouse[3]; // X, Y, Scroll
+    mouseState m_mouse;
     int m_drag[2]; // X, Y
     float m_dragOrigin;
 
@@ -280,9 +280,9 @@ inline state::state()
     , m_leftPressed(false)
     , m_leftReleased(false)
 {
-    m_mouse[0] = -1;
-    m_mouse[1] = -1;
-    m_mouse[2] = 0; // Scroll
+    m_mouse.x = -1;
+    m_mouse.y = -1;
+    m_mouse.wheel = 0;
     m_drag[0] = 0;
     m_drag[1] = 0;
 }
@@ -301,14 +301,14 @@ inline bool state::isHot(ref thing) {
 
 inline bool state::inRectangle(int x, int y, int w, int h, bool checkScroll) {
     return (!checkScroll || m_insideCurrentScroll)
-        && m_mouse[0] >= x && m_mouse[0] <= x + w
-        && m_mouse[1] >= y && m_mouse[1] <= y + h;
+        && m_mouse.x >= x && m_mouse.x <= x + w
+        && m_mouse.y >= y && m_mouse.y <= y + h;
 }
 
 inline void state::clearInput() {
     m_leftPressed = false;
     m_leftReleased = false;
-    m_mouse[2] = 0; // Scroll
+    m_mouse.wheel = 0;
 }
 
 inline void state::clearActive() {
@@ -350,12 +350,12 @@ inline bool state::buttonLogic(ref thing, bool over) {
     return result;
 }
 
-inline void state::update(int (&mouse)[4]) {
+inline void state::update(mouseState &mouse) {
     // Update the input state
-    bool left = mouse[3] & kMouseButtonLeft;
-    m_mouse[0] = mouse[0];
-    m_mouse[1] = mouse[1];
-    m_mouse[2] = mouse[2] * -2;
+    bool left = mouse.button & kMouseButtonLeft;
+    m_mouse.x = mouse.x;
+    m_mouse.y = mouse.y;
+    m_mouse.wheel = mouse.wheel * -2;
     m_leftPressed = !m_left && left;
     m_leftReleased = m_left && !left;
     m_left = left;
@@ -470,11 +470,11 @@ void areaFinish(int inc, bool autoScroll) {
             if (S.isActive(id)) {
                 float u = float(hy - y) / float(range);
                 if (S.m_wentActive) {
-                    S.m_drag[1] = S.m_mouse[1];
+                    S.m_drag[1] = S.m_mouse.y;
                     S.m_dragOrigin = u;
                 }
-                if (S.m_drag[1] != S.m_mouse[1]) {
-                    u = m::clamp(S.m_dragOrigin + (S.m_mouse[1] - S.m_drag[1]) / float(range), 0.0f, 1.0f);
+                if (S.m_drag[1] != S.m_mouse.y) {
+                    u = m::clamp(S.m_dragOrigin + (S.m_mouse.y - S.m_drag[1]) / float(range), 0.0f, 1.0f);
                     *B.value = int((1 - u) * (sh - h));
                 }
             }
@@ -496,7 +496,7 @@ void areaFinish(int inc, bool autoScroll) {
             }
             // Scrolling
             if (B.inside)
-                *B.value = m::clamp(*B.value + inc*S.m_mouse[2], 0, sh - h);
+                *B.value = m::clamp(*B.value + inc*S.m_mouse.wheel, 0, sh - h);
         }
     }
     S.m_insideCurrentScroll = false;
@@ -679,11 +679,11 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
 
     if (S.isActive(id)) {
         if (S.m_wentActive) {
-            S.m_drag[0] = S.m_mouse[0];
+            S.m_drag[0] = S.m_mouse.x;
             S.m_dragOrigin = u;
         }
-        if (S.m_drag[0] != S.m_mouse[0]) { // Mouse and drag don't share same coordinate on the X axis
-            const float u = m::clamp(S.m_dragOrigin + float(S.m_mouse[0] - S.m_drag[0]) / float(range), 0.0f, 1.0f);
+        if (S.m_drag[0] != S.m_mouse.x) { // Mouse and drag don't share same coordinate on the X axis
+            const float u = m::clamp(S.m_dragOrigin + float(S.m_mouse.x - S.m_drag[0]) / float(range), 0.0f, 1.0f);
             value = min + u * max - min;
             value = floorf(float(value) / float(inc) + 0.5f) * float(inc); // Snap to increments
             m = int(u * range);
@@ -780,7 +780,7 @@ const queue &commands() {
     return Q;
 }
 
-void begin(int (&mouse)[4]) {
+void begin(mouseState &mouse) {
     S.update(mouse);
 
     // This hot becomes the nextHot

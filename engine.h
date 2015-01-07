@@ -41,14 +41,27 @@ private:
     bool m_lock;
 };
 
-enum vSyncOption {
+enum {
     kSyncTear = -1, ///< Late swap tearing
     kSyncNone,      ///< No vertical syncronization
     kSyncEnabled,   ///< Vertical syncronization
     kSyncRefresh    ///< No vertical syncronization, cap framerate to monitor refresh rate
 };
 
-u::map<int, int> &neoKeyState(int key = 0, bool keyDown = false, bool keyUp = false);
+struct mouseState {
+    // kMouseButton flags for packet
+    enum {
+        kMouseButtonLeft = 1 << 0,
+        kMouseButtonRight = 1 << 1
+    };
+    int x;
+    int y;
+    int wheel;
+    int button;
+};
+
+u::map<u::string, int> &neoKeyState(const u::string &key = "", bool keyDown = false, bool keyUp = false);
+mouseState neoMouseState();
 void neoMouseDelta(int *deltaX, int *deltaY);
 void neoSwap();
 size_t neoWidth();
@@ -60,6 +73,8 @@ void neoSetWindowTitle(const char *title);
 void neoResize(size_t width, size_t height);
 const u::string &neoUserPath();
 const u::string &neoGamePath();
+void neoBindSet(const u::string &what, void (*handler)());
+void (*neoBindGet(const u::string &what))();
 
 void neoFatalError(const char *error);
 
@@ -68,6 +83,8 @@ inline void neoFatal(const char *fmt, const Ts&... ts) {
     neoFatalError(u::format(fmt, ts...).c_str());
 }
 
-void neoSetVSyncOption(vSyncOption option);
+void neoSetVSyncOption(int option);
+
+void *neoGetProcAddress(const char *proc);
 
 #endif

@@ -11,14 +11,14 @@ namespace edit {
 static m::vec3 *getEntityPosition() {
     if (!gSelected) return nullptr;
     switch (gSelected->type) {
-        case entity::kMapModel:    return &gWorld.getMapModel(gSelected->index).position;
-        case entity::kPlayerStart: return &gWorld.getPlayerStart(gSelected->index).position;
-        case entity::kPointLight:  return &gWorld.getPointLight(gSelected->index).position;
-        case entity::kSpotLight:   return &gWorld.getSpotLight(gSelected->index).position;
-        case entity::kTeleport:    return &gWorld.getTeleport(gSelected->index).position;
-        case entity::kJumppad:     return &gWorld.getJumppad(gSelected->index).position;
-        default:
-            return nullptr;
+    case entity::kMapModel:    return &gWorld.getMapModel(gSelected->index).position;
+    case entity::kPlayerStart: return &gWorld.getPlayerStart(gSelected->index).position;
+    case entity::kPointLight:  return &gWorld.getPointLight(gSelected->index).position;
+    case entity::kSpotLight:   return &gWorld.getSpotLight(gSelected->index).position;
+    case entity::kTeleport:    return &gWorld.getTeleport(gSelected->index).position;
+    case entity::kJumppad:     return &gWorld.getJumppad(gSelected->index).position;
+    default:
+        return nullptr;
     }
     return nullptr;
 }
@@ -26,14 +26,14 @@ static m::vec3 *getEntityPosition() {
 static bool *getEntityHighlight() {
     if (!gSelected) return nullptr;
     switch (gSelected->type) {
-        case entity::kMapModel:    return &gWorld.getMapModel(gSelected->index).highlight;
-        case entity::kPlayerStart: return &gWorld.getPlayerStart(gSelected->index).highlight;
-        case entity::kPointLight:  return &gWorld.getPointLight(gSelected->index).highlight;
-        case entity::kSpotLight:   return &gWorld.getSpotLight(gSelected->index).highlight;
-        case entity::kTeleport:    return &gWorld.getTeleport(gSelected->index).highlight;
-        case entity::kJumppad:     return &gWorld.getJumppad(gSelected->index).highlight;
-        default:
-            return nullptr;
+    case entity::kMapModel:    return &gWorld.getMapModel(gSelected->index).highlight;
+    case entity::kPlayerStart: return &gWorld.getPlayerStart(gSelected->index).highlight;
+    case entity::kPointLight:  return &gWorld.getPointLight(gSelected->index).highlight;
+    case entity::kSpotLight:   return &gWorld.getSpotLight(gSelected->index).highlight;
+    case entity::kTeleport:    return &gWorld.getTeleport(gSelected->index).highlight;
+    case entity::kJumppad:     return &gWorld.getJumppad(gSelected->index).highlight;
+    default:
+        return nullptr;
     }
     return nullptr;
 }
@@ -48,7 +48,7 @@ void deselect() {
 
 void select() {
     deselect();
-    
+
     world::trace::hit h;
     world::trace::query q;
     q.start = gClient.getPosition();

@@ -1,5 +1,4 @@
 #include <time.h>
-#include <SDL2/SDL.h>
 
 #include "engine.h"
 #include "gui.h"
@@ -16,10 +15,19 @@
 #include "u_misc.h"
 #include "u_pair.h"
 
+// Game globals
+bool gRunning = true;
+bool gPlaying = false;
+world::descriptor *gSelected = nullptr; // Selected world entity
+client gClient;
+world gWorld;
+r::pipeline gPipeline;
+m::perspective gPerspective;
+
 template <typename T>
 static inline void memput(unsigned char *&store, const T &data) {
-  memcpy(store, &data, sizeof(T));
-  store += sizeof(T);
+    memcpy(store, &data, sizeof(T));
+    store += sizeof(T);
 }
 
 static bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) {
@@ -152,12 +160,6 @@ VAR(float, cl_fov, "field of view", 45.0f, 270.0f, 90.0f);
 VAR(float, cl_nearp, "near plane", 0.0f, 10.0f, 1.0f);
 VAR(float, cl_farp, "far plane", 128.0f, 4096.0f, 2048.0f);
 
-bool gRunning = true;
-bool gPlaying = false;
-world::descriptor *gSelected = nullptr; // Selected world entity
-client gClient;
-world gWorld;
-
 static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t h) {
     float ratio = float(iw) / float(ih);
     size_t ow = w;
@@ -169,63 +171,87 @@ static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t
     return { ow, oh };
 }
 
-static void changeVariable(const u::string &inputString) {
-    const auto &split = u::split(inputString);
-    const auto &name = split[0];
-    const auto &value = varValue(split[0]);
-
-    if (!value)
-        return u::print("variable '%s' not found\n", name);
-    if (split.size() == 1)
-        return u::print("'%s' is '%s'\n", name, *value);
-
-    const auto &newvalue = split[1];
-    const auto &oldvalue = *value;
-    switch (varChange(name, newvalue, true)) {
-        case kVarNotFoundError:
-            u::print("'%s' not found\n", name);
-            break;
-        case kVarRangeError:
-            u::print("invalid range '%s' for '%s'\n", newvalue, name);
-            break;
-        case kVarReadOnlyError:
-            u::print("'%s' is read only\n", name);
-            break;
-        case kVarTypeError:
-            u::print("newvalue '%s' wrong type for '%s'\n", newvalue, name);
-            break;
-        case kVarSuccess:
-            u::print("'%s' changed from '%s' to '%s'\n", name,
-                oldvalue, newvalue);
-            break;
-    }
-}
-
 static constexpr size_t kCollectTime = 5; // Garbage collect phase for string pool in seconds
 
+static void setBinds() {
+    neoBindSet("MouseDnL", []() {
+        if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit))
+            edit::select();
+    });
+
+    neoBindSet("EscapeDn", []() {
+        if (gPlaying && gMenuState & kMenuMain) {
+            if (gMenuState & kMenuConsole) {
+                gMenuState = kMenuConsole;
+            } else {
+                gMenuState &= ~kMenuMain;
+            }
+        } else if (!(gMenuState & kMenuEdit)) {
+            // If the console is opened leave it open
+            gMenuState = (gMenuState & kMenuConsole)
+                ? kMenuMain | kMenuConsole
+                : kMenuMain;
+        } else {
+            gMenuState &= ~kMenuEdit;
+        }
+        if (gPlaying && !(gMenuState & kMenuMain))
+            neoRelativeMouse(true);
+        else
+            neoRelativeMouse(false);
+        neoCenterMouse();
+    });
+
+    neoBindSet("F8Dn", []() {
+        screenShot();
+    });
+
+    neoBindSet("F11Dn", []() {
+        gMenuState ^= kMenuConsole;
+    });
+
+    neoBindSet("F12Dn", []() {
+         if (varGet<int>("cl_edit").get())
+            gMenuState ^= kMenuEdit;
+        neoRelativeMouse(!(gMenuState & kMenuEdit));
+    });
+
+    neoBindSet("EDn", []() {
+        if (gPlaying) {
+            varGet<int>("cl_edit").toggle();
+            gMenuState &= ~kMenuEdit;
+            neoRelativeMouse(!(gMenuState & kMenuEdit));
+        }
+        edit::deselect();
+    });
+
+    neoBindSet("DeleteDn", []() {
+        edit::remove();
+    });
+}
+
 int neoMain(frameTimer &timer, int, char **) {
+    // Setup rendering pipeline
+    gPerspective.fov = cl_fov;
+    gPerspective.nearp = cl_nearp;
+    gPerspective.farp = cl_farp;
+    gPerspective.width = neoWidth();
+    gPerspective.height = neoHeight();
+
+    gPipeline.setPerspective(gPerspective);
+    gPipeline.setWorld(m::vec3::origin);
+
     // Clear the screen as soon as possible
     gl::ClearColor(40/255.0f, 30/255.0f, 50/255.0f, 0.1f);
     gl::Clear(GL_COLOR_BUFFER_BIT);
     neoSwap();
+
+    setBinds();
 
     r::gui gGui;
     if (!gGui.load("fonts/droidsans"))
         neoFatal("failed to load font");
     if (!gGui.upload())
         neoFatal("failed to initialize GUI rendering method\n");
-
-    // Setup rendering pipeline
-    r::pipeline pipeline;
-    m::perspective perspective;
-    perspective.fov = cl_fov;
-    perspective.nearp = cl_nearp;
-    perspective.farp = cl_farp;
-    perspective.width = neoWidth();
-    perspective.height = neoHeight();
-
-    pipeline.setPerspective(perspective);
-    pipeline.setWorld(m::vec3::origin);
 
     // Setup window and menu
     menuReset();
@@ -295,167 +321,36 @@ int neoMain(frameTimer &timer, int, char **) {
     if (!gWorld.load("garden.kdgz"))
         neoFatal("failed to load world");
 
-    bool input = false;
-    u::string inputString = "";
-
-    int mouse[4] = {0}; // X, Y, Scroll, Button
-
     uint32_t lastTime = timer.ticks();;
     while (gRunning) {
-        if (!input)
-            gClient.update(gWorld, timer.delta());
+        //if (!input)
+        gClient.update(gWorld, timer.delta());
 
-        perspective.fov = cl_fov;
-        perspective.nearp = cl_nearp;
-        perspective.farp = cl_farp;
+        gPerspective.fov = cl_fov;
+        gPerspective.nearp = cl_nearp;
+        gPerspective.farp = cl_farp;
 
-        pipeline.setPerspective(perspective);
-        pipeline.setRotation(gClient.getRotation());
-        pipeline.setPosition(gClient.getPosition());
-        pipeline.setTime(timer.ticks());
+        gPipeline.setPerspective(gPerspective);
+        gPipeline.setRotation(gClient.getRotation());
+        gPipeline.setPosition(gClient.getPosition());
+        gPipeline.setTime(timer.ticks());
+
+        auto mouse = neoMouseState();
 
         // Update dragging/moving entity
-        if (mouse[3] & gui::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit))
+        if (mouse.button & mouseState::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit))
             edit::move();
 
         if (gPlaying) {
-            gWorld.upload(perspective);
+            gWorld.upload(gPerspective);
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            gWorld.render(pipeline);
+            gWorld.render(gPipeline);
         } else {
             gl::ClearColor(40/255.0f, 30/255.0f, 50/255.0f, 0.1f);
             gl::Clear(GL_COLOR_BUFFER_BIT);
         }
-        gGui.render(pipeline);
+        gGui.render(gPipeline);
         neoSwap();
-
-        SDL_Event e;
-        mouse[2] = 0;
-        while (SDL_PollEvent(&e)) {
-            switch (e.type) {
-                case SDL_QUIT:
-                    gRunning = false;
-                    break;
-                case SDL_WINDOWEVENT:
-                    switch (e.window.event) {
-                        case SDL_WINDOWEVENT_RESIZED:
-                            // Resize the window
-                            neoResize(e.window.data1, e.window.data2);
-                            perspective.width = neoWidth();
-                            perspective.height = neoHeight();
-                            pipeline.setPerspective(perspective);
-                            break;
-                    }
-                    break;
-                case SDL_KEYDOWN:
-                    switch (e.key.keysym.sym) {
-                        case SDLK_ESCAPE:
-                            if (gPlaying && gMenuState & kMenuMain) {
-                                if (gMenuState & kMenuConsole) {
-                                    gMenuState = kMenuConsole;
-                                } else {
-                                    gMenuState &= ~kMenuMain;
-                                }
-                            } else if (!(gMenuState & kMenuEdit)) {
-                                // If the console is opened leave it open
-                                gMenuState = (gMenuState & kMenuConsole)
-                                    ? kMenuMain | kMenuConsole
-                                    : kMenuMain;
-                            } else {
-                                gMenuState &= ~kMenuEdit;
-                            }
-                            if (gPlaying && !(gMenuState & kMenuMain))
-                                neoRelativeMouse(true);
-                            else
-                                neoRelativeMouse(false);
-                            neoCenterMouse();
-                            break;
-                        case SDLK_F8:
-                            screenShot();
-                            break;
-                        case SDLK_F9:
-                            u::print("%d fps : %.2f mspf\n", timer.fps(), timer.mspf());
-                            break;
-                        case SDLK_F11:
-                            gMenuState ^= kMenuConsole;
-                            break;
-                        case SDLK_F12:
-                            // If in edit mode then F12 will toggle the edit menu
-                            if (varGet<int>("cl_edit").get())
-                                gMenuState ^= kMenuEdit;
-                            neoRelativeMouse(!(gMenuState & kMenuEdit));
-                            break;
-                        case SDLK_e:
-                            if (gPlaying && !input) {
-                                varGet<int>("cl_edit").toggle();
-                                gMenuState &= ~kMenuEdit;
-                                neoRelativeMouse(!(gMenuState & kMenuEdit));
-                            }
-                            edit::deselect();
-                            break;
-                        case SDLK_BACKSPACE:
-                            if (input)
-                                inputString.pop_back();
-                            break;
-                        case SDLK_DELETE:
-                            edit::remove();
-                            break;
-                        case SDLK_SLASH:
-                            input = !input;
-                            if (input) {
-                                SDL_StartTextInput();
-                            } else {
-                                SDL_StopTextInput();
-                            }
-                            inputString.reset();
-                            break;
-                        case SDLK_RETURN:
-                            if (input) {
-                                changeVariable(inputString);
-                                input = false;
-                                inputString.reset();
-                            }
-                            break;
-                    }
-                    neoKeyState(e.key.keysym.sym, true);
-                    break;
-                case SDL_KEYUP:
-                    neoKeyState(e.key.keysym.sym, false, true);
-                    break;
-                case SDL_MOUSEMOTION:
-                    mouse[0] = e.motion.x;
-                    mouse[1] = neoHeight() - e.motion.y;
-                    break;
-                case SDL_MOUSEWHEEL:
-                    mouse[2] = e.wheel.y;
-                    break;
-                case SDL_MOUSEBUTTONDOWN:
-                    switch (e.button.button) {
-                        case SDL_BUTTON_LEFT:
-                            if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit))
-                                edit::select();
-                            mouse[3] |= gui::kMouseButtonLeft;
-                            break;
-                        case SDL_BUTTON_RIGHT:
-                            mouse[3] |= gui::kMouseButtonRight;
-                            break;
-                    }
-                    break;
-                case SDL_MOUSEBUTTONUP:
-                    switch (e.button.button) {
-                        case SDL_BUTTON_LEFT:
-                            mouse[3] &= ~gui::kMouseButtonLeft;
-                            break;
-                        case SDL_BUTTON_RIGHT:
-                            mouse[3] &= ~gui::kMouseButtonRight;
-                            break;
-                    }
-                    break;
-                case SDL_TEXTINPUT:
-                    inputString += e.text.text;
-                    break;
-            }
-        }
 
         gui::begin(mouse);
 
@@ -488,18 +383,18 @@ int neoMain(frameTimer &timer, int, char **) {
                 gui::RGBA(0, 0, 0, 255));
         }
 
-        if (input) {
-            if (inputString[0] == '/')
-                inputString.pop_front();
+        //if (input) {
+        //    if (inputString[0] == '/')
+        //        inputString.pop_front();
             // Accepting console commands
-            gui::drawTriangle(5, 10, 10, 10, 1, gui::RGBA(155, 155, 155, 255));
-            gui::drawText(20, 10, gui::kAlignLeft,
-                inputString.c_str(), gui::RGBA(255, 255, 255, 255));
-        }
+        //    gui::drawTriangle(5, 10, 10, 10, 1, gui::RGBA(155, 155, 155, 255));
+        //    gui::drawText(20, 10, gui::kAlignLeft,
+        //        inputString.c_str(), gui::RGBA(255, 255, 255, 255));
+        //}
 
         // Cursor above all else
         if ((gMenuState & ~kMenuConsole || gMenuState & kMenuEdit) && !neoRelativeMouse())
-            gui::drawImage(mouse[0], mouse[1] - (32 - 3), 32, 32, "<nocompress>textures/ui/cursor");
+            gui::drawImage(mouse.x, mouse.y - (32 - 3), 32, 32, "<nocompress>textures/ui/cursor");
 
         gui::finish();
 

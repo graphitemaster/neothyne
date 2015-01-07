@@ -4,6 +4,8 @@
 
 #include "u_stack.h"
 
+struct mouseState;
+
 namespace gui {
 
 enum {
@@ -59,11 +61,11 @@ struct line {
 
 struct command {
     command();
-    
+
     int type;
     int flags;
     uint32_t color;
-    
+
     union {
         line asLine;
         rectangle asRectangle;
@@ -154,7 +156,7 @@ void drawImage(int x, int y, int w, int h, const char *path, bool mipmaps = fals
 
 const queue &commands();
 
-void begin(int (&mouse)[4]);
+void begin(mouseState &mouse);
 void finish();
 void collect(size_t &active);
 
