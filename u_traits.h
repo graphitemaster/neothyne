@@ -31,7 +31,7 @@ struct integral_constant {
     static constexpr const T value = v;
 };
 template <typename T, T v>
-const T integral_constant<T, v>::value;
+constexpr const T integral_constant<T, v>::value;
 
 /// true_type
 typedef integral_constant<bool, true> true_type;
