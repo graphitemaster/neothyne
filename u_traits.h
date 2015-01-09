@@ -1,5 +1,12 @@
 #ifndef U_TRAITS_HDR
 #define U_TRAITS_HDR
+#include <stddef.h> // size_t
+
+#ifdef __has_feature
+#   define HAS_FEATURE(X) __has_feature
+#else
+#   define HAS_FEATURE(X) 0
+#endif
 
 namespace u {
 
@@ -308,16 +315,27 @@ struct is_scalar : integral_constant<bool, is_arithmetic<T>::value ||
                                            is_null_pointer<T>::value ||
                                            is_enum<T>::value> {};
 /// is_trivially_constructible
+#if HAS_FEATURE(is_trivially_constructible)
+template <typename T, typename... A>
+struct is_trivially_constructible : integral_constant<bool, __is_trivially_constructible(T, A...)>
+#else
+#   if HAS_FEATURE(has_trivial_constructor)
+#   define IS_TRIVIAL_CONSTRUCTIBLE(T) __has_trivial_constructor(T)
+#else
+#   define IS_TRIVIAL_CONSTRUCTIBLE(T) is_scalar<T>::value
+#endif
 template <typename T, typename... A>
 struct is_trivially_constructible : false_type {};
 template <typename T>
-struct is_trivially_constructible<T> : integral_constant<bool, is_scalar<T>::value> {};
+struct is_trivially_constructible<T> : integral_constant<bool, IS_TRIVIAL_CONSTRUCTIBLE(T)> {};
 template <typename T>
-struct is_trivially_constructible<T, T&&> : integral_constant<bool, is_scalar<T>::value> {};
+struct is_trivially_constructible<T, T&&> : integral_constant<bool, IS_TRIVIAL_CONSTRUCTIBLE(T)> {};
 template <typename T>
-struct is_trivially_constructible<T, const T&> : integral_constant<bool, is_scalar<T>::value> {};
+struct is_trivially_constructible<T, const T&> : integral_constant<bool, IS_TRIVIAL_CONSTRUCTIBLE(T)> {};
 template <typename T>
-struct is_trivially_constructible<T, T&> : integral_constant<bool, is_scalar<T>::value> {};
+struct is_trivially_constructible<T, T&> : integral_constant<bool, IS_TRIVIAL_CONSTRUCTIBLE(T)> {};
+#undef IS_TRIVIAL_CONSTRUCTIBLE
+#endif
 
 /// is_trivially_default_constructible
 template <typename T>
@@ -399,4 +417,5 @@ inline constexpr T &&forward(typename remove_reference<T>::type &&t) noexcept {
 
 }
 
+#undef HAS_FEATURE
 #endif
