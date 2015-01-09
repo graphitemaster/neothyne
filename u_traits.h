@@ -1,6 +1,5 @@
 #ifndef U_TRAITS_HDR
 #define U_TRAITS_HDR
-#include <stddef.h> // size_t
 
 #ifdef __has_feature
 #   define HAS_FEATURE(X) __has_feature
@@ -9,6 +8,12 @@
 #endif
 
 namespace u {
+
+namespace detail {
+    /// To avoid including stddef.h we evaluate the type of sizeof
+    /// which the standard says is size_t
+    typedef decltype(sizeof(0)) size_type;
+};
 
 /// nullptr_t
 typedef decltype(nullptr) nullptr_t;
@@ -95,7 +100,7 @@ template <typename T>
 struct remove_all_extents<T[]> {
     typedef typename remove_all_extents<T>::type type;
 };
-template <typename T, size_t N>
+template <typename T, detail::size_type N>
 struct remove_all_extents<T[N]> {
     typedef typename remove_all_extents<T>::type type;
 };
@@ -177,7 +182,7 @@ template <typename T>
 struct is_array : false_type {};
 template <typename T>
 struct is_array<T[]> : true_type {};
-template <typename T, size_t N>
+template <typename T, detail::size_type N>
 struct is_array<T[N]> : true_type {};
 
 /// is_pointer
