@@ -347,6 +347,10 @@ struct is_trivially_copy_constructible
     : is_trivially_constructible<T, typename add_lvalue_reference<const T>::type> {};
 
 /// is_trivially_assignable
+#if HAS_FEATURE(is_trivially_assignable)
+template <typename T, typename A>
+struct is_trivially_assignable : integral_constant<bool, __is_trivially_assignable> {};
+#else
 template <typename T, typename A>
 struct is_trivially_assignable : false_type {};
 template <typename T>
@@ -357,6 +361,7 @@ template <typename T>
 struct is_trivially_assignable<T&, const T&> : integral_constant<bool, is_scalar<T>::value> {};
 template <typename T>
 struct is_trivially_assignable<T&, T&&> : integral_constant<bool, is_scalar<T>::value> {};
+#endif
 
 /// add_const
 namespace detail {
