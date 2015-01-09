@@ -236,12 +236,17 @@ template <typename T>
 struct is_null_pointer : detail::is_null_pointer<typename remove_cv<T>::type> {};
 
 /// is_union
+#if HAS_FEATURE(is_union)
+template <typename T>
+struct is_union : integral_constant<bool, __is_union(T)> { };
+#else
 namespace detail {
     template <typename T>
     struct is_union : false_type {};
 }
 template <typename T>
 struct is_union : detail::is_union<typename remove_cv<T>::type> {};
+#endif
 
 /// is_class
 namespace detail {
@@ -290,6 +295,10 @@ template <typename T>
 struct is_member_pointer : detail::is_member_pointer<typename remove_cv<T>::type> {};
 
 /// is_enum
+#ifdef HAS_FEATURE(is_enum)
+template <typename T>
+struct is_enum : integral_constant<bool, __is_union(T)> {};
+#else
 template <typename T>
 struct is_enum : integral_constant<bool, !is_void<T>::value &&
                                          !is_integral<T>::value &&
@@ -301,6 +310,7 @@ struct is_enum : integral_constant<bool, !is_void<T>::value &&
                                          !is_union<T>::value &&
                                          !is_class<T>::value &&
                                          !is_function<T>::value> {};
+#endif
 
 /// is_arithmetic
 template <typename T>
