@@ -52,8 +52,8 @@ static const char *cacheFormat(GLuint internal) {
             return "RGB_BPTC_SIGNED_FLOAT";
         case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
             return "RGBA_S3TC_DXT5";
-        case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
-            return "RGB_S3TC_DXT1";
+        case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+            return "RGBA_S3TC_DXT1";
         case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
             return "RED_GREEN_RGTC2";
         case GL_COMPRESSED_RED_RGTC1_EXT:
@@ -121,7 +121,7 @@ static bool readCache(texture &tex, GLuint &internal) {
             break;
 
         case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-        case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+        case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
             if (!gl::has(EXT_texture_compression_s3tc))
                 return false;
             break;
@@ -157,7 +157,7 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     // Only cache compressed textures
     switch (internal) {
         case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-        case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+        case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
         case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
         case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
         case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
@@ -179,19 +179,25 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     if (u::exists(file))
         return false;
 
-    // Build the header
-    textureCacheHeader head;
-    head.version = kTextureCacheVersion;
-    head.width = u::endianSwap(tex.width());
-    head.height = u::endianSwap(tex.height());
-    head.internal = u::endianSwap(internal);
-    head.format = u::endianSwap(tex.format());
-
     // Query the compressed texture size
     gl::BindTexture(GL_TEXTURE_2D, handle);
     GLint compressedSize;
     gl::GetTexLevelParameteriv(GL_TEXTURE_2D, 0,
         GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &compressedSize);
+
+    // Query the compressed height and width (driver may add padding)
+    GLint compressedWidth;
+    GLint compressedHeight;
+    gl::GetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &compressedWidth);
+    gl::GetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &compressedHeight);
+
+    // Build the header
+    textureCacheHeader head;
+    head.version = kTextureCacheVersion;
+    head.width = u::endianSwap(compressedWidth);
+    head.height = u::endianSwap(compressedHeight);
+    head.internal = u::endianSwap(internal);
+    head.format = u::endianSwap(tex.format());
 
     // Prepare the data
     u::vector<unsigned char> data;
@@ -303,8 +309,10 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
                 case kTexFormatBGR:
                     tex.convert<kTexFormatRGB>();
                 case kTexFormatRGB:
-                    return queryFormat(GL_RGB, R_TEX_DATA_RGB,
-                        bptc ? GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB : GL_COMPRESSED_RGB_S3TC_DXT1_EXT);
+                    if (bptc)
+                        return queryFormat(GL_RGB, R_TEX_DATA_RGB, GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB);
+                    // Extend RGB->RGBA for DXT1
+                    return queryFormat(GL_RGB, R_TEX_DATA_RGB, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
                 case kTexFormatRG:
                     return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
                 case kTexFormatLuminance:

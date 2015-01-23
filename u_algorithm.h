@@ -1,6 +1,6 @@
 #ifndef U_ALGORITHM_HDR
 #define U_ALGORITHM_HDR
-#include "u_traits.h"
+#include "u_traits.h" // move
 
 namespace u {
 
