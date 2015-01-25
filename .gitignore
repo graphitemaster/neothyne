@@ -1,4 +1,4 @@
 .gitattributes
 *.o
-*.d
+*.P
 *~
