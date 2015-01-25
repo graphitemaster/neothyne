@@ -142,22 +142,6 @@ frameTimer::frameTimer()
 {
 }
 
-    float m_maxFrameTicks;
-    uint32_t m_lastSecondTicks;
-    int m_frameCount;
-    uint32_t m_minTicks;
-    uint32_t m_maxTicks;
-    float m_averageTicks;
-    float m_deltaTime;
-    uint32_t m_lastFrameTicks;
-    uint32_t m_currentTicks;
-    uint32_t m_targetTicks;
-    uint32_t m_frameMin;
-    uint32_t m_frameMax;
-    float m_frameAverage;
-    int m_framesPerSecond;
-    bool m_lock;
-
 void frameTimer::lock() {
     m_lock = true;
 }
