@@ -10,6 +10,8 @@ before_install:
   # clang 3.4
   - if [ "$CXX" == "clang++" ]; then sudo add-apt-repository -y ppa:h-rayflood/llvm; fi
   - sudo apt-get update -qq
+  # Neothyne uses CC to prevent linking libstdc++. Travis needs to use C++11 though
+  - export CC=$CXX
 
 install:
   # g++4.8.1
