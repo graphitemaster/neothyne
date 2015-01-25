@@ -52,16 +52,12 @@ static inline void generateNumbers() {
         gMT[i] = gMT[i+kPeriod] ^ (y>>1) ^ kMatrix[odd(y)];
     }
 
-    auto unroll = [&y, &i]() {
-        y = m32(gMT[i]) | l31(gMT[i+1]);
-        gMT[i] = gMT[i-kDiff] ^ (y>>1) ^ kMatrix[odd(y)];
-        ++i;
-    };
-
     // i = [227 ... 622]
     for (i = kDiff; i < kSize-1; ) {
-        for (size_t j = 0; j < 11; j++)
-            unroll();
+        for (size_t j = 0; j < 11; j++, ++i) {
+            y = m32(gMT[i]) | l31(gMT[i+1]);
+            gMT[i] = gMT[i-kDiff] ^ (y>>1) ^ kMatrix[odd(y)];
+        }
     }
 
     // i = [623]
