@@ -6,6 +6,7 @@
 
 #include "u_vector.h"
 #include "u_misc.h"
+#include "u_rand.h"
 
 namespace r {
 
@@ -134,7 +135,7 @@ bool ssao::init(const m::perspective &p) {
     random.reserve(kRandomSize * kRandomSize);
     for (size_t i = 0; i < kRandomSize; i++)
         for (size_t j = 0; j < kRandomSize; j++)
-            random.push_back(rand() % 0xFF);
+            random.push_back(u::randu() % 0xFF);
 
     gl::BindTexture(format, m_textures[kRandom]);
     gl::TexImage2D(format, 0, GL_R8, kRandomSize, kRandomSize, 0, GL_RED, GL_UNSIGNED_BYTE, &random[0]);

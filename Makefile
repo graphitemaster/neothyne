@@ -50,7 +50,8 @@ UTIL_SOURCES = \
 	u_file.cpp \
 	u_sha512.cpp \
 	u_string.cpp \
-	u_zlib.cpp
+	u_zlib.cpp \
+	u_rand.cpp
 
 ENGINE_SOURCES = \
 	engine.cpp \

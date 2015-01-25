@@ -14,6 +14,7 @@
 #include "u_file.h"
 #include "u_misc.h"
 #include "u_pair.h"
+#include "u_rand.h"
 
 // Game globals
 bool gRunning = true;
@@ -289,9 +290,7 @@ int neoMain(frameTimer &timer, int, char **) {
     light.ambient = 1.0f;
     light.radius = 30.0f;
     for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
-        light.color = { float(rand()) / float(RAND_MAX),
-                        float(rand()) / float(RAND_MAX),
-                        float(rand()) / float(RAND_MAX) };
+        light.color = { u::randf(), u::randf(), u::randf() };
         light.position = places[i];
         light.position.y -= 10.0f;
         gWorld.insert(light);

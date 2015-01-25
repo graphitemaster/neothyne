@@ -6,6 +6,7 @@
 #include "cvar.h"
 
 #include "u_set.h"
+#include "u_rand.h"
 
 extern bool gPlaying;
 extern bool gRunning;
@@ -51,10 +52,7 @@ static m::vec3 looking() {
 }
 
 static m::vec3 randomColor() {
-    int R = rand() % 0xFF;
-    int G = rand() % 0xFF;
-    int B = rand() % 0xFF;
-    return { R / 255.0f, G / 255.0f, B / 255.0f };
+    return { u::randf(), u::randf(), u::randf() };
 }
 
 static void menuMain() {
