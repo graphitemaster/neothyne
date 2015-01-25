@@ -22,7 +22,7 @@ static struct state {
         } seed = { time(nullptr) };
         mt[0] = seed.u;
         index = 0;
-        for (size_t i = 0; i < kSize; ++i)
+        for (size_t i = 1; i < kSize; ++i)
             mt[i] = 0x6C078965 * (mt[i-1] ^ mt[i-1] >> 30) + i;
     }
 } gState;
