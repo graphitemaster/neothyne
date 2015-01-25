@@ -11,8 +11,9 @@ before_install:
   - if [ "$CXX" == "clang++" ]; then sudo add-apt-repository -y ppa:h-rayflood/llvm; fi
   - sudo apt-get update -qq
   # SDL2
-  - wget http://libsdl.org/release/SDL2-2.0.1.tar.gz -O - | tar xz
-  - (cd SDL2-2.0.1 && ./configure --prefix=$PREFIX && make -j5 && make install)
+  - curl -O http://www.libsdl.org/release/SDL2-2.0.0.tar.gz
+  - tar -xzvf SDL2-2.0.0.tar.gz
+  - (cd SDL2-2.0.0 && ./configure && make && sudo make install)
 
 install:
   # g++4.8.1
