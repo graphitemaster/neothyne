@@ -15,17 +15,15 @@ static constexpr uint32_t kMatrix[2] = { 0, 0x9908B0DF };
 static struct state {
     uint32_t mt[kSize];
     size_t index;
-
-    state()
-        : index(0)
-    {
+    state() {
         union {
             time_t t;
             uint32_t u;
         } seed = { time(nullptr) };
         mt[0] = seed.u;
+        index = 0;
         for (size_t i = 0; i < kSize; ++i)
-            mt[i] = 0x6C078965*(mt[i-1] ^ mt[i-1]>>30) + i;
+            mt[i] = 0x6C078965 * (mt[i-1] ^ mt[i-1] >> 30) + i;
     }
 } gState;
 
@@ -33,11 +31,11 @@ static struct state {
 #define gIndex (gState.index)
 
 static inline uint32_t m32(uint32_t x) {
-    return 0x80000000 & x; // 32nd Most Significant Bit
+    return 0x80000000 & x;
 }
 
 static inline uint32_t l31(uint32_t x) {
-    return 0x7FFFFFFF & x; // 31 Least Significant Bits
+    return 0x7FFFFFFF & x;
 }
 
 static inline bool odd(uint32_t x) {
@@ -58,8 +56,8 @@ static inline void generateNumbers() {
     }
 
     auto unroll = [&y, &i]() {
-        y = m32(gMT[i]) | l31(gMT[i+1]); \
-        gMT[i] = gMT[i-kDiff] ^ (y>>1) ^ kMatrix[odd(y)]; \
+        y = m32(gMT[i]) | l31(gMT[i+1]);
+        gMT[i] = gMT[i-kDiff] ^ (y>>1) ^ kMatrix[odd(y)];
         ++i;
     };
 
@@ -81,10 +79,10 @@ uint32_t randu() {
     uint32_t y = gMT[gIndex];
 
     // Tempering
-    y ^= y>>11;
-    y ^= y<< 7 & 0x9d2c5680;
-    y ^= y<<15 & 0xefc60000;
-    y ^= y>>18;
+    y ^= y >> 11;
+    y ^= y << 7 & 0x9D2C5680;
+    y ^= y << 15 & 0xEFC60000;
+    y ^= y >> 18;
 
     if (++gIndex == kSize)
         gIndex = 0;
