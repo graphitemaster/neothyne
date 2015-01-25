@@ -817,7 +817,7 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
     gl::DepthMask(GL_FALSE);
     if (varGet<int>("cl_edit").get()) {
         // World billboards
-        gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        gl::BlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         for (auto &it : map->m_billboards) {
             // Load billboards on demand
             if (m_billboards.find(it.name) == m_billboards.end()) {

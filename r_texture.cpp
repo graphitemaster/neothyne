@@ -15,6 +15,7 @@ VAR(int, r_aniso, "anisotropic filtering", 0, 1, 1);
 VAR(int, r_bilinear, "bilinear filtering", 0, 1, 1);
 VAR(int, r_trilinear, "trilinear filtering", 0, 1, 1);
 VAR(int, r_mipmaps, "mipmaps", 0, 1, 1);
+VAR(int, r_dxt_optimize, "DXT endpoints optimization", 0, 1, 1);
 VAR(float, r_texquality, "texture quality", 0.0f, 1.0f, 1.0f);
 
 namespace r {
@@ -34,7 +35,118 @@ namespace r {
 #define R_TEX_DATA_LUMINANCE GL_UNSIGNED_BYTE
 #define R_TEX_DATA_RG        GL_UNSIGNED_BYTE
 
-static const unsigned char kTextureCacheVersion = 0xFA;
+enum dxtType {
+    kDXT1,
+    kDXT5
+};
+
+enum dxtColor {
+    kDXTColor33,
+    kDXTColor66,
+    kDXTColor50
+};
+
+struct dxtBlock {
+    uint16_t color0;
+    uint16_t color1;
+    uint32_t pixels;
+};
+
+static uint16_t dxtPack565(uint16_t &r, uint16_t &g, uint16_t &b) {
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+}
+
+static void dxtUnpack565(uint16_t src, uint16_t &r, uint16_t &g, uint16_t &b) {
+    r = (((src>>11)&0x1F)*527 + 15) >> 6;
+    g = (((src>>5)&0x3F)*259 + 35) >> 6;
+    b = ((src&0x1F)*527 + 15) >> 6;
+}
+
+template <dxtColor E>
+static uint16_t dxtCalcColor(uint16_t color0, uint16_t color1) {
+    uint16_t r[3], g[3], b[3];
+    dxtUnpack565(color0, r[0], g[0], b[0]);
+    dxtUnpack565(color1, r[1], g[1], b[1]);
+    if (E == kDXTColor33) {
+        r[2] = (2*r[0] + r[1]) / 3;
+        g[2] = (2*g[0] + g[1]) / 3;
+        b[2] = (2*b[0] + b[1]) / 3;
+    } else if (E == kDXTColor66) {
+        r[2] = (r[0] + 2*r[1]) / 3;
+        g[2] = (g[0] + 2*g[1]) / 3;
+        b[2] = (b[0] + 2*b[1]) / 3;
+    } else if (E == kDXTColor50) {
+        r[2] = (r[0] + r[1]) / 2;
+        g[2] = (g[0] + g[1]) / 2;
+        b[2] = (b[0] + b[1]) / 2;
+    }
+    return dxtPack565(r[2], g[2], b[2]);
+}
+
+template <dxtType T>
+static size_t dxtOptimize(unsigned char *data, size_t width, size_t height) {
+    size_t count = 0;
+    const size_t numBlocks = (width / 4) * (height / 4);
+    dxtBlock *block = ((dxtBlock*)data) + (T == kDXT5); // DXT5: alpha block is first
+    for (size_t i = 0; i != numBlocks; ++i, block += (T == kDXT1 ? 1 : 2)) {
+        const uint16_t color0 = block->color0;
+        const uint16_t color1 = block->color1;
+        const uint32_t pixels = block->pixels;
+        if (pixels == 0) {
+            // Solid color0
+            block->color1 = 0;
+            count++;
+        } else if (pixels == 0x55555555u) {
+            // Solid color1, fill with color0 instead, possibly encoding the block
+            // as 1-bit alpha if color1 is black.
+            block->color0 = color1;
+            block->color1 = 0;
+            block->pixels = 0;
+            count++;
+        } else if (pixels == 0xAAAAAAAAu) {
+            // Solid color2, fill with color0 instead, possibly encoding the block
+            // as 1-bit alpha if color2 is black.
+            block->color0 = (color0 > color1 || T == kDXT5)
+                ? dxtCalcColor<kDXTColor33>(color0, color1)
+                : dxtCalcColor<kDXTColor50>(color0, color1);
+            block->color1 = 0;
+            block->pixels = 0;
+            count++;
+        } else if (pixels == 0xFFFFFFFFu) {
+            // Solid color3
+            if (color0 > color1 || T == kDXT5) {
+                // Fill with color0 instead, possibly encoding the block as 1-bit
+                // alpha if color3 is black.
+                block->color0 = dxtCalcColor<kDXTColor66>(color0, color1);
+                block->color1 = 0;
+                block->pixels = 0;
+                count++;
+            } else {
+                // Transparent / solid black
+                block->color0 = 0;
+                block->color1 = T == kDXT1 ? 0xFFFFu : 0; // kDXT1: Transparent black
+                if (T == kDXT5) // Solid black
+                    block->pixels = 0;
+                count++;
+            }
+        } else if (T == kDXT5 && (pixels & 0xAAAAAAAAu) == 0xAAAAAAAAu) {
+            // Only interpolated colors are used, not the endpoints
+            block->color0 = dxtCalcColor<kDXTColor66>(color0, color1);
+            block->color1 = dxtCalcColor<kDXTColor33>(color0, color1);
+            block->pixels = ~pixels;
+            count++;
+        } else if (T == kDXT5 && color0 < color1) {
+            // Otherwise, ensure the colors are always in the same order
+            block->color0 = color1;
+            block->color1 = color0;
+            block->pixels ^= 0x55555555u;
+            count++;
+        }
+    }
+    return count;
+}
+
+static const unsigned char kTextureCacheVersion = 0x02;
 
 struct textureCacheHeader {
     unsigned char version;
@@ -207,13 +319,37 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     // Read the compressed image
     gl::GetCompressedTexImage(GL_TEXTURE_2D, 0, &data[0] + sizeof(head));
 
-    // Write it to disk!
-    u::print("[cache] => wrote %.50s... %s (compressed %s to %s)\n",
+    // Apply DXT optimizations if we can
+    const bool dxt = internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
+                     internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+
+    size_t dxtOptimCount = 0;
+    if (r_dxt_optimize && dxt) {
+        dxtOptimCount = (internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT)
+            ? dxtOptimize<kDXT1>(&data[0] + sizeof(head), compressedWidth, compressedHeight)
+            : dxtOptimize<kDXT5>(&data[0] + sizeof(head), compressedWidth, compressedHeight);
+    }
+
+    u::print("[cache] => wrote %.50s... %s (compressed %s to %s)",
         cacheString,
         cacheFormat(head.internal),
         sizeMetric(tex.size()),
         sizeMetric(compressedSize)
     );
+
+    if (dxt && dxtOptimCount) {
+        const float blockCount = (compressedWidth / 4.0f) * (compressedHeight / 4.0f);
+        const float blockDifference = blockCount - dxtOptimCount;
+        const float blockPercent = (blockDifference / blockCount) * 100.0f;
+        u::print(" (optimized endpoints in %.2f%% of blocks)",
+            sizeMetric(tex.size()),
+            sizeMetric(compressedSize),
+            blockPercent
+        );
+    }
+    u::print("\n");
+
+    // Write it to disk!
     return u::write(data, file);
 }
 
@@ -477,6 +613,15 @@ bool texture2D::upload() {
                 m_texture.height(), 0, format.format, format.data, m_texture.data());
             gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
             gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
+
+            if (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
+                format.internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT)
+            {
+                needsCache = false;
+                cache(format.internal);
+                if (!useCache())
+                    neoFatal("failed to cache");
+            }
         }
 
         if (r_mipmaps)

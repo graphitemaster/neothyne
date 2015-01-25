@@ -81,6 +81,12 @@ Adjust texture quality
 
 * any value in the range [0.0, 1.0]
 
+##### r_dxt_optimize
+Optimize DXT endpoints such that they have a consistent encoding, this helps some hardware and improves on disk compression ratio.
+
+* 0 = disable
+* 1 = enable
+
 ##### r_fxaa
 Fast approximate anti-aliasing
 
