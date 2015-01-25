@@ -8,7 +8,8 @@ CXXFLAGS = \
 	-fno-rtti \
 	-I. \
 	-DDEBUG_GL \
-	-O3
+	-O3 \
+	$(EXTRAFLAGS)
 
 ENGINE_CXXFLAGS = \
 	$(CXXFLAGS) \
