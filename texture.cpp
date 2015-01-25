@@ -1001,6 +1001,7 @@ struct png : decoder {
                 m_format = kTexFormatRGBA;
                 break;
             default:
+                u::print("%zu\n", m_bpp);
                 assert(0);
                 break;
         }
@@ -1011,7 +1012,7 @@ struct png : decoder {
     }
 
 private:
-    void decode(u::vector<unsigned char>& out, const u::vector<unsigned char> &invec) {
+    void decode(u::vector<unsigned char> &out, const u::vector<unsigned char> &invec) {
         const unsigned char *const in = &invec[0];
         readHeader(&in[0], invec.size());
         if (m_error)
@@ -1157,6 +1158,39 @@ private:
                     &scanlines[passstart[i]], m_width, i, passw[i], passh[i], bpp);
             }
         }
+        if (m_colorType == 3 || m_colorType == 4) {
+            u::vector<unsigned char> data = out; // Make a copy to work with
+            if (!convert(out, &data[0]))
+                returnResult(kInternalError);
+        }
+    }
+
+    bool convert(u::vector<unsigned char> &out, const unsigned char *in) {
+        // This will always produce RGBA32
+        const size_t numPixels = m_width * m_height;
+        out.resize(numPixels * 4);
+        if (m_bitDepth == 8) {
+            switch(m_colorType) {
+            case 3: // Indexed color
+                for (size_t i = 0; i < numPixels; i++) {
+                    if (4u * in[i] >= m_palette.size())
+                        return false;
+                    for (size_t c = 0; c < 4; c++)
+                        out[4 * i + c] = m_palette[4 * in[i] + c]; // RGB colors from palette
+                }
+                break;
+            case 4: // Greyscale with alpha
+                for (size_t i = 0; i < numPixels; i++) {
+                    out[4 * i + 0] = in[2 * i + 0];
+                    out[4 * i + 1] = in[2 * i + 0];
+                    out[4 * i + 2] = in[2 * i + 0];
+                    out[4 * i + 3] = in[2 * i + 1];
+                }
+                break;
+            }
+        }
+        m_bpp = 4;
+        return true;
     }
 
     void readHeader(const unsigned char* in, size_t inlength) {
