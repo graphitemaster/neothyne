@@ -1,8 +1,7 @@
 #include <limits.h> // UINT32_MAX
 #include <stddef.h> // size_t
 #include <time.h>
-
-#include "u_rand.h"
+#include <stdio.h>
 
 namespace u {
 
@@ -48,9 +47,6 @@ static inline void generateNumbers() {
 
     // i = [0 ... 226]
     for (i = 0; i < kDiff; ++i) {
-        y = m32(gMT[i]) | l31(gMT[i+1]);
-        gMT[i] = gMT[i+kPeriod] ^ (y>>1) ^ kMatrix[odd(y)];
-        ++i;
         y = m32(gMT[i]) | l31(gMT[i+1]);
         gMT[i] = gMT[i+kPeriod] ^ (y>>1) ^ kMatrix[odd(y)];
     }
