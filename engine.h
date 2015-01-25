@@ -49,6 +49,7 @@ enum {
 };
 
 struct mouseState {
+    mouseState();
     // kMouseButton flags for packet
     enum {
         kMouseButtonLeft = 1 << 0,
@@ -59,6 +60,14 @@ struct mouseState {
     int wheel;
     int button;
 };
+
+inline mouseState::mouseState()
+    : x(0)
+    , y(0)
+    , wheel(0)
+    , button(0)
+{
+}
 
 u::map<u::string, int> &neoKeyState(const u::string &key = "", bool keyDown = false, bool keyUp = false);
 mouseState neoMouseState();

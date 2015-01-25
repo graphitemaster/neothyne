@@ -577,9 +577,6 @@ bool texture2D::upload() {
                 return false;
         }
 
-        if (blockSize != 8 && blockSize != 16)
-            return false;
-
         auto query = getBestFormat(m_texture);
         if (!query)
             return false;

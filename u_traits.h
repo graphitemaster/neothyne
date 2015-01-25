@@ -2,7 +2,7 @@
 #define U_TRAITS_HDR
 
 #ifdef __has_feature
-#   define HAS_FEATURE(X) __has_feature
+#   define HAS_FEATURE(X) __has_feature(X)
 #else
 #   define HAS_FEATURE(X) 0
 #endif
@@ -332,7 +332,7 @@ struct is_scalar : integral_constant<bool, is_arithmetic<T>::value ||
 /// is_trivially_constructible
 #if HAS_FEATURE(is_trivially_constructible)
 template <typename T, typename... A>
-struct is_trivially_constructible : integral_constant<bool, __is_trivially_constructible(T, A...)>
+struct is_trivially_constructible : integral_constant<bool, __is_trivially_constructible(T, A...)> {};
 #else
 #   if HAS_FEATURE(has_trivial_constructor)
 #   define IS_TRIVIAL_CONSTRUCTIBLE(T) __has_trivial_constructor(T)
@@ -364,7 +364,7 @@ struct is_trivially_copy_constructible
 /// is_trivially_assignable
 #if HAS_FEATURE(is_trivially_assignable)
 template <typename T, typename A>
-struct is_trivially_assignable : integral_constant<bool, __is_trivially_assignable> {};
+struct is_trivially_assignable : integral_constant<bool, __is_trivially_assignable(T, A)> {};
 #else
 template <typename T, typename A>
 struct is_trivially_assignable : false_type {};

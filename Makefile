@@ -8,7 +8,8 @@ CXXFLAGS = \
 	-fno-rtti \
 	-I. \
 	-DDEBUG_GL \
-	-O3
+	-O3 \
+	$(EXTRAFLAGS)
 
 ENGINE_CXXFLAGS = \
 	$(CXXFLAGS) \
@@ -50,7 +51,8 @@ UTIL_SOURCES = \
 	u_file.cpp \
 	u_sha512.cpp \
 	u_string.cpp \
-	u_zlib.cpp
+	u_zlib.cpp \
+	u_rand.cpp
 
 ENGINE_SOURCES = \
 	engine.cpp \
