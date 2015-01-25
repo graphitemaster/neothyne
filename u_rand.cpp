@@ -1,7 +1,8 @@
 #include <limits.h> // UINT32_MAX
 #include <stddef.h> // size_t
 #include <time.h>
-#include <stdio.h>
+
+#include "u_rand.h"
 
 namespace u {
 

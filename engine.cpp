@@ -124,7 +124,13 @@ static SDL_Window *getContext() {
 
 // An accurate frame rate timer and capper
 frameTimer::frameTimer()
-    : m_deltaTime(0.0f)
+    : m_maxFrameTicks(0.0f)
+    , m_lastSecondTicks(0)
+    , m_frameCount(0)
+    , m_minTicks(0)
+    , m_maxTicks(0)
+    , m_averageTicks(0.0f)
+    , m_deltaTime(0.0f)
     , m_lastFrameTicks(0)
     , m_currentTicks(0)
     , m_targetTicks(0)
@@ -135,6 +141,22 @@ frameTimer::frameTimer()
     , m_lock(false)
 {
 }
+
+    float m_maxFrameTicks;
+    uint32_t m_lastSecondTicks;
+    int m_frameCount;
+    uint32_t m_minTicks;
+    uint32_t m_maxTicks;
+    float m_averageTicks;
+    float m_deltaTime;
+    uint32_t m_lastFrameTicks;
+    uint32_t m_currentTicks;
+    uint32_t m_targetTicks;
+    uint32_t m_frameMin;
+    uint32_t m_frameMax;
+    float m_frameAverage;
+    int m_framesPerSecond;
+    bool m_lock;
 
 void frameTimer::lock() {
     m_lock = true;

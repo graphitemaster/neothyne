@@ -2042,6 +2042,7 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
     size_t height, bool normal, textureFormat format)
     : m_width(width)
     , m_height(height)
+    , m_mips(0)
     , m_flags(normal ? kTexFlagNormal : 0)
     , m_format(format)
 {
