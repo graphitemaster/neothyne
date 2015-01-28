@@ -1,5 +1,6 @@
 # Header files
 All header files should have a header guard in the form of
+
     #ifndef FILENAME_HDR
     #define FILENAME_HDR
     ...
