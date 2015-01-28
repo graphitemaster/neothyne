@@ -34,7 +34,7 @@ engine::engine()
 {
 }
 
-bool engine::init(int argc, char **argv) {
+bool engine::init(int &argc, char **argv) {
     // Establish local timers for the engine
     if (!initTimers())
         return false;
@@ -145,20 +145,29 @@ bool engine::initTimers() {
     return true;
 }
 
-bool engine::initData(int argc, char **argv) {
+bool engine::initData(int &argc, char **argv) {
     // Get a path for the game, can come from command line as well
-    --argc;
     const char *directory = nullptr;
-    for (int i = 0; i < argc - 1; i++) {
-        if (!strcmp(argv[i + 1], "-gamedir") && argv[i + 2]) {
-            directory = argv[i + 2];
+    for (int i = 1; i < argc - 1; i++) {
+        if (!strcmp(argv[i], "-gamedir") && argv[i + 1]) {
+            directory = argv[i + 1];
+            argc -= 2;
+            // Found a game directory, remove it and the directory from argv
+            memmove(argv+i, argv+i+2, (argc-i) * sizeof(char*));
             break;
         }
     }
 
-    m_gamePath = directory ? directory : u::format(".%cgame%c", PATH_SEP, PATH_SEP);
-    if (m_gamePath.find(PATH_SEP) == u::string::npos)
-        m_gamePath += PATH_SEP;
+    // Verify the game directory even exists
+    if (!u::exists(directory, u::kDirectory)) {
+        u::print("Game directory `%s' doesn't exist (falling back to .%sgame%c)",
+            directory, u::kPathSep, u::kPathSep);
+        directory = nullptr;
+    }
+
+    m_gamePath = directory ? directory : u::format(".%cgame%c", u::kPathSep, u::kPathSep);
+    if (m_gamePath.find(u::kPathSep) == u::string::npos)
+        m_gamePath += u::kPathSep;
 
     // Get a path for the user
     auto get = SDL_GetPrefPath("Neothyne", "");
@@ -182,7 +191,7 @@ bool engine::initData(int argc, char **argv) {
     }
 
     // Established game and user data paths, now load the config
-    return readConfig(m_gamePath);
+    return readConfig(m_userPath);
 }
 
 u::map<u::string, int> &engine::keyState(const u::string &key, bool keyDown, bool keyUp) {

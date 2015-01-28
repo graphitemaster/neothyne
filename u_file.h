@@ -6,13 +6,13 @@
 #include "u_string.h"
 #include "u_vector.h"
 
-#ifdef _WIN32
-#   define PATH_SEP '\\'
-#else
-#   define PATH_SEP '/'
-#endif
-
 namespace u {
+
+#ifdef _WIN32
+static constexpr int kPathSep = '\\';
+#else
+static constexpr int kPathSep = '/';
+#endif
 
 // A little unique_ptr like file wrapper to achieve RAII. We can't use
 // unique_ptr here because unique_ptr doesn't allow null default delters

@@ -74,7 +74,7 @@ inline mouseState::mouseState()
 /// Engine object
 struct engine {
     engine();
-    bool init(int argc, char **argv);
+    bool init(int &argc, char **argv);
 
     typedef void (*bindFunction)();
 
@@ -100,7 +100,7 @@ struct engine {
 protected:
     bool initWindow();
     bool initTimers();
-    bool initData(int argc, char **argv);
+    bool initData(int &argc, char **argv);
 
 private:
     u::map<u::string, int> m_keyMap;

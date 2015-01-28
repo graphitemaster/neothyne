@@ -46,9 +46,9 @@ static inline u::string fixPath(const u::string &path) {
     u::string fix(path);
     const size_t size = fix.size();
     for (size_t i = 0; i < size; i++) {
-        if (fix[i] != '/')
+        if (!strchr("/\\", fix[i]))
             continue;
-        fix[i] = PATH_SEP;
+        fix[i] = u::kPathSep;
     }
     return fix;
 #endif
