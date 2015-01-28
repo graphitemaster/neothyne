@@ -10,18 +10,7 @@
 #include "u_file.h"
 #include "u_misc.h"
 
-// Engine globals
-static u::map<u::string, int> gKeyMap;
-static u::string gUserPath;
-static u::string gGamePath;
-static size_t gScreenWidth = 0;
-static size_t gScreenHeight = 0;
-static size_t gRefreshRate = 0;
-static SDL_Window *gScreen = nullptr;
-static frameTimer gTimer;
-static u::map<u::string, void (*)()> gBinds;
-static u::string gTextInput;
-static mouseState gMouseState;
+typedef void (*bindFunction)();
 
 // maximum resolution is 15360x8640 (8640p) (16:9)
 // default resolution is 1024x768 (XGA) (4:3)
@@ -36,14 +25,79 @@ VAR(int, vid_height, "resolution height", 0, 8640, 0);
 VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
 
-static SDL_Window *getContext() {
-    SDL_Init(SDL_INIT_VIDEO);
+/// engine
+static struct engine {
+    engine();
+    bool init(int argc, char **argv);
 
+    u::map<u::string, int> &keyState(const u::string &key = "", bool keyDown = false, bool keyUp = false);
+    void mouseDelta(int *deltaX, int *deltaY);
+    mouseState mouse() const;
+    void bindSet(const u::string &what, bindFunction handler);
+    void swap();
+    size_t width() const;
+    size_t height() const;
+    void relativeMouse(bool state);
+    bool relativeMouse();
+    void centerMouse();
+    void setWindowTitle(const char *title);
+    void resize(size_t width, size_t height);
+    void setVSyncOption(int option);
+    const u::string &userPath() const;
+    const u::string &gamePath();
+
+    frameTimer m_frameTimer; // TODO: private
+
+protected:
+    bool initWindow();
+    bool initTimer();
+    bool initData(int argc, char **argv);
+
+private:
+    u::map<u::string, int> m_keyMap;
+    u::map<u::string, bindFunction> m_binds;
+    u::string m_userPath;
+    u::string m_gamePath;
+    u::string m_textInput;
+
+    mouseState m_mouseState;
+    size_t m_screenWidth;
+    size_t m_screenHeight;
+    size_t m_refreshRate;
+    SDL_Window *m_window;
+} gEngine;
+
+inline engine::engine()
+    : m_screenWidth(0)
+    , m_screenHeight(0)
+    , m_refreshRate(0)
+    , m_window(nullptr)
+{
+}
+
+bool engine::init(int argc, char **argv) {
+    // Establish local timers for the engine
+    if (!initTimer())
+        return false;
+    // Establish game and user directories + configuration
+    if (!initData(argc, argv))
+        return false;
+    // Launch the context
+    if (!initWindow())
+        return false;
+
+    setVSyncOption(vid_vsync);
+    m_frameTimer.cap(vid_maxfps);
+
+    return true;
+}
+
+bool engine::initWindow() {
     const u::string &videoDriver = vid_driver.get();
     if (videoDriver.size()) {
         if (SDL_GL_LoadLibrary(videoDriver.c_str()) != 0) {
             u::print("Failed to load video driver: %s\n", SDL_GetError());
-            return nullptr;
+            return false;
         } else {
             u::print("Loaded video driver: %s\n", videoDriver);
         }
@@ -56,8 +110,8 @@ static SDL_Window *getContext() {
         int displays = SDL_GetNumVideoDisplays();
         if (displays < 1) {
             // Failed to even get a display, worst case we'll assume a default
-            gScreenWidth = kDefaultScreenWidth;
-            gScreenHeight = kDefaultScreenHeight;
+            m_screenWidth = kDefaultScreenWidth;
+            m_screenHeight = kDefaultScreenHeight;
         } else {
             // Try all the display devices until we find one that actually contains
             // display information
@@ -65,29 +119,29 @@ static SDL_Window *getContext() {
                 if (SDL_GetCurrentDisplayMode(i, &mode) != 0)
                     continue;
                 // Found a display mode
-                gScreenWidth = mode.w;
-                gScreenHeight = mode.h;
+                m_screenWidth = mode.w;
+                m_screenHeight = mode.h;
             }
         }
     } else {
         // Use the desktop display mode
-        gScreenWidth = mode.w;
-        gScreenHeight = mode.h;
+        m_screenWidth = mode.w;
+        m_screenHeight = mode.h;
     }
 
-    if (gScreenWidth <= 0 || gScreenHeight <= 0) {
+    if (m_screenWidth <= 0 || m_screenHeight <= 0) {
         // In this event we fall back to the default resolution
-        gScreenWidth = kDefaultScreenWidth;
-        gScreenHeight = kDefaultScreenHeight;
+        m_screenWidth = kDefaultScreenWidth;
+        m_screenHeight = kDefaultScreenHeight;
     }
 
-    gRefreshRate = (mode.refresh_rate == 0)
+    m_refreshRate = (mode.refresh_rate == 0)
         ? kRefreshRate : mode.refresh_rate;
 
     // Coming from a config
     if (vid_width != 0 && vid_height != 0) {
-        gScreenWidth = size_t(vid_width.get());
-        gScreenHeight = size_t(vid_height.get());
+        m_screenWidth = size_t(vid_width.get());
+        m_screenHeight = size_t(vid_height.get());
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
@@ -101,25 +155,230 @@ static SDL_Window *getContext() {
     uint32_t flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     if (vid_fullscreen)
         flags |= SDL_WINDOW_FULLSCREEN;
-    SDL_Window *window = SDL_CreateWindow("Neothyne",
+    m_window = SDL_CreateWindow("Neothyne",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        gScreenWidth,
-        gScreenHeight,
+        m_screenWidth,
+        m_screenHeight,
         flags
     );
 
-    if (!window || !SDL_GL_CreateContext(window)) {
+    if (!m_window || !SDL_GL_CreateContext(m_window)) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
             "Neothyne: Initialization error",
             "OpenGL 3.3 or higher is required",
-            nullptr);
-        if (window)
-            SDL_DestroyWindow(window);
+            nullptr
+        );
+        if (m_window)
+            SDL_DestroyWindow(m_window);
         SDL_Quit();
     }
 
-    return window;
+    // Hide the cursor for the window
+    SDL_ShowCursor(0);
+
+    return true;
+}
+
+bool engine::initTimer() {
+    m_frameTimer.reset();
+    m_frameTimer.cap(frameTimer::kMaxFPS);
+    return true;
+}
+
+bool engine::initData(int argc, char **argv) {
+    // Get a path for the game, can come from command line as well
+    --argc;
+    const char *directory = nullptr;
+    for (int i = 0; i < argc - 1; i++) {
+        if (!strcmp(argv[i + 1], "-gamedir") && argv[i + 2]) {
+            directory = argv[i + 2];
+            break;
+        }
+    }
+
+    m_gamePath = directory ? directory : u::format(".%cgame%c", PATH_SEP, PATH_SEP);
+    if (m_gamePath.find(PATH_SEP) == u::string::npos)
+        m_gamePath += PATH_SEP;
+
+    // Get a path for the user
+    auto get = SDL_GetPrefPath("Neothyne", "");
+    m_userPath = get;
+    m_userPath.pop_back(); // Remove additional path separator
+    SDL_free(get);
+
+    // Verify all the paths exist for the user directory. If they don't exist
+    // create them.
+    static const char *paths[] = {
+        "screenshots", "cache"
+    };
+
+    for (size_t i = 0; i < sizeof(paths)/sizeof(*paths); i++) {
+        u::string path = m_userPath + paths[i];
+        if (u::exists(path, u::kDirectory))
+            continue;
+        if (u::mkdir(path))
+            continue;
+        return false;
+    }
+
+    // Established game and user data paths, now load the config
+    return readConfig();
+}
+
+u::map<u::string, int> &engine::keyState(const u::string &key, bool keyDown, bool keyUp) {
+    if (keyDown)
+        m_keyMap[key]++;
+    if (keyUp)
+        m_keyMap[key] = 0;
+    return m_keyMap;
+}
+
+void engine::mouseDelta(int *deltaX, int *deltaY) {
+    if (SDL_GetRelativeMouseMode() == SDL_TRUE)
+        SDL_GetRelativeMouseState(deltaX, deltaY);
+}
+
+mouseState engine::mouse() const {
+    return m_mouseState;
+}
+
+void engine::bindSet(const u::string &what, void (*handler)()) {
+    m_binds[what] = handler;
+}
+
+void engine::swap() {
+    SDL_GL_SwapWindow(m_window);
+    m_frameTimer.update();
+
+    auto callBind = [this](const char *what) {
+        if (m_binds.find(what) != m_binds.end())
+            m_binds[what]();
+    };
+
+    char format[1024];
+    const char *keyName;
+    SDL_Event e;
+    while (SDL_PollEvent(&e)) {
+        switch (e.type) {
+        case SDL_WINDOWEVENT:
+            switch (e.window.event) {
+            case SDL_WINDOWEVENT_RESIZED:
+                resize(e.window.data1, e.window.data2);
+                break;
+            }
+            break;
+        case SDL_KEYDOWN:
+            keyName = SDL_GetKeyName(e.key.keysym.sym);
+            snprintf(format, sizeof(format), "%sDn", keyName);
+            callBind(format);
+            keyState(keyName, true);
+            break;
+        case SDL_KEYUP:
+            keyName = SDL_GetKeyName(e.key.keysym.sym);
+            snprintf(format, sizeof(format), "%sUp", keyName);
+            callBind(format);
+            keyState(keyName, false, true);
+            break;
+        case SDL_MOUSEMOTION:
+            m_mouseState.x = e.motion.x;
+            m_mouseState.y = m_screenHeight - e.motion.y;
+            break;
+        case SDL_MOUSEWHEEL:
+            m_mouseState.wheel = e.wheel.y;
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            switch (e.button.button) {
+            case SDL_BUTTON_LEFT:
+                callBind("MouseDnL");
+                m_mouseState.button |= mouseState::kMouseButtonLeft;
+                break;
+            case SDL_BUTTON_RIGHT:
+                callBind("MouseDnR");
+                m_mouseState.button |= mouseState::kMouseButtonRight;
+                break;
+            }
+            break;
+        case SDL_MOUSEBUTTONUP:
+            switch (e.button.button) {
+            case SDL_BUTTON_LEFT:
+                callBind("MouseUpL");
+                m_mouseState.button &= ~mouseState::kMouseButtonLeft;
+                break;
+            case SDL_BUTTON_RIGHT:
+                callBind("MouseUpR");
+                m_mouseState.button &= ~mouseState::kMouseButtonRight;
+                break;
+            }
+            break;
+        case SDL_TEXTINPUT:
+            m_textInput += e.text.text;
+            break;
+        }
+    }
+}
+
+size_t engine::width() const {
+    return m_screenWidth;
+}
+
+size_t engine::height() const {
+    return m_screenHeight;
+}
+
+void engine::relativeMouse(bool state) {
+    SDL_SetRelativeMouseMode(state ? SDL_TRUE : SDL_FALSE);
+}
+
+bool engine::relativeMouse() {
+    return SDL_GetRelativeMouseMode() == SDL_TRUE;
+}
+
+void engine::centerMouse() {
+    SDL_WarpMouseInWindow(m_window, m_screenWidth / 2, m_screenHeight / 2);
+}
+
+void engine::setWindowTitle(const char *title) {
+    SDL_SetWindowTitle(m_window, title);
+}
+
+void engine::resize(size_t width, size_t height) {
+    SDL_SetWindowSize(m_window, width, height);
+    m_screenWidth = width;
+    m_screenHeight = height;
+    gl::Viewport(0, 0, width, height);
+    vid_width.set(width);
+    vid_height.set(height);
+}
+
+void engine::setVSyncOption(int option) {
+    switch (option) {
+        case kSyncTear:
+            if (SDL_GL_SetSwapInterval(-1) == -1)
+                setVSyncOption(kSyncRefresh);
+            break;
+        case kSyncNone:
+            SDL_GL_SetSwapInterval(0);
+            break;
+        case kSyncEnabled:
+            SDL_GL_SetSwapInterval(1);
+            break;
+        case kSyncRefresh:
+            SDL_GL_SetSwapInterval(0);
+            m_frameTimer.unlock();
+            m_frameTimer.cap(m_refreshRate);
+            m_frameTimer.lock();
+            break;
+    }
+    m_frameTimer.reset();
+}
+
+const u::string &engine::userPath() const {
+    return m_userPath;
+}
+
+const u::string &engine::gamePath() {
+    return m_gamePath;
 }
 
 // An accurate frame rate timer and capper
@@ -210,170 +469,14 @@ uint32_t frameTimer::ticks() const {
     return m_currentTicks;
 }
 
-u::map<u::string, int> &neoKeyState(const u::string &key, bool keyDown, bool keyUp) {
-    if (keyDown)
-        gKeyMap[key]++;
-    if (keyUp)
-        gKeyMap[key] = 0;
-    return gKeyMap;
-}
-
-void neoMouseDelta(int *deltaX, int *deltaY) {
-    if (SDL_GetRelativeMouseMode() == SDL_TRUE)
-        SDL_GetRelativeMouseState(deltaX, deltaY);
-}
-
-mouseState neoMouseState() {
-    return gMouseState;
+// Global functions
+void neoFatalError(const char *error) {
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error", error, nullptr);
+    abort();
 }
 
 void *neoGetProcAddress(const char *proc) {
     return SDL_GL_GetProcAddress(proc);
-}
-
-void neoBindSet(const u::string &what, void (*handler)()) {
-    gBinds[what] = handler;
-}
-
-void (*neoBindGet(const u::string &what))() {
-    if (gBinds.find(what) != gBinds.end())
-        return gBinds[what];
-    return nullptr;
-}
-
-void neoSwap() {
-    SDL_GL_SwapWindow(gScreen);
-    gTimer.update();
-
-    auto callBind = [](const char *what) {
-        if (gBinds.find(what) != gBinds.end())
-            gBinds[what]();
-    };
-
-    // Event dispatch
-    char format[1024];
-    const char *keyName;
-    SDL_Event e;
-    while (SDL_PollEvent(&e)) {
-        switch (e.type) {
-        case SDL_WINDOWEVENT:
-            switch (e.window.event) {
-            case SDL_WINDOWEVENT_RESIZED:
-                neoResize(e.window.data1, e.window.data2);
-                break;
-            }
-            break;
-        case SDL_KEYDOWN:
-            keyName = SDL_GetKeyName(e.key.keysym.sym);
-            snprintf(format, sizeof(format), "%sDn", keyName);
-            callBind(format);
-            neoKeyState(keyName, true);
-            break;
-        case SDL_KEYUP:
-            keyName = SDL_GetKeyName(e.key.keysym.sym);
-            snprintf(format, sizeof(format), "%sUp", keyName);
-            callBind(format);
-            neoKeyState(keyName, false, true);
-            break;
-        case SDL_MOUSEMOTION:
-            gMouseState.x = e.motion.x;
-            gMouseState.y = neoHeight() - e.motion.y;
-            break;
-        case SDL_MOUSEWHEEL:
-            gMouseState.wheel = e.wheel.y;
-            break;
-        case SDL_MOUSEBUTTONDOWN:
-            switch (e.button.button) {
-            case SDL_BUTTON_LEFT:
-                callBind("MouseDnL");
-                gMouseState.button |= mouseState::kMouseButtonLeft;
-                break;
-            case SDL_BUTTON_RIGHT:
-                callBind("MouseDnR");
-                gMouseState.button |= mouseState::kMouseButtonRight;
-                break;
-            }
-            break;
-        case SDL_MOUSEBUTTONUP:
-            switch (e.button.button) {
-            case SDL_BUTTON_LEFT:
-                callBind("MouseUpL");
-                gMouseState.button &= ~mouseState::kMouseButtonLeft;
-                break;
-            case SDL_BUTTON_RIGHT:
-                callBind("MouseUpR");
-                gMouseState.button &= ~mouseState::kMouseButtonRight;
-                break;
-            }
-            break;
-        case SDL_TEXTINPUT:
-            gTextInput += e.text.text;
-            break;
-        }
-    }
-}
-
-size_t neoWidth() {
-    return gScreenWidth;
-}
-
-size_t neoHeight() {
-    return gScreenHeight;
-}
-
-void neoRelativeMouse(bool state) {
-    SDL_SetRelativeMouseMode(state ? SDL_TRUE : SDL_FALSE);
-}
-
-bool neoRelativeMouse() {
-    return SDL_GetRelativeMouseMode() == SDL_TRUE;
-}
-
-void neoCenterMouse() {
-    SDL_WarpMouseInWindow(gScreen, gScreenWidth / 2, gScreenHeight / 2);
-}
-
-void neoSetWindowTitle(const char *title) {
-    SDL_SetWindowTitle(gScreen, title);
-}
-
-void neoResize(size_t width, size_t height) {
-    SDL_SetWindowSize(gScreen, width, height);
-    gScreenWidth = width;
-    gScreenHeight = height;
-    gl::Viewport(0, 0, width, height);
-    vid_width.set(width);
-    vid_height.set(height);
-}
-
-void neoSetVSyncOption(int option) {
-    switch (option) {
-        case kSyncTear:
-            if (SDL_GL_SetSwapInterval(-1) == -1)
-                neoSetVSyncOption(kSyncRefresh);
-            break;
-        case kSyncNone:
-            SDL_GL_SetSwapInterval(0);
-            break;
-        case kSyncEnabled:
-            SDL_GL_SetSwapInterval(1);
-            break;
-        case kSyncRefresh:
-            SDL_GL_SetSwapInterval(0);
-            gTimer.unlock();
-            gTimer.cap(gRefreshRate);
-            gTimer.lock();
-            break;
-    }
-    gTimer.reset();
-}
-
-const u::string &neoUserPath() { return gUserPath; }
-const u::string &neoGamePath() { return gGamePath; }
-
-void neoFatalError(const char *error) {
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error", error, nullptr);
-    abort();
 }
 
 ///
@@ -383,57 +486,17 @@ void neoFatalError(const char *error) {
 ///     main -> entryPoint -> neoMain
 ///
 static int entryPoint(int argc, char **argv) {
-    extern int neoMain(frameTimer &timer, int argc, char **argv);
+    extern int neoMain(frameTimer&, int argc, char **argv);
 
-    // Must come after SDL is loaded
-    gTimer.reset();
-    gTimer.cap(frameTimer::kMaxFPS);
+    if (SDL_Init(SDL_INIT_VIDEO) != 0)
+        neoFatal("Failed to initialize SDL2");
 
-    // Check for command line '-gamedir'
-    --argc;
-    const char *directory = nullptr;
-    for (int i = 0; i < argc - 1; i++) {
-        if (!strcmp(argv[i + 1], "-gamedir") && argv[i + 2]) {
-            directory = argv[i + 2];
-            break;
-        }
-    }
+    if (!gEngine.init(argc, argv))
+        neoFatal("Failed to initialize engine");
 
-    gGamePath = directory ? directory : u::format(".%cgame%c", PATH_SEP, PATH_SEP);
-    if (gGamePath.find(PATH_SEP) == u::string::npos)
-        gGamePath += PATH_SEP;
-
-    // Get a path for the user
-    char *get = SDL_GetPrefPath("Neothyne", "");
-    gUserPath = get;
-    gUserPath.pop_back(); // Remove additional path separator
-    SDL_free(get);
-
-    // Verify all the paths exist for the user directory. If they don't exist
-    // create them.
-    static const char *paths[] = {
-        "screenshots", "cache"
-    };
-
-    for (size_t i = 0; i < sizeof(paths)/sizeof(*paths); i++) {
-        u::string path = gUserPath + paths[i];
-        if (u::exists(path, u::kDirectory))
-            continue;
-        u::mkdir(path);
-    }
-
-    readConfig();
-
-    gScreen = getContext();
-
-    neoSetVSyncOption(vid_vsync);
-    gTimer.cap(vid_maxfps.get());
-
-    SDL_ShowCursor(0);
-
+    // Setup OpenGL
     gl::init();
 
-    // back face culling
     gl::FrontFace(GL_CW);
     gl::CullFace(GL_BACK);
     gl::Enable(GL_CULL_FACE);
@@ -441,16 +504,17 @@ static int entryPoint(int argc, char **argv) {
     gl::Enable(GL_LINE_SMOOTH);
     gl::Hint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 
-    const char *vendor = (const char *)gl::GetString(GL_VENDOR);
-    const char *renderer = (const char *)gl::GetString(GL_RENDERER);
-    const char *version = (const char *)gl::GetString(GL_VERSION);
-    const char *shader = (const char *)gl::GetString(GL_SHADING_LANGUAGE_VERSION);
+    auto vendor = (const char *)gl::GetString(GL_VENDOR);
+    auto renderer = (const char *)gl::GetString(GL_RENDERER);
+    auto version = (const char *)gl::GetString(GL_VERSION);
+    auto shader = (const char *)gl::GetString(GL_SHADING_LANGUAGE_VERSION);
 
     u::print("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\n",
         vendor, renderer, version, shader);
-    u::print("Game: %s\nUser: %s\n", neoGamePath(), neoUserPath());
+    u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
 
-    int status = neoMain(gTimer, argc, argv);
+    // Launch the game
+    int status = neoMain(gEngine.m_frameTimer, argc, argv);
     SDL_Quit();
     return status;
 }
@@ -500,3 +564,64 @@ int main(int argc, char **argv) {
     return entryPoint(argc, argv);
 }
 #endif
+
+// Global wrapper (for now)
+u::map<u::string, int> &neoKeyState(const u::string &key, bool keyDown, bool keyUp) {
+    return gEngine.keyState(key, keyDown, keyUp);
+}
+
+mouseState neoMouseState() {
+    return gEngine.mouse();
+}
+
+void neoMouseDelta(int *deltaX, int *deltaY) {
+    gEngine.mouseDelta(deltaX, deltaY);
+}
+
+void neoSwap() {
+    gEngine.swap();
+}
+
+size_t neoWidth() {
+    return gEngine.width();
+}
+
+size_t neoHeight() {
+    return gEngine.height();
+}
+
+void neoRelativeMouse(bool state) {
+    gEngine.relativeMouse(state);
+}
+
+bool neoRelativeMouse() {
+    return gEngine.relativeMouse();
+}
+
+void neoCenterMouse() {
+    gEngine.centerMouse();
+}
+
+void neoSetWindowTitle(const char *title) {
+    gEngine.setWindowTitle(title);
+}
+
+void neoResize(size_t width, size_t height) {
+    gEngine.resize(width, height);
+}
+
+const u::string &neoUserPath() {
+    return gEngine.userPath();
+}
+
+const u::string &neoGamePath() {
+    return gEngine.gamePath();
+}
+
+void neoBindSet(const u::string &what, void (*handler)()) {
+    gEngine.bindSet(what, handler);
+}
+
+void neoSetVSyncOption(int option) {
+    gEngine.setVSyncOption(option);
+}

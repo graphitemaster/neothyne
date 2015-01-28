@@ -69,6 +69,15 @@ inline mouseState::mouseState()
 {
 }
 
+void neoFatalError(const char *error);
+void *neoGetProcAddress(const char *proc);
+
+template <typename... Ts>
+inline void neoFatal(const char *fmt, const Ts&... ts) {
+    neoFatalError(u::format(fmt, ts...).c_str());
+}
+
+// Wrapper
 u::map<u::string, int> &neoKeyState(const u::string &key = "", bool keyDown = false, bool keyUp = false);
 mouseState neoMouseState();
 void neoMouseDelta(int *deltaX, int *deltaY);
@@ -84,16 +93,6 @@ const u::string &neoUserPath();
 const u::string &neoGamePath();
 void neoBindSet(const u::string &what, void (*handler)());
 void (*neoBindGet(const u::string &what))();
-
-void neoFatalError(const char *error);
-
-template <typename... Ts>
-inline void neoFatal(const char *fmt, const Ts&... ts) {
-    neoFatalError(u::format(fmt, ts...).c_str());
-}
-
 void neoSetVSyncOption(int option);
-
-void *neoGetProcAddress(const char *proc);
 
 #endif
