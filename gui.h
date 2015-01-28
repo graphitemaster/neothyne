@@ -158,7 +158,6 @@ const queue &commands();
 
 void begin(mouseState &mouse);
 void finish();
-void collect(size_t &active);
 
 }
 #endif

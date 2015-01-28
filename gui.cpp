@@ -5,75 +5,28 @@
 
 #include "u_misc.h"
 #include "u_map.h"
+#include "u_set.h"
 
 #include "m_const.h"
 
 namespace gui {
 
 static struct stringPool {
-    static constexpr size_t kTableSize = 1024;
-    static constexpr size_t kThreshold = 25; // Anything less is destroyed during collect phase
-
-    ~stringPool() {
-        for (size_t i = 0; i < kTableSize; i++) {
-            if (!m_table[i])
-                continue;
-            neoFree(m_table[i]->m_data);
-            neoFree(m_table[i]);
-        }
-    }
-
-    stringPool()
-        : m_active(0)
-    {
-        for (size_t i = 0; i < kTableSize; i++)
-            m_table[i] = nullptr;
-    }
-
-    const char *operator()(const char *data) {
-        const size_t length = strlen(data) + 1;
-        size_t hash = u::detail::sdbm((const void *)data, length) & (kTableSize - 1);
-        while (m_table[hash] && memcmp((const void *)m_table[hash]->m_data, (const void *)data, length))
-            hash = (hash + 1) & (kTableSize - 1);
-        if (m_table[hash]) {
-            m_table[hash]->m_count++;
-            return m_table[hash]->m_data;
-        }
-        m_table[hash] = neoMalloc(sizeof(entry));
-        m_table[hash]->m_data = (char *)memcpy(neoMalloc(length), (const void *)data, length);
-        m_active++;
-        return m_table[hash]->m_data;
-    }
-
-    void collect(size_t &active) {
-        for (size_t i = 0; i < kTableSize; i++) {
-            if (m_table[i] && m_table[i]->m_count < kThreshold) {
-                neoFree(m_table[i]->m_data);
-                neoFree(m_table[i]);
-                m_table[i] = nullptr;
-                m_active--;
-            }
-        }
-        active = m_active;
-    }
-
+    const char *operator()(const char *what);
+    void reset();
 private:
-    struct entry {
-        entry(const char *data)
-            : m_count(1)
-        {
-            const size_t length = strlen(data) + 1;
-            m_data = (char *)memcpy(neoMalloc(length), data, length);
-        }
-    private:
-        friend struct stringPool;
-        char *m_data;
-        size_t m_count;
-    };
-    entry *m_table[kTableSize];
-    size_t m_active;
-
+    u::set<u::string> m_pool;
 } gStringPool;
+
+inline const char *stringPool::operator()(const char *what) {
+    if (m_pool.find(what) == m_pool.end())
+        m_pool.insert(what);
+    return m_pool.find(what)->c_str();
+}
+
+inline void stringPool::reset() {
+    m_pool.clear();
+}
 
 void queue::addScissor(int x, int y, int w, int h) {
     if (m_commands.full()) return;
@@ -781,6 +734,8 @@ const queue &commands() {
 }
 
 void begin(mouseState &mouse) {
+    gStringPool.reset();
+
     S.update(mouse);
 
     // This hot becomes the nextHot
@@ -800,10 +755,6 @@ void begin(mouseState &mouse) {
 
 void finish() {
     S.clearInput();
-}
-
-void collect(size_t &active) {
-    gStringPool.collect(active);
 }
 
 }

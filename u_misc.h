@@ -9,6 +9,9 @@
 #include "u_memory.h" // u::unique_ptr
 
 namespace u {
+namespace detail {
+    int c99vsnprintf(char *str, size_t maxSize, const char *format, va_list ap);
+}
 
 template <typename T>
 T endianSwap(T value) {
@@ -86,7 +89,7 @@ static inline u::string formatProcess(const char *fmt, ...) {
         formatted.reset(new char[n]);
         strcpy(&formatted[0], fmt);
         va_start(ap, fmt);
-        f = vsnprintf(&formatted[0], n, fmt, ap);
+        f = detail::c99vsnprintf(&formatted[0], n, fmt, ap);
         va_end(ap);
         if (f < 0 || f >= n)
             n += abs(f - n + 1);

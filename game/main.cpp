@@ -172,8 +172,6 @@ static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t
     return { ow, oh };
 }
 
-static constexpr size_t kCollectTime = 5; // Garbage collect phase for string pool in seconds
-
 static void setBinds() {
     neoBindSet("MouseDnL", []() {
         if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit))
@@ -320,7 +318,6 @@ int neoMain(frameTimer &timer, int, char **) {
     if (!gWorld.load("garden.kdgz"))
         neoFatal("failed to load world");
 
-    uint32_t lastTime = timer.ticks();;
     while (gRunning) {
         //if (!input)
         gClient.update(gWorld, timer.delta());
@@ -396,15 +393,6 @@ int neoMain(frameTimer &timer, int, char **) {
             gui::drawImage(mouse.x, mouse.y - (32 - 3), 32, 32, "<nocompress>textures/ui/cursor");
 
         gui::finish();
-
-        // Collect unused strings
-        if (timer.ticks() > lastTime + (1000 * kCollectTime)) {
-            size_t active = 0;
-            lastTime = timer.ticks();
-            gui::collect(active);
-            // DEBUG code
-            //u::print("%zu active strings\n", active);
-        }
     }
 
     return 0;
