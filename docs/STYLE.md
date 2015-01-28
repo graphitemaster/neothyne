@@ -1,5 +1,9 @@
 # Header files
-All header files should have a header guard in the form of "FILENAME_HDR
+All header files should have a header guard in the form of
+    #ifndef FILENAME_HDR
+    #define FILENAME_HDR
+    ...
+    #endif
 
 The use of #pragma once is forbidden.
 
@@ -62,7 +66,7 @@ namespace's contents should be indented. An example is provided below.
     namespace detail {
         void bar(); // However their contents are
     }
-    
+
     }
 
 When working with implementation details that cannot be hid it's often common to
@@ -99,7 +103,7 @@ functions should. An example is provided below.
         void setFoo(int foo) {
             m_foo = foo;
         }
-        
+
         int foo() const {
             return m_foo;
         }
@@ -163,13 +167,13 @@ the use of the qualifier is inappropriate.
 
 # Integer types
 When working with sizes always use size_t. Lots of functions that utilize sizes
-depend on size_t as part of their interface contract. Blindly breaking this with
+depend on `size_t` as part of their interface contract. Blindly breaking this with
 the usage of integers is forbidden.
 
 The use of short, long and long long is forbidden.
 
 For situations when the exact size of types is important, make appropriate
-use of <stdint.h>
+use of `<stdint.h>`
 
 # Typedefs and using
 Typedefs and using are discouraged, but not forbidden. Use typedef and using
@@ -186,7 +190,7 @@ of indicating error through other means.
 The use of default arguments is discouraged if the function's address may be
 taken in the context of a function pointer.
 
-Functions which do not return shall be marked [[noreturn]].
+Functions which do not return shall be marked `[[noreturn]]`.
 
 Functions taking arrays should do so in the form of a 'reference to array',
 opposed to pointer-to-array with optional size argument. This gives the compiler
@@ -214,14 +218,14 @@ and constant variables.
 # Null considered harmful
 The use of anything but nullptr for pointers is forbidden.
 
-For variable argument functions it's always explicitly use (void*)0 as a NULL
-variable argument instead of nullptr or NULL.
+For variable argument functions always explicitly use `(void*)0` as a `NULL`
+variable argument instead of `nullptr` or `NULL`.
 
 # Sizeof
-Prefer sizeof(varname) to sizeof(type).
+Prefer `sizeof(varname)` to `sizeof(type)`.
 
 # Auto
-The use of auto is only encouraged if the typename is long or ends up being written
+The use of `auto` is only encouraged if the typename is long or ends up being written
 more than once. Otherwise the use of it is discouraged as it can break readability.
 Some examples are provided below.
 
@@ -244,7 +248,7 @@ Use lambdas expressions where appropriate.
 Never use default lambda captures; write all captures explicitly.
 
 # Memory
-The use of new and delete is discouraged except in the context of unique_ptr.
+The use of new and delete is discouraged except in the context of `unique_ptr`.
 
 When implementing container types, it's encouraged you utilize raw memory allocation
 mechanisms like malloc/realloc/free and use placement new to initialize objects.
@@ -252,27 +256,31 @@ The reason for this is new/delete leave very little room for optimization and
 have an unintended overhead. Things like vector<T> can be made much more efficient
 if it utilizes realloc to resize the memory in favor of throwing away its
 internal memory every time a resize is needed. To correctly do this, the use of
-is_pod<T> is required.
+`is_pod<T>` is required.
 
-Use unique_ptr<T> whenever possible over T*.
+Use `unique_ptr<T>` whenever possible over `T*`.
 
 When not implementing container types and raw memory is needed, use
-vector<unsigned char>.
+`vector<unsigned char>`.
 
 # Exceptions
 The use of exceptions is forbidden.
 
 # Runtime type information
 Any operation that depends on runtime type information is forbidden. This
-includes, but is not limited to: dynamic_cast, virtual functions, typeid().
+includes, but is not limited to: `dynamic_cast`, virtual functions, `typeid()`.
 
 Decision trees based on type are a strong indication that the code is on the wrong
 track. You can often achieve the same effect with a tagged union.
 
 # Casting
 The use of C++ style casts is forbidden. The one notable exception to this
-is when implementing forward or move which requires the use of 'static_cast'.
+is when implementing forward or move which requires the use of `static_cast`.
 In all other situations, use C style casts.
+
+# Shifting
+Avoid the use of undefined shifts like signed left shifts. Neothyne has a
+utility that allows safely doing this called `u::sls`.
 
 # Vectors
 The use of vector is encouraged for all tasks that are not key, or key-value
@@ -286,7 +294,7 @@ reserve or resize the vector to accommodate the append.
 Linked lists are forbidden for any task.
 
 # Map/Set
-Only use unordered_map and unordered_set. The use of map and set is otherwise
+Only use `unordered_map` and `unordered_set`. The use of map and set is otherwise
 forbidden.
 
 # Strings
@@ -294,7 +302,7 @@ The use of a managed string type is encouraged if and only if all paths leading
 to it are mutable. If even a single path leading to it is immutable, then the use
 of a managed string type is discouraged.
 
-Try to avoid using expensive operations like pop_front.
+Try to avoid using expensive operations like `pop_front()`.
 
 When appending content to an existing string of which the length is known, always
 favor the methods which allow you to specify the length as an optional argument.
@@ -309,16 +317,16 @@ templates to create a more feature-rich printf.
 # Printf and family
 Using the correct format specifier for types is something that still eludes people.
 
-When printing a size_t always use %zu as the format specifier.
+When printing a `size_t` always use *%zu* as the format specifier.
 
-When printing a pointer always cast it to (void*) and always use %p. Never use
-%x or %lx.
+When printing a pointer always cast it to `(void*)` and always use *%p*. Never use
+*%x* or *%lx*.
 
-When printing int64_t use %"PRId64".
+When printing `int64_t` use *%"PRId64"*.
 
-When printing uint64_t use %"PRIu64" or %"PRIx64"
+When printing `uint64_t` use *%"PRIu64"* or *%"PRIx64"*
 
-When printing ptrdiff_t use %"PRIds"
+When printing `ptrdiff_t` use *%"PRIds"*
 
 # Boost
 The use of the boost libraries is forbidden.
@@ -358,7 +366,7 @@ A small code example is provided below to show the naming
             , type(type)
         {
         }
-        
+
         int fd;
         int type;
 
@@ -368,7 +376,7 @@ A small code example is provided below to show the naming
                 ;
             m_alive = getAck();
         }
-        
+
     private:
         bool m_alive;
     };
@@ -449,7 +457,7 @@ lines
                 ? ohLookAnotherOne()
                 : onFalseAnotherOne()
             : finaFalseThing();
-            
+
 Switch statements should never use braces for blocks. If you need locals for
 a case, lift them outside the switch statement.
 
