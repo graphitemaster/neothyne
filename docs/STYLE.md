@@ -53,7 +53,7 @@ or word would be the name of the namespace; for instance, utilities should go in
 the namespace, appropriately named "utility".
 
 Namespace names should be short, concise, and easy to type repeatedly as the
-use of "using namespace" is discouraged.
+use of `using namespace` is discouraged.
 
 Don't indent contents of the namespace the same way other scopes are indented,
 everything should stay on the first column in a namespace; however a nested
@@ -80,25 +80,25 @@ Unnamed and inline namespaces are forbidden.
 Avoid doing complex initialization in constructors. Constructors can never, and
 should never fail as there is no way to indicate errors, short of using exceptions
 (which are forbidden.) If the object requires non-trivial initialization, consider
-using an init() function.
+using an `init()` function.
 
 If the class defines member variables, every variable must be explicitly initialized
 in all class constructors initializers-lists. If the member variable cannot be
 initialized in the initializer-list, then it should be initialized in the body of
 the constructor.
 
-The use of the 'explicit' keyword for class constructors is encouraged whenever
+The use of the `explicit` keyword for class constructors is encouraged whenever
 appropriate.
 
 Use delegating and inheriting constructors when they reduce code duplication.
 
-Never use the 'class' keyword, always use 'struct'. The former is private by
+Never use the `class` keyword, always use `struct`. The former is private by
 default which is wrong as private members should always be at the bottom of
 the class definition.
 
-The use of private, public and protected is encouraged but not required, if how
-ever it is used, accessor functions should not be prefixed with "get", but mutator
-functions should. An example is provided below.
+The use of `private:`, `public:` and `protected:` is encouraged but not required,
+if how ever it is used, accessor functions should not be prefixed with "get", but
+mutator functions should. An example is provided below.
 
     struct foo {
         void setFoo(int foo) {
@@ -124,13 +124,13 @@ reasonably said that 'bar' "is-a kind of" 'foo'.
 
 Multiple inheritance is forbidden.
 
-The use of 'virtual' is forbidden.
+The use of `virtual` is forbidden.
 
 Operator overloading is discouraged for everything except container types that
 are trying to act as if they were built-in types and maths types like vectors,
 matrices, quaternions, etc. The use of user-defined literals is forbidden.
 
-All classes should have a swap function that does a shallow-swap.
+All container classes should have a `swap()` function that does a shallow-swap.
 
 The use of friend classes and functions is allowed within reason. Friends should
 only be used if the encapsulation boundary of the class should be extended to the
@@ -142,42 +142,42 @@ All parameters passed by reference must be labeled const.
 
 All parameters passed by pointer and reference must satisfy the restrict argument
 in that the reference or pointer is not aliased in the local context. All functions
-must satisfy this constraint, thus functions like 'memmove' are not possible and
-are forbidden. This doesn't mean you shouldn't use memmove, it just means you're
-forbid from writing a function like memmove.
+must satisfy this constraint, thus functions like `memmove` are not possible and
+are forbidden. This doesn't mean you shouldn't use `memmove`, it just means you're
+forbid from writing a function like `memmove`.
 
-Use rvalue references when appropriate. The use of 'forward' is encouraged.
+Use rvalue references when appropriate. The use of `forward` is encouraged.
 
-Using raw pointers for raw memory is discouraged, use vector<T>
-or unique_ptr<T[]> instead.
+Using raw pointers for raw memory is discouraged, use `vector<T>`
+or `unique_ptr<T[]>` instead.
 
 The use of raw pointers is encouraged in situations where references cannot be
 used.
 
 # Const and constexpr
-Use const and constexpr where ever possible.
+Use `const` and `constexpr` where ever possible.
 
 Constants should always be prefixed with 'k'. An example is provided below.
 
     constexpr size_t kSomething = 1024;
 
 Use const cv-qualification where ever possible except when the function clearly
-breaks cv-q indirectly, the use of 'const' is a good indicator of if the function
+breaks cv-q indirectly, the use of `const` is a good indicator of if the function
 mutates what is passed. If it's marked const but still mutates indirectly, then
 the use of the qualifier is inappropriate.
 
 # Integer types
-When working with sizes always use size_t. Lots of functions that utilize sizes
+When working with sizes always use `size_t`. Lots of functions that utilize sizes
 depend on `size_t` as part of their interface contract. Blindly breaking this with
 the usage of integers is forbidden.
 
-The use of short, long and long long is forbidden.
+The use of `short`, `long` and `long long` is forbidden.
 
 For situations when the exact size of types is important, make appropriate
 use of `<stdint.h>`
 
 # Typedefs and using
-Typedefs and using are discouraged, but not forbidden. Use typedef and using
+Typedefs and using are discouraged, but not forbidden. Use `typedef` and `using`
 very carefully as they can hide important type information.
 
 # Functions
@@ -185,8 +185,8 @@ Function overloading is discouraged if the overload only exists to satisfy a
 different type. Use a templated function instead to suppress implicit type
 conversion rules of the language.
 
-For functions which need to indicate failure or error state, use optional<T> instead
-of indicating error through other means.
+For functions which need to indicate failure or error state, use `optional<T>`
+instead of indicating error through other means.
 
 The use of default arguments is discouraged if the function's address may be
 taken in the context of a function pointer.
@@ -249,12 +249,12 @@ Use lambdas expressions where appropriate.
 Never use default lambda captures; write all captures explicitly.
 
 # Memory
-The use of new and delete is discouraged except in the context of `unique_ptr`.
+The use of `new` and `delete` is discouraged except in the context of `unique_ptr`.
 
 When implementing container types, it's encouraged you utilize raw memory allocation
 mechanisms like malloc/realloc/free and use placement new to initialize objects.
 The reason for this is new/delete leave very little room for optimization and
-have an unintended overhead. Things like vector<T> can be made much more efficient
+have an unintended overhead. Things like `vector<T>` can be made much more efficient
 if it utilizes realloc to resize the memory in favor of throwing away its
 internal memory every time a resize is needed. To correctly do this, the use of
 `is_pod<T>` is required.
@@ -311,7 +311,7 @@ If no such means are possible, then utilize the reserve function of the string
 object.
 
 # Streams
-Streams are forbidden. The use of printf and family is already type-checked by
+Streams are forbidden. The use of `printf` and family is already type-checked by
 most major compilers and is much easier to utilize. You can always use variadic
 templates to create a more feature-rich printf.
 
