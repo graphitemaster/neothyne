@@ -23,7 +23,7 @@ VAR(int, vid_height, "resolution height", 0, 8640, 0);
 VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
 
-/// pimpl contex
+/// pimpl context
 struct context {
     struct controller {
         controller() = default;
@@ -79,7 +79,7 @@ inline void context::delController(int instance) {
     }
 }
 
-context::controller *context::getController(int id) {
+inline context::controller *context::getController(int id) {
     if (m_controllers.find(id) == m_controllers.end())
         return nullptr;
     return &m_controllers[id];
