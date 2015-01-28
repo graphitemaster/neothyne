@@ -6,9 +6,10 @@
 #include "u_string.h"
 #include "u_misc.h"
 
+/// Frame timer
 struct frameTimer {
-    static constexpr size_t kMaxFPS = 0; // For capping framerate (0 = disabled)
-    static constexpr float kDampenEpsilon = 0.00001f; // The dampening to remove flip-flip in frame metrics
+    static constexpr size_t kMaxFPS = 0; ///< For capping framerate (0 = disabled)
+    static constexpr float kDampenEpsilon = 0.00001f; ///< Dampening to stabilize framerate readings
 
     frameTimer();
 
@@ -41,6 +42,7 @@ private:
     bool m_lock;
 };
 
+/// Types of frame synchronization methods
 enum {
     kSyncTear = -1, ///< Late swap tearing
     kSyncNone,      ///< No vertical syncronization
@@ -48,17 +50,17 @@ enum {
     kSyncRefresh    ///< No vertical syncronization, cap framerate to monitor refresh rate
 };
 
+/// Represents the given mouse state
 struct mouseState {
     mouseState();
-    // kMouseButton flags for packet
     enum {
-        kMouseButtonLeft = 1 << 0,
-        kMouseButtonRight = 1 << 1
+        kMouseButtonLeft = 1 << 0, ///< left mouse button
+        kMouseButtonRight = 1 << 1 ///< right mouse button
     };
-    int x;
-    int y;
-    int wheel;
-    int button;
+    int x; ///< x position
+    int y; ///< y position
+    int wheel; ///< wheel value
+    int button; ///< flags
 };
 
 inline mouseState::mouseState()
@@ -68,6 +70,50 @@ inline mouseState::mouseState()
     , button(0)
 {
 }
+
+/// Engine object
+struct engine {
+    engine();
+    bool init(int argc, char **argv);
+
+    typedef void (*bindFunction)();
+
+    u::map<u::string, int> &keyState(const u::string &key = "", bool keyDown = false, bool keyUp = false);
+    void mouseDelta(int *deltaX, int *deltaY);
+    mouseState mouse() const;
+    void bindSet(const u::string &what, bindFunction handler);
+    void swap();
+    size_t width() const;
+    size_t height() const;
+    void relativeMouse(bool state);
+    bool relativeMouse();
+    void centerMouse();
+    void setWindowTitle(const char *title);
+    void resize(size_t width, size_t height);
+    void setVSyncOption(int option);
+
+    const u::string &userPath() const;
+    const u::string &gamePath() const;
+
+    frameTimer m_frameTimer; // TODO: private
+
+protected:
+    bool initWindow();
+    bool initTimers();
+    bool initData(int argc, char **argv);
+
+private:
+    u::map<u::string, int> m_keyMap;
+    u::map<u::string, bindFunction> m_binds;
+    u::string m_userPath;
+    u::string m_gamePath;
+    u::string m_textInput;
+    mouseState m_mouseState;
+    size_t m_screenWidth;
+    size_t m_screenHeight;
+    size_t m_refreshRate;
+    void *m_context; ///< pimpl for context
+};
 
 void neoFatalError(const char *error);
 void *neoGetProcAddress(const char *proc);

@@ -407,7 +407,5 @@ int neoMain(frameTimer &timer, int, char **) {
         }
     }
 
-    writeConfig();
-
     return 0;
 }

@@ -267,7 +267,7 @@ u::optional<u::string> varValue(const u::string &name);
 #define NVAR(TYPE, NAME, ...) \
     static var<TYPE> NAME(0, #NAME, __VA_ARGS__);
 
-bool writeConfig();
-bool readConfig();
+bool writeConfig(const u::string &userPath);
+bool readConfig(const u::string &userPath);
 
 #endif

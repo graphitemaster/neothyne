@@ -104,8 +104,8 @@ varStatus varChange(const u::string &name, const u::string &value, bool callback
     return kVarTypeError;
 }
 
-bool writeConfig() {
-    u::file file = u::fopen(neoUserPath() + "init.cfg", "w");
+bool writeConfig(const u::string &userPath) {
+    u::file file = u::fopen(userPath + "init.cfg", "w");
     if (!file)
         return false;
     auto writeLine = [](FILE *fp, const u::string &name, const varReference &ref) {
@@ -134,8 +134,8 @@ bool writeConfig() {
     return true;
 }
 
-bool readConfig() {
-    u::file file = u::fopen(neoUserPath() + "init.cfg", "r");
+bool readConfig(const u::string &userPath) {
+    u::file file = u::fopen(userPath + "init.cfg", "r");
     if (!file)
         return false;
     while (auto getline = u::getline(file)) {

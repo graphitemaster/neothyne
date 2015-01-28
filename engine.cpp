@@ -10,8 +10,6 @@
 #include "u_file.h"
 #include "u_misc.h"
 
-typedef void (*bindFunction)();
-
 // maximum resolution is 15360x8640 (8640p) (16:9)
 // default resolution is 1024x768 (XGA) (4:3)
 static constexpr int kDefaultScreenWidth = 1024;
@@ -26,58 +24,19 @@ VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
 
 /// engine
-static struct engine {
-    engine();
-    bool init(int argc, char **argv);
+static engine gEngine;
 
-    u::map<u::string, int> &keyState(const u::string &key = "", bool keyDown = false, bool keyUp = false);
-    void mouseDelta(int *deltaX, int *deltaY);
-    mouseState mouse() const;
-    void bindSet(const u::string &what, bindFunction handler);
-    void swap();
-    size_t width() const;
-    size_t height() const;
-    void relativeMouse(bool state);
-    bool relativeMouse();
-    void centerMouse();
-    void setWindowTitle(const char *title);
-    void resize(size_t width, size_t height);
-    void setVSyncOption(int option);
-    const u::string &userPath() const;
-    const u::string &gamePath();
-
-    frameTimer m_frameTimer; // TODO: private
-
-protected:
-    bool initWindow();
-    bool initTimer();
-    bool initData(int argc, char **argv);
-
-private:
-    u::map<u::string, int> m_keyMap;
-    u::map<u::string, bindFunction> m_binds;
-    u::string m_userPath;
-    u::string m_gamePath;
-    u::string m_textInput;
-
-    mouseState m_mouseState;
-    size_t m_screenWidth;
-    size_t m_screenHeight;
-    size_t m_refreshRate;
-    SDL_Window *m_window;
-} gEngine;
-
-inline engine::engine()
+engine::engine()
     : m_screenWidth(0)
     , m_screenHeight(0)
     , m_refreshRate(0)
-    , m_window(nullptr)
+    , m_context(nullptr)
 {
 }
 
 bool engine::init(int argc, char **argv) {
     // Establish local timers for the engine
-    if (!initTimer())
+    if (!initTimers())
         return false;
     // Establish game and user directories + configuration
     if (!initData(argc, argv))
@@ -155,7 +114,7 @@ bool engine::initWindow() {
     uint32_t flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     if (vid_fullscreen)
         flags |= SDL_WINDOW_FULLSCREEN;
-    m_window = SDL_CreateWindow("Neothyne",
+    m_context = (void *)SDL_CreateWindow("Neothyne",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         m_screenWidth,
@@ -163,14 +122,14 @@ bool engine::initWindow() {
         flags
     );
 
-    if (!m_window || !SDL_GL_CreateContext(m_window)) {
+    if (!m_context || !SDL_GL_CreateContext((SDL_Window*)m_context)) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
             "Neothyne: Initialization error",
             "OpenGL 3.3 or higher is required",
             nullptr
         );
-        if (m_window)
-            SDL_DestroyWindow(m_window);
+        if (m_context)
+            SDL_DestroyWindow((SDL_Window*)m_context);
         SDL_Quit();
     }
 
@@ -180,7 +139,7 @@ bool engine::initWindow() {
     return true;
 }
 
-bool engine::initTimer() {
+bool engine::initTimers() {
     m_frameTimer.reset();
     m_frameTimer.cap(frameTimer::kMaxFPS);
     return true;
@@ -223,7 +182,7 @@ bool engine::initData(int argc, char **argv) {
     }
 
     // Established game and user data paths, now load the config
-    return readConfig();
+    return readConfig(m_gamePath);
 }
 
 u::map<u::string, int> &engine::keyState(const u::string &key, bool keyDown, bool keyUp) {
@@ -248,7 +207,7 @@ void engine::bindSet(const u::string &what, void (*handler)()) {
 }
 
 void engine::swap() {
-    SDL_GL_SwapWindow(m_window);
+    SDL_GL_SwapWindow((SDL_Window*)m_context);
     m_frameTimer.update();
 
     auto callBind = [this](const char *what) {
@@ -335,15 +294,15 @@ bool engine::relativeMouse() {
 }
 
 void engine::centerMouse() {
-    SDL_WarpMouseInWindow(m_window, m_screenWidth / 2, m_screenHeight / 2);
+    SDL_WarpMouseInWindow((SDL_Window*)m_context, m_screenWidth / 2, m_screenHeight / 2);
 }
 
 void engine::setWindowTitle(const char *title) {
-    SDL_SetWindowTitle(m_window, title);
+    SDL_SetWindowTitle((SDL_Window*)m_context, title);
 }
 
 void engine::resize(size_t width, size_t height) {
-    SDL_SetWindowSize(m_window, width, height);
+    SDL_SetWindowSize((SDL_Window*)m_context, width, height);
     m_screenWidth = width;
     m_screenHeight = height;
     gl::Viewport(0, 0, width, height);
@@ -377,7 +336,7 @@ const u::string &engine::userPath() const {
     return m_userPath;
 }
 
-const u::string &engine::gamePath() {
+const u::string &engine::gamePath() const {
     return m_gamePath;
 }
 
@@ -471,6 +430,7 @@ uint32_t frameTimer::ticks() const {
 
 // Global functions
 void neoFatalError(const char *error) {
+    writeConfig(gEngine.userPath());
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error", error, nullptr);
     abort();
 }
@@ -515,6 +475,7 @@ static int entryPoint(int argc, char **argv) {
 
     // Launch the game
     int status = neoMain(gEngine.m_frameTimer, argc, argv);
+    writeConfig(gEngine.userPath());
     SDL_Quit();
     return status;
 }
