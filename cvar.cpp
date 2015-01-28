@@ -4,7 +4,8 @@
 #include "u_file.h"
 
 struct varReference;
-static u::map<u::string, varReference> *vars = nullptr;
+
+static u::map<u::string, varReference> *gVariables = nullptr;
 
 struct varReference {
     varReference()
@@ -27,9 +28,9 @@ struct varReference {
 };
 
 static u::map<u::string, varReference> &variables() {
-    if (vars)
-        return *vars;
-    return *(vars = new u::map<u::string, varReference>());
+    if (gVariables)
+        return *gVariables;
+    return *(gVariables = new u::map<u::string, varReference>());
 }
 
 // public API
