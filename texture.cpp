@@ -198,17 +198,17 @@ private:
     // fast integer discrete cosine transform
     void rowIDCT(int* blk) {
         int x0, x1, x2, x3, x4, x5, x6, x7, x8;
-        if (!((x1 = blk[4] << 11)
+        if (!((x1 = u::sls(blk[4], 11))
             | (x2 = blk[6]) | (x3 = blk[2])
             | (x4 = blk[1]) | (x5 = blk[7])
             | (x6 = blk[5]) | (x7 = blk[3])))
         {
-            int value = blk[0] << 3;
+            int value = u::sls(blk[0], 3);
             for (size_t i = 0; i < 8; i++)
                 blk[i] = value;
             return;
         }
-        x0 = (blk[0] << 11) + 128;
+        x0 = u::sls(blk[0], 11) + 128;
         x8 = kW7 * (x4 + x5);
         x4 = x8 + (kW1 - kW7) * x4;
         x5 = x8 - (kW1 + kW7) * x5;
@@ -242,7 +242,7 @@ private:
 
     void columnIDCT(const int* blk, unsigned char *out, int stride) {
         int x0, x1, x2, x3, x4, x5, x6, x7, x8;
-        if (!((x1 = blk[8*4] << 8)
+        if (!((x1 = u::sls(blk[8*4], 8))
             | (x2 = blk[8*6]) | (x3 = blk[8*2])
             | (x4 = blk[8*1]) | (x5 = blk[8*7])
             | (x6 = blk[8*5]) | (x7 = blk[8*3])))
@@ -254,7 +254,7 @@ private:
             }
             return;
         }
-        x0 = (blk[0] << 8) + 8192;
+        x0 = u::sls(blk[0], 8) + 8192;
         x8 = kW7 * (x4 + x5) + 4;
         x4 = (x8 + (kW1 - kW7) * x4) >> 3;
         x5 = (x8 - (kW1 + kW7) * x5) >> 3;
@@ -292,14 +292,14 @@ private:
             return 0;
         while (m_bufbits < bits) {
             if (m_size <= 0) {
-                m_buf = (m_buf << 8) | 0xFF;
+                m_buf = u::sls(m_buf, 8) | 0xFF;
                 m_bufbits += 8;
                 continue;
             }
             newbyte = *m_position++;
             m_size--;
             m_bufbits += 8;
-            m_buf = (m_buf << 8) | newbyte;
+            m_buf = u::sls(m_buf, 8) | newbyte;
             if (newbyte == 0xFF) {
                 if (m_size) {
                     unsigned char marker = *m_position++;
@@ -314,7 +314,7 @@ private:
                             if ((marker & 0xF8) != 0xD0)
                                 m_error = kMalformatted;
                             else {
-                                m_buf = (m_buf << 8) | marker;
+                                m_buf = u::sls(m_buf, 8) | marker;
                                 m_bufbits += 8;
                             }
                     }
@@ -519,7 +519,7 @@ private:
         if (!(bits = value & 15))
             return 0;
         if ((value = getBits(bits)) < (1 << (bits - 1)))
-            value += ((-1) << bits) + 1;
+            value += u::sls(-1, bits) + 1;
         return value;
     }
 

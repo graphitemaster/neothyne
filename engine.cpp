@@ -264,7 +264,6 @@ bool engine::initData(int &argc, char **argv) {
             continue;
         if (u::mkdir(path))
             continue;
-        return false;
     }
 
     // Established game and user data paths, now load the config

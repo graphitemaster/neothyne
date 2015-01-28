@@ -220,6 +220,12 @@ struct is_const : false_type {};
 template <typename T>
 struct is_const<const T> : true_type {};
 
+/// is_volatile
+template <typename T>
+struct is_volatile : false_type {};
+template <typename T>
+struct is_volatile<volatile T> : true_type {};
+
 /// is_void
 namespace detail {
     template <typename T>
@@ -434,6 +440,190 @@ template <typename T>
 inline constexpr T &&forward(typename remove_reference<T>::type &&t) noexcept {
     return static_cast<T&&>(t);
 }
+
+namespace detail {
+    template <typename H, typename T>
+    struct types {
+        typedef H head;
+        typedef T tail;
+    };
+
+    // nat: not a type
+    struct nat {
+        nat() = delete;
+        nat(const nat&) = delete;
+        nat &operator=(const nat&) = delete;
+        ~nat() = delete;
+    };
+
+    typedef types<signed char,
+            types<signed short,
+            types<signed int,
+            types<signed long,
+            types<signed long long, nat>>>>> signed_types;
+
+    typedef types<unsigned char,
+            types<unsigned short,
+            types<unsigned int,
+            types<unsigned long,
+            types<unsigned long long, nat>>>>> unsigned_types;
+
+    // Given a type list recursively instantiate until we find the given type
+    template <typename L, size_type S, bool = S <= sizeof(typename L::head)>
+    struct find_first_type;
+    template <typename H, typename T, size_type S>
+    struct find_first_type<types<H, T>, S, true> {
+        typedef H type;
+    };
+    template <typename H, typename T, size_type S>
+    struct find_first_type<types<H, T>, S, false> {
+        typedef typename find_first_type<T, S>::type type;
+    };
+
+    // For make_signed, make_unsigned we need to also apply the right cv
+    template <typename T, typename U, bool = is_const<typename remove_reference<T>::type>::value,
+                                      bool = is_volatile<typename remove_reference<T>::type>::value>
+    struct apply_cv {
+        typedef U type;
+    };
+    template <typename T, typename U>
+    struct apply_cv<T, U, true, false> { // is_const
+        typedef const U type;
+    };
+    template <typename T, typename U>
+    struct apply_cv<T, U, false, true> { // is_volatile
+        typedef volatile U type;
+    };
+    template <typename T, typename U>
+    struct apply_cv<T, U, true, true> { // is_const && is_volatile
+        typedef const volatile U type;
+    };
+    template <typename T, typename U>
+    struct apply_cv<T&, U, true, false> { // T& is_const
+        typedef const U& type;
+    };
+    template <typename T, typename U>
+    struct apply_cv<T&, U, false, true> { // T& is_volatile
+        typedef volatile U& type;
+    };
+    template <typename T, typename U>
+    struct apply_cv<T&, U, true, true> { // T& is_const && T& is_volatile
+        typedef const volatile U& type;
+    };
+
+    template <typename T, bool = is_integral<T>::value || is_enum<T>::value>
+    struct make_signed {};
+    template <typename T, bool = is_integral<T>::value || is_enum<T>::value>
+    struct make_unsigned {};
+    template <typename T>
+    struct make_signed<T, true> {
+        typedef typename find_first_type<signed_types, sizeof(T)>::type type;
+    };
+    template <typename T>
+    struct make_unsigned<T, true> {
+        typedef typename find_first_type<unsigned_types, sizeof(T)>::type type;
+    };
+
+    template <>
+    struct make_signed<bool, true> {};
+    template <>
+    struct make_signed<signed short, true> {
+        typedef short type;
+    };
+    template <>
+    struct make_signed<unsigned short, true> {
+        typedef short type;
+    };
+    template <>
+    struct make_signed<signed int, true> {
+        typedef int type;
+    };
+    template <>
+    struct make_signed<unsigned int, true> {
+        typedef int type;
+    };
+    template <>
+    struct make_signed<signed long, true> {
+        typedef long type;
+    };
+    template <>
+    struct make_signed<unsigned long, true> {
+        typedef long type;
+    };
+    template <>
+    struct make_signed<signed long long, true> {
+        typedef long long type;
+    };
+    template <>
+    struct make_signed<unsigned long long, true> {
+        typedef long long type;
+    };
+
+    template <>
+    struct make_unsigned<bool, true> {};
+    template <>
+    struct make_unsigned<signed short, true> {
+        typedef unsigned short type;
+    };
+    template <>
+    struct make_unsigned<unsigned short, true> {
+        typedef unsigned short type;
+    };
+    template <>
+    struct make_unsigned<signed int, true> {
+        typedef unsigned int type;
+    };
+    template <>
+    struct make_unsigned<unsigned int, true> {
+        typedef unsigned int type;
+    };
+    template <>
+    struct make_unsigned<signed long,true> {
+        typedef unsigned long type;
+    };
+    template <>
+    struct make_unsigned<unsigned long,true> {
+        typedef unsigned long type;
+    };
+    template <>
+    struct make_unsigned<signed long long, true> {
+        typedef unsigned long long type;
+    };
+    template <>
+    struct make_unsigned<unsigned long long, true> {
+        typedef unsigned long long type;
+    };
+}
+
+/// make_signed
+template <typename T>
+struct make_signed {
+    typedef typename detail::apply_cv<T, typename detail::make_signed<
+        typename remove_cv<T>::type>::type>::type type;
+};
+
+/// make_unsigned
+template <typename T>
+struct make_unsigned {
+    typedef typename detail::apply_cv<T, typename detail::make_unsigned<
+        typename remove_cv<T>::type>::type>::type type;
+};
+
+namespace detail {
+    template <typename T, bool = is_integral<T>::value>
+    struct is_signed_switch : integral_constant<bool, T(-1) < T(0)> {};
+    template <typename T>
+    struct is_signed_switch<T, false> : true_type {}; // floating point
+
+    template <typename T, bool = is_arithmetic<T>::value>
+    struct is_signed : is_signed_switch<T> {};
+    template <typename T>
+    struct is_signed<T, false> : false_type {};
+}
+
+/// is_signed
+template <typename T>
+struct is_signed : detail::is_signed<T> {};
 
 }
 
