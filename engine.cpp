@@ -23,15 +23,81 @@ VAR(int, vid_height, "resolution height", 0, 8640, 0);
 VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
 
+/// pimpl contex
+struct context {
+    struct controller {
+        controller() = default;
+    private:
+        friend struct engine;
+        friend struct context;
+        SDL_GameController *gamePad;
+        SDL_Joystick *joyStick;
+        const char *name;
+    };
+    ~context();
+    context();
+
+    void addController(int id);
+    void delController(int id);
+    controller *getController(int id);
+
+private:
+    friend struct engine;
+    u::map<int, controller> m_controllers;
+    SDL_Window *m_window;
+};
+
+#define CTX(X) ((context*)(X))
+
+inline context::context()
+    : m_window(nullptr)
+{
+}
+
+inline context::~context() {
+    if (m_window)
+        SDL_DestroyWindow(m_window);
+}
+
+inline void context::addController(int id) {
+    // Add the new game controller
+    controller cntrl;
+    cntrl.gamePad = SDL_GameControllerOpen(id);
+    cntrl.joyStick = SDL_GameControllerGetJoystick(cntrl.gamePad);
+    cntrl.name = SDL_GameControllerNameForIndex(id);
+    int instance = SDL_JoystickInstanceID(cntrl.joyStick);
+    m_controllers.insert({ instance, cntrl });
+
+    u::print("[input] => gamepad %d (%s) connected\n", instance, cntrl.name);
+}
+
+inline void context::delController(int instance) {
+    auto cntrl = getController(instance);
+    if (cntrl) {
+        u::print("[input] => gamepad %d (%s) disconnected\n", instance, cntrl->name);
+        SDL_GameControllerClose(cntrl->gamePad);
+    }
+}
+
+context::controller *context::getController(int id) {
+    if (m_controllers.find(id) == m_controllers.end())
+        return nullptr;
+    return &m_controllers[id];
+}
+
 /// engine
 static engine gEngine;
 
-engine::engine()
+inline engine::engine()
     : m_screenWidth(0)
     , m_screenHeight(0)
     , m_refreshRate(0)
     , m_context(nullptr)
 {
+}
+
+inline engine::~engine() {
+    delete CTX(m_context);
 }
 
 bool engine::init(int &argc, char **argv) {
@@ -42,7 +108,7 @@ bool engine::init(int &argc, char **argv) {
     if (!initData(argc, argv))
         return false;
     // Launch the context
-    if (!initWindow())
+    if (!initContext())
         return false;
 
     setVSyncOption(vid_vsync);
@@ -51,7 +117,7 @@ bool engine::init(int &argc, char **argv) {
     return true;
 }
 
-bool engine::initWindow() {
+bool engine::initContext() {
     const u::string &videoDriver = vid_driver.get();
     if (videoDriver.size()) {
         if (SDL_GL_LoadLibrary(videoDriver.c_str()) != 0) {
@@ -111,10 +177,13 @@ bool engine::initWindow() {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
+    u::unique_ptr<context> ctx(new context);
+
     uint32_t flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     if (vid_fullscreen)
         flags |= SDL_WINDOW_FULLSCREEN;
-    m_context = (void *)SDL_CreateWindow("Neothyne",
+
+    ctx->m_window = SDL_CreateWindow("Neothyne",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         m_screenWidth,
@@ -122,19 +191,27 @@ bool engine::initWindow() {
         flags
     );
 
-    if (!m_context || !SDL_GL_CreateContext((SDL_Window*)m_context)) {
+    if (!ctx->m_window || !SDL_GL_CreateContext(ctx->m_window)) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
             "Neothyne: Initialization error",
             "OpenGL 3.3 or higher is required",
             nullptr
         );
-        if (m_context)
-            SDL_DestroyWindow((SDL_Window*)m_context);
-        SDL_Quit();
+        return false;
     }
 
     // Hide the cursor for the window
     SDL_ShowCursor(0);
+
+    // Find all controllers (that may be plugged in)
+    for (int i = 0; i < SDL_NumJoysticks(); ++i) {
+        if (!SDL_IsGameController(i))
+            continue;
+        ctx->addController(i);
+    }
+
+    // Own the context now
+    m_context = (void*)ctx.release();
 
     return true;
 }
@@ -159,8 +236,8 @@ bool engine::initData(int &argc, char **argv) {
     }
 
     // Verify the game directory even exists
-    if (!u::exists(directory, u::kDirectory)) {
-        u::print("Game directory `%s' doesn't exist (falling back to .%sgame%c)",
+    if (directory && !u::exists(directory, u::kDirectory)) {
+        u::print("Game directory `%s' doesn't exist (falling back to .%sgame%c)\n",
             directory, u::kPathSep, u::kPathSep);
         directory = nullptr;
     }
@@ -216,7 +293,7 @@ void engine::bindSet(const u::string &what, void (*handler)()) {
 }
 
 void engine::swap() {
-    SDL_GL_SwapWindow((SDL_Window*)m_context);
+    SDL_GL_SwapWindow(CTX(m_context)->m_window);
     m_frameTimer.update();
 
     auto callBind = [this](const char *what) {
@@ -229,6 +306,12 @@ void engine::swap() {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
+        case SDL_CONTROLLERDEVICEADDED:
+            CTX(m_context)->addController(e.cdevice.which);
+            break;
+        case SDL_CONTROLLERDEVICEREMOVED:
+            CTX(m_context)->delController(e.cdevice.which);
+            break;
         case SDL_WINDOWEVENT:
             switch (e.window.event) {
             case SDL_WINDOWEVENT_RESIZED:
@@ -303,15 +386,15 @@ bool engine::relativeMouse() {
 }
 
 void engine::centerMouse() {
-    SDL_WarpMouseInWindow((SDL_Window*)m_context, m_screenWidth / 2, m_screenHeight / 2);
+    SDL_WarpMouseInWindow(CTX(m_context)->m_window, m_screenWidth / 2, m_screenHeight / 2);
 }
 
 void engine::setWindowTitle(const char *title) {
-    SDL_SetWindowTitle((SDL_Window*)m_context, title);
+    SDL_SetWindowTitle(CTX(m_context)->m_window, title);
 }
 
 void engine::resize(size_t width, size_t height) {
-    SDL_SetWindowSize((SDL_Window*)m_context, width, height);
+    SDL_SetWindowSize(CTX(m_context)->m_window, width, height);
     m_screenWidth = width;
     m_screenHeight = height;
     gl::Viewport(0, 0, width, height);
@@ -457,7 +540,7 @@ void *neoGetProcAddress(const char *proc) {
 static int entryPoint(int argc, char **argv) {
     extern int neoMain(frameTimer&, int argc, char **argv);
 
-    if (SDL_Init(SDL_INIT_VIDEO) != 0)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0)
         neoFatal("Failed to initialize SDL2");
 
     if (!gEngine.init(argc, argv))

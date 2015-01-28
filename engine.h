@@ -74,6 +74,8 @@ inline mouseState::mouseState()
 /// Engine object
 struct engine {
     engine();
+    ~engine();
+
     bool init(int &argc, char **argv);
 
     typedef void (*bindFunction)();
@@ -98,7 +100,7 @@ struct engine {
     frameTimer m_frameTimer; // TODO: private
 
 protected:
-    bool initWindow();
+    bool initContext();
     bool initTimers();
     bool initData(int &argc, char **argv);
 

@@ -104,12 +104,12 @@ inline u::string format(const char *fmt, const Ts&... ts) {
 template <typename... Ts>
 inline void fprint(FILE *fp, const char *fmt, const Ts&... ts) {
     fprintf(fp, "%s", format(fmt, ts...).c_str());
-    auto contents = format(fmt, ts...);
 }
 
 template <typename... Ts>
 inline void print(const char *fmt, const Ts&... ts) {
     fprint(stdout, fmt, ts...);
+    fflush(stdout);
 }
 
 }

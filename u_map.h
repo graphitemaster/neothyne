@@ -16,7 +16,6 @@ public:
 
     map& operator=(const map &other);
 
-
     typedef pair<K, V> value_type;
 
     typedef hash_iterator<const hash_node<K, V>> const_iterator;
