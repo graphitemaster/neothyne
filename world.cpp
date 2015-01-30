@@ -26,7 +26,7 @@ world::world()
 {
 }
 
-world::~world() {
+void world::unload(bool destroy) {
     delete m_directionalLight;
     for (auto &it : m_spotLights)
         delete it;
@@ -36,9 +36,32 @@ world::~world() {
         delete it;
     for (auto &it : m_playerStarts)
         delete it;
+
+    m_map.unload();
+    m_renderer.unload();
+
+    m_directionalLight = nullptr;
+
+    if (destroy) {
+        m_entities.destroy();
+        m_billboards.destroy();
+        m_spotLights.destroy();
+        m_pointLights.destroy();
+        m_mapModels.destroy();
+        m_playerStarts.destroy();
+        m_teleports.destroy();
+        m_jumppads.destroy();
+    }
+}
+
+world::~world() {
+    unload(false);
 }
 
 bool world::load(const u::vector<unsigned char> &data) {
+    // Unload any loaded ones before loading in the new one
+    if (isLoaded())
+        unload();
     if (!m_map.load(data))
         return false;
     m_billboards.resize(kBillboardCount);
@@ -47,6 +70,10 @@ bool world::load(const u::vector<unsigned char> &data) {
     m_billboards[kBillboardPlayerStart] = { "textures/icons/playerstart", 16.0f, true, { } };
     m_billboards[kBillboardTeleport] = { "textures/icons/teleport", 16.0f, true, { } };
     return true;
+}
+
+bool world::isLoaded() const {
+    return m_map.isLoaded();
 }
 
 bool world::load(const u::string &file) {
@@ -163,7 +190,10 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
         h->fraction = m::clamp(min, 0.0f, 1.0f);
     }
 
-    // Check the level geometry now
+    // Check the level geometry now (assuming one is loaded)
+    if (!m_map.isLoaded())
+        return ent;
+
     kdSphereTrace sphereTrace;
     sphereTrace.start = q.start;
     sphereTrace.direction = q.direction * maxDistance;

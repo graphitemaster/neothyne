@@ -39,6 +39,9 @@ struct string {
     string &append(char ch);
     string &append(const char *first, const char* last);
     string &append(const char *str, size_t len);
+    string &append(const char *str);
+
+    string &replace_all(const char *what, const char *with);
 
     char pop_back();
     char pop_front();

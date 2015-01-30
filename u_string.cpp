@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "u_algorithm.h"
 #include "u_string.h"
 #include "u_hash.h"
 #include "u_new.h"
@@ -94,7 +95,7 @@ string &string::append(const char *first, const char *last) {
 
     assert(m_first);
     assert(m_last);
-    
+
     for (; first != last; ++m_last, ++first)
         *m_last = *first;
     *m_last = '\0';
@@ -103,6 +104,27 @@ string &string::append(const char *first, const char *last) {
 
 string &string::append(const char *str, size_t len) {
     return append(str, str + len);
+}
+
+string &string::append(const char *str) {
+    return append(str, strlen(str));
+}
+
+string &string::replace_all(const char *before, const char *after) {
+    const size_t beforeLength = strlen(before);
+    string result;
+    const_iterator end_ = end();
+    const_iterator current = begin();
+    const_iterator next = search(current, end_, before, before + beforeLength);
+    while (next != end_) {
+        result.append(current, next);
+        result.append(after);
+        current = next + beforeLength;
+        next = search(current, end_, before, before + beforeLength);
+    }
+    result.append(current, next);
+    swap(result);
+    return *this;
 }
 
 char string::pop_back() {

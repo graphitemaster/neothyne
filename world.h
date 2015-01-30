@@ -100,6 +100,9 @@ struct world {
     bool upload(const m::perspective &p);
     void render(const r::pipeline &pl);
 
+    void unload(bool destroy = true);
+    bool isLoaded() const;
+
     // World entity descriptor
     struct descriptor {
         entity type;
