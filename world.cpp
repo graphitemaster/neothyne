@@ -37,6 +37,9 @@ void world::unload(bool destroy) {
     for (auto &it : m_playerStarts)
         delete it;
 
+    m_map.unload();
+    m_renderer.unload();
+
     m_directionalLight = nullptr;
 
     if (destroy) {
@@ -57,7 +60,8 @@ world::~world() {
 
 bool world::load(const u::vector<unsigned char> &data) {
     // Unload any loaded ones before loading in the new one
-    unload();
+    if (isLoaded())
+        unload();
     if (!m_map.load(data))
         return false;
     m_billboards.resize(kBillboardCount);

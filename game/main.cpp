@@ -256,7 +256,7 @@ int neoMain(frameTimer &timer, int, char **) {
     neoSetWindowTitle("Neothyne");
     neoCenterMouse();
 
-#if 0
+#if 1
     // Setup some lights
     const m::vec3 places[] = {
         m::vec3(153.04, 105.02, 197.67),
