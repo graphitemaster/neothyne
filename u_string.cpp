@@ -111,9 +111,7 @@ string &string::append(const char *str) {
 }
 
 string &string::replace_all(const char *before, const char *after) {
-    //string before = what;
-    //string after = with;
-    size_t beforeLength = strlen(before);
+    const size_t beforeLength = strlen(before);
     string result;
     const_iterator end_ = end();
     const_iterator current = begin();
