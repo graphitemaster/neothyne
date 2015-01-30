@@ -12,6 +12,7 @@
 namespace u {
 namespace detail {
     int c99vsnprintf(char *str, size_t maxSize, const char *format, va_list ap);
+    int c99vsscanf(const char *s, const char *format, va_list ap);
 }
 
 template <typename T>
@@ -35,7 +36,7 @@ T endianSwap(T value) {
 inline int sscanf(const u::string &thing, const char *fmt, ...) {
     va_list va;
     va_start(va, fmt);
-    int value = vsscanf(thing.c_str(), fmt, va);
+    int value = detail::c99vsscanf(thing.c_str(), fmt, va);
     va_end(va);
     return value;
 }
@@ -81,20 +82,16 @@ inline const char *formatNormalize(const u::string &argument) {
 }
 
 static inline u::string formatProcess(const char *fmt, ...) {
-    size_t n = strlen(fmt) * 2;
-    int f = 0;
     va_list ap;
-    for (;;) {
-        u::unique_ptr<char[]> formatted(new char[n]);
-        va_start(ap, fmt);
-        f = detail::c99vsnprintf(&formatted[0], n, fmt, ap);
-        va_end(ap);
-        if (f < 0 || size_t(f) >= n)
-            n += abs(f - n + 1);
-        else
-            return formatted.get();
-    }
-    return "";
+    va_start(ap, fmt);
+    int len = detail::c99vsnprintf(nullptr, 0, fmt, ap);
+    va_end(ap);
+    u::string data;
+    data.resize(len);
+    va_start(ap, fmt);
+    detail::c99vsnprintf(&data[0], len + 1, fmt, ap);
+    va_end(ap);
+    return move(data);
 }
 
 template <typename... Ts>

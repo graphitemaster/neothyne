@@ -14,11 +14,19 @@ namespace detail {
     static constexpr size_t kSizeCorrection = 0;
 #endif
     int c99vsnprintf(char *str, size_t maxSize, const char *format, va_list ap) {
+#ifdef _WIN32
+        // MSVCRT does not support %zu, so we convert it to %Iu
+        u::string fmt = format;
+        fmt.replace_all("%zu", "%Iu");
+#else
+        const char *fmt = format;
+#endif
+
         va_list cp;
         int ret = -1;
         if (maxSize > 0) {
             va_copy(cp, ap);
-            ret = vsnprintf(str, maxSize - kSizeCorrection, format, cp);
+            ret = vsnprintf(str, maxSize - kSizeCorrection, &fmt[0], cp);
             va_end(cp);
             if (ret == int(maxSize - 1))
                 ret = -1;
@@ -38,12 +46,22 @@ namespace detail {
             maxSize *= 4;
             u::unique_ptr<char[]> data(new char[maxSize]); // Try with a larger buffer
             va_copy(cp, ap);
-            ret = vsnprintf(&data[0], maxSize - kSizeCorrection, format, cp);
+            ret = vsnprintf(&data[0], maxSize - kSizeCorrection, &fmt[0], cp);
             va_end(cp);
             if (ret == int(maxSize - 1))
                 ret = -1;
         }
         return ret;
+    }
+
+    int c99vsscanf(const char *s, const char *format, va_list ap) {
+#ifdef _WIN32
+        u::string fmt = format;
+        fmt.replace_all("%zu", "%Iu");
+#else
+        const char *fmt = format;
+#endif
+        return vsscanf(s, &fmt[0], ap);
     }
 }
 

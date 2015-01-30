@@ -1,5 +1,6 @@
 CXX = $(CC)
 CXXFLAGS = \
+	-m32 \
 	-std=c++11 \
 	-Wall \
 	-Wextra \
@@ -8,7 +9,7 @@ CXXFLAGS = \
 	-fno-rtti \
 	-I. \
 	-DDEBUG_GL \
-	-O3 \
+	-g3 \
 	$(EXTRAFLAGS)
 
 ENGINE_CXXFLAGS = \
@@ -16,8 +17,11 @@ ENGINE_CXXFLAGS = \
 	`sdl2-config --cflags`
 
 ENGINE_LDFLAGS = \
+	-m32 \
 	-lm \
-	`sdl2-config --libs`
+	-lmingw32 \
+	-lSDL2 \
+	-mwindows
 
 GAME_SOURCES = \
 	game/menu.cpp \
