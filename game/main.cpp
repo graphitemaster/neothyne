@@ -14,7 +14,6 @@
 #include "u_file.h"
 #include "u_misc.h"
 #include "u_pair.h"
-#include "u_rand.h"
 
 // Game globals
 bool gRunning = true;

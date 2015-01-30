@@ -6,7 +6,7 @@
 #include "cvar.h"
 
 #include "u_set.h"
-#include "u_rand.h"
+#include "u_misc.h"
 
 extern bool gPlaying;
 extern bool gRunning;

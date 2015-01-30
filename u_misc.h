@@ -2,6 +2,7 @@
 #define U_MISC_HDR
 #include <stdarg.h>  // va_start, va_end, va_list
 #include <string.h>  // strcpy
+#include <stdint.h> // uint32_t
 #include <stdio.h>
 
 #include "u_string.h" // u::string
@@ -118,6 +119,10 @@ inline typename enable_if<is_integral<T>::value && is_signed<T>::value,
 sls(T x, T n) {
     return (typename make_signed<T>::type)((typename make_unsigned<T>::type)x << n);
 }
+
+// Random number generation facilities
+uint32_t randu(); //[0, UINT32_MAX]
+float randf(); // [0, 1]
 
 }
 #endif
