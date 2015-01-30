@@ -68,6 +68,11 @@ static void menuMain() {
             gMenuState &= ~kMenuMain;
             neoRelativeMouse(true);
         }
+        if (gui::button("Create")) {
+            gPlaying = true;
+            gMenuState &= ~kMenuMain;
+            neoRelativeMouse(true);
+        }
         if (gui::button("Options")) {
             gMenuState ^= kMenuOptions;
             gMenuState &= ~kMenuMain;

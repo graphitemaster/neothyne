@@ -17,7 +17,7 @@ namespace r {
 
 struct bboxMethod : method {
     bboxMethod();
-    
+
     bool init();
 
     void setWVP(const m::mat4 &wvp);
@@ -36,7 +36,7 @@ inline bboxMethod::bboxMethod()
 
 struct geomMethod : method {
     geomMethod();
-    
+
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setWVP(const m::mat4 &wvp);
@@ -79,7 +79,7 @@ inline geomMethod::geomMethod()
 
 struct finalMethod : method {
     finalMethod();
-    
+
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setWVP(const m::mat4 &wvp);
@@ -138,6 +138,7 @@ struct world : geom {
     bool load(const kdMap &map);
     bool upload(const m::perspective &p);
 
+    void unload(bool destroy = true);
     void render(const pipeline &pl, ::world *map);
 
 private:

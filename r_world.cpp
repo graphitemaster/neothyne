@@ -230,12 +230,27 @@ world::world()
 }
 
 world::~world() {
+    unload(false);
+}
+
+void world::unload(bool destroy) {
     for (auto &it : m_textures2D)
         delete it.second;
     for (auto &it : m_models)
         delete it.second;
     for (auto &it : m_billboards)
         delete it.second;
+
+    if (destroy) {
+        m_models.clear();
+        m_billboards.clear();
+        m_indices.destroy();
+        m_vertices.destroy();
+        m_textureBatches.destroy();
+        m_textures2D.clear();
+    }
+
+    m_uploaded = false;
 }
 
 /// shader permutations

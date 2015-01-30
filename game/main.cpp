@@ -256,6 +256,7 @@ int neoMain(frameTimer &timer, int, char **) {
     neoSetWindowTitle("Neothyne");
     neoCenterMouse();
 
+#if 0
     // Setup some lights
     const m::vec3 places[] = {
         m::vec3(153.04, 105.02, 197.67),
@@ -316,9 +317,9 @@ int neoMain(frameTimer &timer, int, char **) {
 
     if (!gWorld.load("garden.kdgz"))
         neoFatal("failed to load world");
+#endif
 
     while (gRunning) {
-        //if (!input)
         gClient.update(gWorld, timer.delta());
 
         gPerspective.fov = cl_fov;
@@ -336,7 +337,7 @@ int neoMain(frameTimer &timer, int, char **) {
         if (mouse.button & mouseState::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit))
             edit::move();
 
-        if (gPlaying) {
+        if (gPlaying && gWorld.isLoaded()) {
             gWorld.upload(gPerspective);
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
             gWorld.render(gPipeline);
