@@ -8,7 +8,8 @@ enum {
     kMenuOptions = 1 << 2,
     kMenuCredits = 1 << 3,
     kMenuConsole = 1 << 5,
-    kMenuEdit    = 1 << 6
+    kMenuEdit    = 1 << 6,
+    kMenuCreate  = 1 << 7
 };
 
 static constexpr size_t kMenuConsoleHistorySize = 100;

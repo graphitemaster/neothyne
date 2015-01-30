@@ -19,9 +19,13 @@ int gMenuState = kMenuMain | kMenuConsole; // Default state
 u::stack<u::string, kMenuConsoleHistorySize> gMenuConsole; // The console text buffer
 
 static u::map<u::string, int> gMenuData;
+static u::map<u::string, u::string> gMenuStrings;
 
 
 #define D(X) gMenuData[u::format("%s_%s", __func__, #X)]
+#define S(X) gMenuStrings[u::format("%s_%s", __func__, #X)]
+
+#define FMT(N, ...) u::format("%"#N"s..", __VA_ARGS__).c_str()
 
 #define PP_COUNT(X) (sizeof(X)/sizeof(*X))
 
@@ -69,9 +73,9 @@ static void menuMain() {
             neoRelativeMouse(true);
         }
         if (gui::button("Create")) {
-            gPlaying = true;
+            //gPlaying = true;
+            gMenuState ^= kMenuCreate;
             gMenuState &= ~kMenuMain;
-            neoRelativeMouse(true);
         }
         if (gui::button("Options")) {
             gMenuState ^= kMenuOptions;
@@ -453,6 +457,30 @@ static void menuConsole() {
     gui::areaFinish(30, true);
 }
 
+static void menuCreate() {
+    const size_t w = neoWidth() / 4;
+    const size_t h = neoHeight() / 3;
+    const size_t x = neoWidth() / 2 - w / 2;
+    const size_t y = neoHeight() / 2 - h / 2;
+
+    gui::areaBegin("New map", x, y, w, h, D(createScroll));
+        if (S(mesh).empty()) {
+            if (gui::button("Load mesh")) {
+                // TODO: file browser
+            }
+        } else {
+            gui::label(FMT(20, S(mesh)));
+        }
+        if (S(skybox).empty()) {
+            if (gui::button("Load skybox", !S(mesh).empty())) {
+                // TODO: file browser
+            }
+        } else {
+            gui::label(FMT(20, S(skybox)));
+        }
+    gui::areaFinish();
+}
+
 void menuReset() {
     gMenuData["menuCredits_engine"] = true;
     gMenuData["menuCredits_design"] = true;
@@ -461,6 +489,9 @@ void menuReset() {
     gMenuData["menuEdit_dlight"] = true;
     gMenuData["menuEdit_newent"] = true;
     gMenuData["menuEdit_light"] = true;
+
+    gMenuStrings["menuCreate_mesh"] = "";
+    gMenuStrings["menuCreate_skybox"] = "";
 }
 
 void menuUpdate() {
@@ -474,4 +505,6 @@ void menuUpdate() {
         menuConsole();
     if (gMenuState & kMenuEdit)
         menuEdit();
+    if (gMenuState & kMenuCreate)
+        menuCreate();
 }
