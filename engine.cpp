@@ -204,11 +204,13 @@ bool engine::initContext() {
     SDL_ShowCursor(0);
 
     // Find all controllers (that may be plugged in)
+    SDL_GameControllerEventState(SDL_IGNORE);
     for (int i = 0; i < SDL_NumJoysticks(); ++i) {
         if (!SDL_IsGameController(i))
             continue;
         ctx->addController(i);
     }
+    SDL_GameControllerEventState(SDL_ENABLE);
 
     // Own the context now
     m_context = (void*)ctx.release();
@@ -267,7 +269,8 @@ bool engine::initData(int &argc, char **argv) {
     }
 
     // Established game and user data paths, now load the config
-    return readConfig(m_userPath);
+    readConfig(m_userPath);
+    return true;
 }
 
 u::map<u::string, int> &engine::keyState(const u::string &key, bool keyDown, bool keyUp) {
@@ -554,6 +557,7 @@ static int entryPoint(int argc, char **argv) {
 
     gl::Enable(GL_LINE_SMOOTH);
     gl::Hint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    gl::Hint(GL_TEXTURE_COMPRESSION_HINT, GL_FASTEST);
 
     auto vendor = (const char *)gl::GetString(GL_VENDOR);
     auto renderer = (const char *)gl::GetString(GL_RENDERER);

@@ -82,19 +82,18 @@ inline const char *formatNormalize(const u::string &argument) {
 static inline u::string formatProcess(const char *fmt, ...) {
     size_t n = strlen(fmt) * 2;
     int f = 0;
-    u::unique_ptr<char[]> formatted;
     va_list ap;
     for (;;) {
-        formatted.reset(new char[n]);
+        u::unique_ptr<char[]> formatted(new char[n]);
         va_start(ap, fmt);
         f = detail::c99vsnprintf(&formatted[0], n, fmt, ap);
         va_end(ap);
-        if (f < 0 || f >= n)
+        if (f < 0 || size_t(f) >= n)
             n += abs(f - n + 1);
         else
-            break;
+            return formatted.get();
     }
-    return string(formatted.get());
+    return "";
 }
 
 template <typename... Ts>

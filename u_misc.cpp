@@ -34,12 +34,11 @@ namespace detail {
         // (as per the interface-contract of vsnprintf.)
         if (maxSize < 128)
             maxSize = 128;
-        u::unique_ptr<char[]> data;
         while (ret == -1) {
             maxSize *= 4;
-            data.reset(new char[maxSize]); // Try with a larger buffer
+            u::unique_ptr<char[]> data(new char[maxSize]); // Try with a larger buffer
             va_copy(cp, ap);
-            ret = vsnprintf(str, maxSize - kSizeCorrection, format, cp);
+            ret = vsnprintf(&data[0], maxSize - kSizeCorrection, format, cp);
             va_end(cp);
             if (ret == int(maxSize - 1))
                 ret = -1;
