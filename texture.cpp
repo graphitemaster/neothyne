@@ -154,6 +154,8 @@ struct jpeg : decoder {
                 assert(0);
                 break;
         }
+
+        m_pitch = m_bpp * m_width;
     }
 
     u::vector<unsigned char> data() {
@@ -1001,10 +1003,11 @@ struct png : decoder {
                 m_format = kTexFormatRGBA;
                 break;
             default:
-                u::print("%zu\n", m_bpp);
                 assert(0);
                 break;
         }
+
+        m_pitch = m_bpp * m_width;
     }
 
     u::vector<unsigned char> data() {
@@ -1440,6 +1443,8 @@ struct tga : decoder {
                 assert(0);
                 break;
         }
+
+        m_pitch = m_bpp * m_width;
     }
 
     u::vector<unsigned char> data() {
@@ -1983,8 +1988,8 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
             // If the carry happens then the value is rounded up, otherwise it rounds
             // down. This also works +/- INF as well since INF has zero mantissa.
             union { float f; uint32_t i; } u = { quality };
-            u.i += 0x00400000;
-            u.i &= 0xFF800000;
+            u.i += 0x00400000u;
+            u.i &= 0xFF800000u;
             size_t w = m_width * u.f;
             size_t h = m_height * u.f;
             if (w == 0) w = 1;
