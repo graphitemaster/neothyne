@@ -277,8 +277,8 @@ bool engine::initData(int &argc, char **argv) {
         "screenshots", "cache"
     };
 
-    for (size_t i = 0; i < sizeof(paths)/sizeof(*paths); i++) {
-        u::string path = m_userPath + paths[i];
+    for (auto &it : paths) {
+        u::string path = m_userPath + it;
         if (u::exists(path, u::kDirectory))
             continue;
         if (u::mkdir(path))
@@ -319,6 +319,8 @@ void engine::swap() {
         if (m_binds.find(what) != m_binds.end())
             m_binds[what]();
     };
+
+    m_mouseState.wheel = 0;
 
     char format[1024];
     const char *keyName;
