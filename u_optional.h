@@ -3,6 +3,23 @@
 
 namespace u {
 
+namespace detail {
+    template <typename T, bool>
+    union optional_cast;
+
+    template <typename T>
+    union optional_cast<T, true> {
+        const void *p;
+        T *data;
+    };
+
+    template <typename T>
+    union optional_cast<T, false> {
+        void *p;
+        T *data;
+    };
+}
+
 // A small implementation of boost.optional
 struct optional_none { };
 
@@ -103,12 +120,12 @@ const void *optional<T>::storage() const {
 
 template <typename T>
 T &optional<T>::get() {
-    return *(T*)(storage());
+    return *(detail::optional_cast<T, false> { storage() }).data;
 }
 
 template <typename T>
 const T &optional<T>::get() const {
-    return *(const T*)(storage());
+    return *(detail::optional_cast<T, true> { storage() }).data;
 }
 
 template <typename T>
