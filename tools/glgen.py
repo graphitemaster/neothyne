@@ -238,7 +238,7 @@ def genSource(functionList, extensionList, sourceFile):
                     contents += ", ";
             }
             va_end(va);
-            fprintf(stderr, "error %s(%s) (%s:%zu) %s\\n", function, contents.c_str(),
+            u::fprint(stderr, "error %s(%s) (%s:%zu) %s\\n", function, contents.c_str(),
                 file, line, debugErrorString(error));
         }
         """))
