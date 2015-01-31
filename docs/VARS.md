@@ -140,3 +140,9 @@ Chroma upsampling filter for decoding JPEGs
 
 * 0 = bicubic (slow)
 * 1 = pixel repetition (fast)
+
+## UI
+##### ui_scroll_speed
+Mouse scroll speed for UI sliders
+
+* an value in range [1, 10]
