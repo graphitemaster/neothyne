@@ -71,6 +71,12 @@ inline mouseState::mouseState()
 {
 }
 
+enum class textState {
+    kInactive,
+    kInputting,
+    kFinished
+};
+
 /// Engine object
 struct engine {
     engine();
@@ -96,6 +102,7 @@ struct engine {
 
     const u::string &userPath() const;
     const u::string &gamePath() const;
+    textState textInput(u::string &what);
 
     frameTimer m_frameTimer; // TODO: private
 
@@ -109,8 +116,8 @@ private:
     u::map<u::string, bindFunction> m_binds;
     u::string m_userPath;
     u::string m_gamePath;
-    u::string m_textInput;
     mouseState m_mouseState;
+    textState m_textState;
     size_t m_screenWidth;
     size_t m_screenHeight;
     size_t m_refreshRate;
@@ -128,6 +135,7 @@ inline void neoFatal(const char *fmt, const Ts&... ts) {
 // Wrapper
 u::map<u::string, int> &neoKeyState(const u::string &key = "", bool keyDown = false, bool keyUp = false);
 mouseState neoMouseState();
+textState neoTextState(u::string &what);
 void neoMouseDelta(int *deltaX, int *deltaY);
 void neoSwap();
 size_t neoWidth();

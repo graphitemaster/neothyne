@@ -41,16 +41,22 @@ struct context {
     void delController(int id);
     controller *getController(int id);
 
+    void begTextInput();
+    void endTextInput();
+
 private:
     friend struct engine;
     u::map<int, controller> m_controllers;
     SDL_Window *m_window;
+    u::string m_textString;
+    textState m_textState;
 };
 
 #define CTX(X) ((context*)(X))
 
 inline context::context()
     : m_window(nullptr)
+    , m_textState(textState::kInactive)
 {
 }
 
@@ -83,6 +89,17 @@ inline context::controller *context::getController(int id) {
     if (m_controllers.find(id) == m_controllers.end())
         return nullptr;
     return &m_controllers[id];
+}
+
+inline void context::begTextInput() {
+    m_textState = textState::kInputting;
+    m_textString = "";
+}
+
+inline void context::endTextInput() {
+    if (m_textState != textState::kInputting)
+        return;
+    m_textState = textState::kFinished;
 }
 
 /// engine
@@ -322,6 +339,19 @@ void engine::swap() {
             }
             break;
         case SDL_KEYDOWN:
+            if (CTX(m_context)->m_textState == textState::kInputting) {
+                if (e.key.keysym.sym == SDLK_RETURN) {
+                    CTX(m_context)->endTextInput();
+                } else if (e.key.keysym.sym == SDLK_BACKSPACE) {
+                    u::string &input = CTX(m_context)->m_textString;
+                    if (input.size())
+                        input.pop_back();
+                }
+                break;
+            } else if (e.key.keysym.sym == SDLK_SLASH) {
+                CTX(m_context)->begTextInput();
+                break;
+            }
             keyName = SDL_GetKeyName(e.key.keysym.sym);
             snprintf(format, sizeof(format), "%sDn", keyName);
             callBind(format);
@@ -365,7 +395,10 @@ void engine::swap() {
             }
             break;
         case SDL_TEXTINPUT:
-            m_textInput += e.text.text;
+            // Ignore the first "/"
+            if (CTX(m_context)->m_textString.empty() && !strcmp(e.text.text, "/"))
+                break;
+            CTX(m_context)->m_textString += e.text.text;
             break;
         }
     }
@@ -432,6 +465,17 @@ const u::string &engine::userPath() const {
 
 const u::string &engine::gamePath() const {
     return m_gamePath;
+}
+
+textState engine::textInput(u::string &what) {
+    if (CTX(m_context)->m_textState == textState::kInactive)
+        return textState::kInactive;
+    what = CTX(m_context)->m_textString;
+    if (CTX(m_context)->m_textState == textState::kFinished) {
+        CTX(m_context)->m_textState = textState::kInactive;
+        return textState::kFinished;
+    }
+    return textState::kInputting;
 }
 
 // An accurate frame rate timer and capper
@@ -557,12 +601,15 @@ static int entryPoint(int argc, char **argv) {
 
     gl::Enable(GL_LINE_SMOOTH);
     gl::Hint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-    gl::Hint(GL_TEXTURE_COMPRESSION_HINT, GL_FASTEST);
 
     auto vendor = (const char *)gl::GetString(GL_VENDOR);
     auto renderer = (const char *)gl::GetString(GL_RENDERER);
     auto version = (const char *)gl::GetString(GL_VERSION);
     auto shader = (const char *)gl::GetString(GL_SHADING_LANGUAGE_VERSION);
+
+    // Intel online texture compression is slow
+    if (strstr(vendor, "Intel"))
+        gl::Hint(GL_TEXTURE_COMPRESSION_HINT, GL_FASTEST);
 
     u::print("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\n",
         vendor, renderer, version, shader);
@@ -672,6 +719,10 @@ const u::string &neoUserPath() {
 
 const u::string &neoGamePath() {
     return gEngine.gamePath();
+}
+
+textState neoTextState(u::string &what) {
+    return gEngine.textInput(what);
 }
 
 void neoBindSet(const u::string &what, void (*handler)()) {

@@ -379,14 +379,35 @@ int neoMain(frameTimer &timer, int, char **) {
                 gui::RGBA(0, 0, 0, 255));
         }
 
-        //if (input) {
-        //    if (inputString[0] == '/')
-        //        inputString.pop_front();
-            // Accepting console commands
-        //    gui::drawTriangle(5, 10, 10, 10, 1, gui::RGBA(155, 155, 155, 255));
-        //    gui::drawText(20, 10, gui::kAlignLeft,
-        //        inputString.c_str(), gui::RGBA(255, 255, 255, 255));
-        //}
+        u::string inputText;
+        textState text = neoTextState(inputText);
+        if (text != textState::kInactive) {
+            gui::drawTriangle(5, 10, 10, 10, 1, gui::RGBA(155, 155, 155, 255));
+            gui::drawText(20, 10, gui::kAlignLeft,
+                inputText.c_str(), gui::RGBA(255, 255, 255, 255));
+            if (text == textState::kFinished) {
+                auto values = u::split(inputText);
+                if (values.size() == 2) {
+                    switch (varChange(values[0], values[1])) {
+                    case kVarSuccess:
+                        u::print("changed `%s' to `%s'\n", values[0], values[1]);
+                        break;
+                    case kVarRangeError:
+                        u::print("invalid range for `%s'\n", values[0]);
+                        break;
+                    case kVarTypeError:
+                        u::print("invalid type for `%s'\n", values[0]);
+                        break;
+                    case kVarNotFoundError:
+                        u::print("variable `%s' not found\n", values[0]);
+                        break;
+                    case kVarReadOnlyError:
+                        u::print("variable `%s' is read-only\n", values[0]);
+                        break;
+                    }
+                }
+            }
+        }
 
         // Cursor above all else
         if ((gMenuState & ~kMenuConsole || gMenuState & kMenuEdit || gMenuState & kMenuCreate) && !neoRelativeMouse())
