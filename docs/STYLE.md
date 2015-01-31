@@ -176,7 +176,7 @@ The use of `short`, `long`, `long long` and `off64_t` is forbidden.
 For situations when the exact size of types is important, make appropriate
 use of `<stdint.h>`
 
-Don't make make use of correctly-sized types if they impose a hard-coded limitation
+Don't make use of correctly-sized types if they impose a hard-coded limitation
 on the size of the data they can work with. `size_t` is much better suited for
 this task. `size_t` is supposed to be correct regardless of the platform.
 Specializing for a given platform is discouraged. Do not use `size_t` for
