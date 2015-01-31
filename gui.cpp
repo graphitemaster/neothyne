@@ -2,12 +2,15 @@
 
 #include "engine.h"
 #include "gui.h"
+#include "cvar.h"
 
 #include "u_misc.h"
 #include "u_map.h"
 #include "u_set.h"
 
 #include "m_const.h"
+
+VAR(int, ui_scroll_speed, "mouse scroll speed", 1, 10, 5);
 
 namespace gui {
 
@@ -308,7 +311,7 @@ inline void state::update(mouseState &mouse) {
     bool left = mouse.button & kMouseButtonLeft;
     m_mouse.x = mouse.x;
     m_mouse.y = mouse.y;
-    m_mouse.wheel = mouse.wheel * -2;
+    m_mouse.wheel = mouse.wheel * -ui_scroll_speed;
     m_leftPressed = !m_left && left;
     m_leftReleased = m_left && !left;
     m_left = left;
@@ -638,7 +641,8 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
         if (S.m_drag[0] != S.m_mouse.x) { // Mouse and drag don't share same coordinate on the X axis
             const float u = m::clamp(S.m_dragOrigin + float(S.m_mouse.x - S.m_drag[0]) / float(range), 0.0f, 1.0f);
             value = min + u * max - min;
-            value = floorf(float(value) / float(inc) + 0.5f) * float(inc); // Snap to increments
+            if (u::is_floating_point<T>::value)
+                value = floorf(float(value) / float(inc) + 0.5f) * float(inc); // Snap to increments
             m = int(u * range);
             changed = true;
         }
