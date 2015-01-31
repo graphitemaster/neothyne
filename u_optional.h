@@ -10,7 +10,7 @@ namespace detail {
     template <typename T>
     union optional_cast<T, true> {
         const void *p;
-        T *data;
+        const T *data;
     };
 
     template <typename T>
