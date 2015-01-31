@@ -171,10 +171,17 @@ When working with sizes always use `size_t`. Lots of functions that utilize size
 depend on `size_t` as part of their interface contract. Blindly breaking this with
 the usage of integers is forbidden.
 
-The use of `short`, `long` and `long long` is forbidden.
+The use of `short`, `long`, `long long` and `off64_t` is forbidden.
 
 For situations when the exact size of types is important, make appropriate
 use of `<stdint.h>`
+
+Don't make make use of correctly-sized types if they impose a hard-coded limitation
+on the size of the data they can work with. `size_t` is much better suited for
+this task. `size_t` is supposed to be correct regardless of the platform.
+Specializing for a given platform is discouraged. Do not use `size_t` for
+representing the size of objects on disk, use `off_t` instead. A properly
+configured build environment will expose an `off_t` >= 64bits.
 
 # Typedefs and using
 Typedefs and using are discouraged, but not forbidden. Use `typedef` and `using`
@@ -223,7 +230,8 @@ For variable argument functions always explicitly use `(void*)0` as a `NULL`
 variable argument instead of `nullptr` or `NULL`.
 
 # Sizeof
-Prefer `sizeof(varname)` to `sizeof(type)`.
+Prefer `sizeof(varname)` to `sizeof(type)`. The result of `sizeof` returns `size_t`,
+assigning it to anything but a `size_t` is forbidden.
 
 # Auto
 The use of `auto` is only encouraged if the typename is long or ends up being written
