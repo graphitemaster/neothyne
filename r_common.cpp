@@ -332,7 +332,7 @@ static void debugCheck(const char *spec, const char *function, const char *file,
             contents += ", ";
     }
     va_end(va);
-    u::fprint(stderr, "error %s(%s) (%s:%zu) %s\n", function, contents.c_str(),
+    u::fprint(stderr, "error %s(%s) (%s:%zu) %s\n", function, contents,
         file, line, debugErrorString(error));
 }
 #endif
