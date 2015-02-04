@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "u_stack.h"
+#include "m_mat4.h"
 
 struct mouseState;
 
@@ -25,7 +26,8 @@ enum {
     kCommandLine,
     kCommandText,
     kCommandScissor,
-    kCommandImage
+    kCommandImage,
+    kCommandModel
 };
 
 struct box {
@@ -44,6 +46,11 @@ struct scissor : box { };
 
 struct image : box {
     const char *path;
+};
+
+struct model : box {
+    const char *path;
+    m::mat4 wvp;
 };
 
 struct text {
@@ -73,6 +80,7 @@ struct command {
         triangle asTriangle;
         text asText;
         image asImage;
+        model asModel;
     };
 };
 
@@ -94,6 +102,7 @@ struct queue {
     void addTriangle(int x, int y, int w, int h, int flags, uint32_t color);
     void addText(int x, int y, int align, const char *contents, uint32_t color);
     void addImage(int x, int y, int w, int h, const char *path, bool mipmaps = false);
+    void addModel(int x, int y, int w, int h, const char *path, const m::mat4 &wvp);
 private:
     u::stack<command, kCommandQueueSize> m_commands;
 };
@@ -153,6 +162,7 @@ void drawRectangle(int x, int y, int w, int h, int r, uint32_t color);
 void drawText(int x, int y, int align, const char *contents, uint32_t color);
 void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color);
 void drawImage(int x, int y, int w, int h, const char *path, bool mipmaps = false);
+void drawModel(int x, int y, int w, int h, const char *path, const m::mat4 &wvp);
 
 const queue &commands();
 

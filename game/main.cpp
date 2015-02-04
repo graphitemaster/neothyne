@@ -350,6 +350,21 @@ int neoMain(frameTimer &timer, int, char **) {
 
         gui::begin(mouse);
 
+        // Render the model (for testing only)
+        r::pipeline p;
+        p.setPerspective(gPerspective);
+        p.setWorld({0, 0, 25});
+        p.setPosition({0, 0, 0});
+        p.setScale({20, 20, 20});
+
+        const m::vec3 rot(0.0f, -(gPipeline.time() / 10.0f), 0.0f);
+        m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
+        m::mat4 rotate;
+        ry.getMatrix(&rotate);
+        p.setRotate(rotate);
+
+        gui::drawModel(10, 10, 120, 120, "models/icon", p.projection() * p.view() * p.world());
+
         // Must come first as we want the menu to go over the cross hair if it's
         // launched after playing
         if (gPlaying && !(gMenuState & ~kMenuConsole)) {

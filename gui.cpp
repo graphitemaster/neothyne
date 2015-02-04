@@ -119,6 +119,19 @@ void queue::addImage(int x, int y, int w, int h, const char *path, bool mipmaps)
     cmd.asImage.path = gStringPool(path);
 }
 
+void queue::addModel(int x, int y, int w, int h, const char *path, const m::mat4 &wvp) {
+    if (m_commands.full()) return;
+    auto &cmd = m_commands.next();
+    cmd.type = kCommandModel;
+    cmd.color = 0;
+    cmd.asModel.x = x;
+    cmd.asModel.y = y;
+    cmd.asModel.w = w;
+    cmd.asModel.h = h;
+    cmd.asModel.path = gStringPool(path);
+    cmd.asModel.wvp = wvp;
+}
+
 // A reference to something in the gui
 typedef size_t ref;
 
@@ -731,6 +744,10 @@ void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
 
 void drawImage(int x, int y, int w, int h, const char *path, bool mipmaps) {
     Q.addImage(x, y, w, h, path, mipmaps);
+}
+
+void drawModel(int x, int y, int w, int h, const char *path, const m::mat4 &wvp) {
+    Q.addModel(x, y, w, h, path, wvp);
 }
 
 const queue &commands() {

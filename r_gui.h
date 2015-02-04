@@ -12,11 +12,12 @@ namespace m {
 
 namespace r {
 
+struct model;
 struct pipeline;
 
 struct guiMethod : method {
     guiMethod();
-    
+
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setPerspective(const m::perspective &p);
@@ -27,11 +28,17 @@ private:
     GLint m_colorMapLocation;
 };
 
-inline guiMethod::guiMethod()
-    : m_screenSizeLocation(-1)
-    , m_colorMapLocation(-1)
-{
-}
+struct guiModelMethod : method {
+    guiModelMethod();
+
+    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
+    void setWVP(const m::mat4 &wvp);
+    void setColorTextureUnit(int unit);
+
+private:
+    GLint m_WVPLocation;
+    GLint m_colorTextureUnitLocation;
+};
 
 struct gui {
     gui();
@@ -75,6 +82,7 @@ private:
         float xadvance;
     };
 
+
     struct vertex {
         float x, y;
         float s, t;
@@ -103,10 +111,14 @@ private:
 
     GLuint m_vbo;
     GLuint m_vao;
+
     u::map<u::string, texture2D*> m_textures;
+    u::map<u::string, model*> m_models;
+
     texture2D m_font;
     texture2D m_notex;
     guiMethod m_methods[3];
+    guiModelMethod m_modelMethod;
 };
 
 }

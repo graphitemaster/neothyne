@@ -5,6 +5,7 @@
 
 #include "r_gui.h"
 #include "r_pipeline.h"
+#include "r_model.h"
 
 #include "u_file.h"
 #include "u_misc.h"
@@ -50,6 +51,18 @@ static void printImage(const ::gui::image &it) {
         it.x, it.y, it.w, it.h, it.path);
 }
 
+static void printModel(const ::gui::model &it) {
+    u::print("    { x: %d, y: %d, w: %d, h: %d, path: %s\n",
+        it.x, it.y, it.w, it.h, it.path);
+    u::print("      wvp: {\n");
+    for (size_t i = 0; i < 4; i++) {
+        u::print("          [%f, %f, %f, %f]\n",
+            it.wvp.m[i][0], it.wvp.m[i][1], it.wvp.m[i][2], it.wvp.m[i][3]);
+    }
+    u::print("      }\n");
+    u::print("    }\n");
+}
+
 static void printCommand(const ::gui::command &it) {
     switch (it.type) {
         case ::gui::kCommandLine:
@@ -75,11 +88,21 @@ static void printCommand(const ::gui::command &it) {
         case ::gui::kCommandImage:
             u::print("image:\n");
             printImage(it.asImage);
+        case ::gui::kCommandModel:
+            u::print("model:\n");
+            printModel(it.asModel);
             break;
     }
     u::print("\n");
 }
 #endif
+
+///! guiMethod
+guiMethod::guiMethod()
+    : m_screenSizeLocation(-1)
+    , m_colorMapLocation(-1)
+{
+}
 
 bool guiMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
@@ -110,6 +133,43 @@ void guiMethod::setColorTextureUnit(int unit) {
     gl::Uniform1i(m_colorMapLocation, unit);
 }
 
+///! guiModelMethod
+guiModelMethod::guiModelMethod()
+    : m_WVPLocation(0)
+    , m_colorTextureUnitLocation(0)
+{
+}
+
+bool guiModelMethod::init(const u::vector<const char *> &defines) {
+    if (!method::init())
+        return false;
+
+    for (auto &it : defines)
+        method::define(it);
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/guimodel.vs"))
+        return false;
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/guimodel.fs"))
+        return false;
+
+    if (!finalize())
+        return false;
+
+    m_WVPLocation = getUniformLocation("gWVP");
+    m_colorTextureUnitLocation = getUniformLocation("gColorMap");
+
+    return true;
+}
+
+void guiModelMethod::setWVP(const m::mat4 &wvp) {
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+}
+
+void guiModelMethod::setColorTextureUnit(int unit) {
+    gl::Uniform1i(m_colorTextureUnitLocation, unit);
+}
+
+///! gui
 gui::gui()
     : m_vbo(0)
     , m_vao(0)
@@ -131,6 +191,8 @@ gui::~gui() {
             continue;
         delete it.second;
     }
+    for (auto &it : m_models)
+        delete it.second;
 }
 
 bool gui::load(const u::string &font) {
@@ -199,12 +261,17 @@ bool gui::upload() {
         return false;
     if (!m_methods[kMethodImage].init({"HAS_IMAGE"}))
         return false;
+    if (!m_modelMethod.init())
+        return false;
 
     m_methods[kMethodFont].enable();
     m_methods[kMethodFont].setColorTextureUnit(0);
 
     m_methods[kMethodImage].enable();
     m_methods[kMethodImage].setColorTextureUnit(0);
+
+    m_modelMethod.enable();
+    m_modelMethod.setColorTextureUnit(0);
 
     return true;
 }
@@ -295,6 +362,13 @@ void gui::render(const pipeline &pl) {
                           it.asImage.path,
                           it.flags);
                 break;
+            case ::gui::kCommandModel:
+                if (m_models.find(it.asModel.path) == m_models.end()) {
+                    auto mdl = u::unique_ptr<model>(new model);
+                    if (mdl->load(m_textures, it.asModel.path) && mdl->upload())
+                        m_models[it.asModel.path] = mdl.release();
+                }
+                break;
         }
     }
 
@@ -317,7 +391,7 @@ void gui::render(const pipeline &pl) {
             } else {
                 gl::Disable(GL_SCISSOR_TEST);
             }
-        } else {
+        } else if (it.type != ::gui::kCommandModel) {
             if (b->texture)
                 b->texture->bind(GL_TEXTURE0);
             if (b->method != method) {
@@ -328,6 +402,26 @@ void gui::render(const pipeline &pl) {
             b++;
         }
     }
+
+    // Render GUI models
+    gl::Clear(GL_DEPTH_BUFFER_BIT);
+    gl::Enable(GL_DEPTH_TEST);
+    m_modelMethod.enable();
+    for (auto &it : ::gui::commands()()) {
+        if (it.type != ::gui::kCommandModel)
+            continue;
+        if (m_models.find(it.asModel.path) == m_models.end())
+            continue;
+
+        // Render the model
+        auto &mdl = m_models[it.asModel.path];
+        gl::Viewport(it.asModel.x, it.asModel.y, it.asModel.w, it.asModel.h);
+        m_modelMethod.setWVP(it.asModel.wvp);
+        mdl->mat.diffuse->bind(GL_TEXTURE0);
+        mdl->render();
+    }
+    gl::Disable(GL_DEPTH_TEST);
+    gl::Viewport(0, 0, neoWidth(), neoHeight());
 
     // Reset the batches and vertices each frame
     m_vertices.destroy();
@@ -371,7 +465,7 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
         float dmx = (dlx0 + dlx1) * 0.5f;
         float dmy = (dly0 + dly1) * 0.5f;
         float distance = sqrtf(dmx*dmx + dmy*dmy);
-        if (distance > 0.000001f) { // Smaller epsilon
+        if (distance > m::kEpsilon / 10) { // Smaller epsilon
             float scale = 1.0f / distance;
             if (scale > 10.0f)
                 scale = 10.0f;
@@ -476,7 +570,7 @@ void gui::drawLine(float x0, float y0, float x1, float y1, float r, float fth, u
     float dy = y1 - y0;
     float distance = sqrtf(dx*dx + dy*dy);
 
-    if (distance > 0.0001f) {
+    if (distance > m::kEpsilon) {
         distance = 1.0f / distance;
         dx *= distance;
         dy *= distance;
