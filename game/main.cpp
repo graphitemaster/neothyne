@@ -235,7 +235,6 @@ int neoMain(frameTimer &timer, int, char **) {
     gPerspective.width = neoWidth();
     gPerspective.height = neoHeight();
 
-    gPipeline.setPerspective(gPerspective);
     gPipeline.setWorld(m::vec3::origin);
 
     // Clear the screen as soon as possible
@@ -325,6 +324,8 @@ int neoMain(frameTimer &timer, int, char **) {
         gPerspective.fov = cl_fov;
         gPerspective.nearp = cl_nearp;
         gPerspective.farp = cl_farp;
+        gPerspective.width = neoWidth();
+        gPerspective.height = neoHeight();
 
         gPipeline.setPerspective(gPerspective);
         gPipeline.setRotation(gClient.getRotation());
@@ -363,7 +364,10 @@ int neoMain(frameTimer &timer, int, char **) {
         ry.getMatrix(&rotate);
         p.setRotate(rotate);
 
-        gui::drawModel(10, 10, 120, 120, "models/icon", p);
+        gui::drawModel(128 / neoWidth(),
+                       neoHeight() / 128,
+                       neoWidth() / 16,
+                       neoHeight() / 16, "models/icon", p);
 
         // Must come first as we want the menu to go over the cross hair if it's
         // launched after playing
