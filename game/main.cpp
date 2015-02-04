@@ -351,23 +351,25 @@ int neoMain(frameTimer &timer, int, char **) {
 
         gui::begin(mouse);
 
-        // Render the model (for testing only)
-        r::pipeline p;
-        p.setPerspective(gPerspective);
-        p.setWorld({0, 0, 0});
-        p.setPosition({0, 0, -30});
-        p.setScale({20, 20, 20});
+        if (!gPlaying) {
+            // Render the model (for testing only)
+            r::pipeline p;
+            p.setPerspective(gPerspective);
+            p.setWorld({0, 0, 0});
+            p.setPosition({0, 0, -30});
+            p.setScale({20, 20, 20});
 
-        const m::vec3 rot(0.0f, -(gPipeline.time() / 10.0f), 0.0f);
-        m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
-        m::mat4 rotate;
-        ry.getMatrix(&rotate);
-        p.setRotate(rotate);
+            const m::vec3 rot(0.0f, -(gPipeline.time() / 10.0f), 0.0f);
+            m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
+            m::mat4 rotate;
+            ry.getMatrix(&rotate);
+            p.setRotate(rotate);
 
-        gui::drawModel(128 / neoWidth(),
-                       neoHeight() / 128,
-                       neoWidth() / 16,
-                       neoHeight() / 16, "models/icon", p);
+            gui::drawModel(128 / neoWidth(),
+                           neoHeight() / 128 + 16, // 16 to keep above command line
+                           neoWidth() / 16,
+                           neoHeight() / 16, "models/icon", p);
+        }
 
         // Must come first as we want the menu to go over the cross hair if it's
         // launched after playing
@@ -424,6 +426,9 @@ int neoMain(frameTimer &timer, int, char **) {
                         u::print("variable `%s' is read-only\n", values[0]);
                         break;
                     }
+                } else if (values.size() == 1) {
+                    if (values[0] == "quit" || values[0] == "exit")
+                        gRunning = false;
                 }
             }
         }
