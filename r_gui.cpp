@@ -156,6 +156,8 @@ bool guiModelMethod::init(const u::vector<const char *> &defines) {
         return false;
 
     m_WVPLocation = getUniformLocation("gWVP");
+    m_worldLocation = getUniformLocation("gWorld");
+    m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
     m_colorTextureUnitLocation = getUniformLocation("gColorMap");
 
     return true;
@@ -165,8 +167,16 @@ void guiModelMethod::setWVP(const m::mat4 &wvp) {
     gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
 }
 
+void guiModelMethod::setWorld(const m::mat4 &world) {
+    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, (const GLfloat *)world.m);
+}
+
 void guiModelMethod::setColorTextureUnit(int unit) {
     gl::Uniform1i(m_colorTextureUnitLocation, unit);
+}
+
+void guiModelMethod::setEyeWorldPos(const m::vec3 &pos) {
+    gl::Uniform3fv(m_eyeWorldPositionLocation, 1, (const GLfloat *)&pos.x);
 }
 
 ///! gui
@@ -272,6 +282,7 @@ bool gui::upload() {
 
     m_modelMethod.enable();
     m_modelMethod.setColorTextureUnit(0);
+    m_modelMethod.setEyeWorldPos(m::vec3::origin);
 
     return true;
 }
@@ -412,11 +423,11 @@ void gui::render(const pipeline &pl) {
             continue;
         if (m_models.find(it.asModel.path) == m_models.end())
             continue;
-
-        // Render the model
         auto &mdl = m_models[it.asModel.path];
+        auto p = it.asModel.pipeline;
         gl::Viewport(it.asModel.x, it.asModel.y, it.asModel.w, it.asModel.h);
-        m_modelMethod.setWVP(it.asModel.wvp);
+        m_modelMethod.setWorld(p.world());
+        m_modelMethod.setWVP(p.projection() * p.view() * p.world());
         mdl->mat.diffuse->bind(GL_TEXTURE0);
         mdl->render();
     }

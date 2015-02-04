@@ -3,7 +3,8 @@
 #include <stdint.h>
 
 #include "u_stack.h"
-#include "m_mat4.h"
+
+#include "r_pipeline.h"
 
 struct mouseState;
 
@@ -50,7 +51,7 @@ struct image : box {
 
 struct model : box {
     const char *path;
-    m::mat4 wvp;
+    r::pipeline pipeline;
 };
 
 struct text {
@@ -102,7 +103,7 @@ struct queue {
     void addTriangle(int x, int y, int w, int h, int flags, uint32_t color);
     void addText(int x, int y, int align, const char *contents, uint32_t color);
     void addImage(int x, int y, int w, int h, const char *path, bool mipmaps = false);
-    void addModel(int x, int y, int w, int h, const char *path, const m::mat4 &wvp);
+    void addModel(int x, int y, int w, int h, const char *path, const r::pipeline &p);
 private:
     u::stack<command, kCommandQueueSize> m_commands;
 };
@@ -162,7 +163,7 @@ void drawRectangle(int x, int y, int w, int h, int r, uint32_t color);
 void drawText(int x, int y, int align, const char *contents, uint32_t color);
 void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color);
 void drawImage(int x, int y, int w, int h, const char *path, bool mipmaps = false);
-void drawModel(int x, int y, int w, int h, const char *path, const m::mat4 &wvp);
+void drawModel(int x, int y, int w, int h, const char *path, const r::pipeline &p);
 
 const queue &commands();
 

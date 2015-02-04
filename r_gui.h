@@ -33,11 +33,15 @@ struct guiModelMethod : method {
 
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
     void setWVP(const m::mat4 &wvp);
+    void setWorld(const m::mat4 &world);
     void setColorTextureUnit(int unit);
+    void setEyeWorldPos(const m::vec3 &pos);
 
 private:
     GLint m_WVPLocation;
+    GLint m_worldLocation;
     GLint m_colorTextureUnitLocation;
+    GLint m_eyeWorldPositionLocation;
 };
 
 struct gui {

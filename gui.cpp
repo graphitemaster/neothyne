@@ -119,7 +119,7 @@ void queue::addImage(int x, int y, int w, int h, const char *path, bool mipmaps)
     cmd.asImage.path = gStringPool(path);
 }
 
-void queue::addModel(int x, int y, int w, int h, const char *path, const m::mat4 &wvp) {
+void queue::addModel(int x, int y, int w, int h, const char *path, const r::pipeline &p) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandModel;
@@ -129,7 +129,7 @@ void queue::addModel(int x, int y, int w, int h, const char *path, const m::mat4
     cmd.asModel.w = w;
     cmd.asModel.h = h;
     cmd.asModel.path = gStringPool(path);
-    cmd.asModel.wvp = wvp;
+    cmd.asModel.pipeline = p;
 }
 
 // A reference to something in the gui
@@ -746,8 +746,8 @@ void drawImage(int x, int y, int w, int h, const char *path, bool mipmaps) {
     Q.addImage(x, y, w, h, path, mipmaps);
 }
 
-void drawModel(int x, int y, int w, int h, const char *path, const m::mat4 &wvp) {
-    Q.addModel(x, y, w, h, path, wvp);
+void drawModel(int x, int y, int w, int h, const char *path, const r::pipeline &p) {
+    Q.addModel(x, y, w, h, path, p);
 }
 
 const queue &commands() {
