@@ -322,8 +322,8 @@ static void menuEdit() {
                 gui::dedent();
                 gui::label("Direction");
                 gui::indent();
-                    gui::slider("X", sl.direction.x, 0.0f, 360.0f, 1.0f);
-                    gui::slider("Y", sl.direction.y, 0.0f, 360.0f, 1.0f);
+                    gui::slider("Yaw", sl.direction.x, 0.0f, 360.0f, 1.0f);
+                    gui::slider("Pitch", sl.direction.y, 0.0f, 360.0f, 1.0f);
                 gui::dedent();
                 gui::separator();
                 gui::slider("Radius", sl.radius, 1.0f, 1024.0f, 1.0f);

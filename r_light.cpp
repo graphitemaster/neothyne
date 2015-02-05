@@ -135,18 +135,14 @@ bool spotLightMethod::init(const u::vector<const char *> &defines) {
 }
 
 void spotLightMethod::setLight(const spotLight &light) {
-    m::quat rx(m::vec3::xAxis, m::toRadian(light.direction.x));
-    m::quat ry(m::vec3::yAxis, m::toRadian(light.direction.y));
-    m::quat rz(m::vec3::zAxis, m::toRadian(light.direction.z));
-    m::mat4 rotate;
-    (rz * ry * rx).getMatrix(&rotate);
+    const float x = m::toRadian(light.direction.x);
+    const float y = m::toRadian(light.direction.y);
+    const float sx = sinf(x);
+    const float sy = sinf(y);
+    const float cx = cosf(x);
+    const float cy = cosf(y);
 
-    m::vec3 dir;
-    m::vec3 up;
-    m::vec3 side;
-    rotate.getOrient(&dir, &up, nullptr);
-
-    const m::vec3 direction = (dir + up).normalized();
+    m::vec3 direction = m::vec3(sx, -(sy * cx), -(cy * cx)).normalized();
 
     gl::Uniform3fv(m_spotLightLocation.color, 1, &light.color.x);
     gl::Uniform1f(m_spotLightLocation.ambient, light.ambient);
