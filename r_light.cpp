@@ -129,19 +129,32 @@ bool spotLightMethod::init(const u::vector<const char *> &defines) {
     m_spotLightLocation.position = getUniformLocation("gSpotLight.base.position");
     m_spotLightLocation.radius = getUniformLocation("gSpotLight.base.radius");
     m_spotLightLocation.direction = getUniformLocation("gSpotLight.direction");
-    m_spotLightLocation.cutOff = getUniformLocation("gSpotLight.cutOfff");
+    m_spotLightLocation.cutOff = getUniformLocation("gSpotLight.cutOff");
 
     return true;
 }
 
 void spotLightMethod::setLight(const spotLight &light) {
+    m::quat rx(m::vec3::xAxis, m::toRadian(light.direction.x));
+    m::quat ry(m::vec3::yAxis, m::toRadian(light.direction.y));
+    m::quat rz(m::vec3::zAxis, m::toRadian(light.direction.z));
+    m::mat4 rotate;
+    (rz * ry * rx).getMatrix(&rotate);
+
+    m::vec3 dir;
+    m::vec3 up;
+    m::vec3 side;
+    rotate.getOrient(&dir, &up, nullptr);
+
+    const m::vec3 direction = (dir + up).normalized();
+
     gl::Uniform3fv(m_spotLightLocation.color, 1, &light.color.x);
     gl::Uniform1f(m_spotLightLocation.ambient, light.ambient);
     gl::Uniform1f(m_spotLightLocation.diffuse, light.diffuse);
     gl::Uniform3fv(m_spotLightLocation.position, 1, &light.position.x);
     gl::Uniform1f(m_spotLightLocation.radius, light.radius);
-    gl::Uniform3fv(m_spotLightLocation.direction, 1, &light.direction.x);
-    gl::Uniform1f(m_spotLightLocation.cutOff, light.cutOff);
+    gl::Uniform3fv(m_spotLightLocation.direction, 1, &direction.x);
+    gl::Uniform1f(m_spotLightLocation.cutOff, cosf(m::toRadian(light.cutOff)));
 }
 
 }

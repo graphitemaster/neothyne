@@ -324,11 +324,10 @@ static void menuEdit() {
                 gui::indent();
                     gui::slider("X", sl.direction.x, 0.0f, 360.0f, 1.0f);
                     gui::slider("Y", sl.direction.y, 0.0f, 360.0f, 1.0f);
-                    gui::slider("Z", sl.direction.z, 0.0f, 360.0f, 1.0f);
                 gui::dedent();
                 gui::separator();
                 gui::slider("Radius", sl.radius, 1.0f, 1024.0f, 1.0f);
-                gui::slider("Cutoff", sl.cutOff, 0.0f, 1024.0f, 1.0f);
+                gui::slider("Cutoff", sl.cutOff, 1.0f, 90.0f, 1.0f);
                 sl.color = {
                     R / 255.0f,
                     (D(slightLock) ? R : G) / 255.0f,

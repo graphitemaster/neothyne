@@ -44,7 +44,7 @@ struct spotLight : pointLight {
 };
 
 inline spotLight::spotLight()
-    : cutOff(0.0f)
+    : cutOff(90.0f)
 {
 }
 
