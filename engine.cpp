@@ -257,7 +257,7 @@ bool engine::initData(int &argc, char **argv) {
 
     // Verify the game directory even exists
     if (directory && !u::exists(directory, u::kDirectory)) {
-        u::print("Game directory `%s' doesn't exist (falling back to .%sgame%c)\n",
+        u::print("Game directory `%s' doesn't exist (falling back to .%cgame%c)\n",
             directory, u::kPathSep, u::kPathSep);
         directory = nullptr;
     }
