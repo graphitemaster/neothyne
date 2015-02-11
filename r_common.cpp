@@ -9,12 +9,13 @@
 
 #include "engine.h"
 
-#ifndef APIENTRY
+#ifdef _WIN32
+#   define APIENTRY__stdcall
+#else
 #   define APIENTRY
 #endif
-#ifndef APIENTRYP
-#   define APIENTRYP APIENTRY *
-#endif
+
+#define APIENTRYP APIENTRY *
 
 #ifdef DEBUG_GL
 #   define GL_CHECK(SPEC, ...) debugCheck((SPEC), __func__, file, line, __VA_ARGS__)

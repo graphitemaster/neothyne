@@ -63,6 +63,7 @@ inline context::context()
 inline context::~context() {
     if (m_window)
         SDL_DestroyWindow(m_window);
+    SDL_Quit();
 }
 
 inline void context::addController(int id) {
@@ -620,7 +621,6 @@ static int entryPoint(int argc, char **argv) {
     // Launch the game
     int status = neoMain(gEngine.m_frameTimer, argc, argv);
     writeConfig(gEngine.userPath());
-    SDL_Quit();
     return status;
 }
 
