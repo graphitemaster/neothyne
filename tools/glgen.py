@@ -132,7 +132,7 @@ def genSource(functionList, extensionList, sourceFile):
 
         #ifndef APIENTRY
         #   ifdef _WIN32
-        #       define APIENTRY__stdcall
+        #       define APIENTRY __stdcall
         #   else
         #       define APIENTRY
         #   endif
