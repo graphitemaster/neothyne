@@ -52,8 +52,9 @@ struct unique_ptr {
     void reset(pointer v);
     void swap(unique_ptr &&o);
     operator bool() const;
-    T &operator*() const;
-    T *operator->() const;
+    reference operator*() const;
+    pointer operator->() const;
+    reference operator[](size_t i) const;
 
     unique_ptr &operator=(unique_ptr &&o);
     unique_ptr &operator=(nullptr_t);
@@ -218,13 +219,18 @@ inline unique_ptr<T, D>::operator bool() const {
 }
 
 template <typename T, typename D>
-inline T &unique_ptr<T, D>::operator*() const {
+inline typename unique_ptr<T, D>::reference unique_ptr<T, D>::operator*() const {
     return *m_data.first;
 }
 
 template <typename T, typename D>
-inline T *unique_ptr<T, D>::operator->() const {
+inline typename unique_ptr<T, D>::pointer unique_ptr<T, D>::operator->() const {
     return m_data.first;
+}
+
+template <typename T, typename D>
+inline typename unique_ptr<T, D>::reference unique_ptr<T, D>::operator[](size_t i) const {
+    return m_data.first[i];
 }
 
 template <typename T, typename D>
