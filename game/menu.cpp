@@ -467,8 +467,13 @@ static void menuCreate() {
         gui::areaBegin(S(directory).c_str(), x, y, w, h, D(browseScroll));
             // When it isn't the user path we need a way to go back
             if (S(directory) != neoUserPath() && gui::item("..")) {
-                S(directory) = gMenuPaths.back();
+                auto &&get = u::move(gMenuPaths.back());
                 gMenuPaths.pop_back();
+                // Prevent against the situation where the user is begin evil
+                if (u::exists(get, u::kDirectory))
+                    S(directory) = get;
+                else
+                    S(directory) = neoUserPath();
             }
             for (const auto &what : u::dir(S(directory))) {
                 if (u::dir::isFile(u::format("%s%c%s", S(directory), u::kPathSep, what))) {
