@@ -469,7 +469,7 @@ static void menuCreate() {
             if (S(directory) != neoUserPath() && gui::item("..")) {
                 auto &&get = u::move(gMenuPaths.back());
                 gMenuPaths.pop_back();
-                // Prevent against the situation where the user is begin evil
+                // Prevent against the situation where the user is being evil
                 if (u::exists(get, u::kDirectory))
                     S(directory) = get;
                 else
