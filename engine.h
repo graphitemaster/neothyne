@@ -99,6 +99,7 @@ struct engine {
     void setWindowTitle(const char *title);
     void resize(size_t width, size_t height);
     void setVSyncOption(int option);
+    void screenShot();
 
     const u::string &userPath() const;
     const u::string &gamePath() const;
@@ -150,5 +151,6 @@ const u::string &neoGamePath();
 void neoBindSet(const u::string &what, void (*handler)());
 void (*neoBindGet(const u::string &what))();
 void neoSetVSyncOption(int option);
+void neoScreenShot();
 
 #endif
