@@ -1,15 +1,17 @@
-#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
 // These exist on Windows too
-#include <sys/stat.h>
+#include <sys/stat.h>   // S_ISREG, stat
 #include <sys/types.h>
 
 #ifdef _WIN32
-#   include <direct.h>
+#   define _WIN32_LEAN_AND_MEAN
+#   include <windows.h>
+#   include <direct.h>  // rmdir, mkdir
 #else
-#   include <unistd.h> // rmdir
+#   include <dirent.h>  // opendir, readir, DIR
+#   include <unistd.h>  // rmdir, mkdir
 #endif
 
 #include "u_file.h"
@@ -146,5 +148,127 @@ bool write(const u::vector<unsigned char> &data, const u::string &file, const ch
         return false;
     return true;
 }
+
+///! dir
+#ifndef _WIN32
+#include <unistd.h>
+#include <dirent.h>
+
+#define IS_IGNORE(X) (!strcmp((X)->d_name, ".") || !strcmp((X)->d_name, ".."))
+
+///! dir::const_iterator
+dir::const_iterator::const_iterator(void *handle)
+    : m_handle(handle)
+    , m_name(nullptr)
+{
+    if (!m_handle)
+        return;
+    // Ignore "." and ".."
+    struct dirent *next = readdir((DIR *)m_handle);
+    while (next && IS_IGNORE(next))
+        next = readdir((DIR *)m_handle);
+    m_name = next ? next->d_name : nullptr;
+}
+
+dir::const_iterator &dir::const_iterator::operator++() {
+    struct dirent *next = readdir((DIR *)m_handle);
+    while (next && IS_IGNORE(next))
+        next = readdir((DIR *)m_handle);
+    m_name = next ? next->d_name : nullptr;
+    return *this;
+}
+
+///! dir
+dir::dir(const char *where)
+    : m_handle((void *)opendir(where))
+{
+}
+
+dir::~dir() {
+    if (m_handle)
+        closedir((DIR *)m_handle);
+}
+
+bool dir::isFile(const char *fileName) {
+    struct stat buff;
+    stat(fileName, &buff);
+    return S_ISREG(buff.st_mode);
+}
+
+#else
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <assert.h>
+
+#define IS_IGNORE(X) (!strcmp((X).cFileName, ".") || !strcmp((X).cFileName, ".."))
+
+struct findContext {
+    findContext(const char *where);
+    ~findContext();
+    HANDLE handle;
+    WIN32_FIND_DATA findData;
+};
+
+inline findContext::findContext(const char *where)
+    : handle(INVALID_HANDLE_VALUE)
+{
+    static constexpr const char kPathExtra[] = "\\*";
+    const size_t length = strlen(where);
+    assert(length + sizeof(kPathExtra) < MAX_PATH);
+    char path[MAX_PATH];
+    memcpy((void *)path, (const void *)where, length);
+    memcpy((void *)&path[length], (const void *)kPathExtra, sizeof(kPathExtra));
+    if (!(handle = FindFirstFileA(path, &findData)))
+        return;
+    // Ignore "." and ".."
+    if (IS_IGNORE(findData)) {
+        BOOL next = FindNextFileA(handle, &findData);
+        while (next && IS_IGNORE(findData))
+            next = FindNextFileA(handle, &findData);
+    }
+}
+
+inline findContext::~findContext() {
+    if (handle != INVALID_HANDLE_VALUE)
+        FindClose(handle);
+}
+
+///! dir::const_iterator
+dir::const_iterator::const_iterator(void *handle)
+    : m_handle(handle)
+    , m_name(((findContext*)m_handle)->findData.cFileName)
+{
+}
+
+dir::const_iterator &dir::const_iterator::operator++() {
+    findContext *context = (findContext*)m_handle;
+    BOOL next = FindNextFileA(context->handle, &context->findData);
+    // Ignore "." and ".."
+    while (next && IS_IGNORE(context->findData))
+        next = FindNextFileA(context->handle, &context->findData);
+    m_name = next ? context->findData.cFileName : nullptr;
+}
+
+///! dir
+dir::dir(const char *where)
+    : m_handle(new findContext(where))
+{
+}
+
+dir::~dir() {
+    delete (findContext*)m_handle;
+}
+
+bool dir::isFile(const char *fileName) {
+    struct _stat buff;
+    _stat(fileName, &buff);
+#ifdef S_ISREG
+    return S_ISREG(buff.st_mode);
+#else
+    return _S_ISREG(buff.st_mode);
+#endif
+}
+#endif
 
 }

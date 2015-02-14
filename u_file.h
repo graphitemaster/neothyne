@@ -33,6 +33,33 @@ enum pathType {
     kDirectory
 };
 
+struct dir {
+    struct const_iterator {
+        const_iterator(void *handle);
+        const_iterator& operator++();
+        const char *operator*() const;
+
+        friend bool operator !=(const const_iterator &a, const const_iterator &);
+
+    private:
+        void *m_handle;
+        const char *m_name;
+    };
+
+    dir(const u::string &where);
+    dir(const char *where);
+    ~dir();
+
+    const_iterator begin() const;
+    const_iterator end() const;
+
+    static bool isFile(const char *fileName);
+    static bool isFile(const u::string &fileName);
+
+private:
+    void *m_handle;
+};
+
 // check if a file or directory exists
 bool exists(const u::string &path, pathType type = kFile);
 // remove a file or directory
@@ -48,6 +75,33 @@ u::optional<u::vector<unsigned char>> read(const u::string &file, const char *mo
 bool write(const u::vector<unsigned char> &data, const u::string &file, const char *mode = "wb");
 // make a directory
 bool mkdir(const u::string &dir);
+
+///! dir
+inline dir::dir(const u::string &where)
+    : dir(where.c_str())
+{
+}
+
+inline const char *dir::const_iterator::operator*() const {
+    return m_name ? m_name : "";
+}
+
+inline bool operator !=(const dir::const_iterator &a, const dir::const_iterator &) {
+    return a.m_name;
+}
+
+inline dir::const_iterator dir::begin() const {
+    return { m_handle };
+}
+
+inline dir::const_iterator dir::end() const {
+    return { nullptr };
+}
+
+inline bool dir::isFile(const u::string &fileName) {
+    return dir::isFile(fileName.c_str());
+}
+
 }
 
 #endif

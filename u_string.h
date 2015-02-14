@@ -73,10 +73,14 @@ inline string::string(I first, I last)
     append((const char *)first, len);
 }
 
-inline bool operator==(const string& lhs, const string& rhs) {
+inline bool operator==(const string &lhs, const string &rhs) {
     if (lhs.size() != rhs.size())
         return false;
     return !strcmp(lhs.c_str(), rhs.c_str());
+}
+
+inline bool operator!=(const string &lhs, const string &rhs) {
+    return strcmp(lhs.c_str(), rhs.c_str()) != 0;
 }
 
 inline string operator+(const string &lhs, const char *rhs) {

@@ -7,6 +7,7 @@
 
 #include "u_set.h"
 #include "u_misc.h"
+#include "u_file.h"
 
 extern bool gPlaying;
 extern bool gRunning;
@@ -20,7 +21,7 @@ u::stack<u::string, kMenuConsoleHistorySize> gMenuConsole; // The console text b
 
 static u::map<u::string, int> gMenuData;
 static u::map<u::string, u::string> gMenuStrings;
-
+static u::vector<u::string> gMenuPaths;
 
 #define D(X) gMenuData[u::format("%s_%s", __func__, #X)]
 #define S(X) gMenuStrings[u::format("%s_%s", __func__, #X)]
@@ -462,22 +463,42 @@ static void menuCreate() {
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() / 2 - h / 2;
 
-    gui::areaBegin("New map", x, y, w, h, D(createScroll));
-        if (S(mesh).empty()) {
-            if (gui::button("Load mesh")) {
-                // TODO: file browser
+    if (D(browse)) {
+        gui::areaBegin(S(directory).c_str(), x, y, w, h, D(browseScroll));
+            // When it isn't the user path we need a way to go back
+            if (S(directory) != neoUserPath() && gui::item("..")) {
+                S(directory) = gMenuPaths.back();
+                gMenuPaths.pop_back();
             }
-        } else {
-            gui::label(FMT(20, S(mesh)));
-        }
-        if (S(skybox).empty()) {
-            if (gui::button("Load skybox", !S(mesh).empty())) {
-                // TODO: file browser
+            for (const auto &what : u::dir(S(directory))) {
+                if (u::dir::isFile(u::format("%s%c%s", S(directory), u::kPathSep, what))) {
+                    if (gui::item(what))
+                        D(browse) = false;
+                } else {
+                    if (gui::item(u::format("%s%c", what, u::kPathSep).c_str())) {
+                        // Clicked a directory
+                        gMenuPaths.push_back(S(directory));
+                        S(directory) = u::format("%s%s%c", S(directory), what, u::kPathSep);
+                    }
+                }
             }
-        } else {
-            gui::label(FMT(20, S(skybox)));
-        }
-    gui::areaFinish();
+        gui::areaFinish();
+    } else {
+        gui::areaBegin("New map", x, y, w, h, D(createScroll));
+            if (S(mesh).empty()) {
+                if (gui::button("Load mesh"))
+                    D(browse) = true;
+            } else {
+                gui::label(FMT(20, S(mesh)));
+            }
+            if (S(skybox).empty()) {
+                if (gui::button("Load skybox", !S(mesh).empty()))
+                    D(browse) = true;
+            } else {
+                gui::label(FMT(20, S(skybox)));
+            }
+        gui::areaFinish();
+    }
 }
 
 void menuReset() {
@@ -491,6 +512,9 @@ void menuReset() {
 
     gMenuStrings["menuCreate_mesh"] = "";
     gMenuStrings["menuCreate_skybox"] = "";
+
+    gMenuStrings["menuCreate_directory"] = neoUserPath();
+    gMenuPaths.destroy();
 }
 
 void menuUpdate() {
