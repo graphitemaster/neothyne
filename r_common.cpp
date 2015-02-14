@@ -344,8 +344,8 @@ static void debugCheck(const char *spec, const char *function, const char *file,
 
 namespace gl {
 
-static u::set<size_t> extensionSet;
-static const char *extensionList[] = {
+static u::set<size_t> gExtensions;
+static const char *kExtensions[] = {
     "GL_EXT_texture_compression_s3tc",
     "GL_EXT_texture_compression_rgtc",
     "GL_EXT_texture_filter_anisotropic",
@@ -354,7 +354,11 @@ static const char *extensionList[] = {
 };
 
 const char *extensionString(size_t what) {
-    return extensionList[what];
+    return kExtensions[what];
+}
+
+const u::set<size_t> &extensions() {
+    return gExtensions;
 }
 
 void init() {
@@ -434,16 +438,16 @@ void init() {
 
     GLint count = 0;
     glGetIntegerv_(GL_NUM_EXTENSIONS, &count);
-    for (GLint i = 0; i < count; i++) {
-        for (size_t j = 0; j < sizeof(extensionList)/sizeof(*extensionList); j++)
-            if (!strcmp(extensionList[j], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
-                extensionSet.insert(j);
-    }
+    for (GLint i = 0; i < count; i++)
+        for (size_t j = 0; j < sizeof(kExtensions)/sizeof(*kExtensions); j++)
+            if (!strcmp(kExtensions[j], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
+                gExtensions.insert(j);
 }
 
 bool has(size_t ext) {
-    return extensionSet.find(ext) != extensionSet.end();
+    return gExtensions.find(ext) != gExtensions.end();
 }
+
 
 GLuint CreateShader(GLenum shaderType GL_INFOP) {
     GLuint result = glCreateShader_(shaderType);

@@ -16,7 +16,7 @@ bool ssaoMethod::init(const u::vector<const char *> &defines) {
     for (auto &it : defines)
         method::define(it);
 
-    if (gl::has(ARB_texture_rectangle))
+    if (gl::has(gl::ARB_texture_rectangle))
         method::define("HAS_TEXTURE_RECTANGLE");
 
     method::define("kKernelSize", kKernelSize);
@@ -116,7 +116,7 @@ bool ssao::init(const m::perspective &p) {
     m_width = p.width / 2;
     m_height = p.height / 2;
 
-    GLenum format = gl::has(ARB_texture_rectangle)
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     gl::GenTextures(2, m_textures);
@@ -161,7 +161,7 @@ void ssao::update(const m::perspective &p) {
     size_t height = p.height / 2;
 
     if (m_width != width || m_height != height) {
-        GLenum format = gl::has(ARB_texture_rectangle)
+        GLenum format = gl::has(gl::ARB_texture_rectangle)
             ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
         m_width = width;
         m_height = height;

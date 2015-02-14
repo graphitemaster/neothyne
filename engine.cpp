@@ -9,6 +9,7 @@
 
 #include "u_file.h"
 #include "u_misc.h"
+#include "u_set.h"
 
 // maximum resolution is 15360x8640 (8640p) (16:9)
 // default resolution is 1024x768 (XGA) (4:3)
@@ -614,8 +615,12 @@ static int entryPoint(int argc, char **argv) {
     if (strstr(vendor, "Intel"))
         gl::Hint(GL_TEXTURE_COMPRESSION_HINT, GL_FASTEST);
 
-    u::print("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\n",
+    u::print("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\nExtensions:\n",
         vendor, renderer, version, shader);
+
+    for (auto &it : gl::extensions())
+        u::print(" %s\n", gl::extensionString(it));
+
     u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
 
     // Launch the game

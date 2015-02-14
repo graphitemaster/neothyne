@@ -4,6 +4,11 @@
 #include <SDL2/SDL_opengl.h>
 #include <stdint.h>
 
+namespace u {
+template <typename T>
+struct set;
+}
+
 #ifdef DEBUG_GL
 #   define GL_INFO const char *file, size_t line
 #   define GL_INFOP , GL_INFO
@@ -14,17 +19,21 @@
 
 #define ATTRIB_OFFSET(X) ((const GLvoid *)(sizeof(GLfloat) * (X)))
 
-#define EXT_texture_compression_s3tc   0
-#define EXT_texture_compression_rgtc   1
-#define EXT_texture_filter_anisotropic 2
-#define ARB_texture_compression_bptc   3
-#define ARB_texture_rectangle          4
-
 namespace gl {
 
+enum : size_t {
+    EXT_texture_compression_s3tc,
+    EXT_texture_compression_rgtc,
+    EXT_texture_filter_anisotropic,
+    ARB_texture_compression_bptc,
+    ARB_texture_rectangle
+};
+
 void init();
+const char *extensionString(size_t what);
+const u::set<size_t> &extensions();
 bool has(size_t ext);
-const char *extensionString(size_t ext);
+
 GLuint CreateShader(GLenum shaderType GL_INFOP);
 void ShaderSource(GLuint shader, GLsizei count, const GLchar** string, const GLint* length GL_INFOP);
 void CompileShader(GLuint shader GL_INFOP);

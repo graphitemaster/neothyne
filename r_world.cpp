@@ -121,7 +121,7 @@ bool finalMethod::init(const u::vector<const char *> &defines) {
     for (auto &it : defines)
         method::define(it);
 
-    if (gl::has(ARB_texture_rectangle))
+    if (gl::has(gl::ARB_texture_rectangle))
         method::define("HAS_TEXTURE_RECTANGLE");
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/final.vs"))
@@ -189,7 +189,7 @@ bool finalComposite::init(const m::perspective &p, GLuint depth) {
 
     gl::GenTextures(1, &m_texture);
 
-    GLenum format = gl::has(ARB_texture_rectangle)
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     // final composite
@@ -666,7 +666,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
         m_ssao.bindWriting();
 
         // Write to SSAO
-        GLenum format = gl::has(ARB_texture_rectangle)
+        GLenum format = gl::has(gl::ARB_texture_rectangle)
             ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
         // Bind normal/depth/random
@@ -703,7 +703,7 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
     gl::Clear(GL_COLOR_BUFFER_BIT);
 
     // Need to read from the gbuffer and ssao buffer to do lighting
-    GLenum format = gl::has(ARB_texture_rectangle)
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kColor);
@@ -937,7 +937,7 @@ void world::compositePass(const pipeline &pl) {
     // For the final pass it's important we output to the screen
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
-    GLenum format = gl::has(ARB_texture_rectangle)
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     gl::ActiveTexture(GL_TEXTURE0);

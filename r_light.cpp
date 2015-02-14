@@ -9,7 +9,7 @@ bool lightMethod::init(const char *vs, const char *fs, const u::vector<const cha
     if (!method::init())
         return false;
 
-    if (gl::has(ARB_texture_rectangle))
+    if (gl::has(gl::ARB_texture_rectangle))
         method::define("HAS_TEXTURE_RECTANGLE");
 
     for (auto &it : defines)

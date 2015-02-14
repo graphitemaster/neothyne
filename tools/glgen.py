@@ -68,6 +68,11 @@ def genHeader(functionList, extensionList, headerFile):
         #include <SDL2/SDL_opengl.h>
         #include <stdint.h>
 
+        namespace u {
+        template <typename T>
+        struct set;
+        }
+
         #ifdef DEBUG_GL
         #   define GL_INFO const char *file, size_t line
         #   define GL_INFOP , GL_INFO
@@ -78,19 +83,21 @@ def genHeader(functionList, extensionList, headerFile):
 
         #define ATTRIB_OFFSET(X) ((const GLvoid *)(sizeof(GLfloat) * (X)))
 
-        """) % (__file__))
-        # Write out the extension macros
-        largestExtension = max(len(x) for x in extensionList)
-        for i, e in enumerate(extensionList):
-            fill = largestExtension - len(e)
-            header.write('#define %s%s %d\n' % (e, ''.rjust(fill), i))
-        header.write(textwrap.dedent("""\
-
         namespace gl {
 
+        enum : size_t {
+        """) % (__file__))
+
+        for i, e in enumerate(extensionList):
+            header.write(('    %s\n' if i == len(extensionList) - 1 else '    %s,\n') % (e))
+        header.write(textwrap.dedent("""\
+        };
+
         void init();
+        const char *extensionString(size_t what);
+        const u::set<size_t> &extensions();
         bool has(size_t ext);
-        const char *extensionString(size_t ext);
+
         """))
         # Generate the function prototypes
         for function in functionList:
@@ -253,8 +260,8 @@ def genSource(functionList, extensionList, sourceFile):
 
         namespace gl {
 
-        static u::set<size_t> extensionSet;
-        static const char *extensionList[] = {
+        static u::set<size_t> gExtensions;
+        static const char *kExtensions[] = {
         """))
         for i, e in enumerate(extensionList):
             source.write('    "GL_%s"%s\n' % (e, ',' if i != len(extensionList) - 1 else ''))
@@ -262,7 +269,11 @@ def genSource(functionList, extensionList, sourceFile):
         };
 
         const char *extensionString(size_t what) {
-            return extensionList[what];
+            return kExtensions[what];
+        }
+
+        const u::set<size_t> &extensions() {
+            return gExtensions;
         }
 
         void init() {
@@ -278,16 +289,16 @@ def genSource(functionList, extensionList, sourceFile):
 
             GLint count = 0;
             glGetIntegerv_(GL_NUM_EXTENSIONS, &count);
-            for (GLint i = 0; i < count; i++) {
-                for (size_t j = 0; j < sizeof(extensionList)/sizeof(*extensionList); j++)
-                    if (!strcmp(extensionList[j], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
-                        extensionSet.insert(j);
-            }
+            for (GLint i = 0; i < count; i++)
+                for (size_t j = 0; j < sizeof(kExtensions)/sizeof(*kExtensions); j++)
+                    if (!strcmp(kExtensions[j], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
+                        gExtensions.insert(j);
         }
 
         bool has(size_t ext) {
-            return extensionSet.find(ext) != extensionSet.end();
+            return gExtensions.find(ext) != gExtensions.end();
         }
+
         """))
         # Generate the GL function wrappers
         for f in functionList:

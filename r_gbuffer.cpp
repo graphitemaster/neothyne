@@ -30,7 +30,7 @@ void gBuffer::update(const m::perspective &p) {
     size_t height = p.height;
 
     if (m_width != width || m_height != height) {
-        GLenum format = gl::has(ARB_texture_rectangle)
+        GLenum format = gl::has(gl::ARB_texture_rectangle)
             ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
         m_width = width;
         m_height = height;
@@ -59,7 +59,7 @@ bool gBuffer::init(const m::perspective &p) {
 
     gl::GenTextures(kMax, m_textures);
 
-    GLenum format = gl::has(ARB_texture_rectangle)
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     // diffuse + specular

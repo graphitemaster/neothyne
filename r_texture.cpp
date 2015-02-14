@@ -228,19 +228,19 @@ static bool readCache(texture &tex, GLuint &internal) {
     switch (head.internal) {
         case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
         case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
-            if (!gl::has(ARB_texture_compression_bptc))
+            if (!gl::has(gl::ARB_texture_compression_bptc))
                 return false;
             break;
 
         case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
         case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-            if (!gl::has(EXT_texture_compression_s3tc))
+            if (!gl::has(gl::EXT_texture_compression_s3tc))
                 return false;
             break;
 
         case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
         case GL_COMPRESSED_RED_RGTC1_EXT:
-            if (!gl::has(EXT_texture_compression_rgtc))
+            if (!gl::has(gl::EXT_texture_compression_rgtc))
                 return false;
             break;
     }
@@ -397,25 +397,25 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     if (tex.flags() & kTexFlagCompressed) {
         switch (tex.format()) {
             case kTexFormatDXT1:
-                checkSupport(EXT_texture_compression_s3tc);
+                checkSupport(gl::EXT_texture_compression_s3tc);
                 return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
             case kTexFormatDXT3:
-                checkSupport(EXT_texture_compression_s3tc);
+                checkSupport(gl::EXT_texture_compression_s3tc);
                 return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT);
             case kTexFormatDXT5:
-                checkSupport(EXT_texture_compression_s3tc);
+                checkSupport(gl::EXT_texture_compression_s3tc);
                 return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
             case kTexFormatBC4U:
-                checkSupport(EXT_texture_compression_rgtc);
+                checkSupport(gl::EXT_texture_compression_rgtc);
                 return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
             case kTexFormatBC4S:
-                checkSupport(EXT_texture_compression_rgtc);
+                checkSupport(gl::EXT_texture_compression_rgtc);
                 return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_SIGNED_RED_RGTC1_EXT);
             case kTexFormatBC5U:
-                checkSupport(EXT_texture_compression_rgtc);
+                checkSupport(gl::EXT_texture_compression_rgtc);
                 return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
             case kTexFormatBC5S:
-                checkSupport(EXT_texture_compression_rgtc);
+                checkSupport(gl::EXT_texture_compression_rgtc);
                 return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT);
             default:
                 break;
@@ -430,9 +430,9 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
 
     // Texture compression?
     if (r_texcomp && !(tex.flags() & kTexFlagNoCompress)) {
-        const bool bptc = gl::has(ARB_texture_compression_bptc);
-        const bool s3tc = gl::has(EXT_texture_compression_s3tc);
-        const bool rgtc = gl::has(EXT_texture_compression_rgtc);
+        const bool bptc = gl::has(gl::ARB_texture_compression_bptc);
+        const bool s3tc = gl::has(gl::EXT_texture_compression_s3tc);
+        const bool rgtc = gl::has(gl::EXT_texture_compression_rgtc);
         // Deal with conversion from BGR[A] space to RGB[A] space for compression
         // While falling through to the correct internal format for the compression
         if (bptc || s3tc || rgtc) {
@@ -528,7 +528,7 @@ void texture2D::applyFilter() {
     }
 
     // Anisotropic filtering
-    if ((r_aniso & kFilterAniso) && gl::has(EXT_texture_filter_anisotropic)) {
+    if ((r_aniso & kFilterAniso) && gl::has(gl::EXT_texture_filter_anisotropic)) {
         GLfloat largest;
         gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
         gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
@@ -666,7 +666,7 @@ void texture3D::applyFilter() {
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
     // Anisotropic filtering
-    if (r_aniso && gl::has(EXT_texture_filter_anisotropic)) {
+    if (r_aniso && gl::has(gl::EXT_texture_filter_anisotropic)) {
         GLfloat largest;
         gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
         gl::TexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
