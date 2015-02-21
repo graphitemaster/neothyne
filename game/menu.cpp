@@ -134,6 +134,7 @@ static void menuOptions() {
             auto &mipmaps = varGet<int>("r_mipmaps");
             auto &ssao = varGet<int>("r_ssao");
             auto &fxaa = varGet<int>("r_fxaa");
+            auto &spec = varGet<int>("r_spec");
             auto &parallax = varGet<int>("r_parallax");
             auto &texcomp = varGet<int>("r_texcomp");
             auto &texcompcache = varGet<int>("r_texcompcache");
@@ -157,6 +158,8 @@ static void menuOptions() {
                     ssao.toggle();
                 if (gui::check("Anti-aliasing", fxaa.get()))
                     fxaa.toggle();
+                if (gui::check("Specularity", spec.get()))
+                    spec.toggle();
                 if (gui::check("Parallax mapping", parallax.get()))
                     parallax.toggle();
                 if (gui::check("Texture compression", texcomp.get()))

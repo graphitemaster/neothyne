@@ -13,6 +13,7 @@
 VAR(int, r_fxaa, "fast approximate anti-aliasing", 0, 1, 1);
 VAR(int, r_parallax, "parallax mapping", 0, 1, 1);
 VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
+VAR(int, r_spec, "specularity mapping", 0, 1, 1);
 
 namespace r {
 
@@ -371,11 +372,11 @@ static void geomCalculatePermutation(material &mat) {
         permute |= kGeomPermDiffuse;
     if (mat.normal)
         permute |= kGeomPermNormalMap;
-    if (mat.spec)
+    if (mat.spec && r_spec)
         permute |= kGeomPermSpecMap;
     if (mat.displacement && r_parallax)
         permute |= kGeomPermParallax;
-    if (mat.specParams)
+    if (mat.specParams && r_spec)
         permute |= kGeomPermSpecParams;
     for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++) {
         if (geomPermutations[i].permute == permute) {
