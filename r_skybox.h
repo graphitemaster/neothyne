@@ -2,6 +2,7 @@
 #define R_SKYBOX_HDR
 #include "r_texture.h"
 #include "r_method.h"
+#include "r_geom.h"
 
 namespace u {
     struct string;
@@ -29,25 +30,15 @@ private:
 };
 
 struct skybox {
-    skybox();
-    ~skybox();
-
     bool load(const u::string &skyboxName);
     bool upload();
 
     void render(const pipeline &pl);
 
 private:
-    union {
-        struct {
-            GLuint m_vbo;
-            GLuint m_ibo;
-        };
-        GLuint m_buffers[2];
-    };
-    GLuint m_vao;
     texture3D m_cubemap; // skybox cubemap
     skyboxMethod m_method;
+    cube m_cube;
 };
 
 }

@@ -36,54 +36,18 @@ void skyboxMethod::setWorld(const m::mat4 &worldInverse) {
 }
 
 ///! renderer
-skybox::skybox()
-    : m_vao(0)
-{
-    memset(m_buffers, 0, sizeof(m_buffers));
-}
-
-skybox::~skybox() {
-    gl::DeleteBuffers(2, m_buffers);
-    gl::DeleteVertexArrays(1, &m_vao);
-}
-
 bool skybox::load(const u::string &skyboxName) {
     return m_cubemap.load(skyboxName + "_ft", skyboxName + "_bk", skyboxName + "_up",
                           skyboxName + "_dn", skyboxName + "_rt", skyboxName + "_lf");
 }
 
 bool skybox::upload() {
+    if (!m_cube.upload())
+        return false;
     if (!m_cubemap.upload())
         return false;
     if (!m_method.init())
         return false;
-
-    static const GLfloat vertices[] = {
-        -1.0, -1.0,  1.0,
-        1.0, -1.0,  1.0,
-        -1.0,  1.0,  1.0,
-        1.0,  1.0,  1.0,
-        -1.0, -1.0, -1.0,
-        1.0, -1.0, -1.0,
-        -1.0,  1.0, -1.0,
-        1.0,  1.0, -1.0,
-    };
-
-    static const GLubyte indices[] = { 0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1 };
-
-    // create vao to encapsulate state
-    gl::GenVertexArrays(1, &m_vao);
-    gl::BindVertexArray(m_vao);
-
-    gl::GenBuffers(2, m_buffers);
-
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0));
-    gl::EnableVertexAttribArray(0);
-
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     m_method.enable();
     m_method.setTextureUnit(0);
@@ -110,9 +74,8 @@ void skybox::render(const pipeline &pl) {
 
     m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
 
-    gl::BindVertexArray(m_vao);
-    gl::DrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_BYTE, 0);
-    gl::BindVertexArray(0);
+    m_cube.render();
+
     gl::DepthFunc(GL_LESS);
     gl::CullFace(GL_BACK);
 }

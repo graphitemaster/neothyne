@@ -190,7 +190,7 @@ bool cube::upload() {
 
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0));
     gl::EnableVertexAttribArray(0);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
@@ -201,7 +201,7 @@ bool cube::upload() {
 
 void cube::render() {
     gl::BindVertexArray(vao);
-    gl::DrawElements(GL_TRIANGLES, 14, GL_UNSIGNED_BYTE, 0);
+    gl::DrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_BYTE, 0);
 }
 
 }
