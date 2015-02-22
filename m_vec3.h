@@ -241,6 +241,12 @@ inline bool operator!=(const vec3 &a, const vec3 &b) {
         || (m::abs(a.z - b.z) > kEpsilon);
 }
 
+inline vec3 clamp(const vec3 &current, const vec3 &min, const vec3 &max) {
+    return { clamp(current.x, min.x, max.x),
+             clamp(current.y, min.y, max.y),
+             clamp(current.z, min.z, max.z) };
+}
+
 }
 
 #endif

@@ -13,6 +13,8 @@
 #include "u_misc.h"
 #include "u_set.h"
 
+#include "m_vec3.h"
+
 /// Utility for saving a BMP
 template <typename T>
 static inline void memput(unsigned char *&store, const T &data) {
@@ -131,12 +133,26 @@ VAR(u::string, vid_driver, "video driver");
 struct context {
     struct controller {
         controller() = default;
+        controller(int id);
+
+        const char *name() const;
+        int instance() const;
+
+        void update(float delta, const m::vec3 &limits);
+
+    protected:
+        void close();
+
     private:
         friend struct engine;
         friend struct context;
-        SDL_GameController *gamePad;
-        SDL_Joystick *joyStick;
-        const char *name;
+
+        SDL_GameController *m_gamePad;
+        SDL_Joystick *m_joyStick;
+        const char *m_name;
+        int m_instance;
+        m::vec3 m_position[2]; // L, R
+        m::vec3 m_velocity[4]; // L, R, Rest L, Rest R
     };
     ~context();
     context();
@@ -144,6 +160,7 @@ struct context {
     void addController(int id);
     void delController(int id);
     controller *getController(int id);
+    void updateController(int id, unsigned char axis, int16_t value);
 
     void begTextInput();
     void endTextInput();
@@ -158,6 +175,7 @@ private:
 
 #define CTX(X) ((context*)(X))
 
+///! context
 inline context::context()
     : m_window(nullptr)
     , m_textState(textState::kInactive)
@@ -172,28 +190,42 @@ inline context::~context() {
 
 inline void context::addController(int id) {
     // Add the new game controller
-    controller cntrl;
-    cntrl.gamePad = SDL_GameControllerOpen(id);
-    cntrl.joyStick = SDL_GameControllerGetJoystick(cntrl.gamePad);
-    cntrl.name = SDL_GameControllerNameForIndex(id);
-    int instance = SDL_JoystickInstanceID(cntrl.joyStick);
-    m_controllers.insert({ instance, cntrl });
+    controller cntrl(id);
+    m_controllers.insert({ cntrl.instance(), cntrl });
 
-    u::print("[input] => gamepad %d (%s) connected\n", instance, cntrl.name);
+    u::print("[input] => gamepad %d (%s) connected\n", cntrl.m_instance, cntrl.name());
 }
 
 inline void context::delController(int instance) {
     auto cntrl = getController(instance);
-    if (cntrl) {
-        u::print("[input] => gamepad %d (%s) disconnected\n", instance, cntrl->name);
-        SDL_GameControllerClose(cntrl->gamePad);
-    }
+    if (!cntrl) return;
+    u::print("[input] => gamepad %d (%s) disconnected\n", instance, cntrl->name());
+    cntrl->close();
 }
 
 inline context::controller *context::getController(int id) {
     if (m_controllers.find(id) == m_controllers.end())
         return nullptr;
     return &m_controllers[id];
+}
+
+inline void context::updateController(int instance, unsigned char axis, int16_t value) {
+    auto cntrl = getController(instance);
+    if (!cntrl) return;
+    switch (axis) {
+    case SDL_CONTROLLER_AXIS_LEFTX:
+        cntrl->m_velocity[0].x = value / 32767.0f;
+        break;
+    case SDL_CONTROLLER_AXIS_LEFTY:
+        cntrl->m_velocity[0].y = value / 32767.0f;
+        break;
+    case SDL_CONTROLLER_AXIS_RIGHTX:
+        cntrl->m_velocity[1].x = value / 32767.0f;
+        break;
+    case SDL_CONTROLLER_AXIS_RIGHTY:
+        cntrl->m_velocity[1].y = value / 32767.0f;
+        break;
+    }
 }
 
 inline void context::begTextInput() {
@@ -205,6 +237,47 @@ inline void context::endTextInput() {
     if (m_textState != textState::kInputting)
         return;
     m_textState = textState::kFinished;
+}
+
+
+///! context::controller
+inline context::controller::controller(int id)
+    : m_gamePad(SDL_GameControllerOpen(id))
+    , m_joyStick(SDL_GameControllerGetJoystick(m_gamePad))
+    , m_name(SDL_GameControllerNameForIndex(id))
+    , m_instance(SDL_JoystickInstanceID(m_joyStick))
+{
+    // Get idle positions
+    const auto lx = SDL_GameControllerGetAxis(m_gamePad, SDL_CONTROLLER_AXIS_LEFTX);
+    const auto ly = SDL_GameControllerGetAxis(m_gamePad, SDL_CONTROLLER_AXIS_LEFTY);
+    const auto rx = SDL_GameControllerGetAxis(m_gamePad, SDL_CONTROLLER_AXIS_RIGHTX);
+    const auto ry = SDL_GameControllerGetAxis(m_gamePad, SDL_CONTROLLER_AXIS_RIGHTY);
+
+    m_velocity[2] = m::vec3(lx / 32767.0f, ly / 32767.0f, 0.0f);
+    m_velocity[3] = m::vec3(rx / 32767.0f, ry / 32767.0f, 0.0f);
+}
+
+inline const char *context::controller::name() const {
+    return m_name;
+}
+
+inline int context::controller::instance() const {
+    return m_instance;
+}
+
+inline void context::controller::update(float delta, const m::vec3 &limits) {
+    // If the velocity is close to the idle position kill it
+    if (m::abs(m_velocity[2].x - m_velocity[0].x) < 0.1f) m_velocity[0].x = 0.0f;
+    if (m::abs(m_velocity[2].y - m_velocity[0].y) < 0.1f) m_velocity[0].y = 0.0f;
+    if (m::abs(m_velocity[3].x - m_velocity[1].x) < 0.1f) m_velocity[1].x = 0.0f;
+    if (m::abs(m_velocity[3].y - m_velocity[1].y) < 0.1f) m_velocity[1].y = 0.0f;
+
+    m_position[0] = m::clamp(m_position[0] + m_velocity[0] * delta, m::vec3::origin, limits);
+    m_position[1] = m::clamp(m_position[1] + m_velocity[1] * delta, m::vec3::origin, limits);
+}
+
+inline void context::controller::close() {
+    SDL_GameControllerClose(m_gamePad);
 }
 
 /// engine
@@ -325,7 +398,14 @@ bool engine::initContext() {
     // Hide the cursor for the window
     SDL_ShowCursor(0);
 
-    // Find all controllers (that may be plugged in)
+    // Find all gamepads:
+    // We ignore events since we need to calculate the idle state of the joysticks
+    // on the devices. These idles states are used to know when the joysticks are
+    // in resting position.
+    //
+    // This is not accurate. If the engine is launched with the joystick buttons
+    // in a non-resting position the engine will take on that value as the new
+    // resting position.
     SDL_GameControllerEventState(SDL_IGNORE);
     for (int i = 0; i < SDL_NumJoysticks(); ++i) {
         if (!SDL_IsGameController(i))
@@ -438,6 +518,9 @@ void engine::swap() {
         case SDL_CONTROLLERDEVICEREMOVED:
             CTX(m_context)->delController(e.cdevice.which);
             break;
+        case SDL_CONTROLLERAXISMOTION:
+            CTX(m_context)->updateController(e.caxis.which, e.caxis.axis, e.caxis.value);
+            break;
         case SDL_WINDOWEVENT:
             switch (e.window.event) {
             case SDL_WINDOWEVENT_RESIZED:
@@ -509,6 +592,9 @@ void engine::swap() {
             break;
         }
     }
+
+    for (auto &cntrl : CTX(m_context)->m_controllers)
+        cntrl.second.update(m_frameTimer.delta(), { float(m_screenWidth), float(m_screenHeight), 0.0f });
 }
 
 size_t engine::width() const {
