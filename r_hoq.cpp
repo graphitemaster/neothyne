@@ -52,8 +52,8 @@ u::optional<occlusionQueries::ref> occlusionQueries::next() const {
     // Find least-significant bit for the next query
     if (m_bits == 0)
         return u::none;
-    for (size_t i = 0; i < 32; i++)
-        if (m_bits & (1u << i))
+    for (int i = 0; i < r_maxhoq; i++)
+        if (m_bits & (1 << i))
             return i;
     return u::none;
 }
@@ -89,8 +89,8 @@ u::optional<occlusionQueries::ref> occlusionQueries::add(const m::mat4 &wvp) {
     if (!index)
         return u::none;
     const auto handle = *index;
-    m_bits &= ~(1u << handle); // Object in use
     m_objects.push_back({ wvp, this, handle });
+    m_bits &= ~(1u << handle); // Object in use
     return handle;
 }
 
@@ -127,7 +127,7 @@ void occlusionQueries::render() {
         gl::EndQuery(GL_ANY_SAMPLES_PASSED, m_queries[index]);
     }
 
-    m_objects.clear();
+    m_objects.destroy();
 
     // Flush the pipeline for this occlusion query pass
     gl::Flush();
