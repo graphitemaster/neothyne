@@ -30,7 +30,35 @@ embodies the following:
   * Sky fog gradient
   * Fast approximate anti-aliasing (FXAA)
   * Screen space ambient occlusion (SSAO)
-  * View-frustum and occlusion-query culling
+  * View frustum culling
+  * Hardware occlusion query culling
+
+* Immediate-mode graphical user interface (which can do)
+  * Buttons
+  * Items
+  * Check boxes
+  * Radio buttons
+  * Windows
+  * Collapsible areas
+  * Labels (left-justified text)
+  * Values (right-justified text)
+  * Sliders (horizontal and vertical)
+  * Indentation
+  * Headers (vertical separations and lines)
+  * A variety of raw rendering primitives (such as)
+    * Lines
+    * Rectangles
+    * Text
+    * Images
+    * Models
+
+* Console (which allows for)
+  * Global configuration
+  * Reactive changes to various engine components (including renderer)
+
+* Asset optimization (which can do)
+  * Online texture compression
+  * Online linear-speed vertex cache optimization
 
 ## Goals
 
@@ -38,6 +66,7 @@ embodies the following:
 * Shadow mapping
 * Networking (client/server model)
 * Build the game
+* Scripting
 
 ## Screenshots
 An imgur album of screenshots showing the engine and development of it can
