@@ -67,7 +67,6 @@ private:
     //   availability. Linear probe for next available query object is done by finding
     //   the least-significant set bit in this.
     uint32_t m_bits;
-    uint32_t m_wait;
 
     occlusionMethod m_method; // Occlusion rendering method
     cube m_cube; // Cube geometry for occlusion bounding-box render
