@@ -39,7 +39,9 @@ bool quad::upload() {
          1.0f,-1.0f, 0.0f, 1.0f,  0.0f,
     };
 
-    static const GLubyte indices[] = { 0, 1, 2, 0, 2, 3 };
+    static const GLubyte indices[] = {
+        0, 1, 2, 0, 2, 3
+    };
 
     gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, ATTRIB_OFFSET(0)); // position
@@ -129,7 +131,7 @@ bool bbox::upload() {
     geom::upload();
 
     // 1x1x1 cube (centered on origin)
-    static const float vertices[] = {
+    static const GLfloat vertices[] = {
         -0.5f, -0.5f, -0.5f, 1.0f,
          0.5f, -0.5f, -0.5f, 1.0f,
          0.5f,  0.5f, -0.5f, 1.0f,
@@ -140,7 +142,7 @@ bool bbox::upload() {
         -0.5f,  0.5f,  0.5f, 1.0f
     };
 
-    static const unsigned char indices[] = {
+    static const GLubyte indices[] = {
         0, 1, 2, 3,
         4, 5, 6, 7,
         0, 4, 1, 5, 2, 6, 3, 7
@@ -164,6 +166,42 @@ void bbox::render() {
     gl::DrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_BYTE, 0);
     gl::DrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_BYTE, (void*)4);
     gl::DrawElements(GL_LINES, 8, GL_UNSIGNED_BYTE, (void*)8);
+}
+
+bool cube::upload() {
+    geom::upload();
+
+    static const GLfloat vertices[] = {
+        -1.0, -1.0,  1.0,
+         1.0, -1.0,  1.0,
+        -1.0,  1.0,  1.0,
+         1.0,  1.0,  1.0,
+        -1.0, -1.0, -1.0,
+         1.0, -1.0, -1.0,
+        -1.0,  1.0, -1.0,
+         1.0,  1.0, -1.0,
+    };
+
+    static const GLubyte indices[] = {
+        0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1
+    };
+
+    gl::BindVertexArray(vao);
+
+    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    gl::EnableVertexAttribArray(0);
+
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    return true;
+}
+
+void cube::render() {
+    gl::BindVertexArray(vao);
+    gl::DrawElements(GL_TRIANGLES, 14, GL_UNSIGNED_BYTE, 0);
 }
 
 }

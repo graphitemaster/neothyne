@@ -104,6 +104,12 @@ void PixelStorei(GLenum pname, GLint param GL_INFOP);
 void Scissor(GLint x, GLint y, GLsizei width, GLsizei height GL_INFOP);
 void PolygonMode(GLenum face, GLenum mode GL_INFOP);
 void Hint(GLenum target, GLenum mode GL_INFOP);
+void GenQueries(GLsizei n, GLuint* ids GL_INFOP);
+void BeginQuery(GLenum target, GLuint id GL_INFOP);
+void EndQuery(GLenum target, GLuint id GL_INFOP);
+void DeleteQueries(GLsizei n, const GLuint* ids GL_INFOP);
+void GetQueryObjectuiv(GLuint id, GLenum pname, GLuint* params GL_INFOP);
+void Flush(GL_INFO);
 
 }
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -177,5 +183,11 @@ void Hint(GLenum target, GLenum mode GL_INFOP);
 #   define Scissor(...)                  Scissor(__VA_ARGS__, __FILE__, __LINE__)
 #   define PolygonMode(...)              PolygonMode(__VA_ARGS__, __FILE__, __LINE__)
 #   define Hint(...)                     Hint(__VA_ARGS__, __FILE__, __LINE__)
+#   define GenQueries(...)               GenQueries(__VA_ARGS__, __FILE__, __LINE__)
+#   define BeginQuery(...)               BeginQuery(__VA_ARGS__, __FILE__, __LINE__)
+#   define EndQuery(...)                 EndQuery(__VA_ARGS__, __FILE__, __LINE__)
+#   define DeleteQueries(...)            DeleteQueries(__VA_ARGS__, __FILE__, __LINE__)
+#   define GetQueryObjectuiv(...)        GetQueryObjectuiv(__VA_ARGS__, __FILE__, __LINE__)
+#   define Flush(...)                    Flush(/* no arg */ __FILE__, __LINE__)
 #endif
 #endif

@@ -14,6 +14,7 @@ VAR(int, r_fxaa, "fast approximate anti-aliasing", 0, 1, 1);
 VAR(int, r_parallax, "parallax mapping", 0, 1, 1);
 VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 VAR(int, r_spec, "specularity mapping", 0, 1, 1);
+VAR(int, r_hoq, "hardware occlusion queries", 0, 1, 1);
 
 namespace r {
 
@@ -572,8 +573,49 @@ bool world::upload(const m::perspective &p) {
     m_ssaoMethod.setDepthTextureUnit(ssaoMethod::kDepth);
     m_ssaoMethod.setRandomTextureUnit(ssaoMethod::kRandom);
 
+    // setup occlusion stuff
+    if (!m_queries.init())
+        neoFatal("failed to initialize occlusion queries");
+
     u::print("[world] => uploaded\n");
     return m_uploaded = true;
+}
+
+void world::occlusionPass(const pipeline &pl, ::world *map) {
+    if (!r_hoq)
+        return;
+
+    m_queries.update();
+    for (auto &it : map->m_mapModels) {
+        // Ignore if not loaded. The geometry pass will load it in later. We defer
+        // to additional occlusion passes in that case.
+        if (m_models.find(it->name) == m_models.end())
+            continue;
+
+        auto &mdl = m_models[it->name];
+        auto &mesh = mdl->getMesh();
+
+        pipeline p = pl;
+        p.setWorld(it->position);
+        p.setScale(it->scale + mdl->scale);
+
+        const m::vec3 rot = mdl->rotate + it->rotate;
+        m::quat rx(m::vec3::xAxis, m::toRadian(rot.x));
+        m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
+        m::quat rz(m::vec3::zAxis, m::toRadian(rot.z));
+        m::mat4 rotate;
+        (rz * ry * rx).getMatrix(&rotate);
+        p.setRotate(rotate);
+
+        pipeline bp;
+        bp.setWorld(mesh.bbox.center());
+        bp.setScale(mesh.bbox.size());
+        const m::mat4 wvp = (p.projection() * p.view() * p.world()) * bp.world();
+        m_queries.add(wvp, (const void *)&it);
+    }
+
+    // Dispatch all the queries
+    m_queries.render();
 }
 
 void world::geometryPass(const pipeline &pl, ::world *map) {
@@ -637,6 +679,10 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
                 neoFatal("failed to upload model '%s'\n", it->name);
             m_models[it->name] = next.release();
         } else {
+            // Occlusion query
+            if (r_hoq && m_queries.passed(&it))
+                continue;
+
             auto &mdl = m_models[it->name];
 
             pipeline pm = p;
@@ -952,6 +998,7 @@ void world::compositePass(const pipeline &pl) {
 }
 
 void world::render(const pipeline &pl, ::world *map) {
+    occlusionPass(pl, map);
     geometryPass(pl, map);
     lightingPass(pl, map);
     forwardPass(pl, map);

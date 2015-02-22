@@ -188,7 +188,7 @@ void map<K, V>::erase(const_iterator where) {
     hash_node_erase(where.node, hash(where->first), m_buckets.first,
         size_t(m_buckets.last - m_buckets.first) - 1);
     where->~hash_node<K, V>();
-    neoFree(where.node);
+    neoFree((void *)where.node);
     --m_size;
 }
 

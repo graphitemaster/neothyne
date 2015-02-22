@@ -28,7 +28,7 @@ struct sphere : geom {
     sphere();
     bool upload();
     void render();
-    
+
 private:
     size_t m_indices;
     static constexpr size_t kSlices = 8;
@@ -36,6 +36,11 @@ private:
 };
 
 struct bbox : geom {
+    bool upload();
+    void render();
+};
+
+struct cube : geom {
     bool upload();
     void render();
 };

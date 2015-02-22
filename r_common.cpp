@@ -97,6 +97,12 @@ typedef void (APIENTRYP MYPFNGLPIXELSTOREIPROC)(GLenum, GLint);
 typedef void (APIENTRYP MYPFNGLSCISSORPROC)(GLint, GLint, GLsizei, GLsizei);
 typedef void (APIENTRYP MYPFNGLPOLYGONMODEPROC)(GLenum, GLenum);
 typedef void (APIENTRYP MYPFNGLHINTPROC)(GLenum, GLenum);
+typedef void (APIENTRYP MYPFNGLGENQUERIESPROC)(GLsizei, GLuint*);
+typedef void (APIENTRYP MYPFNGLBEGINQUERYPROC)(GLenum, GLuint);
+typedef void (APIENTRYP MYPFNGLENDQUERYPROC)(GLenum, GLuint);
+typedef void (APIENTRYP MYPFNGLDELETEQUERIESPROC)(GLsizei, const GLuint*);
+typedef void (APIENTRYP MYPFNGLGETQUERYOBJECTUIVPROC)(GLuint, GLenum, GLuint*);
+typedef void (APIENTRYP MYPFNGLFLUSHPROC)();
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -168,6 +174,12 @@ static MYPFNGLPIXELSTOREIPROC               glPixelStorei_              = nullpt
 static MYPFNGLSCISSORPROC                   glScissor_                  = nullptr;
 static MYPFNGLPOLYGONMODEPROC               glPolygonMode_              = nullptr;
 static MYPFNGLHINTPROC                      glHint_                     = nullptr;
+static MYPFNGLGENQUERIESPROC                glGenQueries_               = nullptr;
+static MYPFNGLBEGINQUERYPROC                glBeginQuery_               = nullptr;
+static MYPFNGLENDQUERYPROC                  glEndQuery_                 = nullptr;
+static MYPFNGLDELETEQUERIESPROC             glDeleteQueries_            = nullptr;
+static MYPFNGLGETQUERYOBJECTUIVPROC         glGetQueryObjectuiv_        = nullptr;
+static MYPFNGLFLUSHPROC                     glFlush_                    = nullptr;
 
 #ifdef DEBUG_GL
 template <char C, typename T>
@@ -432,6 +444,12 @@ void init() {
     glScissor_                  = (MYPFNGLSCISSORPROC)neoGetProcAddress("glScissor");
     glPolygonMode_              = (MYPFNGLPOLYGONMODEPROC)neoGetProcAddress("glPolygonMode");
     glHint_                     = (MYPFNGLHINTPROC)neoGetProcAddress("glHint");
+    glGenQueries_               = (MYPFNGLGENQUERIESPROC)neoGetProcAddress("glGenQueries");
+    glBeginQuery_               = (MYPFNGLBEGINQUERYPROC)neoGetProcAddress("glBeginQuery");
+    glEndQuery_                 = (MYPFNGLENDQUERYPROC)neoGetProcAddress("glEndQuery");
+    glDeleteQueries_            = (MYPFNGLDELETEQUERIESPROC)neoGetProcAddress("glDeleteQueries");
+    glGetQueryObjectuiv_        = (MYPFNGLGETQUERYOBJECTUIVPROC)neoGetProcAddress("glGetQueryObjectuiv");
+    glFlush_                    = (MYPFNGLFLUSHPROC)neoGetProcAddress("glFlush");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -804,6 +822,36 @@ void PolygonMode(GLenum face, GLenum mode GL_INFOP) {
 void Hint(GLenum target, GLenum mode GL_INFOP) {
     glHint_(target, mode);
     GL_CHECK("22", target, mode);
+}
+
+void GenQueries(GLsizei n, GLuint* ids GL_INFOP) {
+    glGenQueries_(n, ids);
+    GL_CHECK("8*b", n, ids);
+}
+
+void BeginQuery(GLenum target, GLuint id GL_INFOP) {
+    glBeginQuery_(target, id);
+    GL_CHECK("2b", target, id);
+}
+
+void EndQuery(GLenum target, GLuint id GL_INFOP) {
+    glEndQuery_(target, id);
+    GL_CHECK("2b", target, id);
+}
+
+void DeleteQueries(GLsizei n, const GLuint* ids GL_INFOP) {
+    glDeleteQueries_(n, ids);
+    GL_CHECK("8*b", n, ids);
+}
+
+void GetQueryObjectuiv(GLuint id, GLenum pname, GLuint* params GL_INFOP) {
+    glGetQueryObjectuiv_(id, pname, params);
+    GL_CHECK("b2*b", id, pname, params);
+}
+
+void Flush(GL_INFO) {
+    glFlush_();
+    GL_CHECK("",0);
 }
 
 }

@@ -8,6 +8,7 @@
 #include "r_geom.h"
 #include "r_model.h"
 #include "r_light.h"
+#include "r_hoq.h"
 
 #include "u_map.h"
 
@@ -142,6 +143,7 @@ struct world : geom {
     void render(const pipeline &pl, ::world *map);
 
 private:
+    void occlusionPass(const pipeline &pl, ::world *map);
     void geometryPass(const pipeline &pl, ::world *map);
     void lightingPass(const pipeline &pl, ::world *map);
     void forwardPass(const pipeline &pl, ::world *map);
@@ -176,6 +178,7 @@ private:
 
     m::mat4 m_identity;
     m::frustum m_frustum;
+    occlusionQueries m_queries;
 
     bool m_uploaded;
 };
