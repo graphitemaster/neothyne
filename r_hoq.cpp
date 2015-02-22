@@ -50,13 +50,12 @@ occlusionQueries::occlusionQueries()
 
 u::optional<occlusionQueries::ref> occlusionQueries::next() const {
     // Find least-significant bit for the next query
-    static const char *kDeBruijn = "\x00\x01\x17\x02\x1D\x18\x13\x03"
-                                   "\x1E\x1B\x19\x0B\x14\x08\x04\x0D"
-                                   "\x1F\x16\x1C\x12\x1A\x0A\x07\x0C"
-                                   "\x15\x11\x09\x06\x10\x05\x0F\x0E";
     if (m_bits == 0)
         return u::none;
-    return kDeBruijn[(m_bits&-m_bits)*0x076BE629u >> 27];
+    for (size_t i = 0; i < 32; i++)
+        if (m_bits & (1u << i))
+            return i;
+    return u::none;
 }
 
 bool occlusionQueries::init() {
@@ -90,8 +89,8 @@ u::optional<occlusionQueries::ref> occlusionQueries::add(const m::mat4 &wvp) {
     if (!index)
         return u::none;
     const auto handle = *index;
+    m_bits &= ~(1u << handle); // Object in use
     m_objects.push_back({ wvp, this, handle });
-    m_bits &= ~(1u << index); // Object in use
     return handle;
 }
 
