@@ -5,11 +5,10 @@
 #include "r_method.h"
 #include "r_geom.h"
 
+#include "u_optional.h"
 #include "u_vector.h"
-#include "u_map.h"
 
 #include "m_mat4.h"
-#include "m_bbox.h"
 
 namespace r {
 
@@ -27,22 +26,20 @@ inline occlusionMethod::occlusionMethod()
 }
 
 struct occlusionQueries {
+    typedef size_t ref;
+
 protected:
-    bool begin();
+    u::optional<ref> next() const;
 
     struct object {
-        object(const m::mat4 &wvp, occlusionQueries *owner);
-
-        object &operator=(const object &other);
-
+        object(const m::mat4 &wvp, occlusionQueries *owner, ref handle);
     protected:
-        void render(size_t index);
-
+        void render();
     private:
         friend struct occlusionQueries;
         m::mat4 m_wvp;
         occlusionQueries *m_owner;
-        size_t m_index;
+        ref m_handle; // Occlusion query handle
     };
 
 public:
@@ -53,17 +50,25 @@ public:
     void update();
     void render();
 
-    void add(const m::mat4 &wvp, const void *id);
+    // Add an object to do occlusion test
+    u::optional<ref> add(const m::mat4 &wvp);
 
-    bool passed(const void *id);
+    // Check if an object passed the occlusion test
+    bool passed(ref handle);
 
 private:
     friend struct object;
+
     u::vector<object> m_objects; // Objects to query
-    u::vector<GLuint> m_queries; // Occlusion query pool
-    u::map<const void *, size_t> m_mapping; // Opaque object mapping with value = m_objects index
-    int m_next; // Next available occlusion object
-    int m_current; // Current occlusion object, -1 if linear-probe failed (occlusion query pool all in use.)
+    u::vector<GLuint> m_queries; // Occlusion object pool
+
+    // Stores state of query objects:
+    //   An unset bit indicates the query object is in use, while the inverse indicates
+    //   availability. Linear probe for next available query object is done by finding
+    //   the least-significant set bit in this.
+    uint32_t m_bits;
+    uint32_t m_wait;
+
     occlusionMethod m_method; // Occlusion rendering method
     cube m_cube; // Cube geometry for occlusion bounding-box render
 };

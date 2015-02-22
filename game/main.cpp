@@ -177,6 +177,14 @@ int neoMain(frameTimer &timer, int, char **) {
     m.rotate = { 0, 90, 0 };
     gWorld.insert(m);
 
+    for (size_t j = 0; j < 20; j++) {
+        for (size_t i = 0; i < 20; i++) {
+            m.position.x = i * 10.0f;
+            gWorld.insert(m);
+        }
+        m.position.z = j * 10.0f;
+    }
+
     m.name = "models/rl";
     m.position.x += 40.0f;
     gWorld.insert(m);

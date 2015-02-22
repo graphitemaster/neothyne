@@ -611,7 +611,13 @@ void world::occlusionPass(const pipeline &pl, ::world *map) {
         bp.setWorld(mesh.bbox.center());
         bp.setScale(mesh.bbox.size());
         const m::mat4 wvp = (p.projection() * p.view() * p.world()) * bp.world();
-        m_queries.add(wvp, (const void *)&it);
+
+        // Get an occlusion query slot
+        auto occlusionQuery = m_queries.add(wvp);
+        if (!occlusionQuery)
+            continue;
+
+        it->occlusionQuery = *occlusionQuery;
     }
 
     // Dispatch all the queries
@@ -680,7 +686,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
             m_models[it->name] = next.release();
         } else {
             // Occlusion query
-            if (r_hoq && m_queries.passed(&it))
+            if (r_hoq && m_queries.passed(it->occlusionQuery))
                 continue;
 
             auto &mdl = m_models[it->name];

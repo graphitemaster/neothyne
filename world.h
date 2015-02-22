@@ -56,10 +56,12 @@ struct mapModel {
     m::vec3 rotate;
     u::string name;
     bool highlight;
+    r::occlusionQueries::ref occlusionQuery;
 };
 
 inline mapModel::mapModel()
     : highlight(false)
+    , occlusionQuery(size_t(-1))
 {
 }
 
