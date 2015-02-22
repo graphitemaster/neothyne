@@ -139,6 +139,8 @@ static void menuOptions() {
             auto &texcomp = varGet<int>("r_texcomp");
             auto &texcompcache = varGet<int>("r_texcompcache");
             auto &texquality = varGet<float>("r_texquality");
+            auto &hoq = varGet<int>("r_hoq");
+            auto &maxhoq = varGet<int>("r_maxhoq");
             gui::indent();
                 if (gui::collapse("Texture filtering", "", D(filtering)))
                     D(filtering) = !D(filtering);
@@ -167,6 +169,9 @@ static void menuOptions() {
                 if (gui::check("Texture compression cache", texcompcache))
                     texcompcache.toggle();
                 gui::slider("Texture quality", texquality.get(), texquality.min(), texquality.max(), 0.01f);
+                if (gui::check("Hardware occlusion queries", hoq.get()))
+                    hoq.toggle();
+                gui::slider("Maximum occlusion queries", maxhoq.get(), maxhoq.min(), maxhoq.max(), 1, hoq.get());
             gui::dedent();
         }
         if (gui::collapse("Input", "", D(input)))

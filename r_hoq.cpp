@@ -2,9 +2,7 @@
 
 #include "r_hoq.h"
 
-#include "u_misc.h"
-
-VAR(int, r_maxhoq, "maximum hardware occlusion queries", 1, 8, 16);
+VAR(int, r_maxhoq, "maximum hardware occlusion queries", 1, 16, 4);
 
 namespace r {
 
@@ -73,19 +71,10 @@ void occlusionQueries::update() {
     if (r_maxhoq == int(m_queries.size()))
         return;
 
-    // Wait for all the queries to be complete when resetting
     if (m_queries.size()) {
-        size_t count = 0;
-        while (count != m_queries.size()) {
-            for (auto &it : m_queries) {
-                GLuint available = 0;
-                gl::GetQueryObjectuiv(it, GL_QUERY_RESULT_AVAILABLE, &available);
-                if (available)
-                    count++;
-            }
-        }
-
         // Destroy old queries
+        m_mapping.clear();
+        m_objects.destroy();
         gl::DeleteQueries(m_queries.size(), &m_queries[0]);
     }
 
@@ -184,6 +173,9 @@ void occlusionQueries::render() {
 
     // Flush the pipeline for this occlusion query pass
     gl::Flush();
+
+    gl::ColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    gl::DepthMask(GL_TRUE);
 }
 
 }

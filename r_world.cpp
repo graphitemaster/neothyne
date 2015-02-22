@@ -680,8 +680,10 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
             m_models[it->name] = next.release();
         } else {
             // Occlusion query
-            if (r_hoq && m_queries.passed(&it))
+            if (r_hoq && m_queries.passed(&it)) {
+                u::print("HOQ'd %p\n", &it);
                 continue;
+            }
 
             auto &mdl = m_models[it->name];
 
