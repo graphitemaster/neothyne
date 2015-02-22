@@ -105,6 +105,16 @@ Displacement mapping
 * 0 = disable
 * 1 = enable
 
+##### r_hoq
+Hardware occlusion queries
+
+* 0 = disable
+* 1 = enable
+
+##### r_maxhoq
+Maximum amount of occlusion queries that can be in asynchronous wait state.
+
+* any value in the range [1, 16]
 
 ## Client
 ##### cl_farp
