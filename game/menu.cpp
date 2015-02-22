@@ -523,6 +523,8 @@ void menuReset() {
     gMenuData["menuEdit_newent"] = true;
     gMenuData["menuEdit_light"] = true;
 
+    gMenuData["menuCreate_browse"] = false;
+
     gMenuStrings["menuCreate_mesh"] = "";
     gMenuStrings["menuCreate_skybox"] = "";
 

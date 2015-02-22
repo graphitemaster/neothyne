@@ -63,6 +63,7 @@ static void setBinds() {
         else
             neoRelativeMouse(false);
         neoCenterMouse();
+        menuReset();
     });
 
     neoBindSet("F8Dn", []() {
