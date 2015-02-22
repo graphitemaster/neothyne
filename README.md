@@ -30,6 +30,7 @@ embodies the following:
   * Sky fog gradient
   * Fast approximate anti-aliasing (FXAA)
   * Screen space ambient occlusion (SSAO)
+  * View-frustum and occlusion-query culling
 
 ## Goals
 
