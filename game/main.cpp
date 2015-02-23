@@ -94,7 +94,7 @@ static void setBinds() {
     });
 }
 
-int neoMain(frameTimer &timer, int, char **) {
+int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     // Setup rendering pipeline
     gPerspective.fov = cl_fov;
     gPerspective.nearp = cl_nearp;
@@ -193,7 +193,7 @@ int neoMain(frameTimer &timer, int, char **) {
         neoFatal("failed to load world");
 #endif
 
-    while (gRunning) {
+    while (gRunning && !shutdown) {
         gClient.update(gWorld, timer.delta());
 
         gPerspective.fov = cl_fov;

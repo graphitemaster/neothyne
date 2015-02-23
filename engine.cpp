@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <signal.h>
 #include <time.h>
 
 #include <SDL2/SDL.h>
@@ -14,6 +15,13 @@
 #include "u_set.h"
 
 #include "m_vec3.h"
+
+static volatile bool gShutdown = false;
+
+static void neoSignalHandler(int) {
+    writeConfig(neoUserPath());
+    gShutdown = true;
+}
 
 /// Utility for saving a BMP
 template <typename T>
@@ -809,7 +817,10 @@ void *neoGetProcAddress(const char *proc) {
 ///     main -> entryPoint -> neoMain
 ///
 static int entryPoint(int argc, char **argv) {
-    extern int neoMain(frameTimer&, int argc, char **argv);
+    extern int neoMain(frameTimer&, int argc, char **argv, bool &shutdown);
+
+    signal(SIGINT, neoSignalHandler);
+    signal(SIGTERM, neoSignalHandler);
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0)
         neoFatal("Failed to initialize SDL2");
@@ -845,7 +856,7 @@ static int entryPoint(int argc, char **argv) {
     u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
 
     // Launch the game
-    int status = neoMain(gEngine.m_frameTimer, argc, argv);
+    int status = neoMain(gEngine.m_frameTimer, argc, argv, (bool &)gShutdown);
     writeConfig(gEngine.userPath());
     return status;
 }
