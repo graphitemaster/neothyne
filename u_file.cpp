@@ -191,7 +191,8 @@ dir::~dir() {
 
 bool dir::isFile(const char *fileName) {
     struct stat buff;
-    stat(fileName, &buff);
+    if (stat(fileName, &buff) != 0)
+        return false;
     return S_ISREG(buff.st_mode);
 }
 
@@ -262,7 +263,8 @@ dir::~dir() {
 
 bool dir::isFile(const char *fileName) {
     struct _stat buff;
-    _stat(fileName, &buff);
+    if (_stat(fileName, &buff) != 0)
+        return false;
 #ifdef S_ISREG
     return S_ISREG(buff.st_mode);
 #else

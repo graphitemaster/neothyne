@@ -118,7 +118,6 @@ private:
     u::string m_userPath;
     u::string m_gamePath;
     mouseState m_mouseState;
-    textState m_textState;
     size_t m_screenWidth;
     size_t m_screenHeight;
     size_t m_refreshRate;

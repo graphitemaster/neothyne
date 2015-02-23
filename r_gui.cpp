@@ -136,7 +136,9 @@ void guiMethod::setColorTextureUnit(int unit) {
 ///! guiModelMethod
 guiModelMethod::guiModelMethod()
     : m_WVPLocation(0)
+    , m_worldLocation(0)
     , m_colorTextureUnitLocation(0)
+    , m_eyeWorldPositionLocation(0)
 {
 }
 

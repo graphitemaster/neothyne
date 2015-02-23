@@ -140,7 +140,7 @@ VAR(u::string, vid_driver, "video driver");
 /// pimpl context
 struct context {
     struct controller {
-        controller() = default;
+        controller();
         controller(int id);
 
         const char *name() const;
@@ -249,6 +249,14 @@ inline void context::endTextInput() {
 
 
 ///! context::controller
+inline context::controller::controller()
+    : m_gamePad(nullptr)
+    , m_joyStick(nullptr)
+    , m_name(nullptr)
+    , m_instance(0)
+{
+}
+
 inline context::controller::controller(int id)
     : m_gamePad(SDL_GameControllerOpen(id))
     , m_joyStick(SDL_GameControllerGetJoystick(m_gamePad))
