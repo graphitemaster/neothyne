@@ -27,7 +27,7 @@ embodies the following:
   * Sky meshes (skybox, skydome, etc, any mesh will suffice).
   * Normal mapping (dot3 bump mapping)
   * Displacement mapping (steep parallax and relief mapping)
-  * Sky fog gradient
+  * Fog (linear, exp and exp2)
   * Fast approximate anti-aliasing (FXAA)
   * Screen space ambient occlusion (SSAO)
   * View frustum culling
