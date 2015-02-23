@@ -116,6 +116,7 @@ Maximum amount of occlusion queries that can be in asynchronous wait state.
 
 * any value in the range [1, 16]
 
+
 ## Client
 ##### cl_farp
 Far clipping plane distance
@@ -151,8 +152,53 @@ Chroma upsampling filter for decoding JPEGs
 * 0 = bicubic (slow)
 * 1 = pixel repetition (fast)
 
+
 ## UI
 ##### ui_scroll_speed
 Mouse scroll speed for UI sliders
 
-* an value in range [1, 10]
+* any value in range [1, 10]
+
+
+## Map
+##### map_fog_density
+Map fog density
+
+* any value in range [0, 1]
+
+##### map_fog_color
+Map fog color
+
+* any value in range [0, 0x00FFFFFF]
+
+##### map_fog_equation
+Map fog equation
+
+* 0 = Linear
+* 1 = Exp
+* 2 = Exp2
+
+##### map_fog_range_start
+Map fog range start (for linear only)
+
+* any value in range [0, 1]
+
+##### map_fog_range_end
+Map fog range end (for linear only)
+
+* any value in range [0, 1]
+
+##### map_dlight_color
+Map directional light color
+
+* any value in range [0, 0x00FFFFFF]
+
+##### map_dlight_ambient
+Map directional light ambient term
+
+* any value in range [0, 1]
+
+##### map_dlight_diffuse
+Map directional light diffuse term
+
+* any value in range [0, 1]

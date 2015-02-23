@@ -85,6 +85,11 @@ bool directionalLightMethod::init(const u::vector<const char *> &defines) {
     m_directionalLightLocation.diffuse = getUniformLocation("gDirectionalLight.base.diffuse");
     m_directionalLightLocation.direction = getUniformLocation("gDirectionalLight.direction");
 
+    m_fogLocation.color = getUniformLocation("gFog.color");
+    m_fogLocation.density = getUniformLocation("gFog.density");
+    m_fogLocation.range = getUniformLocation("gFog.range");
+    m_fogLocation.equation = getUniformLocation("gFog.equation");
+
     return true;
 }
 
@@ -94,6 +99,13 @@ void directionalLightMethod::setLight(const directionalLight &light) {
     gl::Uniform1f(m_directionalLightLocation.ambient, light.ambient);
     gl::Uniform3fv(m_directionalLightLocation.direction, 1, &direction.x);
     gl::Uniform1f(m_directionalLightLocation.diffuse, light.diffuse);
+}
+
+void directionalLightMethod::setFog(const fog &f) {
+    gl::Uniform3fv(m_fogLocation.color, 1, &f.color.x);
+    gl::Uniform1f(m_fogLocation.density, f.density);
+    gl::Uniform2f(m_fogLocation.range, f.start, f.end);
+    gl::Uniform1i(m_fogLocation.equation, int(f.equation));
 }
 
 ///! Point Light Rendering Method

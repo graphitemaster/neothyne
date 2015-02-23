@@ -134,6 +134,7 @@ static void menuOptions() {
             auto &mipmaps = varGet<int>("r_mipmaps");
             auto &ssao = varGet<int>("r_ssao");
             auto &fxaa = varGet<int>("r_fxaa");
+            auto &fog = varGet<int>("r_fog");
             auto &spec = varGet<int>("r_spec");
             auto &parallax = varGet<int>("r_parallax");
             auto &texcomp = varGet<int>("r_texcomp");
@@ -160,6 +161,8 @@ static void menuOptions() {
                     ssao.toggle();
                 if (gui::check("Anti-aliasing", fxaa.get()))
                     fxaa.toggle();
+                if (gui::check("Fog", fog.get()))
+                    fog.toggle();
                 if (gui::check("Specularity", spec.get()))
                     spec.toggle();
                 if (gui::check("Parallax mapping", parallax.get()))
@@ -383,6 +386,47 @@ static void menuEdit() {
                     color.set((R << 16) | ((D(dlightLock) ? R : G) << 8) | (D(dlightLock) ? R : B));
                 gui::dedent();
             }
+            if (gui::collapse("Fog", "", D(fog)))
+                D(fog) = !D(fog);
+            if (D(fog)) {
+                gui::indent();
+                    auto &equation = varGet<int>("map_fog_equation");
+                    auto &density = varGet<float>("map_fog_density");
+                    auto &color = varGet<int>("map_fog_color");
+                   int R = (color.get() >> 16) & 0xFF;
+                    int G = (color.get() >> 8) & 0xFF;
+                    int B = color.get() & 0xFF;
+                    gui::label("Equation");
+                    gui::indent();
+                        if (gui::check("Linear", equation.get() == fog::kLinear) && equation.get() != fog::kLinear)
+                            equation.set(fog::kLinear);
+                        if (gui::check("Exp", equation.get() == fog::kExp) && equation.get() != fog::kExp)
+                            equation.set(fog::kExp);
+                        if (gui::check("Exp2", equation.get() == fog::kExp2) && equation.get() != fog::kExp2)
+                            equation.set(fog::kExp2);
+                    gui::dedent();
+                    if (equation.get() == fog::kLinear) {
+                        auto &start = varGet<float>("map_fog_range_start");
+                        auto &end = varGet<float>("map_fog_range_end");
+                        gui::label("Range");
+                        gui::indent();
+                        gui::slider("Start", start.get(), start.min(), start.max(), 0.001f);
+                        gui::slider("End", end.get(), end.min(), end.max(), 0.001f);
+                        gui::dedent();
+                    }
+                    gui::slider("Density", density.get(), density.min(), density.max(), 0.001f);
+                    gui::label("Color");
+                    gui::indent();
+                        gui::slider("Red", R, 0, 0xFF, 1);
+                        gui::slider("Green", D(fogLightLock) ? R : G, 0, 0xFF, 1);
+                        gui::slider("Blue", D(fogLightLock) ? R : B, 0, 0xFF, 1);
+                        gui::separator();
+                        if (gui::check("Lock", D(fogLightLock)))
+                            D(fogLightLock) = !D(fogLightLock);
+                    gui::dedent();
+                gui::dedent();
+                color.set((R << 16) | ((D(fogLightLock) ? R : G) << 8) | (D(fogLightLock) ? R : B));
+            }
             if (gui::collapse("New", "", D(newent)))
                 D(newent) = !D(newent);
             if (D(newent)) {
@@ -520,7 +564,8 @@ void menuReset() {
     gMenuData["menuCredits_special"] = true;
 
     gMenuData["menuEdit_dlight"] = true;
-    gMenuData["menuEdit_newent"] = true;
+    gMenuData["menuEdit_fog"] = true;
+    gMenuData["menuEdit_newent"] = false;
     gMenuData["menuEdit_light"] = true;
 
     gMenuData["menuCreate_browse"] = false;

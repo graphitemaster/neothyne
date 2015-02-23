@@ -1,6 +1,7 @@
 #include <shaders/screenspace.h>
 #include <shaders/depth.h>
 #include <shaders/light.h>
+#include <shaders/fog.h>
 
 uniform neoSampler2D gColorMap;
 uniform neoSampler2D gNormalMap;
@@ -43,4 +44,12 @@ void main() {
     fragColor = vec4(colorMap.rgb, 1.0f)
         * calcDirectionalLight(gDirectionalLight, worldPosition, normalMap, specMap);
 #endif
+
+#ifdef USE_FOG
+    float z = neoTexture2D(gDepthMap, texCoord).r;
+    float c = (2.0f * gScreenFrustum.x) / (gScreenFrustum.y +
+        gScreenFrustum.x - z * (gScreenFrustum.y - gScreenFrustum.x));
+    fragColor = mix(fragColor, vec4(gFog.color, 1.0f), calcFogFactor(gFog, c));
+#endif
+
 }

@@ -15,6 +15,7 @@ VAR(int, r_parallax, "parallax mapping", 0, 1, 1);
 VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 VAR(int, r_spec, "specularity mapping", 0, 1, 1);
 VAR(int, r_hoq, "hardware occlusion queries", 0, 1, 1);
+VAR(int, r_fog, "fog", 0, 1, 1);
 
 namespace r {
 
@@ -279,7 +280,8 @@ enum {
 
 // All the light shader permutations
 enum {
-    kLightPermSSAO       = 1 << 0
+    kLightPermSSAO       = 1 << 0,
+    kLightPermFog        = 1 << 1
 };
 
 // All the geometry shader permutations
@@ -300,7 +302,8 @@ static const char *finalPermutationNames[] = {
 // The prelude defines to compile that light shader permutation
 // These must be in the same order as the enums
 static const char *lightPermutationNames[] = {
-    "USE_SSAO"
+    "USE_SSAO",
+    "USE_FOG"
 };
 
 // The prelude defines to compile that geometry shader permutation
@@ -322,7 +325,9 @@ static const finalPermutation finalPermutations[] = {
 // All the possible light permutations
 static const lightPermutation lightPermutations[] = {
     { 0 },
-    { kLightPermSSAO }
+    { kLightPermSSAO },
+    { kLightPermSSAO | kLightPermFog },
+    { kLightPermFog }
 };
 
 // All the possible geometry permutations
@@ -360,8 +365,13 @@ static size_t finalCalculatePermutation() {
 
 // Calculate the correct permutation to use for the light buffer
 static size_t lightCalculatePermutation() {
+    int permute = 0;
+    if (r_fog)
+        permute |= kLightPermFog;
+    if (r_ssao)
+        permute |= kLightPermSSAO;
     for (size_t i = 0; i < sizeof(lightPermutations)/sizeof(lightPermutations[0]); i++)
-        if (r_ssao && (lightPermutations[i].permute & kLightPermSSAO))
+        if (lightPermutations[i].permute == permute)
             return i;
     return 0;
 }
@@ -685,7 +695,11 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
                 neoFatal("failed to upload model '%s'\n", it->name);
             m_models[it->name] = next.release();
         } else {
-            // Occlusion query
+            // Occlusion queries.
+            //  TODO: Implement a space-partitioning data-structure to contain
+            //  the bounding boxes of scene geometry in an efficient manner and
+            //  apply HOQ's on those larger, more appropriate bounding volumes to
+            //  disable / enable batches of models within those volumes.
             if (r_hoq && m_queries.passed(it->occlusionQuery))
                 continue;
 
@@ -735,6 +749,8 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
         m_ssaoMethod.setPerspective(p.perspective());
         m_ssaoMethod.setInverse((p.projection() * p.view()).inverse());
         m_quad.render();
+
+        // TODO: X, Y + Blur
     }
 }
 
@@ -864,6 +880,8 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
         method.setPerspective(pl.perspective());
         method.setEyeWorldPos(pl.position());
         method.setInverse((p.projection() * p.view()).inverse());
+        if (r_fog)
+            method.setFog(map->m_fog);
         m_quad.render();
     }
 }
@@ -875,8 +893,15 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
     gl::Enable(GL_DEPTH_TEST);
     gl::DepthFunc(GL_LEQUAL);
 
-    // Forward render skybox
-    m_skybox.render(pl);
+    // Skybox:
+    //  Forwarded rendered and the last thing rendered to prevent overdraw.
+    //
+    //  Blending function ignores background since it contains fog contribution
+    //  from directional lighting. The skybox is independently fogged with a
+    //  gradient as to provide a coherent effect of world geometry fog reaching
+    //  into the skybox.
+    gl::BlendFunc(GL_ONE, GL_ZERO);
+    m_skybox.render(pl, map->m_fog);
 
     // Editing aids
     static constexpr m::vec3 kHighlighted = { 1.0f, 0.0f, 0.0f };
@@ -884,7 +909,9 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
 
     gl::DepthMask(GL_FALSE);
     if (varGet<int>("cl_edit").get()) {
-        // World billboards
+        // World billboards:
+        //  All billboards have pre-multiplied alpha to prevent strange blending
+        //  blending issues around the edges.
         gl::BlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         for (auto &it : map->m_billboards) {
             // Load billboards on demand

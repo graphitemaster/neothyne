@@ -15,3 +15,5 @@ You'll note entities like models and lights have a bounding box / sphere which
 changes color when selected.
 
 A selected entity can be deleted through the edit menu or with 'DEL'.
+
+Map variables can be found in `VARS.md'

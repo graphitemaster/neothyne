@@ -6,6 +6,7 @@
 struct directionalLight;
 struct pointLight;
 struct spotLight;
+struct fog;
 
 namespace m {
     struct mat4;
@@ -53,6 +54,7 @@ struct directionalLightMethod : lightMethod {
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setLight(const directionalLight &light);
+    void setFog(const fog &f);
 
 private:
     struct {
@@ -61,6 +63,13 @@ private:
         GLint diffuse;
         GLint direction;
     } m_directionalLightLocation;
+
+    struct {
+        GLint color;
+        GLint density;
+        GLint range;
+        GLint equation;
+    } m_fogLocation;
 };
 
 struct pointLightMethod : lightMethod {

@@ -48,6 +48,29 @@ inline spotLight::spotLight()
 {
 }
 
+// fog
+struct fog {
+    fog();
+    m::vec3 color;
+    float density; // Used for Exp, Exp2, and sky fog gradient
+    float start; // Starting range (linear only)
+    float end; // Ending range (linear only)
+    enum {
+        kLinear,
+        kExp,
+        kExp2
+    };
+    int equation;
+};
+
+inline fog::fog()
+    : density(0.0f)
+    , start(0.0f)
+    , end(0.0f)
+    , equation(fog::kLinear)
+{
+}
+
 // a map model
 struct mapModel {
     mapModel();
@@ -101,6 +124,8 @@ struct world {
     bool load(const u::string &map);
     bool upload(const m::perspective &p);
     void render(const r::pipeline &pl);
+
+    void setFog(const fog &f);
 
     void unload(bool destroy = true);
     bool isLoaded() const;
@@ -186,6 +211,7 @@ private:
     u::vector<playerStart*> m_playerStarts;
     u::vector<teleport*> m_teleports;
     u::vector<jumppad*> m_jumppads;
+    fog m_fog; // The fog
 };
 
 #endif

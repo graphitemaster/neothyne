@@ -13,6 +13,18 @@ NVAR(float, map_dlight_directionx, "map directional light direction", -1.0f, 1.0
 NVAR(float, map_dlight_directiony, "map directional light direction", -1.0f, 1.0f, 1.0f);
 NVAR(float, map_dlight_directionz, "map directional light direction", -1.0f, 1.0f, 1.0f);
 
+NVAR(float, map_fog_density, "map fog density", 0.0f, 1.0f, 0.5f);
+NVAR(int, map_fog_color, "map fog color", 0, 0x00FFFFFF, 0x00CCCCCC);
+NVAR(int, map_fog_equation, "map fog equation", 0, 2, 0);
+NVAR(float, map_fog_range_start, "map fog range start (for linear only)", 0.0f, 1.0f, 0.0f);
+NVAR(float, map_fog_range_end, "map fog range end (for linear only)", 0.0f, 1.0f, 1.0f);
+
+enum {
+    kFogLinear,
+    kFogExp,
+    kFogExp2
+};
+
 enum {
     kBillboardJumpPad,
     kBillboardLight,
@@ -87,9 +99,9 @@ bool world::upload(const m::perspective &p) {
 
 void world::render(const r::pipeline &pl) {
     if (m_directionalLight) {
-        const float R = ((map_dlight_color >> 16) & 0xFF) / 255.0f;
-        const float G = ((map_dlight_color >> 8) & 0xFF) / 255.0f;
-        const float B = (map_dlight_color & 0xFF) / 255.0f;
+        float R = ((map_dlight_color >> 16) & 0xFF) / 255.0f;
+        float G = ((map_dlight_color >> 8) & 0xFF) / 255.0f;
+        float B = (map_dlight_color & 0xFF) / 255.0f;
 
         m_directionalLight->ambient = map_dlight_ambient;
         m_directionalLight->diffuse = map_dlight_diffuse;
@@ -99,6 +111,16 @@ void world::render(const r::pipeline &pl) {
             map_dlight_directiony,
             map_dlight_directionz
         };
+
+        R = ((map_fog_color >> 16) & 0xFF) / 255.0f;
+        G = ((map_fog_color >> 8) & 0xFF) / 255.0f;
+        B = (map_fog_color & 0xFF) / 255.0f;
+
+        m_fog.color = { R, G, B };
+        m_fog.density = map_fog_density;
+        m_fog.start = map_fog_range_start;
+        m_fog.end = map_fog_range_end;
+        m_fog.equation = map_fog_equation;
     }
 
     // Erase and generate the billboards each and every frame
@@ -122,6 +144,10 @@ void world::render(const r::pipeline &pl) {
     }
 
     m_renderer.render(pl, this);
+}
+
+void world::setFog(const fog &f) {
+    m_fog = f;
 }
 
 bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxDistance, bool entities, descriptor *ignore) {
