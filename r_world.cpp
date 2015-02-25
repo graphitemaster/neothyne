@@ -205,7 +205,7 @@ bool finalComposite::init(const m::perspective &p, GLuint depth) {
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format, m_texture, 0);
 
     gl::BindTexture(format, depth);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, format, depth, 0);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, format, depth, 0);
 
     static GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
     gl::DrawBuffers(1, drawBuffers);
@@ -364,11 +364,11 @@ static size_t finalCalculatePermutation() {
 }
 
 // Calculate the correct permutation to use for the light buffer
-static size_t lightCalculatePermutation() {
+static size_t lightCalculatePermutation(bool stencil) {
     int permute = 0;
     if (r_fog)
         permute |= kLightPermFog;
-    if (r_ssao)
+    if (r_ssao && !stencil)
         permute |= kLightPermSSAO;
     for (size_t i = 0; i < sizeof(lightPermutations)/sizeof(lightPermutations[0]); i++)
         if (lightPermutations[i].permute == permute)
@@ -452,6 +452,10 @@ bool world::load(const kdMap &map) {
         geomCalculatePermutation(it.mat);
     }
 
+    // HACK: Testing only
+    if (!m_gun.load(m_textures2D, "models/lg"))
+        neoFatal("failed to load gun\n");
+
     m_vertices = u::move(map.vertices);
     u::print("[world] => loaded\n");
     return true;
@@ -472,6 +476,10 @@ bool world::upload(const m::perspective &p) {
         neoFatal("failed to upload sphere");
     if (!m_bbox.upload())
         neoFatal("failed to upload bbox");
+
+    // HACK: Testing only
+    if (!m_gun.upload())
+        neoFatal("failed to upload gun");
 
     // upload materials
     for (auto &it : m_textureBatches)
@@ -644,7 +652,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
     // Clear the depth and color buffers. This is a new scene pass.
     // We need depth testing as the scene pass will write into the depth
     // buffer. Blending isn't needed.
-    gl::Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    gl::Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     gl::Enable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
 
@@ -744,19 +752,51 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
         gl::ActiveTexture(GL_TEXTURE0 + ssaoMethod::kRandom);
         gl::BindTexture(format, m_ssao.texture(ssao::kRandom));
 
-        // Do real SSAO pass now
         m_ssaoMethod.enable();
         m_ssaoMethod.setPerspective(p.perspective());
         m_ssaoMethod.setInverse((p.projection() * p.view()).inverse());
+
         m_quad.render();
 
         // TODO: X, Y + Blur
     }
+
+    // Draw HUD elements to g-buffer
+    m_gBuffer.bindWriting();
+
+    // Stencil test
+    gl::Enable(GL_STENCIL_TEST);
+    gl::Enable(GL_DEPTH_TEST);
+
+    // Write 1s to stencil
+    gl::StencilFunc(GL_ALWAYS, 1, 0xFF); // Stencil to 1
+    gl::StencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+#if 1
+    // HACK: Testing only
+    {
+        p.setRotation(m::quat());
+        const m::vec3 rot = m::vec3(0, 180, 0);
+        m::quat rx(m::vec3::xAxis, m::toRadian(rot.x));
+        m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
+        m::quat rz(m::vec3::zAxis, m::toRadian(rot.z));
+        m::mat4 rotate;
+        (rz * ry * rx).getMatrix(&rotate);
+        p.setRotate(rotate);
+        p.setScale({0.1, 0.1, 0.1});
+        p.setPosition({-0.2, 0.2, -0.35});
+        p.setWorld({0, 0, 0});
+        setup(m_gun.mat, p, rw);
+        m_gun.render();
+    }
+#endif
+
+    gl::Disable(GL_STENCIL_TEST);
+    gl::Disable(GL_DEPTH_TEST);
 }
 
 static constexpr float kLightRadiusTweak = 1.11f;
 
-void world::lightingPass(const pipeline &pl, ::world *map) {
+void world::lightingPass(const pipeline &pl, ::world *map, bool stencil) {
     auto p = pl;
     auto perspective = pl.perspective();
 
@@ -769,7 +809,7 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
     gl::BlendFunc(GL_ONE, GL_ONE);
 
     // Clear the final composite
-    gl::Clear(GL_COLOR_BUFFER_BIT);
+    if(!stencil) gl::Clear(GL_COLOR_BUFFER_BIT);
 
     // Need to read from the gbuffer and ssao buffer to do lighting
     GLenum format = gl::has(gl::ARB_texture_rectangle)
@@ -781,13 +821,18 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
     gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal));
     gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kDepth);
     gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
-    if (r_ssao) {
+    if (r_ssao && !stencil) {
         gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kOcclusion);
         gl::BindTexture(format, m_ssao.texture(ssao::kBuffer));
     }
 
     gl::Enable(GL_DEPTH_TEST);
     gl::DepthMask(GL_FALSE);
+    gl::DepthFunc(GL_LESS);
+    gl::Enable(GL_STENCIL_TEST);
+    gl::StencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+    gl::StencilFunc(GL_EQUAL, stencil ? 1 : 0, 0xFF);
+
     // Point Lighting
     {
         auto &method = m_pointLightMethod;
@@ -874,7 +919,7 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
 
     // Directional Lighting (optional)
     if (map->m_directionalLight) {
-        auto &method = m_directionalLightMethods[lightCalculatePermutation()];
+        auto &method = m_directionalLightMethods[lightCalculatePermutation(stencil)];
         method.enable();
         method.setLight(*map->m_directionalLight);
         method.setPerspective(pl.perspective());
@@ -884,6 +929,8 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
             method.setFog(map->m_fog);
         m_quad.render();
     }
+
+    gl::Disable(GL_STENCIL_TEST);
 }
 
 void world::forwardPass(const pipeline &pl, ::world *map) {
@@ -1033,7 +1080,8 @@ void world::compositePass(const pipeline &pl) {
 void world::render(const pipeline &pl, ::world *map) {
     occlusionPass(pl, map);
     geometryPass(pl, map);
-    lightingPass(pl, map);
+    lightingPass(pl, map, false); // One time as normal
+    lightingPass(pl, map, true); // This time stencil is used
     forwardPass(pl, map);
     compositePass(pl);
 }

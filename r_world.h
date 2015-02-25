@@ -145,7 +145,7 @@ struct world : geom {
 private:
     void occlusionPass(const pipeline &pl, ::world *map);
     void geometryPass(const pipeline &pl, ::world *map);
-    void lightingPass(const pipeline &pl, ::world *map);
+    void lightingPass(const pipeline &pl, ::world *map, bool stencil = false);
     void forwardPass(const pipeline &pl, ::world *map);
     void compositePass(const pipeline &pl);
 
@@ -165,6 +165,9 @@ private:
     bbox m_bbox;
     u::map<u::string, model*> m_models;
     u::map<u::string, billboard*> m_billboards;
+
+    // HACK: Testing only
+    model m_gun;
 
     // The world itself
     u::vector<uint32_t> m_indices;

@@ -110,6 +110,8 @@ void EndQuery(GLenum target, GLuint id GL_INFOP);
 void DeleteQueries(GLsizei n, const GLuint* ids GL_INFOP);
 void GetQueryObjectuiv(GLuint id, GLenum pname, GLuint* params GL_INFOP);
 void Flush(GL_INFO);
+void StencilFunc(GLenum func, GLint ref, GLuint mask GL_INFOP);
+void StencilOp(GLenum sfail, GLenum dpfail, GLenum dppass GL_INFOP);
 
 }
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -189,5 +191,7 @@ void Flush(GL_INFO);
 #   define DeleteQueries(...)            DeleteQueries(__VA_ARGS__, __FILE__, __LINE__)
 #   define GetQueryObjectuiv(...)        GetQueryObjectuiv(__VA_ARGS__, __FILE__, __LINE__)
 #   define Flush(...)                    Flush(/* no arg */ __FILE__, __LINE__)
+#   define StencilFunc(...)              StencilFunc(__VA_ARGS__, __FILE__, __LINE__)
+#   define StencilOp(...)                StencilOp(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif

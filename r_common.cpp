@@ -103,6 +103,8 @@ typedef void (APIENTRYP MYPFNGLENDQUERYPROC)(GLenum, GLuint);
 typedef void (APIENTRYP MYPFNGLDELETEQUERIESPROC)(GLsizei, const GLuint*);
 typedef void (APIENTRYP MYPFNGLGETQUERYOBJECTUIVPROC)(GLuint, GLenum, GLuint*);
 typedef void (APIENTRYP MYPFNGLFLUSHPROC)();
+typedef void (APIENTRYP MYPFNGLSTENCILFUNCPROC)(GLenum, GLint, GLuint);
+typedef void (APIENTRYP MYPFNGLSTENCILOPPROC)(GLenum, GLenum, GLenum);
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -180,6 +182,8 @@ static MYPFNGLENDQUERYPROC                  glEndQuery_                 = nullpt
 static MYPFNGLDELETEQUERIESPROC             glDeleteQueries_            = nullptr;
 static MYPFNGLGETQUERYOBJECTUIVPROC         glGetQueryObjectuiv_        = nullptr;
 static MYPFNGLFLUSHPROC                     glFlush_                    = nullptr;
+static MYPFNGLSTENCILFUNCPROC               glStencilFunc_              = nullptr;
+static MYPFNGLSTENCILOPPROC                 glStencilOp_                = nullptr;
 
 #ifdef DEBUG_GL
 template <char C, typename T>
@@ -450,6 +454,8 @@ void init() {
     glDeleteQueries_            = (MYPFNGLDELETEQUERIESPROC)neoGetProcAddress("glDeleteQueries");
     glGetQueryObjectuiv_        = (MYPFNGLGETQUERYOBJECTUIVPROC)neoGetProcAddress("glGetQueryObjectuiv");
     glFlush_                    = (MYPFNGLFLUSHPROC)neoGetProcAddress("glFlush");
+    glStencilFunc_              = (MYPFNGLSTENCILFUNCPROC)neoGetProcAddress("glStencilFunc");
+    glStencilOp_                = (MYPFNGLSTENCILOPPROC)neoGetProcAddress("glStencilOp");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -852,6 +858,16 @@ void GetQueryObjectuiv(GLuint id, GLenum pname, GLuint* params GL_INFOP) {
 void Flush(GL_INFO) {
     glFlush_();
     GL_CHECK("",0);
+}
+
+void StencilFunc(GLenum func, GLint ref, GLuint mask GL_INFOP) {
+    glStencilFunc_(func, ref, mask);
+    GL_CHECK("27b", func, ref, mask);
+}
+
+void StencilOp(GLenum sfail, GLenum dpfail, GLenum dppass GL_INFOP) {
+    glStencilOp_(sfail, dpfail, dppass);
+    GL_CHECK("222", sfail, dpfail, dppass);
 }
 
 }

@@ -74,3 +74,5 @@ void: EndQuery(GLenum: target, GLuint: id);
 void: DeleteQueries(GLsizei: n, const GLuint*: ids);
 void: GetQueryObjectuiv(GLuint: id, GLenum: pname, GLuint*: params);
 void: Flush();
+void: StencilFunc(GLenum: func, GLint: ref, GLuint: mask);
+void: StencilOp(GLenum: sfail, GLenum: dpfail, GLenum: dppass);

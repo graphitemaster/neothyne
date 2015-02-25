@@ -33,10 +33,6 @@ float samplePixels(vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
 }
 
 void main() {
-#ifdef HAS_HUDGUN
-    // When rendering the HUD guns we don't want AO
-    fragColor.r = 1.0f;
-#else
     vec2 texCoord = calcTexCoord() * 2.0f; // Half resultion adjustment
 
     vec2 randomJitter = normalize(neoTexture2D(gRandomMap, texCoord).xy * 2.0f - 2.0f);
@@ -98,5 +94,4 @@ void main() {
     occlusion += samplePixels(srcPosition, srcNormal, texCoord + k23 * kernelRadius * 0.25f);
 
     fragColor.r = 1.0f - clamp(occlusion / (kKernelSize * kKernelSize), 0.0f, 1.0f);
-#endif
 }
