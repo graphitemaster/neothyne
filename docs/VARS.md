@@ -125,6 +125,7 @@ Debug visualizations of various renderer buffers
 * 3 = position buffer
 * 4 = ambient occlusion buffer
 
+
 ## Client
 ##### cl_farp
 Far clipping plane distance
