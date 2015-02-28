@@ -186,6 +186,11 @@ static MYPFNGLSTENCILFUNCPROC               glStencilFunc_              = nullpt
 static MYPFNGLSTENCILOPPROC                 glStencilOp_                = nullptr;
 
 #ifdef DEBUG_GL
+///! ARB_debug_output
+typedef void (APIENTRYP MYPFNGLDEBUGMESSAGECALLBACKARBPROC)(
+    void (APIENTRYP)(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar *, const GLvoid *),
+    const GLvoid *);
+
 template <char C, typename T>
 u::string stringize(T, char base='?');
 
@@ -356,6 +361,45 @@ static void debugCheck(const char *spec, const char *function, const char *file,
     u::fprint(stderr, "error %s(%s) (%s:%zu) %s\n", function, contents,
         file, line, debugErrorString(error));
 }
+
+static inline const char *debugSource(GLenum source) {
+    switch (source) {
+    case GL_DEBUG_SOURCE_API_ARB:             return "API";
+    case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB:   return "windowing system";
+    case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: return "shader compiler";
+    case GL_DEBUG_SOURCE_THIRD_PARTY_ARB:     return "third party";
+    case GL_DEBUG_SOURCE_OTHER_ARB:           return "other";
+    }
+    return "unknown";
+}
+
+static inline const char *debugType(GLenum type) {
+    switch (type) {
+    case GL_DEBUG_TYPE_ERROR_ARB:               return "error";
+    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB: return "deprecated behavior";
+    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB:  return "undefined behavior";
+    case GL_DEBUG_TYPE_PORTABILITY_ARB:         return "portability";
+    case GL_DEBUG_TYPE_PERFORMANCE_ARB:         return "performance";
+    case GL_DEBUG_TYPE_OTHER_ARB:               return "other";
+    }
+    return "unknown";
+}
+
+static inline const char *debugSeverity(GLenum type) {
+    switch (type) {
+    case GL_DEBUG_SEVERITY_HIGH_ARB:   return "high";
+    case GL_DEBUG_SEVERITY_MEDIUM_ARB: return "medium";
+    case GL_DEBUG_SEVERITY_LOW_ARB:    return "low";
+    }
+    return "unknown";
+}
+
+static void debugCallback(GLenum source, GLenum type, GLuint, GLenum severity,
+    GLsizei, const GLchar *message, const GLvoid *)
+{
+    u::fprint(stderr, "%s with %s severity = %s (%s)", debugType(type),
+        debugSource(source), debugSeverity(severity), message);
+}
 #endif
 
 namespace gl {
@@ -366,7 +410,8 @@ static const char *kExtensions[] = {
     "GL_EXT_texture_compression_rgtc",
     "GL_EXT_texture_filter_anisotropic",
     "GL_ARB_texture_compression_bptc",
-    "GL_ARB_texture_rectangle"
+    "GL_ARB_texture_rectangle",
+    "GL_ARB_debug_output"
 };
 
 const char *extensionString(size_t what) {
@@ -375,6 +420,10 @@ const char *extensionString(size_t what) {
 
 const u::set<size_t> &extensions() {
     return gExtensions;
+}
+
+bool has(size_t ext) {
+    return gExtensions.find(ext) != gExtensions.end();
 }
 
 void init() {
@@ -466,10 +515,13 @@ void init() {
         for (size_t j = 0; j < sizeof(kExtensions)/sizeof(*kExtensions); j++)
             if (!strcmp(kExtensions[j], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
                 gExtensions.insert(j);
-}
 
-bool has(size_t ext) {
-    return gExtensions.find(ext) != gExtensions.end();
+#ifdef DEBUG_GL
+    if (has(gl::ARB_debug_output)) {
+        glEnable_(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+        ((MYPFNGLDEBUGMESSAGECALLBACKARBPROC)neoGetProcAddress("glDebugMessageCallbackARB"))(&debugCallback, nullptr);
+    }
+#endif
 }
 
 

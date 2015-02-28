@@ -176,6 +176,11 @@ def genSource(functionList, extensionList, sourceFile):
         source.write(textwrap.dedent("""\
 
         #ifdef DEBUG_GL
+        ///! ARB_debug_output
+        typedef void (APIENTRYP MYPFNGLDEBUGMESSAGECALLBACKARBPROC)(
+            void (APIENTRYP)(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar *, const GLvoid *),
+            const GLvoid *);
+
         template <char C, typename T>
         u::string stringize(T, char base='?');
 
@@ -256,6 +261,45 @@ def genSource(functionList, extensionList, sourceFile):
         """))
 
         source.write(textwrap.dedent("""\
+
+        static inline const char *debugSource(GLenum source) {
+            switch (source) {
+            case GL_DEBUG_SOURCE_API_ARB:             return "API";
+            case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB:   return "windowing system";
+            case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: return "shader compiler";
+            case GL_DEBUG_SOURCE_THIRD_PARTY_ARB:     return "third party";
+            case GL_DEBUG_SOURCE_OTHER_ARB:           return "other";
+            }
+            return "unknown";
+        }
+
+        static inline const char *debugType(GLenum type) {
+            switch (type) {
+            case GL_DEBUG_TYPE_ERROR_ARB:               return "error";
+            case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB: return "deprecated behavior";
+            case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB:  return "undefined behavior";
+            case GL_DEBUG_TYPE_PORTABILITY_ARB:         return "portability";
+            case GL_DEBUG_TYPE_PERFORMANCE_ARB:         return "performance";
+            case GL_DEBUG_TYPE_OTHER_ARB:               return "other";
+            }
+            return "unknown";
+        }
+
+        static inline const char *debugSeverity(GLenum type) {
+            switch (type) {
+            case GL_DEBUG_SEVERITY_HIGH_ARB:   return "high";
+            case GL_DEBUG_SEVERITY_MEDIUM_ARB: return "medium";
+            case GL_DEBUG_SEVERITY_LOW_ARB:    return "low";
+            }
+            return "unknown";
+        }
+
+        static void debugCallback(GLenum source, GLenum type, GLuint, GLenum severity,
+            GLsizei, const GLchar *message, const GLvoid *)
+        {
+            u::fprint(stderr, "%s with %s severity = %s (%s)", debugType(type),
+                debugSource(source), debugSeverity(severity), message);
+        }
         #endif
 
         namespace gl {
@@ -276,6 +320,10 @@ def genSource(functionList, extensionList, sourceFile):
             return gExtensions;
         }
 
+        bool has(size_t ext) {
+            return gExtensions.find(ext) != gExtensions.end();
+        }
+
         void init() {
         """))
         for f in functionList:
@@ -293,10 +341,13 @@ def genSource(functionList, extensionList, sourceFile):
                 for (size_t j = 0; j < sizeof(kExtensions)/sizeof(*kExtensions); j++)
                     if (!strcmp(kExtensions[j], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
                         gExtensions.insert(j);
-        }
 
-        bool has(size_t ext) {
-            return gExtensions.find(ext) != gExtensions.end();
+        #ifdef DEBUG_GL
+            if (has(gl::ARB_debug_output)) {
+                glEnable_(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+                ((MYPFNGLDEBUGMESSAGECALLBACKARBPROC)neoGetProcAddress("glDebugMessageCallbackARB"))(&debugCallback, nullptr);
+            }
+        #endif
         }
 
         """))

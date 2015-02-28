@@ -26,7 +26,8 @@ enum : size_t {
     EXT_texture_compression_rgtc,
     EXT_texture_filter_anisotropic,
     ARB_texture_compression_bptc,
-    ARB_texture_rectangle
+    ARB_texture_rectangle,
+    ARB_debug_output
 };
 
 void init();
