@@ -45,7 +45,8 @@ RENDERER_SOURCES = \
 	r_world.cpp \
 	r_gui.cpp \
 	r_light.cpp \
-	r_hoq.cpp
+	r_hoq.cpp \
+	r_particles.cpp
 
 UTIL_SOURCES = \
 	u_file.cpp \

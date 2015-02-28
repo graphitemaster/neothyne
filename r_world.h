@@ -5,6 +5,7 @@
 #include "r_ssao.h"
 #include "r_skybox.h"
 #include "r_billboard.h"
+#include "r_particles.h"
 #include "r_geom.h"
 #include "r_model.h"
 #include "r_light.h"
@@ -165,6 +166,9 @@ private:
     bbox m_bbox;
     u::map<u::string, model*> m_models;
     u::map<u::string, billboard*> m_billboards;
+
+    // HACK: Testing only
+    particleSystem m_particles;
 
     // HACK: Testing only
     model m_gun;

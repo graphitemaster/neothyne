@@ -173,20 +173,8 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     // and some map models
     mapModel m;
     m.name = "models/lg";
-    m.position = { 0, 120, 0 };
+    m.position = { 40, 120, 0 };
     m.rotate = { 0, 90, 0 };
-    gWorld.insert(m);
-
-    for (size_t j = 0; j < 20; j++) {
-        for (size_t i = 0; i < 20; i++) {
-            m.position.x = i * 10.0f;
-            gWorld.insert(m);
-        }
-        m.position.z = j * 10.0f;
-    }
-
-    m.name = "models/rl";
-    m.position.x += 40.0f;
     gWorld.insert(m);
 
     if (!gWorld.load("garden.kdgz"))
@@ -206,6 +194,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
         gPipeline.setRotation(gClient.getRotation());
         gPipeline.setPosition(gClient.getPosition());
         gPipeline.setTime(timer.ticks());
+        gPipeline.setDelta(timer.delta());
 
         auto mouse = neoMouseState();
 

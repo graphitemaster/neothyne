@@ -397,6 +397,21 @@ static void geomCalculatePermutation(material &mat) {
     }
 }
 
+// HACK: Testing only
+void testParticle(particle &p, const m::vec3 &ownerPosition) {
+    p.startAlpha = 0.6f;
+    p.currentAlpha = 0.6f;
+    p.color = m::vec3(1.0f, 1.0f, 1.0f);
+    p.totalLifeTime = u::randf() * 0.2f;
+    p.lifeTime = p.totalLifeTime;
+    p.startOrigin = m::vec3::rand(0.05f, 0.05f, 0.05f) + ownerPosition;
+    p.currentOrigin = p.startOrigin;
+    p.startSize = 128.0f;
+    p.currentSize = p.startSize;
+    p.velocity = m::vec3(0.0f, 95.0f, 0.0f);
+    p.respawn = true;
+}
+
 bool world::load(const kdMap &map) {
     // load skybox
     if (!m_skybox.load("textures/sky01"))
@@ -453,8 +468,12 @@ bool world::load(const kdMap &map) {
     }
 
     // HACK: Testing only
+    if (!m_particles.load("textures/particle", &testParticle))
+        neoFatal("failed to load particle");
+
+    // HACK: Testing only
     if (!m_gun.load(m_textures2D, "models/lg"))
-        neoFatal("failed to load gun\n");
+        neoFatal("failed to load gun");
 
     m_vertices = u::move(map.vertices);
     u::print("[world] => loaded\n");
@@ -476,6 +495,16 @@ bool world::upload(const m::perspective &p) {
         neoFatal("failed to upload sphere");
     if (!m_bbox.upload())
         neoFatal("failed to upload bbox");
+
+    // HACK: Testing only
+    if (!m_particles.upload())
+        neoFatal("failed to upload particles");
+
+    for (size_t i = 0; i < 128; i++) {
+        particle p;
+        testParticle(p, m::vec3(0.0f, 120.0f, 0.0f) + m::vec3::rand(1.5f, 5.0f, 1.5f));
+        m_particles.addParticle(u::move(p));
+    }
 
     // HACK: Testing only
     if (!m_gun.upload())
@@ -783,7 +812,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
         (rz * ry * rx).getMatrix(&rotate);
         p.setRotate(rotate);
         p.setScale({0.1, 0.1, 0.1});
-        p.setPosition({-0.2, 0.2, -0.35});
+        p.setPosition({-0.15, 0.2, -0.35});
         p.setWorld({0, 0, 0});
         setup(m_gun.mat, p, rw);
         m_gun.render();
@@ -954,7 +983,7 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
     static constexpr m::vec3 kHighlighted = { 1.0f, 0.0f, 0.0f };
     static constexpr m::vec3 kOutline = { 0.0f, 0.0f, 1.0f };
 
-    gl::DepthMask(GL_FALSE);
+    //gl::DepthMask(GL_FALSE);
     if (varGet<int>("cl_edit").get()) {
         // World billboards:
         //  All billboards have pre-multiplied alpha to prevent strange blending
@@ -1050,7 +1079,11 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
         gl::Enable(GL_CULL_FACE);
         gl::PolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
-    gl::DepthMask(GL_TRUE);
+    //gl::DepthMask(GL_TRUE);
+
+    // Particles
+    m_particles.update(pl);
+    m_particles.render(pl);
 
     // Don't need depth testing or blending anymore
     gl::Disable(GL_DEPTH_TEST);

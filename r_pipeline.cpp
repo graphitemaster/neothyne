@@ -39,6 +39,10 @@ void pipeline::setTime(float time) {
     m_time = time;
 }
 
+void pipeline::setDelta(float delta) {
+    m_delta = delta;
+}
+
 const m::mat4 &pipeline::world() {
     m::mat4 scale;
     m::mat4 translate;
@@ -87,6 +91,10 @@ const m::quat &pipeline::rotation() const {
 
 float pipeline::time() const {
     return m_time;
+}
+
+float pipeline::delta() const {
+    return m_delta;
 }
 
 }

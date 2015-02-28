@@ -71,6 +71,8 @@ struct vec3 {
         return { u::max(lhs.x, rhs.x), u::max(lhs.y, rhs.y), u::max(lhs.z, rhs.z) };
     }
 
+    static vec3 rand(float mx, float my, float mz);
+
     static const vec3 xAxis;
     static const vec3 yAxis;
     static const vec3 zAxis;

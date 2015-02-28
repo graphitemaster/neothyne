@@ -16,6 +16,7 @@ struct pipeline {
     void setRotation(const m::quat &rotation);
     void setPerspective(const m::perspective &p);
     void setTime(float time);
+    void setDelta(float delta);
 
     const m::mat4 &world();
     const m::mat4 &view();
@@ -30,6 +31,7 @@ struct pipeline {
     const m::perspective &perspective() const;
 
     float time() const;
+    float delta() const;
 
 private:
     enum {
@@ -48,6 +50,7 @@ private:
     m::quat m_rotation;
 
     float m_time;
+    float m_delta;
 };
 
 }

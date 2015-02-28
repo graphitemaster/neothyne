@@ -241,15 +241,17 @@ bool gui::load(const u::string &font) {
     if (!m_font.load(where))
         return false;
 
+    if (!m_notex.load("textures/notex"))
+        return false;
+
     return true;
 }
 
 bool gui::upload() {
     if (!m_font.upload())
         return false;
-
     // No texture needed if fail to load a menu texture
-    if (!m_notex.load("textures/notex") || !m_notex.upload())
+    if (!m_notex.upload())
         return false;
 
     gl::GenVertexArrays(1, &m_vao);
