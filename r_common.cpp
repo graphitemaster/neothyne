@@ -188,7 +188,7 @@ static MYPFNGLSTENCILOPPROC                 glStencilOp_                = nullpt
 #ifdef DEBUG_GL
 ///! ARB_debug_output
 typedef void (APIENTRYP MYPFNGLDEBUGMESSAGECALLBACKARBPROC)(
-    void (APIENTRYP)(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar *, const GLvoid *),
+    void (APIENTRYP)(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar *, GLvoid *),
     const GLvoid *);
 
 template <char C, typename T>
@@ -395,7 +395,7 @@ static inline const char *debugSeverity(GLenum type) {
 }
 
 static void debugCallback(GLenum source, GLenum type, GLuint, GLenum severity,
-    GLsizei, const GLchar *message, const GLvoid *)
+    GLsizei, const GLchar *message, GLvoid *)
 {
     u::fprint(stderr, "%s with %s severity = %s (%s)", debugType(type),
         debugSource(source), debugSeverity(severity), message);
