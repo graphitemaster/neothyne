@@ -12,8 +12,8 @@ uniform directionalLight gDirectionalLight;
 out vec4 fragColor;
 
 void main() {
-#if defined(USE_DEBUG_DEPTH) || defined(USE_DEBUG_NORMAL) || defined(USE_DEBUG_SSAO)
-#ifdef USE_DEBUG_DEPTH
+#if defined(USE_DEBUG_DEPTH) || defined(USE_DEBUG_NORMAL) || defined(USE_DEBUG_POSITION) || defined(USE_DEBUG_SSAO)
+#if defined(USE_DEBUG_DEPTH)
     // Depth buffer visualization
     vec2 texCoord = calcTexCoord();
     float z = neoTexture2D(gDepthMap, texCoord).r;
@@ -25,7 +25,12 @@ void main() {
     vec2 texCoord = calcTexCoord();
     vec4 normalDecode = neoTexture2D(gNormalMap, texCoord);
     vec3 normalMap = normalize(normalDecode.rgb * 2.0f - 1.0f);
-    fragColor.rgb = normalMap * 0.5 + 0.5;
+    fragColor.rgb = normalMap * 0.5f + 0.5f;
+#elif defined(USE_DEBUG_POSITION)
+    // Position visualization
+    vec2 texCoord = calcTexCoord();
+    vec3 worldPosition = calcPosition(texCoord);
+    fragColor.rgb = worldPosition;
 #elif defined(USE_DEBUG_SSAO)
     // Ambient occlusion visualization
     vec2 texCoord = calcTexCoord();
@@ -33,7 +38,7 @@ void main() {
     float occlusionMap = neoTexture2D(gOcclusionMap, fragCoord).r;
     fragColor.rgb = vec3(occlusionMap);
 #endif //! USE_DEBUG_DEPTH
-#else //+ USE_DEBUG_{DEPTH|NORMAL|SSAO}
+#else //+ USE_DEBUG_{DEPTH|NORMAL|POSITION|SSAO}
     vec2 texCoord = calcTexCoord();
     vec4 colorMap = neoTexture2D(gColorMap, texCoord);
     vec4 normalDecode = neoTexture2D(gNormalMap, texCoord);
@@ -59,6 +64,6 @@ void main() {
     fragColor = mix(fragColor, vec4(gFog.color, 1.0f), calcFogFactor(gFog, c));
 #endif //! USE_FOG
 
-#endif //! USE_DEBUG{DEPTH|NORMAL|SSAO}
+#endif //! USE_DEBUG{DEPTH|NORMAL|POSITION|SSAO}
 
 }

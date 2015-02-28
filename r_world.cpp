@@ -16,6 +16,7 @@
 enum {
     kDebugDepth = 1,
     kDebugNormal,
+    kDebugPosition,
     kDebugSSAO
 };
 
@@ -25,7 +26,7 @@ VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 VAR(int, r_spec, "specularity mapping", 0, 1, 1);
 VAR(int, r_hoq, "hardware occlusion queries", 0, 1, 1);
 VAR(int, r_fog, "fog", 0, 1, 1);
-VAR(int, r_debug, "debug visualizations", 0, 3, 0);
+NVAR(int, r_debug, "debug visualizations", 0, 4, 0);
 
 namespace r {
 
@@ -48,25 +49,26 @@ struct lightPermutation {
 
 // All the final shader permutations
 enum {
-    kFinalPermFXAA        = 1 << 0
+    kFinalPermFXAA          = 1 << 0
 };
 
 // All the light shader permutations
 enum {
-    kLightPermSSAO        = 1 << 0,
-    kLightPermFog         = 1 << 1,
-    kLightPermDebugDepth  = 1 << 2,
-    kLightPermDebugNormal = 1 << 3,
-    kLightPermDebugSSAO   = 1 << 4
+    kLightPermSSAO          = 1 << 0,
+    kLightPermFog           = 1 << 1,
+    kLightPermDebugDepth    = 1 << 2,
+    kLightPermDebugNormal   = 1 << 3,
+    kLightPermDebugPosition = 1 << 4,
+    kLightPermDebugSSAO     = 1 << 5
 };
 
 // All the geometry shader permutations
 enum {
-    kGeomPermDiffuse      = 1 << 0,
-    kGeomPermNormalMap    = 1 << 1,
-    kGeomPermSpecMap      = 1 << 2,
-    kGeomPermSpecParams   = 1 << 3,
-    kGeomPermParallax     = 1 << 4
+    kGeomPermDiffuse        = 1 << 0,
+    kGeomPermNormalMap      = 1 << 1,
+    kGeomPermSpecMap        = 1 << 2,
+    kGeomPermSpecParams     = 1 << 3,
+    kGeomPermParallax       = 1 << 4
 };
 
 // The prelude defines to compile that final shader permutation
@@ -82,6 +84,7 @@ static const char *lightPermutationNames[] = {
     "USE_FOG",
     "USE_DEBUG_DEPTH",
     "USE_DEBUG_NORMAL",
+    "USE_DEBUG_POSITION",
     "USE_DEBUG_SSAO"
 };
 
@@ -110,7 +113,8 @@ static const lightPermutation lightPermutations[] = {
     // Debug visualizations
     { kLightPermDebugDepth },
     { kLightPermDebugNormal },
-    { kLightPermDebugSSAO }
+    { kLightPermDebugPosition },
+    { kLightPermDebugSSAO },
 };
 
 // All the possible geometry permutations
@@ -148,17 +152,20 @@ static size_t finalCalculatePermutation() {
 
 // Calculate the correct permutation to use for the light buffer
 static size_t lightCalculatePermutation(bool stencil) {
-    for (size_t i = 0; i < sizeof(lightPermutations)/sizeof(lightPermutations[0]); i++) {
+    for (auto &it : lightPermutations) {
         switch (r_debug) {
         case kDebugDepth:
-            if (lightPermutations[i].permute == kLightPermDebugDepth)
-                return i;
+            if (it.permute == kLightPermDebugDepth)
+                return &it - lightPermutations;
         case kDebugNormal:
-            if (lightPermutations[i].permute == kLightPermDebugNormal)
-                return i;
+            if (it.permute == kLightPermDebugNormal)
+                return &it - lightPermutations;
+        case kDebugPosition:
+            if (it.permute == kLightPermDebugPosition)
+                return &it - lightPermutations;
         case kDebugSSAO:
-            if (lightPermutations[i].permute == kLightPermDebugSSAO && !stencil)
-                return i;
+            if (it.permute == kLightPermDebugSSAO && !stencil)
+                return &it - lightPermutations;
         }
     }
     int permute = 0;
@@ -166,9 +173,9 @@ static size_t lightCalculatePermutation(bool stencil) {
         permute |= kLightPermFog;
     if (r_ssao && !stencil)
         permute |= kLightPermSSAO;
-    for (size_t i = 0; i < sizeof(lightPermutations)/sizeof(lightPermutations[0]); i++)
-        if (lightPermutations[i].permute == permute)
-            return i;
+    for (auto &it : lightPermutations)
+        if (it.permute == permute)
+            return &it - lightPermutations;
     return 0;
 }
 
@@ -185,9 +192,9 @@ static void geomCalculatePermutation(material &mat) {
         permute |= kGeomPermParallax;
     if (mat.specParams && r_spec)
         permute |= kGeomPermSpecParams;
-    for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++) {
-        if (geomPermutations[i].permute == permute) {
-            mat.permute = i;
+    for (auto &it : geomPermutations) {
+        if (it.permute == permute) {
+            mat.permute = &it - geomPermutations;
             return;
         }
     }
