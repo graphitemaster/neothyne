@@ -24,15 +24,11 @@ struct billboardMethod : method {
     bool init();
 
     void setVP(const m::mat4 &vp);
-    void setCamera(const m::vec3 &position);
-    void setTextureUnit(int unit);
-    void setSize(float width, float height);
+    void setColorTextureUnit(int unit);
 
 private:
     GLuint m_VPLocation;
-    GLuint m_cameraPositionLocation;
     GLuint m_colorMapLocation;
-    GLuint m_sizeLocation;
 };
 
 struct billboard {
@@ -48,9 +44,14 @@ struct billboard {
     void add(const m::vec3 &position);
 
 private:
+    struct vertex {
+        m::vec3 p;
+        float u, v;
+    };
+    u::vector<m::vec3> m_positions;
+    u::vector<vertex> m_vertices;
     GLuint m_vbo;
     GLuint m_vao;
-    u::vector<m::vec3> m_positions;
     texture2D m_texture;
     billboardMethod m_method;
 };

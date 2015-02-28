@@ -7,6 +7,4 @@ out vec4 fragColor;
 
 void main() {
     fragColor = color0 * texture(gColorMap, texCoord0);
-    //fragColor.a = 0.1f;
-    //fragColor.a = color0.a;
 }

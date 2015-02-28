@@ -23,7 +23,7 @@ r::pipeline gPipeline;
 m::perspective gPerspective;
 
 VAR(float, cl_fov, "field of view", 45.0f, 270.0f, 90.0f);
-VAR(float, cl_nearp, "near plane", 0.0f, 10.0f, 1.0f);
+VAR(float, cl_nearp, "near plane", 0.0f, 10.0f, 0.1f);
 VAR(float, cl_farp, "far plane", 128.0f, 4096.0f, 2048.0f);
 
 static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t h) {

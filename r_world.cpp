@@ -398,13 +398,16 @@ static void geomCalculatePermutation(material &mat) {
 }
 
 // HACK: Testing only
-void testParticle(particle &p, const m::vec3 &ownerPosition) {
+void testParticle(particle &p) {
     p.startAlpha = 0.6f;
     p.currentAlpha = 0.6f;
     p.color = m::vec3(1.0f, 1.0f, 1.0f);
     p.totalLifeTime = u::randf() * 0.2f;
     p.lifeTime = p.totalLifeTime;
-    p.startOrigin = m::vec3::rand(0.05f, 0.05f, 0.05f) + ownerPosition;
+    if (p.startOrigin == m::vec3::origin)
+        p.startOrigin = m::vec3(0, 120, 0);
+    else
+        p.startOrigin += m::vec3::rand(0.05f, 0.05f, 0.05f);
     p.currentOrigin = p.startOrigin;
     p.startSize = 128.0f;
     p.currentSize = p.startSize;
@@ -502,7 +505,7 @@ bool world::upload(const m::perspective &p) {
 
     for (size_t i = 0; i < 128; i++) {
         particle p;
-        testParticle(p, m::vec3(0.0f, 120.0f, 0.0f) + m::vec3::rand(1.5f, 5.0f, 1.5f));
+        testParticle(p);
         m_particles.addParticle(u::move(p));
     }
 
@@ -965,9 +968,7 @@ void world::lightingPass(const pipeline &pl, ::world *map, bool stencil) {
 void world::forwardPass(const pipeline &pl, ::world *map) {
     m_final.bindWriting();
 
-    // Forward rendering takes place here, reenable depth testing
     gl::Enable(GL_DEPTH_TEST);
-    gl::DepthFunc(GL_LEQUAL);
 
     // Skybox:
     //  Forwarded rendered and the last thing rendered to prevent overdraw.
@@ -983,11 +984,14 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
     static constexpr m::vec3 kHighlighted = { 1.0f, 0.0f, 0.0f };
     static constexpr m::vec3 kOutline = { 0.0f, 0.0f, 1.0f };
 
-    //gl::DepthMask(GL_FALSE);
     if (varGet<int>("cl_edit").get()) {
         // World billboards:
         //  All billboards have pre-multiplied alpha to prevent strange blending
-        //  blending issues around the edges.
+        //  issues around the edges.
+        //
+        //  Billboards are represented as one face so we have to disable
+        //  culling too
+        gl::Disable(GL_CULL_FACE);
         gl::BlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         for (auto &it : map->m_billboards) {
             // Load billboards on demand
@@ -1021,6 +1025,7 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
                 board->add(jt.position);
             board->render(pl, it.size);
         }
+        gl::Enable(GL_CULL_FACE);
 
         // Map models
         for (auto &it : map->m_mapModels) {
@@ -1073,17 +1078,17 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
             p.setScale({scale, scale, scale});
             m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
             m_sphere.render();
-
         }
 
         gl::Enable(GL_CULL_FACE);
         gl::PolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
-    //gl::DepthMask(GL_TRUE);
 
     // Particles
+    gl::Disable(GL_CULL_FACE);
     m_particles.update(pl);
     m_particles.render(pl);
+    gl::Enable(GL_CULL_FACE);
 
     // Don't need depth testing or blending anymore
     gl::Disable(GL_DEPTH_TEST);

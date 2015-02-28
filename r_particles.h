@@ -32,15 +32,15 @@ struct particle {
 struct particleSystemMethod : method {
     particleSystemMethod();
     bool init();
-    void setWVP(const m::mat4 &wvp);
+    void setVP(const m::mat4 &vp);
     void setColorTextureUnit(int unit);
 private:
-    GLint m_WVPLocation;
+    GLint m_VPLocation;
     GLint m_colorTextureUnitLocation;
 };
 
 struct particleSystem {
-    typedef void (*initParticleFunction)(particle &p, const m::vec3 &);
+    typedef void (*initParticleFunction)(particle &p);
 
     particleSystem();
     ~particleSystem();
@@ -53,11 +53,9 @@ struct particleSystem {
 
     void addParticle(particle &&p);
 
-    void initParticle(particle &p, const m::vec3 &ownerPosition);
-
 private:
     struct vertex {
-        float x, y, z;
+        m::vec3 p;
         float u, v;
         float r, g, b, a;
     };
