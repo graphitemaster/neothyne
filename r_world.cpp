@@ -19,6 +19,147 @@ VAR(int, r_fog, "fog", 0, 1, 1);
 
 namespace r {
 
+/// shader permutations
+struct geomPermutation {
+    int permute;    // flags of the permutations
+    int color;      // color texture unit (or -1 if not to be used)
+    int normal;     // normal texture unit (or -1 if not to be used)
+    int spec;       // ...
+    int disp;       // ...
+};
+
+struct finalPermutation {
+    int permute;    // flags of the permutations
+};
+
+struct lightPermutation {
+    int permute;    // flags of the permutations
+};
+
+// All the final shader permutations
+enum {
+    kFinalPermFXAA       = 1 << 0
+};
+
+// All the light shader permutations
+enum {
+    kLightPermSSAO       = 1 << 0,
+    kLightPermFog        = 1 << 1
+};
+
+// All the geometry shader permutations
+enum {
+    kGeomPermDiffuse     = 1 << 0,
+    kGeomPermNormalMap   = 1 << 1,
+    kGeomPermSpecMap     = 1 << 2,
+    kGeomPermSpecParams  = 1 << 3,
+    kGeomPermParallax    = 1 << 4
+};
+
+// The prelude defines to compile that final shader permutation
+// These must be in the same order as the enums
+static const char *finalPermutationNames[] = {
+    "USE_FXAA"
+};
+
+// The prelude defines to compile that light shader permutation
+// These must be in the same order as the enums
+static const char *lightPermutationNames[] = {
+    "USE_SSAO",
+    "USE_FOG"
+};
+
+// The prelude defines to compile that geometry shader permutation
+// These must be in the same order as the enums
+static const char *geomPermutationNames[] = {
+    "USE_DIFFUSE",
+    "USE_NORMALMAP",
+    "USE_SPECMAP",
+    "USE_SPECPARAMS",
+    "USE_PARALLAX"
+};
+
+// All the possible final permutations
+static const finalPermutation finalPermutations[] = {
+    { 0 },
+    { kFinalPermFXAA }
+};
+
+// All the possible light permutations
+static const lightPermutation lightPermutations[] = {
+    { 0 },
+    { kLightPermSSAO },
+    { kLightPermSSAO | kLightPermFog },
+    { kLightPermFog }
+};
+
+// All the possible geometry permutations
+static const geomPermutation geomPermutations[] = {
+    { 0,                                                                              -1, -1, -1, -1 },
+    { kGeomPermDiffuse,                                                                0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap,                                           0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecMap,                                             0, -1,  1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecParams,                                          0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap,                                           0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecMap,                        0,  1,  2, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecParams,                     0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermParallax,                       0,  1, -1,  2 },
+    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecMap    | kGeomPermParallax, 0,  1,  2,  3 },
+    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecParams | kGeomPermParallax, 0,  1, -1,  2 }
+};
+
+// Generate the list of permutation names for the shader
+template <typename T, size_t N, typename U>
+static u::vector<const char *> generatePermutation(const T(&list)[N], const U &p) {
+    u::vector<const char *> permutes;
+    for (size_t i = 0; i < N; i++)
+        if (p.permute & (1 << i))
+            permutes.push_back(list[i]);
+    return permutes;
+}
+
+// Calculate the correct permutation to use for the final composite
+static size_t finalCalculatePermutation() {
+    for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++)
+        if (r_fxaa && (geomPermutations[i].permute & kFinalPermFXAA))
+            return i;
+    return 0;
+}
+
+// Calculate the correct permutation to use for the light buffer
+static size_t lightCalculatePermutation(bool stencil) {
+    int permute = 0;
+    if (r_fog)
+        permute |= kLightPermFog;
+    if (r_ssao && !stencil)
+        permute |= kLightPermSSAO;
+    for (size_t i = 0; i < sizeof(lightPermutations)/sizeof(lightPermutations[0]); i++)
+        if (lightPermutations[i].permute == permute)
+            return i;
+    return 0;
+}
+
+// Calculate the correct permutation to use for a given material
+static void geomCalculatePermutation(material &mat) {
+    int permute = 0;
+    if (mat.diffuse)
+        permute |= kGeomPermDiffuse;
+    if (mat.normal)
+        permute |= kGeomPermNormalMap;
+    if (mat.spec && r_spec)
+        permute |= kGeomPermSpecMap;
+    if (mat.displacement && r_parallax)
+        permute |= kGeomPermParallax;
+    if (mat.specParams && r_spec)
+        permute |= kGeomPermSpecParams;
+    for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++) {
+        if (geomPermutations[i].permute == permute) {
+            mat.permute = i;
+            return;
+        }
+    }
+}
+
 ///! Bounding box Rendering method
 bool bboxMethod::init() {
     if (!method::init())
@@ -254,147 +395,6 @@ void world::unload(bool destroy) {
     }
 
     m_uploaded = false;
-}
-
-/// shader permutations
-struct geomPermutation {
-    int permute;    // flags of the permutations
-    int color;      // color texture unit (or -1 if not to be used)
-    int normal;     // normal texture unit (or -1 if not to be used)
-    int spec;       // ...
-    int disp;       // ...
-};
-
-struct finalPermutation {
-    int permute;    // flags of the permutations
-};
-
-struct lightPermutation {
-    int permute;    // flags of the permutations
-};
-
-// All the final shader permutations
-enum {
-    kFinalPermFXAA       = 1 << 0
-};
-
-// All the light shader permutations
-enum {
-    kLightPermSSAO       = 1 << 0,
-    kLightPermFog        = 1 << 1
-};
-
-// All the geometry shader permutations
-enum {
-    kGeomPermDiffuse     = 1 << 0,
-    kGeomPermNormalMap   = 1 << 1,
-    kGeomPermSpecMap     = 1 << 2,
-    kGeomPermSpecParams  = 1 << 3,
-    kGeomPermParallax    = 1 << 4
-};
-
-// The prelude defines to compile that final shader permutation
-// These must be in the same order as the enums
-static const char *finalPermutationNames[] = {
-    "USE_FXAA"
-};
-
-// The prelude defines to compile that light shader permutation
-// These must be in the same order as the enums
-static const char *lightPermutationNames[] = {
-    "USE_SSAO",
-    "USE_FOG"
-};
-
-// The prelude defines to compile that geometry shader permutation
-// These must be in the same order as the enums
-static const char *geomPermutationNames[] = {
-    "USE_DIFFUSE",
-    "USE_NORMALMAP",
-    "USE_SPECMAP",
-    "USE_SPECPARAMS",
-    "USE_PARALLAX"
-};
-
-// All the possible final permutations
-static const finalPermutation finalPermutations[] = {
-    { 0 },
-    { kFinalPermFXAA }
-};
-
-// All the possible light permutations
-static const lightPermutation lightPermutations[] = {
-    { 0 },
-    { kLightPermSSAO },
-    { kLightPermSSAO | kLightPermFog },
-    { kLightPermFog }
-};
-
-// All the possible geometry permutations
-static const geomPermutation geomPermutations[] = {
-    { 0,                                                                              -1, -1, -1, -1 },
-    { kGeomPermDiffuse,                                                                0, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap,                                           0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermSpecMap,                                             0, -1,  1, -1 },
-    { kGeomPermDiffuse | kGeomPermSpecParams,                                          0, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap,                                           0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecMap,                        0,  1,  2, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecParams,                     0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermParallax,                       0,  1, -1,  2 },
-    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecMap    | kGeomPermParallax, 0,  1,  2,  3 },
-    { kGeomPermDiffuse | kGeomPermNormalMap | kGeomPermSpecParams | kGeomPermParallax, 0,  1, -1,  2 }
-};
-
-// Generate the list of permutation names for the shader
-template <typename T, size_t N, typename U>
-static u::vector<const char *> generatePermutation(const T(&list)[N], const U &p) {
-    u::vector<const char *> permutes;
-    for (size_t i = 0; i < N; i++)
-        if (p.permute & (1 << i))
-            permutes.push_back(list[i]);
-    return permutes;
-}
-
-// Calculate the correct permutation to use for the final composite
-static size_t finalCalculatePermutation() {
-    for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++)
-        if (r_fxaa && (geomPermutations[i].permute & kFinalPermFXAA))
-            return i;
-    return 0;
-}
-
-// Calculate the correct permutation to use for the light buffer
-static size_t lightCalculatePermutation(bool stencil) {
-    int permute = 0;
-    if (r_fog)
-        permute |= kLightPermFog;
-    if (r_ssao && !stencil)
-        permute |= kLightPermSSAO;
-    for (size_t i = 0; i < sizeof(lightPermutations)/sizeof(lightPermutations[0]); i++)
-        if (lightPermutations[i].permute == permute)
-            return i;
-    return 0;
-}
-
-// Calculate the correct permutation to use for a given material
-static void geomCalculatePermutation(material &mat) {
-    int permute = 0;
-    if (mat.diffuse)
-        permute |= kGeomPermDiffuse;
-    if (mat.normal)
-        permute |= kGeomPermNormalMap;
-    if (mat.spec && r_spec)
-        permute |= kGeomPermSpecMap;
-    if (mat.displacement && r_parallax)
-        permute |= kGeomPermParallax;
-    if (mat.specParams && r_spec)
-        permute |= kGeomPermSpecParams;
-    for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++) {
-        if (geomPermutations[i].permute == permute) {
-            mat.permute = i;
-            return;
-        }
-    }
 }
 
 // HACK: Testing only
