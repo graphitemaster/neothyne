@@ -116,6 +116,14 @@ Maximum amount of occlusion queries that can be in asynchronous wait state.
 
 * any value in the range [1, 16]
 
+##### r_debug
+Debug visualizations of various renderer buffers
+
+* 0 = no visualization
+* 1 = depth buffer
+* 2 = normal buffer
+* 3 = position buffer
+* 4 = ambient occlusion buffer
 
 ## Client
 ##### cl_farp
