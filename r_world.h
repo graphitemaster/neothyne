@@ -146,9 +146,12 @@ struct world : geom {
 private:
     void occlusionPass(const pipeline &pl, ::world *map);
     void geometryPass(const pipeline &pl, ::world *map);
-    void lightingPass(const pipeline &pl, ::world *map, bool stencil = false);
+    void lightingPass(const pipeline &pl, ::world *map);
     void forwardPass(const pipeline &pl, ::world *map);
     void compositePass(const pipeline &pl);
+
+    void pointLightPass(const pipeline &pl, const ::world *const map);
+    void spotLightPass(const pipeline &pl, const ::world *const map);
 
     // world shading methods and permutations
     u::vector<geomMethod> m_geomMethods;

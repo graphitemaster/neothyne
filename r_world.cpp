@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "engine.h"
 #include "world.h"
 #include "cvar.h"
@@ -10,12 +12,20 @@
 #include "u_misc.h"
 #include "u_file.h"
 
+// Debug visualizations
+enum {
+    kDebugDepth = 1,
+    kDebugNormal,
+    kDebugSSAO
+};
+
 VAR(int, r_fxaa, "fast approximate anti-aliasing", 0, 1, 1);
 VAR(int, r_parallax, "parallax mapping", 0, 1, 1);
 VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 VAR(int, r_spec, "specularity mapping", 0, 1, 1);
 VAR(int, r_hoq, "hardware occlusion queries", 0, 1, 1);
 VAR(int, r_fog, "fog", 0, 1, 1);
+VAR(int, r_debug, "debug visualizations", 0, 3, 0);
 
 namespace r {
 
@@ -38,22 +48,25 @@ struct lightPermutation {
 
 // All the final shader permutations
 enum {
-    kFinalPermFXAA       = 1 << 0
+    kFinalPermFXAA        = 1 << 0
 };
 
 // All the light shader permutations
 enum {
-    kLightPermSSAO       = 1 << 0,
-    kLightPermFog        = 1 << 1
+    kLightPermSSAO        = 1 << 0,
+    kLightPermFog         = 1 << 1,
+    kLightPermDebugDepth  = 1 << 2,
+    kLightPermDebugNormal = 1 << 3,
+    kLightPermDebugSSAO   = 1 << 4
 };
 
 // All the geometry shader permutations
 enum {
-    kGeomPermDiffuse     = 1 << 0,
-    kGeomPermNormalMap   = 1 << 1,
-    kGeomPermSpecMap     = 1 << 2,
-    kGeomPermSpecParams  = 1 << 3,
-    kGeomPermParallax    = 1 << 4
+    kGeomPermDiffuse      = 1 << 0,
+    kGeomPermNormalMap    = 1 << 1,
+    kGeomPermSpecMap      = 1 << 2,
+    kGeomPermSpecParams   = 1 << 3,
+    kGeomPermParallax     = 1 << 4
 };
 
 // The prelude defines to compile that final shader permutation
@@ -66,7 +79,10 @@ static const char *finalPermutationNames[] = {
 // These must be in the same order as the enums
 static const char *lightPermutationNames[] = {
     "USE_SSAO",
-    "USE_FOG"
+    "USE_FOG",
+    "USE_DEBUG_DEPTH",
+    "USE_DEBUG_NORMAL",
+    "USE_DEBUG_SSAO"
 };
 
 // The prelude defines to compile that geometry shader permutation
@@ -90,7 +106,11 @@ static const lightPermutation lightPermutations[] = {
     { 0 },
     { kLightPermSSAO },
     { kLightPermSSAO | kLightPermFog },
-    { kLightPermFog }
+    { kLightPermFog },
+    // Debug visualizations
+    { kLightPermDebugDepth },
+    { kLightPermDebugNormal },
+    { kLightPermDebugSSAO }
 };
 
 // All the possible geometry permutations
@@ -120,14 +140,27 @@ static u::vector<const char *> generatePermutation(const T(&list)[N], const U &p
 
 // Calculate the correct permutation to use for the final composite
 static size_t finalCalculatePermutation() {
-    for (size_t i = 0; i < sizeof(geomPermutations)/sizeof(geomPermutations[0]); i++)
-        if (r_fxaa && (geomPermutations[i].permute & kFinalPermFXAA))
+    for (size_t i = 0; i < sizeof(finalPermutations)/sizeof(finalPermutations[0]); i++)
+        if (r_fxaa && (finalPermutations[i].permute & kFinalPermFXAA))
             return i;
     return 0;
 }
 
 // Calculate the correct permutation to use for the light buffer
 static size_t lightCalculatePermutation(bool stencil) {
+    for (size_t i = 0; i < sizeof(lightPermutations)/sizeof(lightPermutations[0]); i++) {
+        switch (r_debug) {
+        case kDebugDepth:
+            if (lightPermutations[i].permute == kLightPermDebugDepth)
+                return i;
+        case kDebugNormal:
+            if (lightPermutations[i].permute == kLightPermDebugNormal)
+                return i;
+        case kDebugSSAO:
+            if (lightPermutations[i].permute == kLightPermDebugSSAO && !stencil)
+                return i;
+        }
+    }
     int permute = 0;
     if (r_fog)
         permute |= kLightPermFog;
@@ -576,8 +609,7 @@ bool world::upload(const m::perspective &p) {
         m_directionalLightMethods[i].setColorTextureUnit(lightMethod::kColor);
         m_directionalLightMethods[i].setNormalTextureUnit(lightMethod::kNormal);
         m_directionalLightMethods[i].setDepthTextureUnit(lightMethod::kDepth);
-        if (p.permute & kLightPermSSAO)
-            m_directionalLightMethods[i].setOcclusionTextureUnit(lightMethod::kOcclusion);
+        m_directionalLightMethods[i].setOcclusionTextureUnit(lightMethod::kOcclusion);
     }
 
     // point light method
@@ -794,43 +826,117 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
     }
 
     // Draw HUD elements to g-buffer
-    m_gBuffer.bindWriting();
+    if (r_debug != kDebugSSAO) {
+        m_gBuffer.bindWriting();
 
-    // Stencil test
-    gl::Enable(GL_STENCIL_TEST);
-    gl::Enable(GL_DEPTH_TEST);
+        // Stencil test
+        gl::Enable(GL_STENCIL_TEST);
+        gl::Enable(GL_DEPTH_TEST);
 
-    // Write 1s to stencil
-    gl::StencilFunc(GL_ALWAYS, 1, 0xFF); // Stencil to 1
-    gl::StencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        // Write 1s to stencil
+        gl::StencilFunc(GL_ALWAYS, 1, 0xFF); // Stencil to 1
+        gl::StencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 #if 1
-    // HACK: Testing only
-    {
-        p.setRotation(m::quat());
-        const m::vec3 rot = m::vec3(0, 180, 0);
-        m::quat rx(m::vec3::xAxis, m::toRadian(rot.x));
-        m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
-        m::quat rz(m::vec3::zAxis, m::toRadian(rot.z));
-        m::mat4 rotate;
-        (rz * ry * rx).getMatrix(&rotate);
-        p.setRotate(rotate);
-        p.setScale({0.1, 0.1, 0.1});
-        p.setPosition({-0.15, 0.2, -0.35});
-        p.setWorld({0, 0, 0});
-        setup(m_gun.mat, p, rw);
-        m_gun.render();
-    }
+        // HACK: Testing only
+        {
+            p.setRotation(m::quat());
+            const m::vec3 rot = m::vec3(0, 180, 0);
+            m::quat rx(m::vec3::xAxis, m::toRadian(rot.x));
+            m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
+            m::quat rz(m::vec3::zAxis, m::toRadian(rot.z));
+            m::mat4 rotate;
+            (rz * ry * rx).getMatrix(&rotate);
+            p.setRotate(rotate);
+            p.setScale({0.1, 0.1, 0.1});
+            p.setPosition({-0.15, 0.2, -0.35});
+            p.setWorld({0, 0, 0});
+            setup(m_gun.mat, p, rw);
+            m_gun.render();
+        }
 #endif
 
-    gl::Disable(GL_STENCIL_TEST);
-    gl::Disable(GL_DEPTH_TEST);
+        gl::Disable(GL_STENCIL_TEST);
+        gl::Disable(GL_DEPTH_TEST);
+    }
 }
 
 static constexpr float kLightRadiusTweak = 1.11f;
 
-void world::lightingPass(const pipeline &pl, ::world *map, bool stencil) {
+void world::pointLightPass(const pipeline &pl, const ::world *const map) {
+    pipeline p = pl;
+    auto &method = m_pointLightMethod;
+    method.enable();
+    method.setPerspective(pl.perspective());
+    method.setEyeWorldPos(pl.position());
+    method.setInverse((p.projection() * p.view()).inverse());
+
+    for (auto &it : map->m_pointLights) {
+        float scale = it->radius * kLightRadiusTweak;
+
+        // Frustum cull lights
+        m_frustum.setup(it->position, p.rotation(), p.perspective());
+        if (!m_frustum.testSphere(p.position(), scale))
+            continue;
+
+        p.setWorld(it->position);
+        p.setScale({scale, scale, scale});
+
+        method.setLight(*it);
+        method.setWVP(p.projection() * p.view() * p.world());
+
+        const m::vec3 dist = it->position - p.position();
+        scale += p.perspective().nearp + 1.0f;
+        if (dist*dist >= scale*scale) {
+            gl::DepthFunc(GL_LESS);
+            gl::CullFace(GL_BACK);
+        } else {
+            gl::DepthFunc(GL_GEQUAL);
+            gl::CullFace(GL_FRONT);
+        }
+        m_sphere.render();
+    }
+}
+
+void world::spotLightPass(const pipeline &pl, const ::world *const map) {
+    pipeline p = pl;
+    auto &method = m_spotLightMethod;
+    method.enable();
+    method.setPerspective(pl.perspective());
+    method.setEyeWorldPos(pl.position());
+    method.setInverse((p.projection() * p.view()).inverse());
+
+    for (auto &it : map->m_spotLights) {
+        float scale = it->radius * kLightRadiusTweak;
+
+        // Frustum cull lights
+        m_frustum.setup(it->position, p.rotation(), p.perspective());
+        if (!m_frustum.testSphere(p.position(), scale))
+            continue;
+
+        p.setWorld(it->position);
+        p.setScale({scale, scale, scale});
+
+        method.setLight(*it);
+        method.setWVP(p.projection() * p.view() * p.world());
+
+        const m::vec3 dist = it->position - p.position();
+        scale += p.perspective().nearp + 1.0f;
+        if (dist*dist >= scale*scale) {
+            gl::DepthFunc(GL_LESS);
+            gl::CullFace(GL_BACK);
+        } else {
+            gl::DepthFunc(GL_GEQUAL);
+            gl::CullFace(GL_FRONT);
+        }
+        m_sphere.render();
+    }
+    gl::DepthMask(GL_TRUE);
+    gl::DepthFunc(GL_LESS);
+    gl::CullFace(GL_BACK);
+}
+
+void world::lightingPass(const pipeline &pl, ::world *map) {
     auto p = pl;
-    auto perspective = pl.perspective();
 
     // Write to the final composite
     m_final.bindWriting();
@@ -841,7 +947,7 @@ void world::lightingPass(const pipeline &pl, ::world *map, bool stencil) {
     gl::BlendFunc(GL_ONE, GL_ONE);
 
     // Clear the final composite
-    if(!stencil) gl::Clear(GL_COLOR_BUFFER_BIT);
+    gl::Clear(GL_COLOR_BUFFER_BIT);
 
     // Need to read from the gbuffer and ssao buffer to do lighting
     GLenum format = gl::has(gl::ARB_texture_rectangle)
@@ -853,113 +959,39 @@ void world::lightingPass(const pipeline &pl, ::world *map, bool stencil) {
     gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal));
     gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kDepth);
     gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
-    if (r_ssao && !stencil) {
-        gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kOcclusion);
-        gl::BindTexture(format, m_ssao.texture(ssao::kBuffer));
-    }
 
-    gl::Enable(GL_DEPTH_TEST);
-    gl::DepthMask(GL_FALSE);
-    gl::DepthFunc(GL_LESS);
     gl::Enable(GL_STENCIL_TEST);
     gl::StencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-    gl::StencilFunc(GL_EQUAL, stencil ? 1 : 0, 0xFF);
 
-    // Point Lighting
-    {
-        auto &method = m_pointLightMethod;
-        method.enable();
-        method.setPerspective(pl.perspective());
-        method.setEyeWorldPos(pl.position());
-        method.setInverse((p.projection() * p.view()).inverse());
-
-        pipeline p;
-        p.setPosition(pl.position());
-        p.setRotation(pl.rotation());
-        p.setPerspective(perspective);
-
-        for (auto &it : map->m_pointLights) {
-            float scale = it->radius * kLightRadiusTweak;
-
-            // Frustum cull lights
-            m_frustum.setup(it->position, p.rotation(), p.perspective());
-            if (!m_frustum.testSphere(p.position(), scale))
-                continue;
-
-            p.setWorld(it->position);
-            p.setScale({scale, scale, scale});
-
-            method.setLight(*it);
-            method.setWVP(p.projection() * p.view() * p.world());
-
-            const m::vec3 dist = it->position - p.position();
-            scale += perspective.nearp + 1.0f;
-            if (dist*dist >= scale*scale) {
-                gl::DepthFunc(GL_LESS);
-                gl::CullFace(GL_BACK);
-            } else {
-                gl::DepthFunc(GL_GEQUAL);
-                gl::CullFace(GL_FRONT);
-            }
-            m_sphere.render();
+    // Two lighting passes (stencil and non stencil)
+    for (size_t i = 0; i < 2; i++) {
+        if ((r_ssao || r_debug == kDebugSSAO) && !i) {
+            gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kOcclusion);
+            gl::BindTexture(format, m_ssao.texture(ssao::kBuffer));
         }
-    }
 
-    // Spot lighting
-    {
-        auto &method = m_spotLightMethod;
-        method.enable();
-        method.setPerspective(pl.perspective());
-        method.setEyeWorldPos(pl.position());
-        method.setInverse((p.projection() * p.view()).inverse());
+        gl::StencilFunc(GL_EQUAL, !i, 0xFF);
 
-        pipeline p;
-        p.setPosition(pl.position());
-        p.setRotation(pl.rotation());
-        p.setPerspective(perspective);
-
-        for (auto &it : map->m_spotLights) {
-            float scale = it->radius * kLightRadiusTweak;
-
-            // Frustum cull lights
-            m_frustum.setup(it->position, p.rotation(), p.perspective());
-            if (!m_frustum.testSphere(p.position(), scale))
-                continue;
-
-            p.setWorld(it->position);
-            p.setScale({scale, scale, scale});
-
-            method.setLight(*it);
-            method.setWVP(p.projection() * p.view() * p.world());
-
-            const m::vec3 dist = it->position - p.position();
-            scale += perspective.nearp + 1.0f;
-            if (dist*dist >= scale*scale) {
-                gl::DepthFunc(GL_LESS);
-                gl::CullFace(GL_BACK);
-            } else {
-                gl::DepthFunc(GL_GEQUAL);
-                gl::CullFace(GL_FRONT);
-            }
-            m_sphere.render();
-        }
-        gl::DepthMask(GL_TRUE);
+        gl::Enable(GL_DEPTH_TEST);
+        gl::DepthMask(GL_FALSE);
         gl::DepthFunc(GL_LESS);
-        gl::CullFace(GL_BACK);
-    }
-    gl::Disable(GL_DEPTH_TEST);
+        if (!r_debug) {
+            pointLightPass(pl, map);
+            spotLightPass(pl, map);
+        }
+        gl::Disable(GL_DEPTH_TEST);
 
-    // Directional Lighting (optional)
-    if (map->m_directionalLight) {
-        auto &method = m_directionalLightMethods[lightCalculatePermutation(stencil)];
-        method.enable();
-        method.setLight(*map->m_directionalLight);
-        method.setPerspective(pl.perspective());
-        method.setEyeWorldPos(pl.position());
-        method.setInverse((p.projection() * p.view()).inverse());
-        if (r_fog)
-            method.setFog(map->m_fog);
-        m_quad.render();
+        if (map->m_directionalLight) {
+            auto &method = m_directionalLightMethods[lightCalculatePermutation(!i)];
+            method.enable();
+            method.setLight(*map->m_directionalLight);
+            method.setPerspective(pl.perspective());
+            method.setEyeWorldPos(pl.position());
+            method.setInverse((p.projection() * p.view()).inverse());
+            if (r_fog)
+                method.setFog(map->m_fog);
+            m_quad.render();
+        }
     }
 
     gl::Disable(GL_STENCIL_TEST);
@@ -1118,8 +1150,7 @@ void world::compositePass(const pipeline &pl) {
 void world::render(const pipeline &pl, ::world *map) {
     occlusionPass(pl, map);
     geometryPass(pl, map);
-    lightingPass(pl, map, false); // One time as normal
-    lightingPass(pl, map, true); // This time stencil is used
+    lightingPass(pl, map);
     forwardPass(pl, map);
     compositePass(pl);
 }
