@@ -13,7 +13,8 @@ CXXFLAGS = \
 	$(EXTRAFLAGS)
 
 ENGINE_CXXFLAGS = \
-	$(CXXFLAGS)
+	$(CXXFLAGS) \
+	`sdl2-config --cflags`
 
 ENGINE_LDFLAGS = \
 	-m32 \
