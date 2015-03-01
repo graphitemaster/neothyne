@@ -294,7 +294,7 @@ def genSource(functionList, extensionList, sourceFile):
             return "unknown";
         }
 
-        static void debugCallback(GLenum source, GLenum type, GLuint, GLenum severity,
+        static void APIENTRY debugCallback(GLenum source, GLenum type, GLuint, GLenum severity,
             GLsizei, const GLchar *message, GLvoid *)
         {
             u::fprint(stderr, "%s with %s severity = %s (%s)", debugType(type),
