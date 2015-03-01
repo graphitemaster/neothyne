@@ -1,6 +1,6 @@
 #ifndef R_BILLBOARD_HDR
 #define R_BILLBOARD_HDR
-#include "r_common.h"
+#include "r_geom.h"
 #include "r_texture.h"
 #include "r_method.h"
 
@@ -31,10 +31,7 @@ private:
     GLuint m_colorMapLocation;
 };
 
-struct billboard {
-    billboard();
-    ~billboard();
-
+struct billboard : geom {
     bool load(const u::string &billboardTexture);
     bool upload();
 
@@ -50,8 +47,6 @@ private:
     };
     u::vector<m::vec3> m_positions;
     u::vector<vertex> m_vertices;
-    GLuint m_vbo;
-    GLuint m_vao;
     texture2D m_texture;
     billboardMethod m_method;
 };

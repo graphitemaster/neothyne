@@ -1,5 +1,6 @@
 #ifndef R_PARTICLES_HDR
 #define R_PARTICLES_HDR
+#include "r_geom.h"
 #include "r_method.h"
 #include "r_texture.h"
 
@@ -39,11 +40,10 @@ private:
     GLint m_colorTextureUnitLocation;
 };
 
-struct particleSystem {
+struct particleSystem : geom {
     typedef void (*initParticleFunction)(particle &p);
 
     particleSystem();
-    ~particleSystem();
 
     bool load(const u::string &file, initParticleFunction initFunction);
     bool upload();
@@ -64,8 +64,6 @@ private:
     initParticleFunction m_initFunction;
     particleSystemMethod m_method;
     float m_gravity;
-    GLuint m_vao;
-    GLuint m_vbo;
     texture2D m_texture;
 };
 
