@@ -1,4 +1,6 @@
 #include <time.h> // time_t, time
+#include <float.h>
+#include <limits.h>
 
 #include "u_misc.h"
 #include "u_memory.h" // unique_ptr

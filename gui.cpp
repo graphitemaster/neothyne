@@ -422,7 +422,7 @@ void areaFinish(int inc, bool autoScroll) {
     const int sbot = W.y;
     const int sh = stop - sbot;
 
-    float barHeight = float(h)/float(sh);
+    const float barHeight = sh ? float(h) / float(sh) : float(h);
 
     if (barHeight < 1.0f) {
         if (autoScroll) {

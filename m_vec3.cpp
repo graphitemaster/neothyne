@@ -49,7 +49,7 @@ bool vec3::rayCylinderIntersect(const vec3 &start, const vec3 &direction,
 
     // test
     const float distance = b*b - a*c;
-    if (distance < 0.0f)
+    if (distance < 0.0f || a == 0.0f)
         return false;
     *fraction = (-b - sqrtf(distance)) / a;
     const float collide = (start + *fraction * direction - edgeStart) * pa;

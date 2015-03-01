@@ -387,6 +387,9 @@ void gui::render(const pipeline &pl) {
         }
     }
 
+    if (m_batches.empty())
+        return;
+
     // Blast it all out in one giant shot
     gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
