@@ -3,10 +3,9 @@ CXXFLAGS = \
 	-std=c++11 \
 	-Wall \
 	-Wextra \
-	-pedantic \
 	-ffast-math \
 	-fno-exceptions \
-	-fsanitize=undefined \
+	-fno-rtti \
 	-I. \
 	-DDEBUG_GL \
 	-O3 \
@@ -18,7 +17,6 @@ ENGINE_CXXFLAGS = \
 
 ENGINE_LDFLAGS = \
 	-lm \
-	-fsanitize=undefined \
 	`sdl2-config --libs`
 
 GAME_SOURCES = \
