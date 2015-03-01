@@ -249,6 +249,7 @@ dir::const_iterator &dir::const_iterator::operator++() {
     while (next && IS_IGNORE(context->findData))
         next = FindNextFileA(context->handle, &context->findData);
     m_name = next ? context->findData.cFileName : nullptr;
+    return *this;
 }
 
 ///! dir
