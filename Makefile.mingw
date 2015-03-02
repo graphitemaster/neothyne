@@ -10,10 +10,12 @@ CXXFLAGS = \
 	-I. \
 	-DDEBUG_GL \
 	-O3 \
+	-fno-omit-frame-pointer \
 	$(EXTRAFLAGS)
 
 ENGINE_CXXFLAGS = \
-	$(CXXFLAGS)
+	$(CXXFLAGS) \
+	`sdl2-config --cflags`
 
 ENGINE_LDFLAGS = \
 	-m32 \
