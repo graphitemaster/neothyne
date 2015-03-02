@@ -157,15 +157,19 @@ static size_t lightCalculatePermutation(bool stencil) {
         case kDebugDepth:
             if (it.permute == kLightPermDebugDepth)
                 return &it - lightPermutations;
+            break;
         case kDebugNormal:
             if (it.permute == kLightPermDebugNormal)
                 return &it - lightPermutations;
+            break;
         case kDebugPosition:
             if (it.permute == kLightPermDebugPosition)
                 return &it - lightPermutations;
+            break;
         case kDebugSSAO:
             if (it.permute == kLightPermDebugSSAO && !stencil)
                 return &it - lightPermutations;
+            break;
         }
     }
     int permute = 0;
