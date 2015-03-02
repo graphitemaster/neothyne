@@ -10,6 +10,7 @@ CXXFLAGS = \
 	-I. \
 	-DDEBUG_GL \
 	-O3 \
+	-fno-omit-frame-pointer \
 	$(EXTRAFLAGS)
 
 ENGINE_CXXFLAGS = \
