@@ -26,11 +26,13 @@ struct skyboxMethod : method {
     void setTextureUnit(int unit);
     void setWorld(const m::mat4 &worldInverse);
     void setFog(const fog &f);
+    void setSkyColor(const m::vec3 &color);
 
 private:
     GLint m_WVPLocation;
     GLint m_cubeMapLocation;
     GLint m_worldLocation;
+    GLint m_skyColor;
     struct {
         GLint color;
         GLint density;
@@ -47,6 +49,7 @@ private:
     texture3D m_cubemap; // skybox cubemap
     skyboxMethod m_methods[2];
     cube m_cube;
+    m::vec3 m_skyColor;
 };
 
 }

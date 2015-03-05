@@ -6,6 +6,7 @@
 
 #include "u_string.h"
 #include "u_vector.h"
+#include "u_misc.h"
 
 namespace r {
 ///! method
@@ -26,6 +27,7 @@ bool skyboxMethod::init(const u::vector<const char *> &defines) {
     m_WVPLocation = getUniformLocation("gWVP");
     m_worldLocation = getUniformLocation("gWorld");
     m_cubeMapLocation = getUniformLocation("gCubemap");
+    m_skyColor = getUniformLocation("gSkyColor");
     m_fogLocation.color = getUniformLocation("gFog.color");
     m_fogLocation.density = getUniformLocation("gFog.density");
 
@@ -49,10 +51,41 @@ void skyboxMethod::setFog(const fog &f) {
     gl::Uniform1f(m_fogLocation.density, f.density);
 }
 
+void skyboxMethod::setSkyColor(const m::vec3 &skyColor) {
+    gl::Uniform3fv(m_skyColor, 1, &skyColor.x);
+}
+
 ///! renderer
 bool skybox::load(const u::string &skyboxName) {
-    return m_cubemap.load(skyboxName + "_ft", skyboxName + "_bk", skyboxName + "_up",
-                          skyboxName + "_dn", skyboxName + "_rt", skyboxName + "_lf");
+    if (!m_cubemap.load(skyboxName + "_ft", skyboxName + "_bk", skyboxName + "_up",
+                        skyboxName + "_dn", skyboxName + "_rt", skyboxName + "_lf"))
+        return false;
+
+    // Calculate the average color of the top of the skybox. We utilize this color
+    // for vertical fog mixture that reaches into the sky if the map has fog at
+    // all.
+    const auto &tex = m_cubemap.get(texture3D::kUp);
+    const auto &data = tex.data();
+
+    uint64_t totals[3] = {0};
+    const size_t stride = tex.width() * tex.bpp();
+    for (size_t y = 0; y < tex.height(); y++) {
+        for (size_t x = 0; x < tex.width(); x++) {
+            for (size_t i = 0; i < 3; i++) {
+                const size_t index = (y * stride) + x*tex.bpp() + i;
+                totals[i] += data[index];
+            }
+        }
+    }
+    int reduce[3] = {0};
+    for (size_t i = 0; i < 3; i++)
+        reduce[i] = totals[i] / (tex.width() * tex.height());
+
+    m_skyColor = m::vec3(reduce[0] / 255.0f,
+                         reduce[1] / 255.0f,
+                         reduce[2] / 255.0f);
+
+    return true;
 }
 
 bool skybox::upload() {
@@ -67,6 +100,7 @@ bool skybox::upload() {
     for (auto &it : m_methods) {
         it.enable();
         it.setTextureUnit(0);
+        it.setSkyColor(m_skyColor);
     }
     return true;
 }

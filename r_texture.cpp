@@ -676,12 +676,12 @@ void texture3D::applyFilter() {
 bool texture3D::load(const u::string &ft, const u::string &bk, const u::string &up,
                      const u::string &dn, const u::string &rt, const u::string &lf)
 {
-    if (!m_textures[0].load(ft, r_texquality)) return false;
-    if (!m_textures[1].load(bk, r_texquality)) return false;
-    if (!m_textures[2].load(up, r_texquality)) return false;
-    if (!m_textures[3].load(dn, r_texquality)) return false;
-    if (!m_textures[4].load(rt, r_texquality)) return false;
-    if (!m_textures[5].load(lf, r_texquality)) return false;
+    if (!m_textures[kFront].load(ft, r_texquality)) return false;
+    if (!m_textures[kBack].load(bk, r_texquality)) return false;
+    if (!m_textures[kUp].load(up, r_texquality)) return false;
+    if (!m_textures[kDown].load(dn, r_texquality)) return false;
+    if (!m_textures[kRight].load(rt, r_texquality)) return false;
+    if (!m_textures[kLeft].load(lf, r_texquality)) return false;
     return true;
 }
 
@@ -734,6 +734,10 @@ void texture3D::bind(GLenum unit) {
 void texture3D::resize(size_t width, size_t height) {
     for (size_t i = 0; i < 6; i++)
         m_textures[i].resize(width, height);
+}
+
+const texture &texture3D::get(int direction) const {
+    return m_textures[direction];
 }
 
 }

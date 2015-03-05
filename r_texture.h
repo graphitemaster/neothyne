@@ -45,6 +45,17 @@ struct texture3D {
     void bind(GLenum unit);
     void resize(size_t width, size_t height);
 
+    enum {
+        kFront,
+        kBack,
+        kUp,
+        kDown,
+        kRight,
+        kLeft
+    };
+
+    const texture &get(int direction) const;
+
 private:
     void applyFilter();
     bool m_uploaded;
