@@ -18,6 +18,6 @@ void main() {
     light.radius = 100.0f;
 
     vec4 value = calcPointLight(light, worldPosition0, normalize(normal0), vec2(0.1f, 1.0f));
-    fragColor = texture2D(gColorMap, texCoord0) * value;
+    fragColor = texture(gColorMap, texCoord0) * value;
     fragColor.a = 1.0f;
 }

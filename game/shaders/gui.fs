@@ -11,7 +11,7 @@ void main() {
 #ifdef HAS_FONT
     fragColor = vec4(color0.rgb, color0.a * texture(gColorMap, texCoord0).r);
 #elif defined(HAS_IMAGE)
-    fragColor = texture2D(gColorMap, texCoord0);
+    fragColor = texture(gColorMap, texCoord0);
 #else
     fragColor = color0;
 #endif

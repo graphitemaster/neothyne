@@ -7,7 +7,7 @@
 #  define neoTexture2D texture2DRect
 #else
 #  define neoSampler2D sampler2D
-#  define neoTexture2D texture2D
+#  define neoTexture2D texture
 #endif
 
 uniform vec2 gScreenSize; // { width, height }

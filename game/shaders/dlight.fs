@@ -15,11 +15,7 @@ void main() {
 #if defined(USE_DEBUG_DEPTH) || defined(USE_DEBUG_NORMAL) || defined(USE_DEBUG_POSITION) || defined(USE_DEBUG_SSAO)
 #if defined(USE_DEBUG_DEPTH)
     // Depth buffer visualization
-    vec2 texCoord = calcTexCoord();
-    float z = neoTexture2D(gDepthMap, texCoord).r;
-    float c = (2.0f * gScreenFrustum.x) / (gScreenFrustum.y +
-        gScreenFrustum.x - z * (gScreenFrustum.y - gScreenFrustum.x));
-    fragColor.rgb = vec3(c);
+    fragColor.rgb = vec3(calcLinearDepth(calcTexCoord()));
 #elif defined(USE_DEBUG_NORMAL)
     // Normal buffer visualization
     vec2 texCoord = calcTexCoord();
@@ -58,10 +54,8 @@ void main() {
 #endif //! USE_SSAO
 
 #ifdef USE_FOG
-    float z = neoTexture2D(gDepthMap, texCoord).r;
-    float c = (2.0f * gScreenFrustum.x) / (gScreenFrustum.y +
-        gScreenFrustum.x - z * (gScreenFrustum.y - gScreenFrustum.x));
-    fragColor = mix(fragColor, vec4(gFog.color, 1.0f), calcFogFactor(gFog, c));
+    fragColor = mix(fragColor, vec4(gFog.color, 1.0f),
+        calcFogFactor(gFog, calcLinearDepth(texCoord)));
 #endif //! USE_FOG
 
 #endif //! USE_DEBUG{DEPTH|NORMAL|POSITION|SSAO}
