@@ -176,6 +176,24 @@ private:
     // HACK: Testing only
     model m_gun;
 
+    // Cached lights
+    struct pointLightCache {
+        pointLightCache(const pointLight &light, const m::mat4 &wvp, bool inside);
+        const pointLight &light;
+        const m::mat4 wvp;
+        bool inside;
+    };
+
+    struct spotLightCache {
+        spotLightCache(const spotLight &light, const m::mat4 &wvp, bool inside);
+        const spotLight &light;
+        const m::mat4 wvp;
+        bool inside;
+    };
+
+    u::vector<pointLightCache> m_pointLightCache;
+    u::vector<spotLightCache> m_spotLightCache;
+
     // The world itself
     u::vector<uint32_t> m_indices;
     u::vector<kdBinVertex> m_vertices;
@@ -192,6 +210,20 @@ private:
 
     bool m_uploaded;
 };
+
+inline world::pointLightCache::pointLightCache(const pointLight &light, const m::mat4 &wvp, bool inside)
+    : light(light)
+    , wvp(wvp)
+    , inside(inside)
+{
+}
+
+inline world::spotLightCache::spotLightCache(const spotLight &light, const m::mat4 &wvp, bool inside)
+    : light(light)
+    , wvp(wvp)
+    , inside(inside)
+{
+}
 
 }
 
