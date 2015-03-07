@@ -4,6 +4,7 @@
 #include "menu.h"
 #include "gui.h"
 #include "cvar.h"
+#include "grader.h"
 
 #include "u_set.h"
 #include "u_misc.h"
@@ -89,6 +90,60 @@ static void menuMain() {
         if (gui::button("Exit")) {
             gRunning = false;
         }
+    gui::areaFinish();
+}
+
+static void menuColorGrading() {
+    const size_t w = neoWidth() / 3;
+    const size_t h = neoHeight() / 2;
+    const size_t x = neoWidth() / 2 - w / 2;
+    const size_t y = neoHeight() / 2 - h / 2;
+
+    auto &colorGrading = gWorld.getColorGrader();
+
+    auto sliders = [&](int what) {
+        float cr = colorGrading.CR(what);
+        float mg = colorGrading.MG(what);
+        float yb = colorGrading.YB(what);
+        if (gui::slider("Cyan - Red", cr, 0.0f, 255.0f, 0.001f))
+            colorGrading.setCR(cr, what);
+        if (gui::slider("Magenta - Green", mg, 0.0f, 255.0f, 0.001f))
+            colorGrading.setMG(mg, what);
+        if (gui::slider("Yellow - Blue", yb, 0.0f, 255.0f, 0.001f))
+            colorGrading.setYB(yb, what);
+    };
+
+    gui::areaBegin("Color grading", x, y, w, h, D(scroll));
+        gui::heading();
+        gui::label("Tone balance");
+        gui::indent();
+            if (gui::check("Preserve luminosity", colorGrading.luma()))
+                colorGrading.setLuma(!colorGrading.luma());
+            if (gui::collapse("Shadows", "", D(shadows)))
+                D(shadows) = !D(shadows);
+            if (D(shadows))
+                sliders(colorGrader::kBalanceShadows);
+            if (gui::collapse("Midtones", "", D(midtones)))
+                D(midtones) = !D(midtones);
+            if (D(midtones))
+                sliders(colorGrader::kBalanceMidtones);
+            if (gui::collapse("Highlights", "", D(highlights)))
+                D(highlights) = !D(highlights);
+            if (D(highlights))
+                sliders(colorGrader::kBalanceHighlights);
+        gui::dedent();
+        gui::label("Brightness and contrast");
+        gui::indent();
+            float brightness = colorGrading.brightness();
+            float contrast = colorGrading.contrast();
+            if (gui::slider("Brightness", brightness, -1.0f, 1.0f, 0.0015f))
+                colorGrading.setBrightness(brightness);
+            if (gui::slider("Contrast", contrast, -1.0f, 1.0f, 0.0015f))
+                colorGrading.setContrast(contrast);
+        gui::dedent();
+        gui::heading();
+        if (gui::button("Reset"))
+            colorGrading.reset();
     gui::areaFinish();
 }
 
@@ -590,4 +645,6 @@ void menuUpdate() {
         menuEdit();
     if (gMenuState & kMenuCreate)
         menuCreate();
+    if (gMenuState & kMenuColorGrading)
+        menuColorGrading();
 }

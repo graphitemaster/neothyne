@@ -266,7 +266,8 @@ void geomMethod::setWVP(const m::mat4 &wvp) {
 }
 
 void geomMethod::setWorld(const m::mat4 &worldInverse) {
-    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
+    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE,
+        (const GLfloat *)worldInverse.m);
 }
 
 void geomMethod::setEyeWorldPos(const m::vec3 &position) {
@@ -321,6 +322,7 @@ bool finalMethod::init(const u::vector<const char *> &defines) {
 
     m_WVPLocation = getUniformLocation("gWVP");
     m_colorMapLocation = getUniformLocation("gColorMap");
+    m_colorGradingMapLocation = getUniformLocation("gColorGradingMap");
     m_screenSizeLocation = getUniformLocation("gScreenSize");
     return true;
 }
@@ -333,6 +335,10 @@ void finalMethod::setColorTextureUnit(int unit) {
     gl::Uniform1i(m_colorMapLocation, unit);
 }
 
+void finalMethod::setColorGradingTextureUnit(int unit) {
+    gl::Uniform1i(m_colorGradingMapLocation, unit);
+}
+
 void finalMethod::setPerspective(const m::perspective &p) {
     gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
     // TODO: frustum in final shader to do other things eventually
@@ -341,10 +347,10 @@ void finalMethod::setPerspective(const m::perspective &p) {
 
 finalComposite::finalComposite()
     : m_fbo(0)
-    , m_texture(0)
     , m_width(0)
     , m_height(0)
 {
+    memset(m_textures, 0, sizeof(m_textures));
 }
 
 finalComposite::~finalComposite() {
@@ -354,43 +360,67 @@ finalComposite::~finalComposite() {
 void finalComposite::destroy() {
     if (m_fbo)
         gl::DeleteFramebuffers(1, &m_fbo);
-    if (m_texture)
-        gl::DeleteTextures(1, &m_texture);
+    if (m_textures[0])
+        gl::DeleteTextures(2, m_textures);
 }
 
-void finalComposite::update(const m::perspective &p, GLuint depth) {
-    size_t width = p.width;
-    size_t height = p.height;
+void finalComposite::update(const m::perspective &p,
+    const unsigned char *const colorGradingData)
+{
+    const size_t width = p.width;
+    const size_t height = p.height;
+
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     if (m_width != width || m_height != height) {
-        destroy();
-        init(p, depth);
+        m_width = width;
+        m_height = height;
+        gl::BindTexture(format, m_textures[kFinal]);
+        gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA,
+            GL_FLOAT, nullptr);
+        gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    }
+
+    // Need to update color grading data if any is passed at all
+    if (colorGradingData) {
+        gl::BindTexture(GL_TEXTURE_3D, m_textures[kColorGrading]);
+        gl::TexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, 16, 16, 16, GL_RGB,
+            GL_UNSIGNED_BYTE, colorGradingData);
     }
 }
 
-bool finalComposite::init(const m::perspective &p, GLuint depth) {
+bool finalComposite::init(const m::perspective &p, GLuint depth,
+    const unsigned char *const colorGradingData)
+{
     m_width = p.width;
     m_height = p.height;
 
     gl::GenFramebuffers(1, &m_fbo);
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
 
-    gl::GenTextures(1, &m_texture);
+    gl::GenTextures(2, m_textures);
 
     GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     // final composite
-    gl::BindTexture(format, m_texture);
-    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    gl::BindTexture(format, m_textures[kFinal]);
+    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT,
+        nullptr);
     gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format, m_texture, 0);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format,
+        m_textures[kFinal], 0);
 
     gl::BindTexture(format, depth);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, format, depth, 0);
+    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+        format, depth, 0);
 
     static GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
     gl::DrawBuffers(1, drawBuffers);
@@ -400,6 +430,17 @@ bool finalComposite::init(const m::perspective &p, GLuint depth) {
         return false;
 
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+    // Color grading texture
+    gl::BindTexture(GL_TEXTURE_3D, m_textures[kColorGrading]);
+    gl::TexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    gl::TexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    gl::TexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    gl::TexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, 16, 16, 16, 0, GL_RGB,
+        GL_UNSIGNED_BYTE, colorGradingData);
+
     return true;
 }
 
@@ -407,8 +448,8 @@ void finalComposite::bindWriting() {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
 }
 
-GLuint finalComposite::texture() const {
-    return m_texture;
+GLuint finalComposite::texture(size_t index) const {
+    return m_textures[index];
 }
 
 ///! renderer
@@ -527,7 +568,7 @@ bool world::load(const kdMap &map) {
     return true;
 }
 
-bool world::upload(const m::perspective &p) {
+bool world::upload(const m::perspective &p, ::world *map) {
     if (m_uploaded)
         return true;
 
@@ -591,6 +632,7 @@ bool world::upload(const m::perspective &p) {
             neoFatal("failed to initialize final composite rendering method");
         m_finalMethods[i].enable();
         m_finalMethods[i].setColorTextureUnit(0);
+        m_finalMethods[i].setColorGradingTextureUnit(1);
         m_finalMethods[i].setWVP(m_identity);
     }
 
@@ -650,7 +692,7 @@ bool world::upload(const m::perspective &p) {
         neoFatal("failed to initialize world renderer");
     if (!m_ssao.init(p))
         neoFatal("failed to initialize world renderer");
-    if (!m_final.init(p, m_gBuffer.texture(gBuffer::kDepth)))
+    if (!m_final.init(p, m_gBuffer.texture(gBuffer::kDepth), map->getColorGrader().data()))
         neoFatal("failed to initialize world renderer");
 
     if (!m_ssaoMethod.init())
@@ -1190,9 +1232,16 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
     gl::Disable(GL_BLEND);
 }
 
-void world::compositePass(const pipeline &pl) {
+void world::compositePass(const pipeline &pl, ::world *map) {
     // We're going to be reading from the final composite
-    m_final.update(pl.perspective(), m_gBuffer.texture(gBuffer::kDepth));
+    auto &colorGrading = map->getColorGrader();
+    if (colorGrading.updated()) {
+        colorGrading.grade();
+        m_final.update(pl.perspective(), map->getColorGrader().data());
+        colorGrading.update();
+    } else {
+        m_final.update(pl.perspective(), nullptr);
+    }
 
     // For the final pass it's important we output to the screen
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -1201,7 +1250,10 @@ void world::compositePass(const pipeline &pl) {
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     gl::ActiveTexture(GL_TEXTURE0);
-    gl::BindTexture(format, m_final.texture());
+    gl::BindTexture(format, m_final.texture(finalComposite::kFinal));
+
+    gl::ActiveTexture(GL_TEXTURE1);
+    gl::BindTexture(GL_TEXTURE_3D, m_final.texture(finalComposite::kColorGrading));
 
     const size_t index = finalCalculatePermutation();
     auto &it = m_finalMethods[index];
@@ -1215,7 +1267,7 @@ void world::render(const pipeline &pl, ::world *map) {
     geometryPass(pl, map);
     lightingPass(pl, map);
     forwardPass(pl, map);
-    compositePass(pl);
+    compositePass(pl, map);
 }
 
 }

@@ -50,18 +50,18 @@ static void setBinds() {
             } else {
                 gMenuState &= ~kMenuMain;
             }
-        } else if (!(gMenuState & kMenuEdit)) {
+        } else if (!(gMenuState & kMenuEdit) && !(gMenuState & kMenuColorGrading)) {
             // If the console is opened leave it open
             gMenuState = (gMenuState & kMenuConsole)
                 ? kMenuMain | kMenuConsole
                 : kMenuMain;
         } else {
-            gMenuState &= ~kMenuEdit;
+            if (gMenuState & kMenuEdit)
+                gMenuState &= ~kMenuEdit;
+            else if (gMenuState & kMenuColorGrading)
+                gMenuState &= ~kMenuColorGrading;
         }
-        if (gPlaying && !(gMenuState & kMenuMain))
-            neoRelativeMouse(true);
-        else
-            neoRelativeMouse(false);
+        neoRelativeMouse(gPlaying && !(gMenuState & kMenuMain));
         neoCenterMouse();
         menuReset();
     });
@@ -70,12 +70,18 @@ static void setBinds() {
         neoScreenShot();
     });
 
+    neoBindSet("F10Dn", []() {
+        if (varGet<int>("cl_edit").get())
+            gMenuState ^= kMenuColorGrading;
+        neoRelativeMouse(!((gMenuState & kMenuEdit) || (gMenuState & kMenuColorGrading)));
+    });
+
     neoBindSet("F11Dn", []() {
         gMenuState ^= kMenuConsole;
     });
 
     neoBindSet("F12Dn", []() {
-         if (varGet<int>("cl_edit").get())
+        if (varGet<int>("cl_edit").get())
             gMenuState ^= kMenuEdit;
         neoRelativeMouse(!(gMenuState & kMenuEdit));
     });
@@ -261,6 +267,8 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
 
         if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit)) {
             gui::drawText(neoWidth() / 2, neoHeight() - 20, gui::kAlignCenter, "F12 to toggle edit menu",
+                gui::RGBA(0, 0, 0, 255));
+            gui::drawText(neoWidth() / 2, neoHeight() - 40, gui::kAlignCenter, "F10 to toggle color grading menu",
                 gui::RGBA(0, 0, 0, 255));
         }
 

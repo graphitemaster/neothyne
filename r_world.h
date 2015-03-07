@@ -86,17 +86,20 @@ struct finalMethod : method {
 
     void setWVP(const m::mat4 &wvp);
     void setColorTextureUnit(int unit);
+    void setColorGradingTextureUnit(int unit);
     void setPerspective(const m::perspective &perspective);
 
 private:
     GLint m_WVPLocation;
     GLint m_colorMapLocation;
+    GLint m_colorGradingMapLocation;
     GLint m_screenSizeLocation;
 };
 
 inline finalMethod::finalMethod()
     : m_WVPLocation(-1)
     , m_colorMapLocation(-1)
+    , m_colorGradingMapLocation(-1)
     , m_screenSizeLocation(-1)
 {
 }
@@ -105,11 +108,18 @@ struct finalComposite {
     finalComposite();
     ~finalComposite();
 
-    bool init(const m::perspective &p, GLuint depth);
-    void update(const m::perspective &p, GLuint depth);
+    bool init(const m::perspective &p, GLuint depth,
+        const unsigned char *const colorGradingData);
+    void update(const m::perspective &p,
+        const unsigned char *const colorGradingData);
     void bindWriting();
 
-    GLuint texture() const;
+    enum {
+        kFinal,
+        kColorGrading
+    };
+
+    GLuint texture(size_t index) const;
 
 private:
     enum {
@@ -120,11 +130,10 @@ private:
     void destroy();
 
     GLuint m_fbo;
-    GLuint m_texture;
+    GLuint m_textures[2]; // kFinal, kColorGrading
     size_t m_width;
     size_t m_height;
 };
-
 struct renderTextureBatch {
     int permute;
     size_t start;
@@ -138,7 +147,7 @@ struct world : geom {
     ~world();
 
     bool load(const kdMap &map);
-    bool upload(const m::perspective &p);
+    bool upload(const m::perspective &p, ::world *map);
 
     void unload(bool destroy = true);
     void render(const pipeline &pl, ::world *map);
@@ -148,7 +157,7 @@ private:
     void geometryPass(const pipeline &pl, ::world *map);
     void lightingPass(const pipeline &pl, ::world *map);
     void forwardPass(const pipeline &pl, ::world *map);
-    void compositePass(const pipeline &pl);
+    void compositePass(const pipeline &pl, ::world *map);
 
     void pointLightPass(const pipeline &pl, const ::world *const map);
     void spotLightPass(const pipeline &pl, const ::world *const map);

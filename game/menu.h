@@ -4,12 +4,13 @@
 #include "u_stack.h"
 
 enum {
-    kMenuMain    = 1 << 0,
-    kMenuOptions = 1 << 2,
-    kMenuCredits = 1 << 3,
-    kMenuConsole = 1 << 5,
-    kMenuEdit    = 1 << 6,
-    kMenuCreate  = 1 << 7
+    kMenuMain         = 1 << 0,
+    kMenuOptions      = 1 << 2,
+    kMenuCredits      = 1 << 3,
+    kMenuConsole      = 1 << 5,
+    kMenuEdit         = 1 << 6,
+    kMenuCreate       = 1 << 7,
+    kMenuColorGrading = 1 << 8
 };
 
 static constexpr size_t kMenuConsoleHistorySize = 100;

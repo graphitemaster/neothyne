@@ -94,7 +94,7 @@ bool world::load(const u::string &file) {
 }
 
 bool world::upload(const m::perspective &p) {
-    return m_renderer.upload(p);
+    return m_renderer.upload(p, this);
 }
 
 void world::render(const r::pipeline &pl) {
@@ -371,4 +371,8 @@ jumppad &world::getJumppad(size_t index) {
 
 const u::vector<mapModel*> &world::getMapModels() const {
     return m_mapModels;
+}
+
+colorGrader &world::getColorGrader() {
+    return m_colorGrader;
 }

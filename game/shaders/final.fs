@@ -1,6 +1,7 @@
 #include <shaders/screenspace.h>
 
 uniform neoSampler2D gColorMap;
+uniform sampler3D gColorGradingMap;
 
 out vec4 fragColor;
 
@@ -76,4 +77,6 @@ void main() {
 #else
     fragColor = neoTexture2D(gColorMap, texCoord);
 #endif
+    // Apply color grading
+    fragColor = vec4(texture(gColorGradingMap, fragColor.rgb).rbg, 1.0);
 }

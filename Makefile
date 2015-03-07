@@ -65,6 +65,7 @@ ENGINE_SOURCES = \
 	texture.cpp \
 	cvar.cpp \
 	gui.cpp \
+	grader.cpp \
 	$(UTIL_SOURCES) \
 	$(MATH_SOURCES) \
 	$(RENDERER_SOURCES)

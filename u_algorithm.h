@@ -51,6 +51,16 @@ inline constexpr T abs(const T &lhs) {
     return lhs < 0 ? -lhs : lhs;
 }
 
+template <typename T>
+inline constexpr T square(const T &value) {
+    return value * value;
+}
+
+template <typename T>
+typename enable_if<is_floating_point<T>::value, int>::type round(T value) {
+    return int(value + T(0.5));
+}
+
 }
 
 #endif

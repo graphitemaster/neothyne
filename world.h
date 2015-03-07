@@ -1,5 +1,6 @@
 #ifndef WORLD_HDR
 #define WORLD_HDR
+#include "grader.h"
 #include "r_world.h"
 
 struct baseLight {
@@ -170,6 +171,7 @@ struct world {
     playerStart &getPlayerStart(size_t index);
     teleport &getTeleport(size_t index);
     jumppad &getJumppad(size_t index);
+    colorGrader &getColorGrader();
 
     const u::vector<mapModel*> &getMapModels() const;
 
@@ -212,6 +214,7 @@ private:
     u::vector<teleport*> m_teleports;
     u::vector<jumppad*> m_jumppads;
     fog m_fog; // The fog
+    colorGrader m_colorGrader;
 };
 
 #endif
