@@ -170,29 +170,21 @@ bool method::finalize() {
     GLint infoLogLength = 0;
     u::string infoLog;
 
-    // Link and validate
     gl::LinkProgram(m_program);
     gl::GetProgramiv(m_program, GL_LINK_STATUS, &success);
-    if (!success)
-        goto error;
-
-    gl::ValidateProgram(m_program);
-    gl::GetProgramiv(m_program, GL_VALIDATE_STATUS, &success);
-    if (!success)
-        goto error;
+    if (!success) {
+        gl::GetProgramiv(m_program, GL_INFO_LOG_LENGTH, &infoLogLength);
+        infoLog.resize(infoLogLength);
+        gl::GetProgramInfoLog(m_program, infoLogLength, nullptr, &infoLog[0]);
+        u::print("shader link error:\n%s\n", infoLog);
+        return false;
+    }
 
     for (auto &it : m_shaders)
         gl::DeleteShader(it);
 
     m_shaders.clear();
     return true;
-
-error:
-    gl::GetProgramiv(m_program, GL_INFO_LOG_LENGTH, &infoLogLength);
-    infoLog.resize(infoLogLength);
-    gl::GetProgramInfoLog(m_program, infoLogLength, nullptr, &infoLog[0]);
-    u::print("shader link error:\n%s\n", infoLog);
-    return false;
 }
 
 }
