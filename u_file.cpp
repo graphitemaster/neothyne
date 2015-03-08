@@ -7,6 +7,7 @@
 
 #ifdef _WIN32
 #   define _WIN32_LEAN_AND_MEAN
+#   define NOMINMAX
 #   include <windows.h>
 #   include <direct.h>  // rmdir, mkdir
 #else
@@ -197,9 +198,6 @@ bool dir::isFile(const char *fileName) {
 }
 
 #else
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <assert.h>
 
 #define IS_IGNORE(X) (!strcmp((X).cFileName, ".") || !strcmp((X).cFileName, ".."))
