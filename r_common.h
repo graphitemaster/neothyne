@@ -115,6 +115,7 @@ void StencilFunc(GLenum func, GLint ref, GLuint mask GL_INFOP);
 void StencilOp(GLenum sfail, GLenum dpfail, GLenum dppass GL_INFOP);
 void TexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid* data GL_INFOP);
 void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid * data GL_INFOP);
+void GetProgramInfoLog(GLuint program, GLsizei maxLength, GLsizei* length, GLchar* infoLog GL_INFOP);
 
 }
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -198,5 +199,6 @@ void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLi
 #   define StencilOp(...)                StencilOp(__VA_ARGS__, __FILE__, __LINE__)
 #   define TexImage3D(...)               TexImage3D(__VA_ARGS__, __FILE__, __LINE__)
 #   define TexSubImage3D(...)            TexSubImage3D(__VA_ARGS__, __FILE__, __LINE__)
+#   define GetProgramInfoLog(...)        GetProgramInfoLog(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif

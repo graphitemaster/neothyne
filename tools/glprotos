@@ -78,3 +78,4 @@ void: StencilFunc(GLenum: func, GLint: ref, GLuint: mask);
 void: StencilOp(GLenum: sfail, GLenum: dpfail, GLenum: dppass);
 void: TexImage3D(GLenum: target, GLint: level, GLint: internalFormat, GLsizei: width, GLsizei: height, GLsizei: depth, GLint: border, GLenum: format, GLenum: type, const GLvoid*: data);
 void: TexSubImage3D(GLenum: target, GLint: level, GLint: xoffset, GLint: yoffset, GLint: zoffset, GLsizei: width, GLsizei: height, GLsizei: depth, GLenum: format, GLenum: type, const GLvoid *: data);
+void: GetProgramInfoLog(GLuint: program, GLsizei: maxLength, GLsizei*: length, GLchar*: infoLog);

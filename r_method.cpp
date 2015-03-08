@@ -188,9 +188,9 @@ bool method::finalize() {
     return true;
 
 error:
-    gl::GetShaderiv(m_program, GL_INFO_LOG_LENGTH, &infoLogLength);
+    gl::GetProgramiv(m_program, GL_INFO_LOG_LENGTH, &infoLogLength);
     infoLog.resize(infoLogLength);
-    gl::GetShaderInfoLog(m_program, infoLogLength, nullptr, &infoLog[0]);
+    gl::GetProgramInfoLog(m_program, infoLogLength, nullptr, &infoLog[0]);
     u::print("shader link error:\n%s\n", infoLog);
     return false;
 }

@@ -107,6 +107,7 @@ typedef void (APIENTRYP MYPFNGLSTENCILFUNCPROC)(GLenum, GLint, GLuint);
 typedef void (APIENTRYP MYPFNGLSTENCILOPPROC)(GLenum, GLenum, GLenum);
 typedef void (APIENTRYP MYPFNGLTEXIMAGE3DPROC)(GLenum, GLint, GLint, GLsizei, GLsizei, GLsizei, GLint, GLenum, GLenum, const GLvoid*);
 typedef void (APIENTRYP MYPFNGLTEXSUBIMAGE3DPROC)(GLenum, GLint, GLint, GLint, GLint, GLsizei, GLsizei, GLsizei, GLenum, GLenum, const GLvoid *);
+typedef void (APIENTRYP MYPFNGLGETPROGRAMINFOLOGPROC)(GLuint, GLsizei, GLsizei*, GLchar*);
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -188,6 +189,7 @@ static MYPFNGLSTENCILFUNCPROC               glStencilFunc_              = nullpt
 static MYPFNGLSTENCILOPPROC                 glStencilOp_                = nullptr;
 static MYPFNGLTEXIMAGE3DPROC                glTexImage3D_               = nullptr;
 static MYPFNGLTEXSUBIMAGE3DPROC             glTexSubImage3D_            = nullptr;
+static MYPFNGLGETPROGRAMINFOLOGPROC         glGetProgramInfoLog_        = nullptr;
 
 #ifdef DEBUG_GL
 ///! ARB_debug_output
@@ -511,6 +513,7 @@ void init() {
     glStencilOp_                = (MYPFNGLSTENCILOPPROC)neoGetProcAddress("glStencilOp");
     glTexImage3D_               = (MYPFNGLTEXIMAGE3DPROC)neoGetProcAddress("glTexImage3D");
     glTexSubImage3D_            = (MYPFNGLTEXSUBIMAGE3DPROC)neoGetProcAddress("glTexSubImage3D");
+    glGetProgramInfoLog_        = (MYPFNGLGETPROGRAMINFOLOGPROC)neoGetProcAddress("glGetProgramInfoLog");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -936,6 +939,11 @@ void TexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei width,
 void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid * data GL_INFOP) {
     glTexSubImage3D_(target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, data);
     GL_CHECK("2777788822*0", target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, data);
+}
+
+void GetProgramInfoLog(GLuint program, GLsizei maxLength, GLsizei* length, GLchar* infoLog GL_INFOP) {
+    glGetProgramInfoLog_(program, maxLength, length, infoLog);
+    GL_CHECK("b8*8*1", program, maxLength, length, infoLog);
 }
 
 }
