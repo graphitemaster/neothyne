@@ -167,21 +167,32 @@ GLint method::getUniformLocation(const u::string &name) {
 
 bool method::finalize() {
     GLint success = 0;
+    GLint infoLogLength = 0;
+    u::string infoLog;
+
+    // Link and validate
     gl::LinkProgram(m_program);
     gl::GetProgramiv(m_program, GL_LINK_STATUS, &success);
     if (!success)
-        return false;
+        goto error;
 
     gl::ValidateProgram(m_program);
     gl::GetProgramiv(m_program, GL_VALIDATE_STATUS, &success);
     if (!success)
-        return false;
+        goto error;
 
     for (auto &it : m_shaders)
         gl::DeleteShader(it);
 
     m_shaders.clear();
     return true;
+
+error:
+    gl::GetShaderiv(m_program, GL_INFO_LOG_LENGTH, &infoLogLength);
+    infoLog.resize(infoLogLength);
+    gl::GetShaderInfoLog(m_program, infoLogLength, nullptr, &infoLog[0]);
+    u::print("shader link error:\n%s\n", infoLog);
+    return false;
 }
 
 }
