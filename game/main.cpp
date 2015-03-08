@@ -39,7 +39,7 @@ static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t
 
 static void setBinds() {
     neoBindSet("MouseDnL", []() {
-        if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit))
+        if (varGet<int>("cl_edit").get() && (gMenuState == 0 || gMenuState == kMenuConsole))
             edit::select();
     });
 
