@@ -119,7 +119,7 @@ static void menuColorGrading() {
         float l = colorGrading.L(what);
         if (gui::slider("Hue", h, 0.0f, 255.0f, 0.001f))
             colorGrading.setH(h, what);
-        if (gui::slider("Saturation", s, 0.0f, 255.0f, 0.001f))
+        if (gui::slider("Saturation", s, -255.0f, 255.0f, 0.001f))
             colorGrading.setS(s, what);
         if (gui::slider("Lightness", l, 0.0f, 255.0f, 0.001f))
             colorGrading.setL(l, what);
