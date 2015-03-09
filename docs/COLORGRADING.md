@@ -11,7 +11,7 @@ subtractive color scheme. The term subtractive comes from the fact that the
 color we see in objects is reflected light minus any degree of Red, Green and
 Blue. If something absorbs Green and Blue light, only to reflect Red, we see Red.
 Whereas, if it only absorbs Red, it will reflect Blue and Green and the result
-becomes Cyan. Thus, when you subtract various wavelengths of absorption, any
+becomes Cyan. Thus, when you subtract various wavelengths through absorption, any
 shade of any color can be produced.
 
 It's also important to know what shadows, midtones and highlights are. Highlights
