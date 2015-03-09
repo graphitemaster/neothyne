@@ -235,6 +235,12 @@ void colorGrader::applyColorBalance() {
 void colorGrader::applyHueSaturation() {
     generateHueSaturationTables();
 
+    // +42ish each step, capped to a byte, rounded down to nearest integer
+    // i.e The ratio 256/6 times 0.5 1.5 2.5 ... 6.5 floored and then saturated
+    // to [0, 255].
+    //
+    // how to generate the table in J:
+    //  255 <. <. 256r6 * 0.5 + i.7     NB. With 255 and <. to saturate the result
     static constexpr int kHueThresholds[] = {
         21, 64, 106, 149, 192, 234, 255
     };
