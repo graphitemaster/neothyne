@@ -419,6 +419,10 @@ Comments are vital to keeping code readable. Code should be self-documenting but
 when it isn't comments should never describe the code itself but rather what
 the code is attempting to do.
 
+When describing how a static table of numbers is generated or what an algorithm
+is trying to accomplish, prefer to describe it in terms of a piece of J code
+opposed to pseudo code or commented out C/C++.
+
 # Indentation
 Never use tabulators, always use spaces. When indenting, you indent 4 spaces
 at a time.
