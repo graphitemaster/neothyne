@@ -71,7 +71,7 @@ scene when adjusting midtones for instance.
 
 ### Understanding Hue, Saturation and Lightness
 
-Lets define the terminology first. Hue is related to wavelength, that is the
+Let us define the terminology first. Hue is related to wavelength, that is the
 "base tone" of a color, but there is much more to what we consider a specific
 color. Saturation on the other hand refers to how a Hue appears under particular
 lighting conditions. Think of Saturation in terms of weak vs strong or pale vs
