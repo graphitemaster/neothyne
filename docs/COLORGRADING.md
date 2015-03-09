@@ -36,13 +36,13 @@ due to the way difference sources of light have different colors or temperatures
 to them. You may want to make lights appear more florescent or more incandescent
 for instance.
 
-The range in difference temperatures ranges from the very cool light blue sky
+The range in different temperatures ranges from the very cool light blue sky
 straight through to a very warm light like that of a candle. We don't normally
 notice this difference in temperature because our eyes adjust automatically for
 it. So, unless the temperature is very extreme, everything will generally look
 the same to us under differing lighting conditions. Making these adjustments
 automatically for rendering is just not feasible so you may need to tell the
-engine how you want to treat different light Or you may just want to manipulate
+engine how you want to treat different light, or you may just want to manipulate
 white balance for artistic effect too.
 
 The way the color balance tool works in the Neothyne's color grading options is
@@ -60,11 +60,11 @@ balanced by Yellow as the opposite color. There is also 90 degrees from Green an
 Magenta on the color wheel. From these two alone we can identify any color on
 the wheel (as well as some imaginary ones.)
 
-Realize now, that each of these colors has a direct or indirect effect one another.
-If one area of the current scene is too Green and you pull it out, the rest of the
-scene will become more Magenta (Green's counterpart.) This may be fine if the
-entire scene has too much of a Green cast as the correction serves to balance
-out the color.
+Realize now, that each of these colors has a direct or indirect effect on one
+another. If one area of the current scene is too Green and you pull it out, the
+rest of the scene will become more Magenta (Green's counterpart.) This may be
+fine if the entire scene has too much of a Green cast as the correction serves
+to balance out the color.
 
 The color balance tool in Neothyne also has the option to preserve luminosity when
 balancing color. This options serves to preserve the apparent brightness in the
@@ -74,8 +74,8 @@ scene when adjusting midtones for instance.
 
 Lets define the terminology first. A Hue is synonymous with a color, that is to
 say Hues are colors. When we say something is Red, Green or Blue, what we're
-conveying is the Hue. Saturation on the other hands refers to how a Hue appears
-under particular lighting condition. Think of Saturation in terms of weak vs
+conveying is the Hue. Saturation on the other hand refers to how a Hue appears
+under particular lighting conditions. Think of Saturation in terms of weak vs
 strong or pale vs pure. Finally, Lightness refers to how light or dark a color is.
 Lighter colors have higher values. For example, Orange has a higher value than
 navy Blue or dark Purple. Black has the lowest value of any Hue, and White the
@@ -83,7 +83,7 @@ highest.
 
 You also have the option to specify how much color ranges will overlap. The
 effect of this is very subtle and will only work on colors next to each other
-(or close to each other.) The more overlap the more closer colors begin to
+(or close to each other.) The more overlap, the more closer colors begin to
 become the same Hue.
 
 ### Understanding Brightness and Contrast
@@ -111,5 +111,5 @@ changes and edits are rarely flattering.
 
 It's generally advised that when working with Hue and Saturation not to use
 the Lightness option to adjust exposure, it may look like it does a nice job, but
-it doesn't. If you, for example, dark a scene using lightness, you'll begin to
+it doesn't. If you, for example, darken a scene using lightness, you'll begin to
 lose any areas defined as White.
