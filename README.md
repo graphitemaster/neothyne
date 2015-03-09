@@ -32,6 +32,10 @@ embodies the following:
   * Screen space ambient occlusion (SSAO)
   * View frustum culling
   * Hardware occlusion query culling
+  * Variable color grading (supporting)
+    * Color balance (shadows, midtones and highlights)
+    * Hue, lightness and saturation
+    * Brightness and contrast
 
 * Immediate-mode graphical user interface (which can do)
   * Buttons
