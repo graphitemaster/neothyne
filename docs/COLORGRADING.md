@@ -5,7 +5,7 @@
 There are three basic components of visible light: Red, Green and Blue. We
 call these colors RGB for short and they form the basis of something we call
 an additive color scheme. We call it additive because adding different
-combinations of Red, Green and Blue produce either Cyan, Magenta, Yellow or
+combinations of pure Red, Green and Blue produce either Cyan, Magenta, Yellow or
 White (all of them combined.) Cyan, Magenta and Yellow, or CYM for short is a
 subtractive color scheme. The term subtractive comes from the fact that the
 color we see in objects is reflected light minus any degree of Red, Green and
@@ -53,12 +53,11 @@ why this is we have to first explain some color theory.
 
 Back in 1931, William David Wright and John Guild created what we now know today
 as the CIE XYZ color space. Derived from a series of experiments done by those two
-in the 1920s they discovered the following facts about color. In our field of
+in the 1920s they discovered the following facts about color: In our field of
 vision, Green is represented in the widest range; Magenta is the opposite color.
 Blue represents the remaining range of wavelengths in our field of vision, also
-balanced by Yellow as the opposite color. There is also 90 degrees from Green and
-Magenta on the color wheel. From these two alone we can identify any color on
-the wheel (as well as some imaginary ones.)
+balanced by Yellow as the opposite color. These findings are why we balance
+color in terms of Green/Megenta, and Blue/Yellow.
 
 Realize now, that each of these colors has a direct or indirect effect on one
 another. If one area of the current scene is too Green and you pull it out, the
@@ -72,14 +71,13 @@ scene when adjusting midtones for instance.
 
 ### Understanding Hue, Saturation and Lightness
 
-Lets define the terminology first. A Hue is synonymous with a color, that is to
-say Hues are colors. When we say something is Red, Green or Blue, what we're
-conveying is the Hue. Saturation on the other hand refers to how a Hue appears
-under particular lighting conditions. Think of Saturation in terms of weak vs
-strong or pale vs pure. Finally, Lightness refers to how light or dark a color is.
-Lighter colors have higher values. For example, Orange has a higher value than
-navy Blue or dark Purple. Black has the lowest value of any Hue, and White the
-highest.
+Lets define the terminology first. Hue is related to wavelength, that is the
+"base tone" of a color, but there is much more to what we consider a specific
+color. Saturation on the other hand refers to how a Hue appears under particular
+lighting conditions. Think of Saturation in terms of weak vs strong or pale vs
+pure. Finally, Lightness refers to how light or dark a color is. Lighter colors
+have higher values. For example, Orange has a higher value than navy Blue or dark
+Purple. Black has the lowest value of any Hue, and White the highest.
 
 You also have the option to specify how much color ranges will overlap. The
 effect of this is very subtle and will only work on colors next to each other
