@@ -32,7 +32,7 @@ with lots of black and white.
 Sometimes getting colors to look correct and accurate as possible may require
 adjustment to the white balance (as well as color balance). You may have
 noticed that it's sometimes hard to achieve a normal or abnormal look to the scene
-due to the way difference sources of light have different colors or temperatures
+due to the way different sources of light have different colors or temperatures
 to them. You may want to make lights appear more florescent or more incandescent
 for instance.
 
