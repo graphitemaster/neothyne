@@ -16,15 +16,34 @@ struct colorGrader {
         kBalanceMax
     };
 
+    enum {
+        kHuesAll,
+        kHuesRed,
+        kHuesYellow,
+        kHuesGreen,
+        kHuesCyan,
+        kHuesBlue,
+        kHuesMagenta,
+        kHuesMax
+    };
+
     void setLuma(bool keep);
     void setCR(double value, int what);
     void setMG(double value, int what);
     void setYB(double value, int what);
+    void setH(double hue, int what);
+    void setS(double saturation, int what);
+    void setL(double lightness, int what);
+    void setHueOverlap(double value);
+
     bool luma() const;
     double CR(int what) const;
     double MG(int what) const;
     double YB(int what) const;
-
+    double H(int what) const;
+    double S(int what) const;
+    double L(int what) const;
+    double hueOverlap() const;
     const unsigned char *data() const;
 
     bool updated() const;
@@ -35,9 +54,14 @@ struct colorGrader {
     void grade();
 
 protected:
-    void brightnessContrast();
-    void generateTexture();
+    void applyBrightnessContrast();
+    void applyColorBalance();
+    void applyHueSaturation();
+
     void generateColorBalanceTables();
+    void generateHueSaturationTables();
+
+    void generateTexture();
 
     // Color space conversion functions
     static void RGB2HSL(int &red, int &green, int &blue);
@@ -49,6 +73,15 @@ private:
     // Brightness & contrast
     double m_brightness;
     double m_contrast;
+
+    // Hue & saturation
+    double m_hue[kHuesMax];
+    double m_lightness[kHuesMax];
+    double m_saturation[kHuesMax];
+    double m_hueOverlap;
+    int m_hLookup[6][256];
+    int m_sLookup[6][256];
+    int m_lLookup[6][256];
 
     // color balance
     bool m_preserveLuma;

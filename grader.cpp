@@ -43,44 +43,6 @@ double colorGrader::contrast() const {
     return m_contrast;
 }
 
-void colorGrader::brightnessContrast() {
-    const float brightness = 255.0f * 0.392f * float(m_brightness);
-    const float contrast = float(m_contrast);
-    float gain = 1.0f;
-
-    unsigned char *src = m_data;
-    unsigned char *dst = m_data;
-
-    //  if -1 <= contrast < 0, 0 <= gain < 1
-    //  if contrast = 0; gain = 1 or no change
-    //  if 0 > contrast < 1, 1 < gain < infinity
-    if (contrast != 0.0f) {
-        if (contrast > 0.0f)
-            gain = 1.0f / (1.0f - contrast);
-        else if (contrast < 0.0f)
-            gain = 1.0f + contrast;
-    }
-
-    // 1/2(gain *max - max), where max = 2^8-1
-    const float shift = (gain * 127.5f - 127.5f) - 0.5f;
-
-    for (size_t h = 0; h < kHeight; h++) {
-        unsigned char *s = src;
-        unsigned char *d = dst;
-        for (size_t w = 0; w < kWidth; w++) {
-            for (size_t b = 0; b < 3; b++) {
-                // Brightness & contrast correction
-                const float tmp = m::clamp(gain*(brightness + s[b]) - shift, 0.0f, 255.0f);
-                d[b] = (unsigned char)(tmp);
-            }
-            s += 3;
-            d += 3;
-        }
-        src += 3*kWidth;
-        dst += 3*kWidth;
-    }
-}
-
 void colorGrader::generateTexture() {
     // Generate the 3D volume texture
     unsigned char *next = m_data;
@@ -107,6 +69,32 @@ void colorGrader::generateColorBalanceTables() {
                 color[j] = m::clamp(color[j] + m_balance[j][k] * transfer[j][k][color[j]], 0.0, 255.0);
         for (size_t j = 0; j < 3; j++)
             m_balanceLookup[j][i] = color[j];
+    }
+}
+
+void colorGrader::generateHueSaturationTables() {
+    int value;
+    for (int hue = 0; hue < 6; hue++) {
+        for (int i = 0; i < 256; i++) {
+            // Hue
+            value = (m_hue[0] + m_hue[hue + 1]) * 255.0 / 360.0;
+            if ((i + value) < 0)
+                m_hLookup[hue][i] = 255 + (i + value);
+            else if ((i + value) > 255)
+                m_hLookup[hue][i] = i + value - 255;
+            else
+                m_hLookup[hue][i] = i + value;
+
+            // Saturation
+            value = m::clamp((m_saturation[0] + m_saturation[hue + 1]) * 255.0 / 100.0, -255.0, 255.0);
+            m_sLookup[hue][i] = m::clamp((i * (255 + value)) / 255, 0, 255);
+
+            // Lightness
+            value = m::clamp((m_lightness[0] + m_lightness[hue + 1]) * 127.0 / 100.0, -255.0, 255.0);
+            m_lLookup[hue][i] = value < 0
+                ? (unsigned char)((i * (255 + value)) / 255)
+                : (unsigned char)(i + ((255 - i) * value) / 255);
+        }
     }
 }
 
@@ -215,7 +203,7 @@ int colorGrader::RGB2L(int red, int green, int blue) {
     return u::round((max + min) / 2.0);
 }
 
-void colorGrader::grade() {
+void colorGrader::applyColorBalance() {
     generateColorBalanceTables();
     unsigned char *src = m_data;
     unsigned char *dst = m_data;
@@ -242,7 +230,131 @@ void colorGrader::grade() {
         src += 3*kWidth;
         dst += 3*kWidth;
     }
-    brightnessContrast();
+}
+
+void colorGrader::applyHueSaturation() {
+    generateHueSaturationTables();
+
+    static constexpr int kHueThresholds[] = {
+        21, 64, 106, 149, 192, 234, 255
+    };
+
+    unsigned char *src = m_data;
+    unsigned char *dst = m_data;
+
+    int phue = 0;
+    int shue = 0;
+    float pintensity = 0.0f;
+    float sintensity = 0.0f;
+    bool useSecondaryHue = false;
+    float overlapHue = (m_hueOverlap / 100.0) * 21.0;
+
+    for (size_t h = 0; h < kHeight; h++) {
+        unsigned char *s = src;
+        unsigned char *d = dst;
+        for (size_t w = 0; w < kWidth; w++) {
+            int r = s[0];
+            int g = s[1];
+            int b = s[2];
+            RGB2HSL(r, g, b);
+
+            phue = (r + (128 / 6)) / 6;
+
+            for (int c = 0; c < 7; c++) {
+                if (r < kHueThresholds[c] + overlapHue) {
+                    int hueThreshold = kHueThresholds[c];
+                    phue = c;
+                    if (overlapHue > 1.0 && r > hueThreshold - overlapHue) {
+                        shue = c + 1;
+                        sintensity = (r - hueThreshold + overlapHue) / (2.0 * overlapHue);
+                        pintensity = 1.0f - sintensity;
+                        useSecondaryHue = true;
+                    } else {
+                        useSecondaryHue = false;
+                    }
+                    break;
+                }
+            }
+            if (phue >= 6) {
+                phue = 0;
+                useSecondaryHue = false;
+            }
+            if (shue >= 6)
+                shue = 0;
+            if (useSecondaryHue) {
+                int diff = m_hLookup[phue][r] - m_hLookup[shue][r];
+                if (diff < -127 || diff >= 128) {
+                    r = int(m_hLookup[phue][r] * pintensity +
+                            (m_hLookup[shue][r] + 255) * sintensity) % 255;
+                } else {
+                    r = m_hLookup[phue][r] * pintensity +
+                        m_hLookup[shue][r] * sintensity;
+                }
+
+                g = m_sLookup[phue][g] * pintensity + m_sLookup[shue][g] * sintensity;
+                b = m_lLookup[phue][b] * pintensity + m_lLookup[shue][b] * sintensity;
+            } else {
+                r = m_hLookup[shue][r];
+                g = m_sLookup[shue][g];
+                b = m_lLookup[shue][b];
+            }
+
+            HSL2RGB(r, g, b);
+
+            d[0] = r;
+            d[1] = g;
+            d[2] = b;
+
+            s += 3;
+            d += 3;
+        }
+        src += 3*kWidth;
+        dst += 3*kWidth;
+    }
+}
+
+void colorGrader::applyBrightnessContrast() {
+    const float brightness = 255.0f * 0.392f * float(m_brightness);
+    const float contrast = float(m_contrast);
+    float gain = 1.0f;
+
+    unsigned char *src = m_data;
+    unsigned char *dst = m_data;
+
+    //  if -1 <= contrast < 0, 0 <= gain < 1
+    //  if contrast = 0; gain = 1 or no change
+    //  if 0 > contrast < 1, 1 < gain < infinity
+    if (contrast != 0.0f) {
+        if (contrast > 0.0f)
+            gain = 1.0f / (1.0f - contrast);
+        else if (contrast < 0.0f)
+            gain = 1.0f + contrast;
+    }
+
+    // 1/2(gain *max - max), where max = 2^8-1
+    const float shift = (gain * 127.5f - 127.5f) - 0.5f;
+
+    for (size_t h = 0; h < kHeight; h++) {
+        unsigned char *s = src;
+        unsigned char *d = dst;
+        for (size_t w = 0; w < kWidth; w++) {
+            for (size_t b = 0; b < 3; b++) {
+                // Brightness & contrast correction
+                const float tmp = m::clamp(gain*(brightness + s[b]) - shift, 0.0f, 255.0f);
+                d[b] = (unsigned char)(tmp);
+            }
+            s += 3;
+            d += 3;
+        }
+        src += 3*kWidth;
+        dst += 3*kWidth;
+    }
+}
+
+void colorGrader::grade() {
+    applyColorBalance();
+    applyHueSaturation();
+    applyBrightnessContrast();
 }
 
 void colorGrader::update() {
@@ -253,6 +365,12 @@ void colorGrader::update() {
 void colorGrader::reset() {
     memset(m_balance, 0, sizeof(m_balance));
 
+    for (size_t i = kHuesAll; i < kHuesMax; i++) {
+        m_hue[i] = 0.0;
+        m_saturation[i] = 0.0;
+        m_lightness[i] = 0.0;
+    }
+
     // TODO: Investigate why shadows need special treatment
     for (size_t i = 0; i < 3; i++)
         m_balance[i][kBalanceShadows] = 1.0;
@@ -260,6 +378,7 @@ void colorGrader::reset() {
     m_preserveLuma = true;
     m_brightness = 0.0;
     m_contrast = 0.0;
+    m_hueOverlap = 0.0;
     m_updated = true;
 }
 
@@ -287,6 +406,26 @@ void colorGrader::setYB(double value, int what) {
     m_updated = true;
 }
 
+void colorGrader::setH(double hue, int what) {
+    m_hue[what] = hue;
+    m_updated = true;
+}
+
+void colorGrader::setS(double saturation, int what) {
+    m_saturation[what] = saturation;
+    m_updated = true;
+}
+
+void colorGrader::setL(double lightness, int what) {
+    m_lightness[what] = lightness;
+    m_updated = true;
+}
+
+void colorGrader::setHueOverlap(double value) {
+    m_hueOverlap = value;
+    m_updated = true;
+}
+
 bool colorGrader::luma() const {
     return m_preserveLuma;
 }
@@ -301,6 +440,22 @@ double colorGrader::MG(int what) const {
 
 double colorGrader::YB(int what) const {
     return m_balance[2][what];
+}
+
+double colorGrader::H(int what) const {
+    return m_hue[what];
+}
+
+double colorGrader::S(int what) const {
+    return m_saturation[what];
+}
+
+double colorGrader::hueOverlap() const {
+    return m_hueOverlap;
+}
+
+double colorGrader::L(int what) const {
+    return m_lightness[what];
 }
 
 const unsigned char *colorGrader::data() const {

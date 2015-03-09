@@ -25,7 +25,7 @@ static u::map<u::string, u::string> gMenuStrings;
 static u::vector<u::string> gMenuPaths;
 
 #define D(X) gMenuData[u::format("%s_%s", __func__, #X)]
-#define S(X) gMenuStrings[u::format("%s_%s", __func__, #X)]
+#define STR(X) gMenuStrings[u::format("%s_%s", __func__, #X)]
 
 #define FMT(N, ...) u::format("%"#N"s..", __VA_ARGS__).c_str()
 
@@ -95,13 +95,13 @@ static void menuMain() {
 
 static void menuColorGrading() {
     const size_t w = neoWidth() / 3;
-    const size_t h = neoHeight() / 2;
+    const size_t h = neoHeight() - (neoHeight() / 4);
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() / 2 - h / 2;
 
     auto &colorGrading = gWorld.getColorGrader();
 
-    auto sliders = [&](int what) {
+    auto cmySliders = [&](int what) {
         float cr = colorGrading.CR(what);
         float mg = colorGrading.MG(what);
         float yb = colorGrading.YB(what);
@@ -113,6 +113,18 @@ static void menuColorGrading() {
             colorGrading.setYB(yb, what);
     };
 
+    auto hslSliders = [&](int what) {
+        float h = colorGrading.H(what);
+        float s = colorGrading.S(what);
+        float l = colorGrading.L(what);
+        if (gui::slider("Hue", h, 0.0f, 255.0f, 0.001f))
+            colorGrading.setH(h, what);
+        if (gui::slider("Saturation", s, 0.0f, 255.0f, 0.001f))
+            colorGrading.setS(s, what);
+        if (gui::slider("Lightness", l, 0.0f, 255.0f, 0.001f))
+            colorGrading.setL(l, what);
+    };
+
     gui::areaBegin("Color grading", x, y, w, h, D(scroll));
         gui::heading();
         gui::label("Tone balance");
@@ -122,15 +134,46 @@ static void menuColorGrading() {
             if (gui::collapse("Shadows", "", D(shadows)))
                 D(shadows) = !D(shadows);
             if (D(shadows))
-                sliders(colorGrader::kBalanceShadows);
+                cmySliders(colorGrader::kBalanceShadows);
             if (gui::collapse("Midtones", "", D(midtones)))
                 D(midtones) = !D(midtones);
             if (D(midtones))
-                sliders(colorGrader::kBalanceMidtones);
+                cmySliders(colorGrader::kBalanceMidtones);
             if (gui::collapse("Highlights", "", D(highlights)))
                 D(highlights) = !D(highlights);
             if (D(highlights))
-                sliders(colorGrader::kBalanceHighlights);
+                cmySliders(colorGrader::kBalanceHighlights);
+        gui::dedent();
+        gui::label("Hue and Saturation");
+        gui::indent();
+            float hueOverlap = colorGrading.hueOverlap();
+            if (gui::slider("Overlap", hueOverlap, 0.0f, 255.0f, 0.001f))
+                colorGrading.setHueOverlap(hueOverlap);
+            // NEXT
+            if (gui::collapse("Red", "", D(red)))
+                D(red) = !D(red);
+            if (D(red))
+                hslSliders(colorGrader::kHuesRed);
+            if (gui::collapse("Yellow", "", D(yellow)))
+                D(yellow) = !D(yellow);
+            if (D(yellow))
+                hslSliders(colorGrader::kHuesYellow);
+            if (gui::collapse("Green", "", D(green)))
+                D(green) = !D(green);
+            if (D(green))
+                hslSliders(colorGrader::kHuesGreen);
+            if (gui::collapse("Cyan", "", D(cyan)))
+                D(cyan) = !D(cyan);
+            if (D(cyan))
+                hslSliders(colorGrader::kHuesCyan);
+            if (gui::collapse("Blue", "", D(blue)))
+                D(blue) = !D(blue);
+            if (D(blue))
+                hslSliders(colorGrader::kHuesBlue);
+            if (gui::collapse("Magenta", "", D(magenta)))
+                D(magenta) = !D(magenta);
+            if (D(magenta))
+                hslSliders(colorGrader::kHuesMagenta);
         gui::dedent();
         gui::label("Brightness and contrast");
         gui::indent();
@@ -571,43 +614,43 @@ static void menuCreate() {
     const size_t y = neoHeight() / 2 - h / 2;
 
     if (D(browse)) {
-        gui::areaBegin(S(directory).c_str(), x, y, w, h, D(browseScroll));
+        gui::areaBegin(STR(directory).c_str(), x, y, w, h, D(browseScroll));
             // When it isn't the user path we need a way to go back
-            if (S(directory) != neoUserPath() && gui::item("..")) {
+            if (STR(directory) != neoUserPath() && gui::item("..")) {
                 auto &&get = u::move(gMenuPaths.back());
                 gMenuPaths.pop_back();
                 // Prevent against the situation where the user is being evil
                 if (u::exists(get, u::kDirectory))
-                    S(directory) = get;
+                    STR(directory) = get;
                 else
-                    S(directory) = neoUserPath();
+                    STR(directory) = neoUserPath();
             }
-            for (const auto &what : u::dir(S(directory))) {
-                if (u::dir::isFile(u::format("%s%c%s", S(directory), u::kPathSep, what))) {
+            for (const auto &what : u::dir(STR(directory))) {
+                if (u::dir::isFile(u::format("%s%c%s", STR(directory), u::kPathSep, what))) {
                     if (gui::item(what))
                         D(browse) = false;
                 } else {
                     if (gui::item(u::format("%s%c", what, u::kPathSep).c_str())) {
                         // Clicked a directory
-                        gMenuPaths.push_back(S(directory));
-                        S(directory) = u::format("%s%s%c", S(directory), what, u::kPathSep);
+                        gMenuPaths.push_back(STR(directory));
+                        STR(directory) = u::format("%s%s%c", STR(directory), what, u::kPathSep);
                     }
                 }
             }
         gui::areaFinish();
     } else {
         gui::areaBegin("New map", x, y, w, h, D(createScroll));
-            if (S(mesh).empty()) {
+            if (STR(mesh).empty()) {
                 if (gui::button("Load mesh"))
                     D(browse) = true;
             } else {
-                gui::label(FMT(20, S(mesh)));
+                gui::label(FMT(20, STR(mesh)));
             }
-            if (S(skybox).empty()) {
-                if (gui::button("Load skybox", !S(mesh).empty()))
+            if (STR(skybox).empty()) {
+                if (gui::button("Load skybox", !STR(mesh).empty()))
                     D(browse) = true;
             } else {
-                gui::label(FMT(20, S(skybox)));
+                gui::label(FMT(20, STR(skybox)));
             }
         gui::areaFinish();
     }
