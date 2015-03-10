@@ -54,8 +54,8 @@ void main() {
 #endif //! USE_SSAO
 
 #ifdef USE_FOG
-    fragColor = mix(fragColor, vec4(gFog.color, 1.0f),
-        calcFogFactor(gFog, calcLinearDepth(texCoord)));
+    float fogFactor = calcFogFactor(gFog, calcLinearDepth(texCoord));
+    fragColor = vec4(mix(fragColor.rgb, gFog.color, fogFactor), fogFactor);
 #endif //! USE_FOG
 
 #endif //! USE_DEBUG{DEPTH|NORMAL|POSITION|SSAO}

@@ -1027,6 +1027,12 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
         gl::Disable(GL_DEPTH_TEST);
     }
 
+    // Change the blending function such that point and spot lights get fogged
+    // as well.
+    if (r_fog) {
+        gl::BlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
     // Two lighting passes for directional light (stencil and non stencil)
     gl::Enable(GL_STENCIL_TEST);
     gl::StencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
