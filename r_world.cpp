@@ -923,55 +923,31 @@ void world::pointLightPass(const pipeline &pl, const ::world *const map) {
     method.setEyeWorldPos(pl.position());
     method.setInverse((p.projection() * p.view()).inverse());
 
-    if (m_pointLightCache.empty()) {
-        for (auto &it : map->m_pointLights) {
-            float scale = it->radius * kLightRadiusTweak;
+    for (auto &it : map->m_pointLights) {
+        float scale = it->radius * kLightRadiusTweak;
 
-            // Frustum cull lights
-            m_frustum.setup(it->position, p.rotation(), p.perspective());
-            if (!m_frustum.testSphere(p.position(), scale))
-                continue;
+        // Frustum cull lights
+        m_frustum.setup(it->position, p.rotation(), p.perspective());
+        if (!m_frustum.testSphere(p.position(), scale))
+            continue;
 
-            p.setWorld(it->position);
-            p.setScale({scale, scale, scale});
+        p.setWorld(it->position);
+        p.setScale({scale, scale, scale});
 
-            const m::mat4 wvp = p.projection() * p.view() * p.world();
-            method.setLight(*it);
-            method.setWVP(wvp);
+        const m::mat4 wvp = p.projection() * p.view() * p.world();
+        method.setLight(*it);
+        method.setWVP(wvp);
 
-            const m::vec3 dist = it->position - p.position();
-            scale += p.perspective().nearp + 1.0f;
-            if (dist*dist >= scale*scale) {
-                gl::DepthFunc(GL_LESS);
-                gl::CullFace(GL_BACK);
-                m_pointLightCache.push_back({*it, wvp, true});
-            } else {
-                gl::DepthFunc(GL_GEQUAL);
-                gl::CullFace(GL_FRONT);
-                m_pointLightCache.push_back({*it, wvp, false});
-            }
-            m_sphere.render();
+        const m::vec3 dist = it->position - p.position();
+        scale += p.perspective().nearp + 1.0f;
+        if (dist*dist >= scale*scale) {
+            gl::DepthFunc(GL_LESS);
+            gl::CullFace(GL_BACK);
+        } else {
+            gl::DepthFunc(GL_GEQUAL);
+            gl::CullFace(GL_FRONT);
         }
-    } else {
-        for (auto &it : m_pointLightCache) {
-            auto &light = it.light;
-            float scale = light.radius * kLightRadiusTweak;
-
-            p.setWorld(light.position);
-            p.setScale({scale, scale, scale});
-
-            method.setLight(light);
-            method.setWVP(it.wvp);
-
-            if (it.inside) {
-                gl::DepthFunc(GL_LESS);
-                gl::CullFace(GL_BACK);
-            } else {
-                gl::DepthFunc(GL_GEQUAL);
-                gl::CullFace(GL_FRONT);
-            }
-            m_sphere.render();
-        }
+        m_sphere.render();
     }
 }
 
@@ -983,55 +959,33 @@ void world::spotLightPass(const pipeline &pl, const ::world *const map) {
     method.setEyeWorldPos(pl.position());
     method.setInverse((p.projection() * p.view()).inverse());
 
-    if (m_spotLightCache.empty()) {
-        for (auto &it : map->m_spotLights) {
-            float scale = it->radius * kLightRadiusTweak;
+    for (auto &it : map->m_spotLights) {
+        float scale = it->radius * kLightRadiusTweak;
 
-            // Frustum cull lights
-            m_frustum.setup(it->position, p.rotation(), p.perspective());
-            if (!m_frustum.testSphere(p.position(), scale))
-                continue;
+        // Frustum cull lights
+        m_frustum.setup(it->position, p.rotation(), p.perspective());
+        if (!m_frustum.testSphere(p.position(), scale))
+            continue;
 
-            p.setWorld(it->position);
-            p.setScale({scale, scale, scale});
+        p.setWorld(it->position);
+        p.setScale({scale, scale, scale});
 
-            const m::mat4 wvp = p.projection() * p.view() * p.world();
-            method.setLight(*it);
-            method.setWVP(wvp);
+        const m::mat4 wvp = p.projection() * p.view() * p.world();
+        method.setLight(*it);
+        method.setWVP(wvp);
 
-            const m::vec3 dist = it->position - p.position();
-            scale += p.perspective().nearp + 1.0f;
-            if (dist*dist >= scale*scale) {
-                gl::DepthFunc(GL_LESS);
-                gl::CullFace(GL_BACK);
-                m_spotLightCache.push_back({*it, wvp, true});
-            } else {
-                gl::DepthFunc(GL_GEQUAL);
-                gl::CullFace(GL_FRONT);
-                m_spotLightCache.push_back({*it, wvp, false});
-            }
-            m_sphere.render();
+        const m::vec3 dist = it->position - p.position();
+        scale += p.perspective().nearp + 1.0f;
+        if (dist*dist >= scale*scale) {
+            gl::DepthFunc(GL_LESS);
+            gl::CullFace(GL_BACK);
+        } else {
+            gl::DepthFunc(GL_GEQUAL);
+            gl::CullFace(GL_FRONT);
         }
-    } else {
-        for (auto &it : m_spotLightCache) {
-            auto &light = it.light;
-            float scale = light.radius * kLightRadiusTweak;
-            p.setWorld(light.position);
-            p.setScale({scale, scale, scale});
-
-            method.setLight(light);
-            method.setWVP(it.wvp);
-
-            if (it.inside) {
-                gl::DepthFunc(GL_LESS);
-                gl::CullFace(GL_BACK);
-            } else {
-                gl::DepthFunc(GL_GEQUAL);
-                gl::CullFace(GL_FRONT);
-            }
-            m_sphere.render();
-        }
+        m_sphere.render();
     }
+
     gl::DepthMask(GL_TRUE);
     gl::DepthFunc(GL_LESS);
     gl::CullFace(GL_BACK);
@@ -1062,13 +1016,21 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
     gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kDepth);
     gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
 
+    if (!r_debug) {
+        gl::Enable(GL_DEPTH_TEST);
+        gl::DepthMask(GL_FALSE);
+        gl::DepthFunc(GL_LESS);
+
+        pointLightPass(pl, map);
+        spotLightPass(pl, map);
+
+        gl::Disable(GL_DEPTH_TEST);
+    }
+
+    // Two lighting passes for directional light (stencil and non stencil)
     gl::Enable(GL_STENCIL_TEST);
     gl::StencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-    m_pointLightCache.clear();
-    m_spotLightCache.clear();
-
-    // Two lighting passes (stencil and non stencil)
     for (size_t i = 0; i < 2; i++) {
         if ((r_ssao || r_debug == kDebugSSAO) && !i) {
             gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kOcclusion);
@@ -1077,26 +1039,15 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
 
         gl::StencilFunc(GL_EQUAL, !i, 0xFF);
 
-        gl::Enable(GL_DEPTH_TEST);
-        gl::DepthMask(GL_FALSE);
-        gl::DepthFunc(GL_LESS);
-        if (!r_debug) {
-            pointLightPass(pl, map);
-            spotLightPass(pl, map);
-        }
-        gl::Disable(GL_DEPTH_TEST);
-
-        if (map->m_directionalLight) {
-            auto &method = m_directionalLightMethods[lightCalculatePermutation(!i)];
-            method.enable();
-            method.setLight(*map->m_directionalLight);
-            method.setPerspective(pl.perspective());
-            method.setEyeWorldPos(pl.position());
-            method.setInverse((p.projection() * p.view()).inverse());
-            if (r_fog)
-                method.setFog(map->m_fog);
-            m_quad.render();
-        }
+        auto &method = m_directionalLightMethods[lightCalculatePermutation(!i)];
+        method.enable();
+        method.setLight(map->getDirectionalLight());
+        method.setPerspective(pl.perspective());
+        method.setEyeWorldPos(pl.position());
+        method.setInverse((p.projection() * p.view()).inverse());
+        if (r_fog)
+            method.setFog(map->m_fog);
+        m_quad.render();
     }
 
     gl::Disable(GL_STENCIL_TEST);

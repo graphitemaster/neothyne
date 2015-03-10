@@ -119,7 +119,6 @@ enum class entity {
 };
 
 struct world {
-    world();
     ~world();
 
     bool load(const u::string &map);
@@ -154,7 +153,6 @@ struct world {
 
     bool trace(const trace::query &q, trace::hit *result, float maxDistance, bool entities = true, descriptor *ignore = nullptr);
 
-    void insert(const directionalLight &it);
     descriptor *insert(const spotLight &it);
     descriptor *insert(const pointLight &it);
     descriptor *insert(const mapModel &it);
@@ -206,7 +204,7 @@ private:
     u::vector<billboard> m_billboards;
 
     // The following are populated via insert/erase
-    directionalLight *m_directionalLight;
+    directionalLight m_directionalLight;
     u::vector<spotLight*> m_spotLights;
     u::vector<pointLight*> m_pointLights;
     u::vector<mapModel*> m_mapModels;

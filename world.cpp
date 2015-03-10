@@ -33,13 +33,7 @@ enum {
     kBillboardCount
 };
 
-world::world()
-    : m_directionalLight(nullptr)
-{
-}
-
 void world::unload(bool destroy) {
-    delete m_directionalLight;
     for (auto &it : m_spotLights)
         delete it;
     for (auto &it : m_pointLights)
@@ -51,8 +45,6 @@ void world::unload(bool destroy) {
 
     m_map.unload();
     m_renderer.unload();
-
-    m_directionalLight = nullptr;
 
     if (destroy) {
         m_entities.destroy();
@@ -98,30 +90,28 @@ bool world::upload(const m::perspective &p) {
 }
 
 void world::render(const r::pipeline &pl) {
-    if (m_directionalLight) {
-        float R = ((map_dlight_color >> 16) & 0xFF) / 255.0f;
-        float G = ((map_dlight_color >> 8) & 0xFF) / 255.0f;
-        float B = (map_dlight_color & 0xFF) / 255.0f;
+    float R = ((map_dlight_color >> 16) & 0xFF) / 255.0f;
+    float G = ((map_dlight_color >> 8) & 0xFF) / 255.0f;
+    float B = (map_dlight_color & 0xFF) / 255.0f;
 
-        m_directionalLight->ambient = map_dlight_ambient;
-        m_directionalLight->diffuse = map_dlight_diffuse;
-        m_directionalLight->color = { R, G, B };
-        m_directionalLight->direction = {
-            map_dlight_directionx,
-            map_dlight_directiony,
-            map_dlight_directionz
-        };
+    m_directionalLight.ambient = map_dlight_ambient;
+    m_directionalLight.diffuse = map_dlight_diffuse;
+    m_directionalLight.color = { R, G, B };
+    m_directionalLight.direction = {
+        map_dlight_directionx,
+        map_dlight_directiony,
+        map_dlight_directionz
+    };
 
-        R = ((map_fog_color >> 16) & 0xFF) / 255.0f;
-        G = ((map_fog_color >> 8) & 0xFF) / 255.0f;
-        B = (map_fog_color & 0xFF) / 255.0f;
+    R = ((map_fog_color >> 16) & 0xFF) / 255.0f;
+    G = ((map_fog_color >> 8) & 0xFF) / 255.0f;
+    B = (map_fog_color & 0xFF) / 255.0f;
 
-        m_fog.color = { R, G, B };
-        m_fog.density = map_fog_density;
-        m_fog.start = map_fog_range_start;
-        m_fog.end = map_fog_range_end;
-        m_fog.equation = map_fog_equation;
-    }
+    m_fog.color = { R, G, B };
+    m_fog.density = map_fog_density;
+    m_fog.start = map_fog_range_start;
+    m_fog.end = map_fog_range_end;
+    m_fog.equation = map_fog_equation;
 
     // Erase and generate the billboards each and every frame
     for (auto &it : m_billboards)
@@ -253,11 +243,6 @@ static inline T *copy(const T &other) {
     return o;
 }
 
-void world::insert(const directionalLight &it) {
-    delete m_directionalLight;
-    m_directionalLight = copy(it);
-}
-
 world::descriptor *world::insert(const pointLight &it) {
     const size_t index = m_pointLights.size();
     m_pointLights.push_back(copy(it));
@@ -342,7 +327,7 @@ void world::erase(size_t where) {
 }
 
 directionalLight &world::getDirectionalLight() {
-    return *m_directionalLight;
+    return m_directionalLight;
 }
 
 spotLight &world::getSpotLight(size_t index) {

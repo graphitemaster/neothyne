@@ -168,13 +168,12 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     light.position = { 0, 110, 0 };
     gWorld.insert(light);
 
-    directionalLight dlight;
+    // World only has one directional light
+    directionalLight &dlight = gWorld.getDirectionalLight();
     dlight.color = { 0.7, 0.7, 0.7 };
     dlight.ambient = 0.75f;
     dlight.diffuse = 0.75f;
     dlight.direction = { -1.0f, 0.0f, 0.0f };
-
-    gWorld.insert(dlight);
 
     // and some map models
     mapModel m;
