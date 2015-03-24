@@ -383,7 +383,7 @@ bool engine::initContext() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
         SDL_GL_CONTEXT_PROFILE_CORE | SDL_GL_CONTEXT_DEBUG_FLAG);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
@@ -405,7 +405,7 @@ bool engine::initContext() {
     if (!ctx->m_window || !SDL_GL_CreateContext(ctx->m_window)) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
             "Neothyne: Initialization error",
-            "OpenGL 3.3 or higher is required",
+            "OpenGL 3.0 or higher is required",
             nullptr
         );
         return false;

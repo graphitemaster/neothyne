@@ -9,9 +9,9 @@ namespace r {
 
 method::method()
     : m_program(0)
-    , m_vertexSource("#version 330 core\n")
-    , m_fragmentSource("#version 330 core\n")
-    , m_geometrySource("#version 330 core\n")
+    , m_vertexSource("#version 130\n")
+    , m_fragmentSource("#version 130\n")
+    , m_geometrySource("#version 130\n")
 {
 }
 
