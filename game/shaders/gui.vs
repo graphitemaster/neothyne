@@ -1,8 +1,8 @@
 uniform vec2 gScreenSize;
 
-layout(location = 0) in vec2 position;
-layout(location = 1) in vec2 texCoord;
-layout(location = 2) in vec4 color;
+in vec2 position;
+in vec2 texCoord;
+in vec4 color;
 
 out vec2 texCoord0;
 out vec4 color0;

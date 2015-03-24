@@ -1,4 +1,4 @@
-layout (location = 0) out vec4 diffuseOut;
+out vec4 diffuseOut;
 
 uniform vec3 gColor;
 

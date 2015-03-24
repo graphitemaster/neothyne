@@ -116,6 +116,8 @@ void StencilOp(GLenum sfail, GLenum dpfail, GLenum dppass GL_INFOP);
 void TexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid* data GL_INFOP);
 void TexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid * data GL_INFOP);
 void GetProgramInfoLog(GLuint program, GLsizei maxLength, GLsizei* length, GLchar* infoLog GL_INFOP);
+void BindAttribLocation(GLuint program, GLuint index, const GLchar* name GL_INFOP);
+void BindFragDataLocation(GLuint program, GLuint colorNumber, const GLchar* name GL_INFOP);
 
 }
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -200,5 +202,7 @@ void GetProgramInfoLog(GLuint program, GLsizei maxLength, GLsizei* length, GLcha
 #   define TexImage3D(...)               TexImage3D(__VA_ARGS__, __FILE__, __LINE__)
 #   define TexSubImage3D(...)            TexSubImage3D(__VA_ARGS__, __FILE__, __LINE__)
 #   define GetProgramInfoLog(...)        GetProgramInfoLog(__VA_ARGS__, __FILE__, __LINE__)
+#   define BindAttribLocation(...)       BindAttribLocation(__VA_ARGS__, __FILE__, __LINE__)
+#   define BindFragDataLocation(...)     BindFragDataLocation(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif

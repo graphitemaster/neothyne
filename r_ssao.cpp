@@ -27,7 +27,7 @@ bool ssaoMethod::init(const u::vector<const char *> &defines) {
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/ssao.fs"))
         return false;
-    if (!finalize())
+    if (!finalize({ { 0, "position" } }))
         return false;
 
     m_occluderBiasLocation = getUniformLocation("gOccluderBias");

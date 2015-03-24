@@ -8,8 +8,8 @@ in vec3 eyePosition0;
 in float eyeDotDirection0;
 #endif
 
-layout (location = 0) out vec4 diffuseOut;
-layout (location = 1) out vec4 normalOut;
+out vec4 diffuseOut;
+out vec4 normalOut;
 
 #ifdef USE_DIFFUSE
 uniform sampler2D gColorMap;

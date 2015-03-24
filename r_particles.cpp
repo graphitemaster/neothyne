@@ -33,8 +33,12 @@ bool particleSystemMethod::init() {
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/particles.fs"))
         return false;
 
-    if (!finalize())
+    if (!finalize({ { 0, "position" },
+                    { 1, "texCoord" },
+                    { 2, "color"    } }))
+    {
         return false;
+    }
 
     m_VPLocation = getUniformLocation("gVP");
     m_colorTextureUnitLocation = getUniformLocation("gColorMap");

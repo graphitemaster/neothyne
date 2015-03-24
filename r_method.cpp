@@ -165,7 +165,9 @@ GLint method::getUniformLocation(const u::string &name) {
     return gl::GetUniformLocation(m_program, name.c_str());
 }
 
-bool method::finalize() {
+bool method::finalize(const u::vector<attribute> &attributes,
+                      const u::vector<attribute> &fragData)
+{
     GLint success = 0;
     GLint infoLogLength = 0;
     u::string infoLog;
@@ -182,6 +184,12 @@ bool method::finalize() {
 
     for (auto &it : m_shaders)
         gl::DeleteShader(it);
+
+    for (auto &it : attributes)
+        gl::BindAttribLocation(m_program, it.index, it.name);
+
+    for (auto &it : fragData)
+        gl::BindFragDataLocation(m_program, it.index, it.name);
 
     m_shaders.clear();
     return true;

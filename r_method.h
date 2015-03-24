@@ -8,6 +8,11 @@
 
 namespace r {
 
+struct attribute {
+    GLuint index;
+    const char *name;
+};
+
 struct method {
     method();
     ~method();
@@ -23,7 +28,8 @@ struct method {
 protected:
     bool addShader(GLenum shaderType, const char *shaderText);
 
-    bool finalize();
+    bool finalize(const u::vector<attribute> &attributes = u::vector<attribute>(),
+                  const u::vector<attribute> &fragData = u::vector<attribute>());
 
     u::optional<u::string> preprocess(const u::string &file);
 

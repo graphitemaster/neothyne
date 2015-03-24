@@ -116,8 +116,12 @@ bool guiMethod::init(const u::vector<const char *> &defines) {
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/gui.fs"))
         return false;
 
-    if (!finalize())
+    if (!finalize({ { 0, "position" },
+                    { 1, "texCoord" },
+                    { 2, "color"    } }))
+    {
         return false;
+    }
 
     m_screenSizeLocation = getUniformLocation("gScreenSize");
     m_colorMapLocation = getUniformLocation("gColorMap");
@@ -154,8 +158,14 @@ bool guiModelMethod::init(const u::vector<const char *> &defines) {
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/guimodel.fs"))
         return false;
 
-    if (!finalize())
+    if (!finalize({ { 0, "position" },
+                    { 1, "normal"   },
+                    { 2, "texCoord" },
+                    { 3, "tangent"  },
+                    { 4, "w"        } }))
+    {
         return false;
+    }
 
     m_WVPLocation = getUniformLocation("gWVP");
     m_worldLocation = getUniformLocation("gWorld");

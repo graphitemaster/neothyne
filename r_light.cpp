@@ -19,7 +19,7 @@ bool lightMethod::init(const char *vs, const char *fs, const u::vector<const cha
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, fs))
         return false;
-    if (!finalize())
+    if (!finalize({ { 0, "position" } }))
         return false;
 
     // matrices
