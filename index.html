@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Meta tags -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Title -->
+    <title>Neothyne</title>
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+    <!-- Custom style -->
+    <style>
+      body {
+        padding-left: 10%;
+        padding-right: 10%;
+        padding-bottom: 10%;
+        background-color: rgb(40, 30, 50);
+      }
+      .jumbotron {
+        background: rgba(0, 0, 0, 0);
+        padding-left: 0%;
+        padding-top: 1%;
+        padding-bottom: 1%;
+      }
+      .container-inverse {
+        background-image: -webkit-linear-gradient(top, #3c3c3c 0%, #222 50%);
+        background-image: -o-linear-gradient(,odd;e, #3c3c3c 0%, #222 50%);
+        background-image: linear-gradient(0deg, #3c3c3c 0%, #222 50%);
+        background-repeat: repeat-x;
+        border-radius: 4px;
+        border: 1px solid black;
+      }
+      .carousel {
+        padding-top: 1%;
+        padding-bottom: 1%;
+        background: rgba(0, 0, 0, 0);
+      }
+      .carousel-inner,.carousel,.item,.container,.fill {
+        height: 100%;
+        width: 100%;
+        padding-left: 0%;
+        .item img {
+          width: 100%;
+          height: 100px;
+        }
+      }
+      .carousel-caption {
+        -webkit-text-stroke: 2px black;
+        text-shadow:
+          2px 2px 0 #000;
+         -2px -2px 0 #000,
+          2px -2px 0 #000,
+         -2px  2px 0 #000,
+          2px  2px 0 #000;
+      }
+      .navbar-nav > li {
+        padding-left: 30px;
+      }
+      #about {
+        color: white;
+      }
+    </style>
+  </head>
+  <!-- Page body -->
+  <body>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <!-- Logo -->
+    <div class="jumbotron">
+      <!-- Center text (to center logo) -->
+      <div class="container text-center">
+          <img src="http://i.imgur.com/Eoqf42q.png"></img>
+      </div>
+    </div>
+    <!-- Navigation bar -->
+    <nav class="navbar navbar-inverse">
+      <!-- Fluid container for navigation options -->
+      <div class="container-fluid">
+          <!-- Navigation navigators -->
+          <ul class="nav navbar-nav">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="https://github.com/graphitemaster/neothyne/issues">Issues</a></li>
+            <li><a href="https://github.com/graphitemaster/neothyne">Github</a></li>
+            <li><a href="http://webchat.freenode.net?channels=%23neothyne">Chat</a></li>
+          </ul>
+      </div>
+    </nav>
+    <!-- Main website container -->
+    <div class="container container-inverse">
+      <!-- Row fluid top container -->
+      <div id="top-container" class="row-fluid">
+        <!-- Left side scaffold-->
+        <div class="col-sm-6">
+          <!-- Image and caption carousel with left and right control -->
+            <div id="myCarousel" class="carousel slide" data-ride="carousel">
+              <!-- Carousel indicators -->
+              <ol class="carousel-indicators">
+                <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+                <li data-target="#myCarousel" data-slide-to="1"></li>
+                <li data-target="#myCarousel" data-slide-to="2"></li>
+                <li data-target="#myCarousel" data-slide-to="3"></li>
+                <li data-target="#myCarousel" data-slide-to="3"></li>
+              </ol>
+              <!-- Carousel wrapper for slides -->
+              <div class="carousel-inner" role="listbox">
+                <div class="item active">
+                  <img src="http://i.imgur.com/E8Wsgga.png" alt="Minimalism">
+                  <div class="carousel-caption">
+                    <h3>Minimalism</h3>
+                    <p>Sleek and minimalist design because gameplay is more important.</p>
+                  </div>
+                </div>
+                <div class="item">
+                  <img src="http://i.imgur.com/WmoaqEa.png" alt="Modern rendering">
+                  <div class="carousel-caption">
+                    <h3>Modern rendering</h3>
+                    <p>Conservative modern rendering techniques that work on low-end devices too.</p>
+                  </div>
+                </div>
+                <div class="item">
+                  <img src="http://i.imgur.com/uwVPYJ3.jpg" alt="Deferred rendering">
+                  <div class="carousel-caption">
+                    <h3>Deferred rendering</h3>
+                    <p>Unbound light sources and screen-space effects</p>
+                  </div>
+                </div>
+                <div class="item">
+                  <img src="http://i.imgur.com/Zphtqmo.png" alt="Editing">
+                  <div class="carousel-caption">
+                    <h3>Editing</h3>
+                    <p>Create, modify and explore one's artistic abilities.</p>
+                  </div>
+                </div>
+                <div class="item">
+                  <img src="http://i.imgur.com/ZHqTDMT.png" alt="Color grading">
+                  <div class="carousel-caption">
+                    <h3>Color grading</h3>
+                    <p>Unleash artistic styles on your creations like never before.</p>
+                  </div>
+                </div>
+              </div>
+            <!-- Carousel left and right controls -->
+            <a class="left carousel-control" href="#myCarousel" role="button" data-slide="prev">
+              <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+              <span class="sr-only">Previous</span>
+            </a>
+            <a class="right carousel-control" href="#myCarousel" role="button" data-slide="next">
+              <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+              <span class="sr-only">Next</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <!-- Right side scaffold -->
+      <div class="col-sm-6" id="about">
+        <h4>Twitch arena shooting reborn</h4>
+        <p>
+          Neothyne is a <i>Free</i> and <i>Open Source</i> game, built on a new
+          engine using <a href="libsdl.org">SDL2</a> and <a href="opengl.org">OpenGL</a>
+        </p>
+        <ul>
+          <li>A focus for old school <a href="http://en.wikipedia.org/wiki/Twitch_gameplay">twitch gameplay.</a></li>
+          <li>New open source engine built from the ground up focusing on providing
+          modern rendering techniques for both high-end and low-end systems.</li>
+          <li>Available for Windows, GNU/Linux, BSD, OS X and mobile devices.</li>
+          <li>Built-in level editor to create, modify and explore one's artistic
+            abilities.</li>
+        </ul>
+        <h4>Getting involved</h4>
+        <p>
+          Neothyne is a <i>by the people for the people</i> project. We encourage
+          people to get involved and shape the direction of this project. To get
+          involved drop by our <a href="http://en.wikipedia.org/wiki/Internet_Relay_Chat">IRC</a>
+          channel <a href="http://webchat.freenode.net?channels=%23neothyne">#neothyne</a> on
+          <a href="https://freenode.net/">Freenode</a> We welcome your ideas.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
