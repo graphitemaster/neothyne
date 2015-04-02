@@ -31,6 +31,11 @@ struct hash_node {
     V second;
     hash_node *next;
     hash_node *prev;
+
+private:
+    // Prevent compiler synthesized assignment operator for non-pod types from
+    // generating warnings.
+    hash_node &operator=(const hash_node &);
 };
 
 template <typename K, typename V>

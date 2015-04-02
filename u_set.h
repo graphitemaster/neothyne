@@ -50,14 +50,15 @@ template <typename K>
 set<K>::set(const set &other)
     : m_size(other.m_size)
 {
-    const size_t nbuckets = (size_t)(other.m_buckets.last - other.m_buckets.first);
-    m_buckets.resize(9, 0);
+    const size_t nbuckets = size_t(other.m_buckets.last - other.m_buckets.first);
+    m_buckets.resize(nbuckets, 0);
 
-    for (pointer* it = *other.m_buckets.first; it; it = it->next) {
+    for (pointer *it = *other.m_buckets.first; it; it = it->next) {
         unsigned char *data = neoMalloc(sizeof(hash_node<K, void>));
         hash_node<K, void> *newnode = new(data) hash_node<K, void>(*it);
-        newnode->next = newnode->prev = 0;
-        hash_node_insert(newnode, hash(*it), m_buckets.first, nbuckets - 1);
+        newnode->next = nullptr;
+        newnode->prev = nullptr;
+        hash_node_insert(newnode, hash(it->first), m_buckets.first, nbuckets - 1);
     }
 }
 
