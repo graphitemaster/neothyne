@@ -290,21 +290,27 @@ void world::erase(size_t where) {
     size_t index = it.index;
     switch (it.type) {
         case entity::kMapModel:
+            delete m_mapModels[index];
             m_mapModels.erase(m_mapModels.begin() + index);
             break;
         case entity::kPlayerStart:
+            delete m_playerStarts[index];
             m_playerStarts.erase(m_playerStarts.begin() + index);
             break;
         case entity::kPointLight:
+            delete m_pointLights[index];
             m_pointLights.erase(m_pointLights.begin() + index);
             break;
         case entity::kSpotLight:
+            delete m_spotLights[index];
             m_spotLights.erase(m_spotLights.begin() + index);
             break;
         case entity::kTeleport:
+            delete m_teleports[index];
             m_teleports.erase(m_teleports.begin() + index);
             break;
         case entity::kJumppad:
+            delete m_jumppads[index];
             m_jumppads.erase(m_jumppads.begin() + index);
             break;
         default:
