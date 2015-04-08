@@ -8,6 +8,7 @@
 #include "u_misc.h"
 
 #include "engine.h"
+#include "cvar.h"
 
 #ifndef APIENTRY
 #   ifdef _WIN32
@@ -530,6 +531,15 @@ void init() {
         for (size_t j = 0; j < sizeof(kExtensions)/sizeof(*kExtensions); j++)
             if (!strcmp(kExtensions[j], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
                 gExtensions.insert(j);
+
+    auto &aniso = varGet<int>("r_aniso");
+    if (has(gl::EXT_texture_filter_anisotropic)) {
+        float largest;
+        glGetFloatv_(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
+        aniso.setMax(int(largest));
+    } else {
+        aniso.setMax(0);
+    }
 
 #ifdef DEBUG_GL
     if (has(gl::ARB_debug_output)) {

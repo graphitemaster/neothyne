@@ -528,11 +528,8 @@ void texture2D::applyFilter() {
     }
 
     // Anisotropic filtering
-    if ((r_aniso & kFilterAniso) && gl::has(gl::EXT_texture_filter_anisotropic)) {
-        GLfloat largest;
-        gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
-        gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
-    }
+    if (r_aniso && (m_filter & kFilterAniso))
+        gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, float(r_aniso));
 }
 
 bool texture2D::cache(GLuint internal) {

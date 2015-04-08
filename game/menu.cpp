@@ -245,12 +245,12 @@ static void menuOptions() {
                     D(filtering) = !D(filtering);
                 if (D(filtering)) {
                     gui::indent();
-                        if (gui::check("Anisotropic", aniso.get()))
-                            aniso.toggle();
+                        //if (gui::check("Anisotropic", aniso.get()))
                         if (gui::check("Trilinear", trilinear.get()))
                             trilinear.toggle();
                         if (gui::check("Bilinear", bilinear.get()))
                             bilinear.toggle();
+                        gui::slider<int>("Anisotropic", aniso.get(), aniso.min(), aniso.max(), 1);
                     gui::dedent();
                 }
                 if (gui::check("Mipmaps", mipmaps.get()))

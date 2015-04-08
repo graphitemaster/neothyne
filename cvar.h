@@ -63,14 +63,16 @@ struct var {
     const T min() const;
     const T max() const;
     varStatus set(const T &value);
+    void setMin(const T &min);
+    void setMax(const T &max);
     void operator()();
     int flags() const;
     void toggle();
 
 private:
-    const T m_min;
-    const T m_max;
-    const T m_default;
+    T m_min;
+    T m_max;
+    T m_default;
     T m_current;
     command m_callback;
     int m_flags;
@@ -178,6 +180,16 @@ inline varStatus var<T>::set(const T &value) {
         return kVarRangeError;
     m_current = value;
     return kVarSuccess;
+}
+
+template <typename T>
+inline void var<T>::setMin(const T &min) {
+    m_min = min;
+}
+
+template <typename T>
+inline void var<T>::setMax(const T &max) {
+    m_max = max;
 }
 
 template <typename T>
