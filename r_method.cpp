@@ -165,8 +165,8 @@ GLint method::getUniformLocation(const u::string &name) {
     return gl::GetUniformLocation(m_program, name.c_str());
 }
 
-bool method::finalize(const u::vector<attribute> &attributes,
-                      const u::vector<attribute> &fragData)
+bool method::finalize(const u::initializer_list<attribute> &attributes,
+                      const u::initializer_list<attribute> &fragData)
 {
     GLint success = 0;
     GLint infoLogLength = 0;

@@ -28,8 +28,8 @@ struct method {
 protected:
     bool addShader(GLenum shaderType, const char *shaderText);
 
-    bool finalize(const u::vector<attribute> &attributes = u::vector<attribute>(),
-                  const u::vector<attribute> &fragData = u::vector<attribute>());
+    bool finalize(const u::initializer_list<attribute> &attributes = {},
+                  const u::initializer_list<attribute> &fragData = {});
 
     u::optional<u::string> preprocess(const u::string &file);
 
