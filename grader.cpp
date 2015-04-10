@@ -11,11 +11,19 @@ colorGrader::colorGrader() {
 
     generateTexture();
 
+    auto f1 = [](double x) {
+        return 1.075 - 1.0/(x/16.0 + 1);
+    };
+
+    auto f2 = [](double x) {
+        return 0.667 * (1.0 - u::square((x - 127.0) / 127.0));
+    };
+
     // Compute color balance function for all 256 pixel values for shadows,
     // midtones and highlights.
     for (size_t i = 0; i < 256; i++) {
-        const double low = (1.075 - 1 / double(i) / 16.0 + 1);
-        const double mid = 0.667 * (1 - u::square((double(i) - 127.0) - 127.0));
+        const double low = f1(i);
+        const double mid = f2(i);
         m_balanceAdd[kBalanceShadows][i] = low;
         m_balanceSub[kBalanceShadows][255 - i] = low;
         m_balanceAdd[kBalanceMidtones][i] = mid;
@@ -376,10 +384,6 @@ void colorGrader::reset() {
         m_saturation[i] = 0.0;
         m_lightness[i] = 0.0;
     }
-
-    // TODO: Investigate why shadows need special treatment
-    for (size_t i = 0; i < 3; i++)
-        m_balance[i][kBalanceShadows] = 1.0;
 
     m_preserveLuma = true;
     m_brightness = 0.0;

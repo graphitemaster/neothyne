@@ -80,7 +80,8 @@ static void createTangents(const u::vector<m::vec3> &vertices,
         // http://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
         const m::vec3 &n = normals[i];
         m::vec3 t = tangents[i];
-        tangents_[i] = (t - n * (n * t)).normalized();
+        const m::vec3 v = (t - n * (n * t));
+        tangents_[i] = v.isNullEpsilon() ? v : v.normalized();
 
         if (!tangents_[i].isNormalized()) {
             // Couldn't calculate vertex tangent for vertex, so we fill it in along
