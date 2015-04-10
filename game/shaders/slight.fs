@@ -1,6 +1,7 @@
 #include <shaders/screenspace.h>
 #include <shaders/depth.h>
 #include <shaders/light.h>
+#include <shaders/utils.h>
 
 uniform neoSampler2D gColorMap;
 uniform neoSampler2D gNormalMap;
@@ -16,7 +17,9 @@ void main() {
     vec3 normalMap = normalDecode.rgb * 2.0f - 1.0f;
     vec3 worldPosition = calcPosition(texCoord);
     vec2 specMap = vec2(colorMap.a * 2.0f, exp2(normalDecode.a * 8.0f));
-
-    fragColor = vec4(colorMap.rgb, 1.0f)
-        * calcSpotLight(gSpotLight, worldPosition, normalMap, specMap);
+    fragColor = MASK_ALPHA(colorMap *
+                           calcSpotLight(gSpotLight,
+                                         worldPosition,
+                                         normalMap,
+                                         specMap));
 }

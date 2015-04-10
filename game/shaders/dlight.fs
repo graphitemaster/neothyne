@@ -2,6 +2,7 @@
 #include <shaders/depth.h>
 #include <shaders/light.h>
 #include <shaders/fog.h>
+#include <shaders/utils.h>
 
 uniform neoSampler2D gColorMap;
 uniform neoSampler2D gNormalMap;
@@ -45,12 +46,18 @@ void main() {
     vec2 fragCoord = texCoord / 2.0f; // Half resolution adjustment
     float occlusionMap = neoTexture2D(gOcclusionMap, fragCoord).r;
 
-    fragColor = vec4(colorMap.rgb, 1.0f)
-        * occlusionMap
-        * calcDirectionalLight(gDirectionalLight, worldPosition, normalMap, specMap);
+    fragColor = MASK_ALPHA(colorMap *
+                           occlusionMap *
+                           calcDirectionalLight(gDirectionalLight,
+                                                worldPosition,
+                                                normalMap,
+                                                specMap));
 #else //+ USE_SSAO
-    fragColor = vec4(colorMap.rgb, 1.0f)
-        * calcDirectionalLight(gDirectionalLight, worldPosition, normalMap, specMap);
+    fragColor = MASK_ALPHA(colorMap *
+                           calcDirectionalLight(gDirectionalLight,
+                                                worldPosition,
+                                                normalMap,
+                                                specMap));
 #endif //! USE_SSAO
 
 #ifdef USE_FOG

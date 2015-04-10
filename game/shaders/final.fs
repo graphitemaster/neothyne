@@ -3,11 +3,11 @@
 uniform neoSampler2D gColorMap;
 uniform sampler3D gColorGradingMap;
 
-out vec4 fragColor;
+out vec3 fragColor;
 
 #ifdef USE_FXAA
-vec4 fxaa(neoSampler2D textureSampler, vec2 texCoord) {
-    vec4 outColor;
+vec3 fxaa(neoSampler2D textureSampler, vec2 texCoord) {
+    vec3 outColor;
 
     const float FXAA_SPAN_MAX = 8.0; // TODO: make console variable?
     const float FXAA_REDUCE_MUL = 1.0/FXAA_SPAN_MAX;
@@ -61,11 +61,11 @@ vec4 fxaa(neoSampler2D textureSampler, vec2 texCoord) {
     float lumaB = dot(rgbB, luma);
 
     if((lumaB < lumaMin) || (lumaB > lumaMax)) {
-        outColor.xyz = rgbA;
+        outColor = rgbA;
     } else {
-        outColor.xyz = rgbB;
+        outColor = rgbB;
     }
-    outColor.a = 1.0f;
+
     return outColor;
 }
 #endif
@@ -75,8 +75,8 @@ void main() {
 #ifdef USE_FXAA
     fragColor = fxaa(gColorMap, texCoord);
 #else
-    fragColor = neoTexture2D(gColorMap, texCoord);
+    fragColor = neoTexture2D(gColorMap, texCoord).rgb;
 #endif
     // Apply color grading
-    fragColor = vec4(texture(gColorGradingMap, fragColor.rgb).rbg, 1.0);
+    fragColor = texture(gColorGradingMap, fragColor.rgb).rbg;
 }

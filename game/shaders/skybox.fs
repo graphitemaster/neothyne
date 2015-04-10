@@ -3,7 +3,7 @@
 in vec3 texCoord0;
 in vec3 worldPos0;
 
-out vec4 fragColor;
+out vec3 fragColor;
 
 uniform samplerCube gCubemap;
 uniform vec3 gSkyColor;
@@ -18,8 +18,8 @@ void main() {
     // the sky.
     float vertFogGrad = 1.0f - clamp(dot(-eyeDir, vec3(0.0f, 1.0f, 0.0f)) - 0.1f, 0.0f, 0.25f) / 0.25f;
     vec3 verticalMixture = mix(color, gFog.color, vertFogGrad);
-    fragColor = vec4(mix(verticalMixture, gSkyColor, gFog.density), 1.0f);
+    fragColor = mix(verticalMixture, gSkyColor, gFog.density);
 #else
-    fragColor = vec4(texture(gCubemap, texCoord0).rgb, 1.0f);
+    fragColor = texture(gCubemap, texCoord0).rgb;
 #endif
 }

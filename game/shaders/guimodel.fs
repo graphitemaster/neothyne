@@ -1,4 +1,5 @@
-#include "shaders/light.h"
+#include <shaders/light.h>
+#include <shaders/utils.h>
 
 in vec2 texCoord0;
 in vec3 normal0;
@@ -18,6 +19,5 @@ void main() {
     light.radius = 100.0f;
 
     vec4 value = calcPointLight(light, worldPosition0, normalize(normal0), vec2(0.1f, 1.0f));
-    fragColor = texture(gColorMap, texCoord0) * value;
-    fragColor.a = 1.0f;
+    fragColor = MASK_ALPHA(texture(gColorMap, texCoord0) * value);
 }

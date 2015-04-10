@@ -1,7 +1,7 @@
-out vec4 diffuseOut;
+out vec3 diffuseOut;
 
 uniform vec3 gColor;
 
 void main() {
-    diffuseOut = vec4(gColor, 1.0f);
+    diffuseOut = gColor;
 }
