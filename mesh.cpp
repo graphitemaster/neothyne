@@ -183,21 +183,21 @@ bool obj::load(const u::string &file) {
             // Note: 1 to skip "f"
             auto contents = u::split(line);
             for (size_t i = 1; i < contents.size(); i++) {
-                size_t vi = 0;
-                size_t ni = 0;
-                size_t ti = 0;
-                if (u::sscanf(contents[i], "%zu/%zu/%zu", &vi, &ti, &ni) == 3) {
-                    v.push_back(vi - 1);
-                    t.push_back(ti - 1);
-                    n.push_back(ni - 1);
-                } else if (u::sscanf(contents[i], "%zu//%zu", &vi, &ni) == 2) {
-                    v.push_back(vi - 1);
-                    n.push_back(ni - 1);
-                } else if (u::sscanf(contents[i], "%zu/%zu", &vi, &ti) == 2) {
-                    v.push_back(vi - 1);
-                    t.push_back(ti - 1);
-                } else if (u::sscanf(contents[i], "%zu", &vi) == 1) {
-                    v.push_back(vi - 1);
+                int vi = 0;
+                int ni = 0;
+                int ti = 0;
+                if (u::sscanf(contents[i], "%i/%i/%i", &vi, &ti, &ni) == 3) {
+                    v.push_back(vi < 0 ? v.size() + vi : vi - 1);
+                    t.push_back(ti < 0 ? t.size() + ti : ti - 1);
+                    n.push_back(ni < 0 ? n.size() + ni : ni - 1);
+                } else if (u::sscanf(contents[i], "%i//%i", &vi, &ni) == 2) {
+                    v.push_back(vi < 0 ? v.size() + vi : vi - 1);
+                    n.push_back(ni < 0 ? n.size() + ni : ni - 1);
+                } else if (u::sscanf(contents[i], "%i/%i", &vi, &ti) == 2) {
+                    v.push_back(vi < 0 ? v.size() + vi : vi - 1);
+                    t.push_back(ti < 0 ? t.size() + ti : ti - 1);
+                } else if (u::sscanf(contents[i], "%i", &vi) == 1) {
+                    v.push_back(vi < 0 ? v.size() + vi : vi - 1);
                 }
             }
 
