@@ -11,7 +11,7 @@
 
 VAR(int, r_texcomp, "texture compression", 0, 1, 1);
 VAR(int, r_texcompcache, "cache compressed textures", 0, 1, 1);
-VAR(int, r_aniso, "anisotropic filtering", 0, 1, 1);
+VAR(int, r_aniso, "anisotropic filtering", 0, 16, 4);
 VAR(int, r_bilinear, "bilinear filtering", 0, 1, 1);
 VAR(int, r_trilinear, "trilinear filtering", 0, 1, 1);
 VAR(int, r_mipmaps, "mipmaps", 0, 1, 1);

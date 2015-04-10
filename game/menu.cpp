@@ -190,6 +190,61 @@ static void menuColorGrading() {
     gui::areaFinish();
 }
 
+static void menuDeveloper() {
+    const size_t w = neoWidth() / 3;
+    const size_t h = neoHeight() / 2;
+    const size_t x = neoWidth() / 2 - w / 2;
+    const size_t y = neoHeight() / 2 - h / 2;
+
+    auto &trilinear = varGet<int>("r_trilinear");
+    auto &bilinear = varGet<int>("r_bilinear");
+    auto &fog = varGet<int>("r_fog");
+    auto &spec = varGet<int>("r_spec");
+    auto &texcompcache = varGet<int>("r_texcompcache");
+    auto &hoq = varGet<int>("r_hoq");
+    auto &maxhoq = varGet<int>("r_maxhoq");
+    auto &mipmaps = varGet<int>("r_mipmaps");
+    auto &fov = varGet<float>("cl_fov");
+    auto &nearp = varGet<float>("cl_nearp");
+    auto &farp = varGet<float>("cl_farp");
+
+    gui::areaBegin("Developer", x, y, w, h, D(scroll));
+        gui::heading();
+        gui::indent();
+            if (gui::check("Texture compression cache", texcompcache))
+                texcompcache.toggle();
+            gui::label("Texture filtering");
+            gui::indent();
+                if (gui::check("Mipmaps", mipmaps.get()))
+                    mipmaps.toggle();
+                if (gui::check("Trilinear", trilinear.get(), mipmaps.get()))
+                    trilinear.toggle();
+                if (gui::check("Bilinear", bilinear.get()))
+                    bilinear.toggle();
+            gui::dedent();
+            gui::label("World shading");
+            gui::indent();
+                if (gui::check("Fog", fog.get()))
+                    fog.toggle();
+                if (gui::check("Specularity", spec.get()))
+                    spec.toggle();
+            gui::dedent();
+            gui::label("Occlusion queries");
+            gui::indent();
+                if (gui::check("Hardware occlusion queries", hoq.get()))
+                    hoq.toggle();
+                gui::slider("Maximum occlusion queries", maxhoq.get(), maxhoq.min(), maxhoq.max(), 1, hoq.get());
+            gui::dedent();
+            gui::label("Clipping planes");
+            gui::indent();
+                gui::slider("Field of view", fov.get(), fov.min(), fov.max(), 0.01f);
+                gui::slider("Near", nearp.get(), nearp.min(), nearp.max(), 0.01f);
+                gui::slider("Far", farp.get(), farp.min(), farp.max(), 0.01f);
+            gui::dedent();
+        gui::dedent();
+    gui::areaFinish();
+}
+
 static void menuOptions() {
     const size_t w = neoWidth() / 3;
     const size_t h = neoHeight() / 2;
@@ -227,52 +282,22 @@ static void menuOptions() {
             D(graphics) = !D(graphics);
         if (D(graphics)) {
             auto &aniso = varGet<int>("r_aniso");
-            auto &trilinear = varGet<int>("r_trilinear");
-            auto &bilinear = varGet<int>("r_bilinear");
-            auto &mipmaps = varGet<int>("r_mipmaps");
             auto &ssao = varGet<int>("r_ssao");
             auto &fxaa = varGet<int>("r_fxaa");
-            auto &fog = varGet<int>("r_fog");
-            auto &spec = varGet<int>("r_spec");
             auto &parallax = varGet<int>("r_parallax");
             auto &texcomp = varGet<int>("r_texcomp");
-            auto &texcompcache = varGet<int>("r_texcompcache");
             auto &texquality = varGet<float>("r_texquality");
-            auto &hoq = varGet<int>("r_hoq");
-            auto &maxhoq = varGet<int>("r_maxhoq");
             gui::indent();
-                if (gui::collapse("Texture filtering", "", D(filtering)))
-                    D(filtering) = !D(filtering);
-                if (D(filtering)) {
-                    gui::indent();
-                        //if (gui::check("Anisotropic", aniso.get()))
-                        if (gui::check("Trilinear", trilinear.get()))
-                            trilinear.toggle();
-                        if (gui::check("Bilinear", bilinear.get()))
-                            bilinear.toggle();
-                        gui::slider<int>("Anisotropic", aniso.get(), aniso.min(), aniso.max(), 1);
-                    gui::dedent();
-                }
-                if (gui::check("Mipmaps", mipmaps.get()))
-                    mipmaps.toggle();
+                gui::slider<int>("Anisotropic", aniso.get(), aniso.min(), aniso.max(), 1);
                 if (gui::check("Ambient occlusion", ssao.get()))
                     ssao.toggle();
                 if (gui::check("Anti-aliasing", fxaa.get()))
                     fxaa.toggle();
-                if (gui::check("Fog", fog.get()))
-                    fog.toggle();
-                if (gui::check("Specularity", spec.get()))
-                    spec.toggle();
                 if (gui::check("Parallax mapping", parallax.get()))
                     parallax.toggle();
                 if (gui::check("Texture compression", texcomp.get()))
                     texcomp.toggle();
-                if (gui::check("Texture compression cache", texcompcache))
-                    texcompcache.toggle();
                 gui::slider("Texture quality", texquality.get(), texquality.min(), texquality.max(), 0.01f);
-                if (gui::check("Hardware occlusion queries", hoq.get()))
-                    hoq.toggle();
-                gui::slider("Maximum occlusion queries", maxhoq.get(), maxhoq.min(), maxhoq.max(), 1, hoq.get());
             gui::dedent();
         }
         if (gui::collapse("Input", "", D(input)))
@@ -285,21 +310,6 @@ static void menuOptions() {
                 if (gui::check("Invert", mouse_invert.get()))
                     mouse_invert.toggle();
                 gui::slider("Sensitivity", mouse_sens.get(), mouse_sens.min(), mouse_sens.max(), 0.01f);
-            gui::dedent();
-        }
-        if (gui::collapse("Game", "", D(game)))
-            D(game) = !D(game);
-        if (D(game)) {
-            gui::indent();
-                auto &fov = varGet<float>("cl_fov");
-                auto &nearp = varGet<float>("cl_nearp");
-                auto &farp = varGet<float>("cl_farp");
-                gui::label("Distance");
-                gui::indent();
-                    gui::slider("Field of view", fov.get(), fov.min(), fov.max(), 0.01f);
-                    gui::slider("Near", nearp.get(), nearp.min(), nearp.max(), 0.01f);
-                    gui::slider("Far", farp.get(), farp.min(), farp.max(), 0.01f);
-                gui::dedent();
             gui::dedent();
         }
     gui::areaFinish();
@@ -690,4 +700,6 @@ void menuUpdate() {
         menuCreate();
     if (gMenuState & kMenuColorGrading)
         menuColorGrading();
+    if (gMenuState & kMenuDeveloper)
+        menuDeveloper();
 }

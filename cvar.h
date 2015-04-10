@@ -185,11 +185,15 @@ inline varStatus var<T>::set(const T &value) {
 template <typename T>
 inline void var<T>::setMin(const T &min) {
     m_min = min;
+    if (m_current < m_min)
+        m_current = m_min;
 }
 
 template <typename T>
 inline void var<T>::setMax(const T &max) {
     m_max = max;
+    if (m_current > m_max)
+        m_current = m_max;
 }
 
 template <typename T>

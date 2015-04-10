@@ -21,12 +21,4 @@ vec2 calcTexCoord() {
 #endif
 }
 
-vec2 calcFragCoord(vec2 texCoord) {
-#ifdef HAS_TEXTURE_RECTANGLE
-    return texCoord / gScreenSize;
-#else
-    return texCoord;
-#endif
-}
-
 #endif

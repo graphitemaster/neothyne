@@ -60,6 +60,8 @@ static void setBinds() {
                 gMenuState &= ~kMenuEdit;
             else if (gMenuState & kMenuColorGrading)
                 gMenuState &= ~kMenuColorGrading;
+            else if (gMenuState & kMenuDeveloper)
+                gMenuState &= ~kMenuDeveloper;
         }
         neoRelativeMouse(gPlaying && !(gMenuState & kMenuMain));
         neoCenterMouse();
@@ -68,6 +70,10 @@ static void setBinds() {
 
     neoBindSet("F8Dn", []() {
         neoScreenShot();
+    });
+
+    neoBindSet("F9Dn", []() {
+        gMenuState ^= kMenuDeveloper;
     });
 
     neoBindSet("F10Dn", []() {
