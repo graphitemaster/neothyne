@@ -29,7 +29,7 @@ bool occlusionMethod::init() {
 }
 
 void occlusionMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
 ///! occlusionQueries::object

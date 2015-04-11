@@ -25,7 +25,7 @@ bool billboardMethod::init() {
 }
 
 void billboardMethod::setVP(const m::mat4 &vp) {
-    gl::UniformMatrix4fv(m_VPLocation, 1, GL_TRUE, (const GLfloat*)vp.m);
+    gl::UniformMatrix4fv(m_VPLocation, 1, GL_TRUE, vp.ptr());
 }
 
 void billboardMethod::setColorTextureUnit(int unit) {

@@ -25,7 +25,7 @@ inline perspective::perspective()
 }
 
 struct mat4 {
-    vec4 m[4];
+    vec4 a, b, c, d;
 
     void loadIdentity();
     mat4 inverse();
@@ -37,7 +37,24 @@ struct mat4 {
     void setCameraTrans(const vec3 &position, const quat &q);
     void setPerspectiveTrans(const perspective &p);
     void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
+
+    float *ptr();
+    const float *ptr() const;
+
+private:
+    static float det2x2(float a, float b, float c, float d);
+    static float det3x3(float a1, float a2, float a3,
+                        float b1, float b2, float b3,
+                        float c1, float c2, float c3);
 };
+
+inline float *mat4::ptr() {
+    return &a.x;
+}
+
+inline const float *mat4::ptr() const {
+    return &a.x;
+}
 
 }
 

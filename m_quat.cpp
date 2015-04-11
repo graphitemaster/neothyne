@@ -26,10 +26,10 @@ void quat::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
 
 quat operator*(const quat &q, const vec3 &v) {
     const float w = - (q.x * v.x) - (q.y * v.y) - (q.z * v.z);
-    const float x =   (q.w * v.x) + (q.y * v.z) - (q.z * v.y);
-    const float y =   (q.w * v.y) + (q.z * v.x) - (q.x * v.z);
-    const float z =   (q.w * v.z) + (q.x * v.y) - (q.y * v.x);
-    return quat(x, y, z, w);
+    const float x = (q.w * v.x) + (q.y * v.z) - (q.z * v.y);
+    const float y = (q.w * v.y) + (q.z * v.x) - (q.x * v.z);
+    const float z = (q.w * v.z) + (q.x * v.y) - (q.y * v.x);
+    return { x, y, z, w };
 }
 
 quat operator*(const quat &l, const quat &r) {
@@ -37,7 +37,7 @@ quat operator*(const quat &l, const quat &r) {
     const float x = (l.x * r.w) + (l.w * r.x) + (l.y * r.z) - (l.z * r.y);
     const float y = (l.y * r.w) + (l.w * r.y) + (l.z * r.x) - (l.x * r.z);
     const float z = (l.z * r.w) + (l.w * r.z) + (l.x * r.y) - (l.y * r.x);
-    return quat(x, y, z, w);
+    return { x, y, z, w };
 }
 
 void quat::getMatrix(mat4 *mat) const {
@@ -46,26 +46,19 @@ void quat::getMatrix(mat4 *mat) const {
     const float qy = y*n;
     const float qz = z*n;
     const float qw = w*n;
-
-    mat->m[0][0] = 1.0f - 2.0f*qy*qy - 2.0f*qz*qz;
-    mat->m[0][1] = 2.0f*qx*qy - 2.0f*qz*qw;
-    mat->m[0][2] = 2.0f*qx*qz + 2.0f*qy*qw;
-    mat->m[0][3] = 0.0f;
-
-    mat->m[1][0] = 2.0f*qx*qy + 2.0f*qz*qw;
-    mat->m[1][1] = 1.0f - 2.0f*qx*qx - 2.0f*qz*qz;
-    mat->m[1][2] = 2.0f*qy*qz - 2.0f*qx*qw;
-    mat->m[1][3] = 0.0f;
-
-    mat->m[2][0] = 2.0f*qx*qz - 2.0f*qy*qw;
-    mat->m[2][1] = 2.0f*qy*qz + 2.0f*qx*qw;
-    mat->m[2][2] = 1.0f - 2.0f*qx*qx - 2.0f*qy*qy;
-    mat->m[2][3] = 0.0f;
-
-    mat->m[3][0] = 0.0f;
-    mat->m[3][1] = 0.0f;
-    mat->m[3][2] = 0.0f;
-    mat->m[3][3] = 1.0f;
+    mat->a = { 1.0f - 2.0f*qy*qy - 2.0f*qz*qz,
+               2.0f*qx*qy - 2.0f*qz*qw,
+               2.0f*qx*qz + 2.0f*qy*qw,
+               0.0f };
+    mat->b = { 2.0f*qx*qy + 2.0f*qz*qw,
+               1.0f - 2.0f*qx*qx - 2.0f*qz*qz,
+               2.0f*qy*qz - 2.0f*qx*qw,
+               0.0f };
+    mat->c = { 2.0f*qx*qz - 2.0f*qy*qw,
+               2.0f*qy*qz + 2.0f*qx*qw,
+               1.0f - 2.0f*qx*qx - 2.0f*qy*qy,
+               0.0f };
+    mat->d = { 0.0f, 0.0f, 0.0f, 1.0f };
 }
 
 }

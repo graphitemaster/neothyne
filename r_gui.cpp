@@ -176,11 +176,11 @@ bool guiModelMethod::init(const u::vector<const char *> &defines) {
 }
 
 void guiModelMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
 void guiModelMethod::setWorld(const m::mat4 &world) {
-    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, (const GLfloat *)world.m);
+    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, world.ptr());
 }
 
 void guiModelMethod::setColorTextureUnit(int unit) {
@@ -188,7 +188,7 @@ void guiModelMethod::setColorTextureUnit(int unit) {
 }
 
 void guiModelMethod::setEyeWorldPos(const m::vec3 &pos) {
-    gl::Uniform3fv(m_eyeWorldPositionLocation, 1, (const GLfloat *)&pos.x);
+    gl::Uniform3fv(m_eyeWorldPositionLocation, 1, &pos.x);
 }
 
 ///! gui

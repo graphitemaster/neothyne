@@ -43,11 +43,11 @@ bool lightMethod::init(const char *vs, const char *fs, const u::vector<const cha
 }
 
 void lightMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat*)wvp.m);
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
 void lightMethod::setInverse(const m::mat4 &inverse) {
-    gl::UniformMatrix4fv(m_inverseLocation, 1, GL_TRUE, (const GLfloat*)inverse.m);
+    gl::UniformMatrix4fv(m_inverseLocation, 1, GL_TRUE, inverse.ptr());
 }
 
 void lightMethod::setColorTextureUnit(int unit) {

@@ -35,7 +35,7 @@ bool skyboxMethod::init(const u::vector<const char *> &defines) {
 }
 
 void skyboxMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
 void skyboxMethod::setTextureUnit(int unit) {
@@ -43,7 +43,7 @@ void skyboxMethod::setTextureUnit(int unit) {
 }
 
 void skyboxMethod::setWorld(const m::mat4 &worldInverse) {
-    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, (const GLfloat *)worldInverse.m);
+    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, worldInverse.ptr());
 }
 
 void skyboxMethod::setFog(const fog &f) {

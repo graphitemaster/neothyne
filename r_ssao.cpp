@@ -74,12 +74,12 @@ void ssaoMethod::setAttenuation(float constant, float linear) {
 void ssaoMethod::setInverse(const m::mat4 &inverse) {
     // This is the inverse projection matrix used to reconstruct position from
     // depth in the SSAO pass
-    gl::UniformMatrix4fv(m_inverseLocation, 1, GL_TRUE, (const GLfloat *)inverse.m);
+    gl::UniformMatrix4fv(m_inverseLocation, 1, GL_TRUE, inverse.ptr());
 }
 
 void ssaoMethod::setWVP(const m::mat4 &wvp) {
     // Will set an identity matrix as this will be a screen space QUAD
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
 void ssaoMethod::setPerspective(const m::perspective &p) {

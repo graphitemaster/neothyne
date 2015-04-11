@@ -227,7 +227,7 @@ bool bboxMethod::init() {
 }
 
 void bboxMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
 void bboxMethod::setColor(const m::vec3 &color) {
@@ -273,12 +273,11 @@ bool geomMethod::init(const u::vector<const char *> &defines) {
 }
 
 void geomMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
 void geomMethod::setWorld(const m::mat4 &worldInverse) {
-    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE,
-        (const GLfloat *)worldInverse.m);
+    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, worldInverse.ptr());
 }
 
 void geomMethod::setEyeWorldPos(const m::vec3 &position) {
@@ -339,7 +338,7 @@ bool finalMethod::init(const u::vector<const char *> &defines) {
 }
 
 void finalMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, (const GLfloat *)wvp.m);
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
 void finalMethod::setColorTextureUnit(int unit) {
