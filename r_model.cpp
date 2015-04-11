@@ -160,60 +160,26 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
 bool model::upload() {
     geom::upload();
 
-    struct layout {
-        m::vec3 position;
-        m::vec3 normal;
-        float s;
-        float t;
-        m::vec3 tangent;
-        float w;
-    };
-
     const auto &indices = m_mesh.indices();
-    const auto &positions = m_mesh.positions();
-    const auto &normals = m_mesh.normals();
-    const auto &coordinates = m_mesh.coordinates();
-    const auto &tangents = m_mesh.tangents();
-    const auto &bitangents = m_mesh.bitangents();
+    const auto &vertices = m_mesh.vertices();
 
-    // Interleave vertex data for the GPU
-    u::vector<layout> interleave;
-    interleave.resize(positions.size());
-    for (size_t i = 0; i < positions.size(); i++) {
-        auto &entry = interleave[i];
-        entry.position = positions[i];
-        entry.normal = normals[i];
-        entry.s = coordinates[i].x;
-        entry.t = coordinates[i].y;
-        entry.tangent = tangents[i];
-        entry.w = bitangents[i];
-    }
-
-    // Copy out of size_t format into GLuint format
-    u::vector<GLuint> finalIndices;
-    finalIndices.reserve(indices.size());
-    for (auto &it : indices)
-        finalIndices.push_back(it);
-
-    m_indices = finalIndices.size();
+    m_indices = indices.size();
 
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof(layout) * interleave.size(), &interleave[0], GL_STATIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(0)); // vertex
-    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(3)); // normals
-    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(6)); // texCoord
-    gl::VertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(8)); // tangent
-    gl::VertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(layout), ATTRIB_OFFSET(11)); // w
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::vertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), ATTRIB_OFFSET(0)); // vertex
+    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), ATTRIB_OFFSET(3)); // normals
+    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), ATTRIB_OFFSET(6)); // texCoord
+    gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), ATTRIB_OFFSET(8)); // tangent
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
     gl::EnableVertexAttribArray(2);
     gl::EnableVertexAttribArray(3);
-    gl::EnableVertexAttribArray(4);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof(GLuint), &finalIndices[0], GL_STATIC_DRAW);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
 
     // TODO: multiple materials
     if (!mat.upload())

@@ -96,42 +96,26 @@ static void createTangents(const u::vector<m::vec3> &vertices,
 }
 
 bool mesh::load(const u::string &file) {
-    if (!m_obj.load(file))
+    obj o;
+    if (!o.load(file, this))
         return false;
 
     // Calculate bounding box
-    const auto &p = positions();
-    for (const auto &it : p)
-        bbox.expand(it);
+    for (const auto &it : m_vertices)
+        bbox.expand({it.position[0], it.position[1], it.position[2]});
     return true;
 }
 
-u::vector<size_t> mesh::indices() const {
-    return m_obj.indices();
+u::vector<mesh::vertex> mesh::vertices() const {
+    return m_vertices;
 }
 
-u::vector<m::vec3> mesh::positions() const {
-    return m_obj.positions();
-}
-
-u::vector<m::vec3> mesh::normals() const {
-    return m_obj.normals();
-}
-
-u::vector<m::vec3> mesh::coordinates() const {
-    return m_obj.coordinates();
-}
-
-u::vector<m::vec3> mesh::tangents() const {
-    return m_obj.tangents();
-}
-
-u::vector<float> mesh::bitangents() const {
-    return m_obj.bitangents();
+u::vector<unsigned int> mesh::indices() const {
+    return m_indices;
 }
 
 ///! OBJ Model Loading and Rendering
-bool obj::load(const u::string &file) {
+bool obj::load(const u::string &file, mesh *store) {
     u::file fp = fopen(neoGamePath() + file + ".obj", "r");
     if (!fp)
         return false;
@@ -145,6 +129,8 @@ bool obj::load(const u::string &file) {
 
     // Unique vertices are stored in a map keyed by face.
     u::map<face, size_t> uniques;
+
+    u::vector<size_t> indices;
 
     size_t count = 0;
     size_t group = 0;
@@ -203,8 +189,8 @@ bool obj::load(const u::string &file) {
 
             // Triangulate the mesh
             for (size_t i = 1; i < v.size() - 1; ++i) {
-                auto index = m_indices.size();
-                m_indices.resize(index + 3);
+                auto index = indices.size();
+                indices.resize(index + 3);
                 auto triangulate = [&v, &n, &t, &uniques, &count](size_t index, size_t &out) {
                     face triangle;
                     triangle.vertex = v[index];
@@ -215,65 +201,60 @@ bool obj::load(const u::string &file) {
                         uniques[triangle] = count++;
                     out = uniques[triangle];
                 };
-                triangulate(0,     m_indices[index + 0]);
-                triangulate(i + 0, m_indices[index + 1]);
-                triangulate(i + 1, m_indices[index + 2]);
+                triangulate(0,     indices[index + 0]);
+                triangulate(i + 0, indices[index + 1]);
+                triangulate(i + 1, indices[index + 2]);
             }
         }
     }
 
     // Construct the model, indices are already generated
-    m_positions.resize(count);
-    m_normals.resize(count);
-    m_coordinates.resize(count);
+    u::vector<m::vec3> positions_(count);
+    u::vector<m::vec3> normals_(count);
+    u::vector<m::vec3> coordinates_(count);
     for (auto &it : uniques) {
         const auto &first = it.first;
         const auto &second = it.second;
-        m_positions[second] = vertices[first.vertex];
+        positions_[second] = vertices[first.vertex];
         if (normals.size())
-            m_normals[second] = normals[first.normal];
+            normals_[second] = normals[first.normal];
         if (coordinates.size())
-            m_coordinates[second] = coordinates[first.coordinate];
+            coordinates_[second] = coordinates[first.coordinate];
     }
 
     // Optimize the indices
     vertexCacheOptimizer vco;
-    vco.optimize(m_indices);
+    vco.optimize(indices);
 
     // Change winding order
-    for (size_t i = 0; i < m_indices.size(); i += 3)
-        u::swap(m_indices[i], m_indices[i + 2]);
+    for (size_t i = 0; i < indices.size(); i += 3)
+        u::swap(indices[i], indices[i + 2]);
 
     // Calculate tangents
-    m_tangents.resize(count);
-    m_bitangents.resize(count);
-    createTangents(m_positions, m_coordinates, m_normals, m_indices, m_tangents, m_bitangents);
+    u::vector<m::vec3> tangents_(count);
+    u::vector<float> bitangents_(count);
+    createTangents(positions_, coordinates_, normals_, indices, tangents_, bitangents_);
+
+    // Interleave for GPU
+    store->m_vertices.resize(count);
+    for (size_t i = 0; i < count; i++) {
+        auto &vert = store->m_vertices[i];
+        for (size_t j = 0; j < 3; j++) {
+            vert.position[j] = positions_[i][j];
+            vert.normal[j] = normals_[i][j];
+            vert.tangent[j] = tangents_[i][j];
+        }
+        vert.coordinate[0] = coordinates_[i].x;
+        vert.coordinate[1] = coordinates_[i].y;
+        vert.tangent[3] = bitangents_[i];
+    }
+
+    // size_t -> unsigned int
+    store->m_indices.reserve(count);
+    for (auto &it : indices)
+        store->m_indices.push_back(it);
 
     return true;
-}
-
-u::vector<size_t> obj::indices() const {
-    return m_indices;
-}
-
-u::vector<m::vec3> obj::positions() const {
-    return m_positions;
-}
-
-u::vector<m::vec3> obj::normals() const {
-    return m_normals;
-}
-
-u::vector<m::vec3> obj::coordinates() const {
-    return m_coordinates;
-}
-
-u::vector<m::vec3> obj::tangents() const {
-    return m_tangents;
-}
-
-u::vector<float> obj::bitangents() const {
-    return m_bitangents;
 }
 
 ///! vertexCacheData

@@ -622,13 +622,11 @@ bool world::upload(const m::perspective &p, ::world *map) {
     gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(0));  // vertex
     gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(3));  // normals
     gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(6));  // texCoord
-    gl::VertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(8));  // tangent
-    gl::VertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(11)); // w
+    gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(8));  // tangent
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
     gl::EnableVertexAttribArray(2);
     gl::EnableVertexAttribArray(3);
-    gl::EnableVertexAttribArray(4);
 
     // upload data
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);

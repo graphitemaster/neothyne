@@ -8,41 +8,33 @@ namespace u {
     struct string;
 }
 
-struct obj {
-    bool load(const u::string &file);
+struct mesh;
 
-    u::vector<size_t> indices() const;
-    u::vector<m::vec3> positions() const;
-    u::vector<m::vec3> normals() const;
-    u::vector<m::vec3> coordinates() const;
-    u::vector<m::vec3> tangents() const;
-    u::vector<float> bitangents() const;
-
-private:
+class obj {
     friend struct mesh;
-
-    u::vector<size_t> m_indices;
-    u::vector<m::vec3> m_positions;
-    u::vector<m::vec3> m_normals;
-    u::vector<m::vec3> m_coordinates;
-    u::vector<m::vec3> m_tangents;
-    u::vector<float> m_bitangents; // Sign only
+    bool load(const u::string &file, mesh *store);
 };
 
 struct mesh {
     bool load(const u::string &file);
 
-    u::vector<size_t> indices() const;
-    u::vector<m::vec3> positions() const;
-    u::vector<m::vec3> normals() const;
-    u::vector<m::vec3> coordinates() const;
-    u::vector<m::vec3> tangents() const;
-    u::vector<float> bitangents() const;
+    struct vertex {
+        float position[3];
+        float normal[3];
+        float coordinate[2];
+        float tangent[4];
+    };
+
+    u::vector<vertex> vertices() const;
+    u::vector<unsigned int> indices() const;
 
     m::bbox bbox;
 
 private:
-    obj m_obj; // TO BE EXTENDED
+    friend struct obj;
+
+    u::vector<vertex> m_vertices;
+    u::vector<unsigned int> m_indices;
 };
 
 struct vertexCacheData {
