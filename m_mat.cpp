@@ -125,7 +125,6 @@ void mat4::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
     }
 }
 
-// TODO: Cleanup
 inline float mat4::det2x2(float a, float b, float c, float d) {
     return a*d - b*c;
 }
