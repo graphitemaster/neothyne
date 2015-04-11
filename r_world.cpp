@@ -737,7 +737,6 @@ void world::occlusionPass(const pipeline &pl, ::world *map) {
             continue;
 
         auto &mdl = m_models[it->name];
-        auto &mesh = mdl->getMesh();
 
         pipeline p = pl;
         p.setWorld(it->position);
@@ -752,8 +751,8 @@ void world::occlusionPass(const pipeline &pl, ::world *map) {
         p.setRotate(rotate);
 
         pipeline bp;
-        bp.setWorld(mesh.bbox.center());
-        bp.setScale(mesh.bbox.size());
+        bp.setWorld(mdl->bounds().center());
+        bp.setScale(mdl->bounds().size());
         const m::mat4 wvp = (p.projection() * p.view() * p.world()) * bp.world();
 
         // Get an occlusion query slot
@@ -1133,7 +1132,6 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
         // Map models
         for (auto &it : map->m_mapModels) {
             auto &mdl = m_models[it->name];
-            auto &mesh = mdl->getMesh();
 
             pipeline p = pl;
             p.setWorld(it->position);
@@ -1148,8 +1146,8 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
             p.setRotate(rotate);
 
             pipeline bp;
-            bp.setWorld(mesh.bbox.center());
-            bp.setScale(mesh.bbox.size());
+            bp.setWorld(mdl->bounds().center());
+            bp.setScale(mdl->bounds().size());
             m_bboxMethod.enable();
             m_bboxMethod.setColor(it->highlight ? kHighlighted : kOutline);
             m_bboxMethod.setWVP((p.projection() * p.view() * p.world()) * bp.world());

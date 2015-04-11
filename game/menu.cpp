@@ -651,7 +651,7 @@ static void menuCreate() {
     } else {
         gui::areaBegin("New map", x, y, w, h, D(createScroll));
             if (STR(mesh).empty()) {
-                if (gui::button("Load mesh"))
+                if (gui::button("Load model"))
                     D(browse) = true;
             } else {
                 gui::label(FMT(20, STR(mesh)));

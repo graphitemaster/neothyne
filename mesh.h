@@ -8,16 +8,10 @@ namespace u {
     struct string;
 }
 
-struct mesh;
-
-class obj {
-    friend struct mesh;
-    bool load(const u::string &file, mesh *store);
-};
+struct model;
+struct obj;
 
 struct mesh {
-    bool load(const u::string &file);
-
     struct vertex {
         float position[3];
         float normal[3];
@@ -25,14 +19,11 @@ struct mesh {
         float tangent[4];
     };
 
-    u::vector<vertex> vertices() const;
-    u::vector<unsigned int> indices() const;
-
-    m::bbox bbox;
-
 private:
+    friend struct model;
     friend struct obj;
 
+    m::bbox m_bounds;
     u::vector<vertex> m_vertices;
     u::vector<unsigned int> m_indices;
 };

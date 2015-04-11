@@ -33,6 +33,12 @@ T endianSwap(T value) {
     return value;
 }
 
+template <typename T>
+void endianSwap(T *data, size_t length) {
+    for (T *end = &data[length]; data < end; data++)
+        *data = endianSwap(*data);
+}
+
 inline int sscanf(const u::string &thing, const char *fmt, ...) {
     va_list va;
     va_start(va, fmt);

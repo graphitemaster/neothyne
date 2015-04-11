@@ -149,7 +149,7 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
     }
 
     // Now use that to load the mesh
-    if (!m_mesh.load("models/" + name))
+    if (!m_model.load("models/" + name))
         return false;
     // Load the model file all over again, except we treat it as a material file
     if (!mat.load(textures, file, "models/"))
@@ -160,8 +160,8 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
 bool model::upload() {
     geom::upload();
 
-    const auto &indices = m_mesh.indices();
-    const auto &vertices = m_mesh.vertices();
+    const auto &indices = m_model.indices();
+    const auto &vertices = m_model.vertices();
 
     m_indices = indices.size();
 
@@ -190,11 +190,12 @@ bool model::upload() {
 
 void model::render() {
     gl::BindVertexArray(vao);
-    gl::DrawElements(GL_TRIANGLES, m_indices, GL_UNSIGNED_INT, 0);
-}
 
-const mesh &model::getMesh() const {
-    return m_mesh;
+    // TODO: multiple materials
+    const auto &batches = m_model.batches();
+    for (const auto &it : batches)
+        gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
+            (const GLvoid*)(sizeof(GLuint) * it.index));
 }
 
 }

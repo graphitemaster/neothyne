@@ -62,6 +62,7 @@ ENGINE_SOURCES = \
 	kdtree.cpp \
 	world.cpp \
 	mesh.cpp \
+	model.cpp \
 	texture.cpp \
 	cvar.cpp \
 	gui.cpp \

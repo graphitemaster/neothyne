@@ -1,6 +1,6 @@
 #ifndef R_MODEL_HDR
 #define R_MODEL_HDR
-#include "mesh.h"
+#include "model.h"
 
 #include "r_geom.h"
 
@@ -41,12 +41,16 @@ struct model : geom {
     m::vec3 scale;
     m::vec3 rotate;
 
-    const mesh &getMesh() const;
+    m::bbox bounds() const;
 
 private:
     size_t m_indices;
-    mesh m_mesh;
+    ::model m_model;
 };
+
+inline m::bbox model::bounds() const {
+    return m_model.bounds();
+}
 
 }
 #endif
