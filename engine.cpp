@@ -14,7 +14,7 @@
 #include "u_misc.h"
 #include "u_set.h"
 
-#include "m_vec3.h"
+#include "m_vec.h"
 
 static volatile bool gShutdown = false;
 

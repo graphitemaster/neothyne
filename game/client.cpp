@@ -289,8 +289,8 @@ void client::inputMouseMove() {
     m_mouseLon -= (float)deltaX * cl_mouse_sens * invert;
     m_mouseLon = m::angleMod(m_mouseLon);
 
-    m::quat qlat(m::vec3::xAxis, m::toRadian(m_mouseLat));
-    m::quat qlon(m::vec3::yAxis, m::toRadian(m_mouseLon));
+    m::quat qlat(m::toRadian(m_mouseLat), m::vec3::xAxis);
+    m::quat qlon(m::toRadian(m_mouseLon), m::vec3::yAxis);
 
     setRotation(qlon * qlat);
 }

@@ -1,6 +1,6 @@
 #include "m_plane.h"
 #include "m_const.h"
-#include "m_mat4.h"
+#include "m_mat.h"
 #include "m_quat.h"
 
 namespace m {

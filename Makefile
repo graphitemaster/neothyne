@@ -26,9 +26,9 @@ GAME_SOURCES = \
 	game/edit.cpp
 
 MATH_SOURCES = \
-	m_mat4.cpp \
+	m_mat.cpp \
 	m_quat.cpp \
-	m_vec3.cpp \
+	m_vec.cpp \
 	m_plane.cpp
 
 RENDERER_SOURCES = \

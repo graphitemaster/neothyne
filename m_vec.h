@@ -11,11 +11,7 @@ namespace m {
 
 struct vec3 {
     union {
-        struct {
-            float x;
-            float y;
-            float z;
-        };
+        struct { float x, y, z; };
         float m[3];
     };
 
@@ -247,6 +243,45 @@ inline vec3 clamp(const vec3 &current, const vec3 &min, const vec3 &max) {
     return { clamp(current.x, min.x, max.x),
              clamp(current.y, min.y, max.y),
              clamp(current.z, min.z, max.z) };
+}
+
+struct vec4 {
+    union {
+        struct { float x, y, z, w; };
+        float m[4];
+    };
+
+    constexpr vec4();
+    constexpr vec4(float x, float y, float z, float w);
+
+    float &operator[](size_t index);
+    const float &operator[](size_t index) const;
+
+    void endianSwap();
+};
+
+inline constexpr vec4::vec4()
+    : x(0.0f)
+    , y(0.0f)
+    , z(0.0f)
+    , w(0.0f)
+{
+}
+
+inline constexpr vec4::vec4(float x, float y, float z, float w)
+    : x(x)
+    , y(y)
+    , z(z)
+    , w(w)
+{
+}
+
+inline float &vec4::operator[](size_t index) {
+    return m[index];
+}
+
+inline const float &vec4::operator[](size_t index) const {
+    return m[index];
 }
 
 }

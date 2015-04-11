@@ -1,6 +1,6 @@
 #include "r_geom.h"
 
-#include "m_vec3.h"
+#include "m_vec.h"
 #include "m_const.h"
 
 #include "u_vector.h"

@@ -743,9 +743,9 @@ void world::occlusionPass(const pipeline &pl, ::world *map) {
         p.setScale(it->scale + mdl->scale);
 
         const m::vec3 rot = mdl->rotate + it->rotate;
-        m::quat rx(m::vec3::xAxis, m::toRadian(rot.x));
-        m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
-        m::quat rz(m::vec3::zAxis, m::toRadian(rot.z));
+        m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+        m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+        m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
         m::mat4 rotate;
         (rz * ry * rx).getMatrix(&rotate);
         p.setRotate(rotate);
@@ -843,9 +843,9 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
             pm.setScale(it->scale + mdl->scale);
 
             const m::vec3 rot = mdl->rotate + it->rotate;
-            m::quat rx(m::vec3::xAxis, m::toRadian(rot.x));
-            m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
-            m::quat rz(m::vec3::zAxis, m::toRadian(rot.z));
+            m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+            m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+            m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
             m::mat4 rotate;
             (rz * ry * rx).getMatrix(&rotate);
             pm.setRotate(rotate);
@@ -902,9 +902,9 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
         {
             p.setRotation(m::quat());
             const m::vec3 rot = m::vec3(0, 180, 0);
-            m::quat rx(m::vec3::xAxis, m::toRadian(rot.x));
-            m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
-            m::quat rz(m::vec3::zAxis, m::toRadian(rot.z));
+            m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+            m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+            m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
             m::mat4 rotate;
             (rz * ry * rx).getMatrix(&rotate);
             p.setRotate(rotate);
@@ -1138,9 +1138,9 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
             p.setScale(it->scale + mdl->scale);
 
             const m::vec3 rot = mdl->rotate + it->rotate;
-            m::quat rx(m::vec3::xAxis, m::toRadian(rot.x));
-            m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
-            m::quat rz(m::vec3::zAxis, m::toRadian(rot.z));
+            m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+            m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+            m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
             m::mat4 rotate;
             (rz * ry * rx).getMatrix(&rotate);
             p.setRotate(rotate);

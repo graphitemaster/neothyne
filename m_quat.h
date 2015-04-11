@@ -1,25 +1,18 @@
 #ifndef M_QUAT_HDR
 #define M_QUAT_HDR
+#include "m_vec.h"
 
 namespace m {
 
-struct vec3;
 struct mat4;
 
-struct quat {
-    float x;
-    float y;
-    float z;
-    float w;
-
-    constexpr quat();
+struct quat : vec4 {
+    constexpr quat() = default;
     constexpr quat(float x, float y, float z, float w);
 
-    quat(const vec3 &vec, float angle);
+    quat(float angle, const vec3 &vec);
 
     constexpr quat conjugate() const;
-
-    void endianSwap();
 
     // get all 3 axis of the quaternion
     void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
@@ -30,28 +23,22 @@ struct quat {
     friend quat operator*(const quat &l, const vec3 &v);
     friend quat operator*(const quat &l, const quat &r);
 
-private:
-    void rotationAxis(const vec3 &vec, float angle);
 };
 
-inline constexpr quat::quat()
-    : x(0.0f)
-    , y(0.0f)
-    , z(0.0f)
-    , w(1.0f)
-{
-}
-
 inline constexpr quat::quat(float x, float y, float z, float w)
-    : x(x)
-    , y(y)
-    , z(z)
-    , w(w)
+    : vec4(x, y, z, w)
 {
 }
 
-inline quat::quat(const vec3 &vec, float angle) {
-    rotationAxis(vec, angle);
+inline quat::quat(float angle, const vec3 &vec) {
+    const float s = sinf(angle / 2.0f);
+    const float c = cosf(angle / 2.0f);
+
+    const vec3 normal = vec.normalized();
+    x = s * normal.x;
+    y = s * normal.y;
+    z = s * normal.z;
+    w = c;
 }
 
 inline constexpr quat quat::conjugate() const {

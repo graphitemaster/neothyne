@@ -235,7 +235,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             p.setScale({20, 20, 20});
 
             const m::vec3 rot(0.0f, -(gPipeline.time() / 10.0f), 0.0f);
-            m::quat ry(m::vec3::yAxis, m::toRadian(rot.y));
+            m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
             m::mat4 rotate;
             ry.getMatrix(&rotate);
             p.setRotate(rotate);

@@ -1,8 +1,8 @@
 #ifndef R_PIPELINE_HDR
 #define R_PIPELINE_HDR
-#include "m_vec3.h"
+#include "m_vec.h"
 #include "m_quat.h"
-#include "m_mat4.h"
+#include "m_mat.h"
 
 namespace r {
 

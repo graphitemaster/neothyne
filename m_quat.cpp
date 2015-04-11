@@ -1,8 +1,8 @@
 #include "u_misc.h"
 
 #include "m_quat.h"
-#include "m_vec3.h"
-#include "m_mat4.h"
+#include "m_vec.h"
+#include "m_mat.h"
 
 namespace m {
 
@@ -22,24 +22,6 @@ void quat::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
         direction->y = 2.0f * (y * z - w * x);
         direction->z = 1.0f - 2.0f * (x * x + y * y);
     }
-}
-
-void quat::rotationAxis(const vec3 &vec, float angle) {
-    const float s = sinf(angle / 2.0f);
-    const float c = cosf(angle / 2.0f);
-
-    vec3 normal = vec.normalized();
-    x = s * normal.x;
-    y = s * normal.y;
-    z = s * normal.z;
-    w = c;
-}
-
-void quat::endianSwap() {
-    x = u::endianSwap(x);
-    y = u::endianSwap(y);
-    z = u::endianSwap(z);
-    w = u::endianSwap(w);
 }
 
 quat operator*(const quat &q, const vec3 &v) {
@@ -69,7 +51,7 @@ void quat::getMatrix(mat4 *mat) const {
     mat->m[0][1] = 2.0f*qx*qy - 2.0f*qz*qw;
     mat->m[0][2] = 2.0f*qx*qz + 2.0f*qy*qw;
     mat->m[0][3] = 0.0f;
-    
+
     mat->m[1][0] = 2.0f*qx*qy + 2.0f*qz*qw;
     mat->m[1][1] = 1.0f - 2.0f*qx*qx - 2.0f*qz*qz;
     mat->m[1][2] = 2.0f*qy*qz - 2.0f*qx*qw;

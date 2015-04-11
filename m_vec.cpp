@@ -1,7 +1,7 @@
 #include "u_misc.h"
 #include "u_algorithm.h"
 
-#include "m_vec3.h"
+#include "m_vec.h"
 #include "m_quat.h"
 
 namespace m {
@@ -76,6 +76,13 @@ vec3 vec3::rand(float mx, float my, float mz) {
     return { mx * ((float)(u::randu() % 20000) * 0.0001f - 1.0f),
              my * ((float)(u::randu() % 20000) * 0.0001f - 1.0f),
              mz * ((float)(u::randu() % 20000) * 0.0001f - 1.0f) };
+}
+
+void vec4::endianSwap() {
+    x = u::endianSwap(x);
+    y = u::endianSwap(y);
+    z = u::endianSwap(z);
+    w = u::endianSwap(w);
 }
 
 }

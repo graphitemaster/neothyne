@@ -6,7 +6,7 @@
 
 #include "u_vector.h"
 
-#include "m_vec3.h"
+#include "m_vec.h"
 
 namespace u {
     struct string;

@@ -4,7 +4,7 @@
 #include "r_method.h"
 #include "r_texture.h"
 
-#include "m_vec3.h"
+#include "m_vec.h"
 
 namespace m {
     struct mat4;

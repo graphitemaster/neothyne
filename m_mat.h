@@ -1,9 +1,9 @@
-#ifndef M_MAT4_HDR
-#define M_MAT4_HDR
+#ifndef M_MAT_HDR
+#define M_MAT_HDR
+#include "m_vec.h"
 
 namespace m {
 
-struct vec3;
 struct quat;
 
 struct perspective {
@@ -25,7 +25,7 @@ inline perspective::perspective()
 }
 
 struct mat4 {
-    float m[4][4];
+    vec4 m[4];
 
     void loadIdentity();
     mat4 inverse();

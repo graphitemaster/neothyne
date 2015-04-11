@@ -2,7 +2,7 @@
 #define R_SSAO_HDR
 #include "r_method.h"
 
-#include "m_mat4.h"
+#include "m_mat.h"
 
 namespace r {
 
