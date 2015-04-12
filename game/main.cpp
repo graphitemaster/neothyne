@@ -217,14 +217,15 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             gWorld.upload(gPerspective);
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
             gWorld.render(gPipeline);
+            gGui.render(gPipeline);
+            gui::begin(mouse);
         } else {
             gl::ClearColor(40/255.0f, 30/255.0f, 50/255.0f, 0.1f);
             gl::Clear(GL_COLOR_BUFFER_BIT);
+            gGui.render(gPipeline);
+            gui::begin(mouse);
         }
-        gGui.render(gPipeline);
         neoSwap();
-
-        gui::begin(mouse);
 
         if (!gPlaying) {
             // Render the model (for testing only)

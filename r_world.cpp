@@ -3,6 +3,7 @@
 #include "engine.h"
 #include "world.h"
 #include "cvar.h"
+#include "gui.h"
 
 #include "r_model.h"
 #include "r_pipeline.h"
@@ -1193,6 +1194,26 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
     // Don't need depth testing or blending anymore
     gl::Disable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
+
+    // Render text showing what we're debugging
+    const size_t x = neoWidth() / 2;
+    const size_t y = neoHeight() - 20;
+    switch (r_debug) {
+        case kDebugDepth:
+            gui::drawText(x, y, gui::kAlignCenter, "Depth", gui::RGBA(255, 0, 0));
+            break;
+        case kDebugNormal:
+            gui::drawText(x, y, gui::kAlignCenter, "Normals", gui::RGBA(255, 0, 0));
+            break;
+        case kDebugPosition:
+            gui::drawText(x, y, gui::kAlignCenter, "Position", gui::RGBA(255, 0, 0));
+            break;
+        case kDebugSSAO:
+            gui::drawText(x, y, gui::kAlignCenter, "Ambient Occlusion", gui::RGBA(255, 0, 0));
+            break;
+        default:
+            break;
+    }
 }
 
 void world::compositePass(const pipeline &pl, ::world *map) {
