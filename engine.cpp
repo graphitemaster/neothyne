@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <signal.h>
+#include <stdint.h>
 #include <time.h>
 
 #include <SDL2/SDL.h>
@@ -15,6 +16,63 @@
 #include "u_set.h"
 
 #include "m_vec.h"
+
+// To render text into screen shots we use an 8x8 bitmap font
+static const uint64_t kFont[128] = {
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x0000000000000000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x0000000000000000,0x0808080800080000,0x2828000000000000,0x00287C287C280000,
+    0x081E281C0A3C0800,0x6094681629060000,0x1C20201926190000,0x0808000000000000,
+    0x0810202010080000,0x1008040408100000,0x2A1C3E1C2A000000,0x0008083E08080000,
+    0x0000000000081000,0x0000003C00000000,0x0000000000080000,0x0204081020400000,
+    0x1824424224180000,0x08180808081C0000,0x3C420418207E0000,0x3C420418423C0000,
+    0x081828487C080000,0x7E407C02423C0000,0x3C407C42423C0000,0x7E04081020400000,
+    0x3C423C42423C0000,0x3C42423E023C0000,0x0000080000080000,0x0000080000081000,
+    0x0006186018060000,0x00007E007E000000,0x0060180618600000,0x3844041800100000,
+    0x003C449C945C201C,0x1818243C42420000,0x7844784444780000,0x3844808044380000,
+    0x7844444444780000,0x7C407840407C0000,0x7C40784040400000,0x3844809C44380000,
+    0x42427E4242420000,0x3E080808083E0000,0x1C04040444380000,0x4448507048440000,
+    0x40404040407E0000,0x4163554941410000,0x4262524A46420000,0x1C222222221C0000,
+    0x7844784040400000,0x1C222222221C0200,0x7844785048440000,0x1C22100C221C0000,
+    0x7F08080808080000,0x42424242423C0000,0x8142422424180000,0x4141495563410000,
+    0x4224181824420000,0x4122140808080000,0x7E040810207E0000,0x3820202020380000,
+    0x4020100804020000,0x3808080808380000,0x1028000000000000,0x00000000007E0000,
+    0x1008000000000000,0x003C023E463A0000,0x40407C42625C0000,0x00001C20201C0000,
+    0x02023E42463A0000,0x003C427E403C0000,0x0018103810100000,0x0000344C44340438,
+    0x2020382424240000,0x0800080808080000,0x0800180808080870,0x20202428302C0000,
+    0x1010101010180000,0x0000665A42420000,0x00002E3222220000,0x00003C42423C0000,
+    0x00005C62427C4040,0x00003A46423E0202,0x00002C3220200000,0x001C201804380000,
+    0x00103C1010180000,0x00002222261A0000,0x0000424224180000,0x000081815A660000,
+    0x0000422418660000,0x0000422214081060,0x00003C08103C0000,0x1C103030101C0000,
+    0x0808080808080800,0x38080C0C08380000,0x000000324C000000,0x7E7E7E7E7E7E0000
+};
+
+///! Query the operating system name
+static char gOperatingSystem[1024];
+#if !defined(_WIN32) && !defined(_WIN64)
+#  include <sys/utsname.h>
+#endif
+static struct queryOperatingSystem {
+    queryOperatingSystem() {
+        // Operating system is unknown until further checking
+        strcpy(gOperatingSystem, "Unknown");
+#if !defined(_WIN32) && !defined(_WIN64)
+        struct utsname n;
+        if (uname(&n) == 0)
+            snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s %s", n.sysname, n.release, n.machine);
+#elif defined(_WIN32)
+        strcpy(gOperatingSystem, "Windows 32-bit");
+#elif defined(_WIN64)
+        strcpy(gOperatingSystem, "Windows 64-bit");
+#endif
+    }
+} gQueryOperatingSystem;
 
 static volatile bool gShutdown = false;
 
@@ -136,6 +194,7 @@ VAR(int, vid_width, "resolution width", 0, 15360, 0);
 VAR(int, vid_height, "resolution height", 0, 8640, 0);
 VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
+VAR(int, scr_sysinfo, "show system info in screenshots", 0, 1, 1);
 
 /// pimpl context
 struct context {
@@ -394,7 +453,10 @@ bool engine::initContext() {
     if (vid_fullscreen)
         flags |= SDL_WINDOW_FULLSCREEN;
 
-    ctx->m_window = SDL_CreateWindow("Neothyne",
+    char name[1024];
+    snprintf(name, sizeof(name), "Neothyne [%s]", gOperatingSystem);
+    ctx->m_window = SDL_CreateWindow(
+        name,
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         m_screenWidth,
@@ -634,7 +696,9 @@ void engine::centerMouse() {
 }
 
 void engine::setWindowTitle(const char *title) {
-    SDL_SetWindowTitle(CTX(m_context)->m_window, title);
+    char name[1024];
+    snprintf(name, sizeof(name), "%s [%s]", title, gOperatingSystem);
+    SDL_SetWindowTitle(CTX(m_context)->m_window, name);
 }
 
 void engine::resize(size_t width, size_t height) {
@@ -695,7 +759,63 @@ void engine::screenShot() {
     texture::reorient(pixels.get(), screenWidth, screenHeight, 3, screenWidth * 3,
         temp.get(), false, true, false);
 
-    // Write the data
+    // Rasterize some information into the screen shot
+    if (scr_sysinfo) {
+        int line = 0;
+        auto drawString = [&temp,&screenWidth,&screenHeight,&line](const char *s) {
+            u::vector<SDL_Surface*> surfaces;
+            u::vector<unsigned char *> pixelData;
+            for (; *s; s++) {
+                u::unique_ptr<unsigned char> glyph(new unsigned char[8*8*3]);
+                u::unique_ptr<unsigned char> flip(new unsigned char[8*8*3]);
+                unsigned char *next = &glyph[0];
+                for (size_t h = 0, n = 1; h < 8; h++)
+                    for (size_t w = 0; w < 8; w++, n+=n)
+                        for (size_t k = 0; k < 3; k++)
+                            *next++ = (kFont[int(*s)] & n) ? 255 : 0;
+                texture::reorient(glyph.get(), 8, 8, 3, 8*3, flip.get(), true, true, false);
+                surfaces.push_back(SDL_CreateRGBSurfaceFrom(flip.get(), 8, 8, 24, 8*3,
+                    0x0000ff, 0x00ff00, 0xff0000, 0));
+                pixelData.push_back(flip.release());
+            }
+            SDL_Surface *output = SDL_CreateRGBSurface(0, 8*surfaces.size(), 8, 24,
+                0x0000ff, 0x00ff00, 0xff0000, 0);
+            SDL_FillRect(output, NULL, SDL_MapRGB(output->format, 0, 0, 0));
+            const SDL_Rect srcRect = { 0, 0, 8, 8 };
+            for (size_t i = 0; i < surfaces.size(); i++) {
+                SDL_Surface *surface = surfaces[i];
+                SDL_Rect dstRect = { 8*int(i), 0, 8, 8 };
+                SDL_BlitSurface(surface, &srcRect, output, &dstRect);
+                SDL_FreeSurface(surface);
+            }
+            for (size_t h = 0; h < 8; h++) {
+                unsigned char *src = (unsigned char *)output->pixels + 8*surfaces.size()*3*h;
+                unsigned char *dst = temp.get() + screenWidth*3*8*line + screenWidth*3*h;
+                memcpy(dst, src, 8*surfaces.size()*3);
+            }
+            SDL_FreeSurface(output);
+            line++;
+        };
+
+        // Print some info
+        auto vendor = (const char *)gl::GetString(GL_VENDOR);
+        auto renderer = (const char *)gl::GetString(GL_RENDERER);
+        auto version = (const char *)gl::GetString(GL_VERSION);
+        auto shader = (const char *)gl::GetString(GL_SHADING_LANGUAGE_VERSION);
+
+        drawString(gOperatingSystem);
+        drawString(vendor);
+        drawString(renderer);
+        drawString(version);
+        drawString(shader);
+        drawString("Extensions:");
+        for (auto &it : gl::extensions()) {
+            char buffer[2048];
+            snprintf(buffer, sizeof(buffer), " %s", gl::extensionString(it));
+            drawString(buffer);
+        }
+    }
+
     if (bmpWrite(file, screenWidth, screenHeight, temp.get()))
         u::print("[screenshot] => %s\n", file);
 }
@@ -855,8 +975,8 @@ static int entryPoint(int argc, char **argv) {
     if (strstr(vendor, "Intel"))
         gl::Hint(GL_TEXTURE_COMPRESSION_HINT, GL_FASTEST);
 
-    u::print("Vendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\nExtensions:\n",
-        vendor, renderer, version, shader);
+    u::print("OS: %s\nVendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\nExtensions:\n",
+        gOperatingSystem, vendor, renderer, version, shader);
 
     for (auto &it : gl::extensions())
         u::print(" %s\n", gl::extensionString(it));
