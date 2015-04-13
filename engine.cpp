@@ -761,39 +761,33 @@ void engine::screenShot() {
 
     // Rasterize some information into the screen shot
     if (scr_sysinfo) {
-        int line = 0;
-        auto drawString = [&temp,&screenWidth,&screenHeight,&line](const char *s) {
-            u::vector<SDL_Surface*> surfaces;
+        size_t line = 0;
+        auto drawString = [&temp,&line](const char *s) {
             u::vector<unsigned char *> pixelData;
             for (; *s; s++) {
                 u::unique_ptr<unsigned char> glyph(new unsigned char[8*8*3]);
-                u::unique_ptr<unsigned char> flip(new unsigned char[8*8*3]);
-                unsigned char *next = &glyph[0];
+                unsigned char *prev = &glyph[8*8*3-1];
                 for (size_t h = 0, n = 1; h < 8; h++)
                     for (size_t w = 0; w < 8; w++, n+=n)
                         for (size_t k = 0; k < 3; k++)
-                            *next++ = (kFont[int(*s)] & n) ? 255 : 0;
-                texture::reorient(glyph.get(), 8, 8, 3, 8*3, flip.get(), true, true, false);
-                surfaces.push_back(SDL_CreateRGBSurfaceFrom(flip.get(), 8, 8, 24, 8*3,
-                    0x0000ff, 0x00ff00, 0xff0000, 0));
-                pixelData.push_back(flip.release());
+                            *prev-- = (kFont[int(*s)] & n) ? 255 : 0;
+                pixelData.push_back(glyph.release());
             }
-            SDL_Surface *output = SDL_CreateRGBSurface(0, 8*surfaces.size(), 8, 24,
-                0x0000ff, 0x00ff00, 0xff0000, 0);
-            SDL_FillRect(output, NULL, SDL_MapRGB(output->format, 0, 0, 0));
-            const SDL_Rect srcRect = { 0, 0, 8, 8 };
-            for (size_t i = 0; i < surfaces.size(); i++) {
-                SDL_Surface *surface = surfaces[i];
-                SDL_Rect dstRect = { 8*int(i), 0, 8, 8 };
-                SDL_BlitSurface(surface, &srcRect, output, &dstRect);
-                SDL_FreeSurface(surface);
+            const size_t size = 8*pixelData.size()*8*3;
+            u::unique_ptr<unsigned char> output(new unsigned char[size]);
+            memset(output.get(), 0, size);
+            for (size_t i = 0; i < pixelData.size(); i++) {
+                unsigned char *s = pixelData[i];
+                unsigned char *d = output.get()+i*8*3;
+                for (size_t h = 0; h < 8; h++, s+=8*3, d+=8*pixelData.size()*3)
+                    memcpy(d, s, 8*3);
+                delete[] pixelData[i];
             }
             for (size_t h = 0; h < 8; h++) {
-                unsigned char *src = (unsigned char *)output->pixels + 8*surfaces.size()*3*h;
-                unsigned char *dst = temp.get() + screenWidth*3*8*line + screenWidth*3*h;
-                memcpy(dst, src, 8*surfaces.size()*3);
+                unsigned char *s = output.get() + 8*pixelData.size()*3*h;
+                unsigned char *d = temp.get() + neoWidth()*3*8*line + neoWidth()*3*h;
+                memcpy(d, s, 8*pixelData.size()*3);
             }
-            SDL_FreeSurface(output);
             line++;
         };
 
@@ -808,7 +802,7 @@ void engine::screenShot() {
         drawString(renderer);
         drawString(version);
         drawString(shader);
-        drawString("Extensions:");
+        drawString("Extensions");
         for (auto &it : gl::extensions()) {
             char buffer[2048];
             snprintf(buffer, sizeof(buffer), " %s", gl::extensionString(it));
