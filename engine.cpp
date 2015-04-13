@@ -762,12 +762,13 @@ void engine::screenShot() {
     // Rasterize some information into the screen shot
     if (scr_sysinfo) {
         size_t line = 0;
-        auto drawString = [&temp,&line](const char *s) {
+        auto drawString = [&temp, &line](const char *s) {
             u::vector<unsigned char *> pixelData;
             for (; *s; s++) {
                 u::unique_ptr<unsigned char> glyph(new unsigned char[8*8*3]);
                 unsigned char *prev = &glyph[8*8*3-1];
-                for (size_t h = 0, n = 1; h < 8; h++)
+                uint64_t n = 1;
+                for (size_t h = 0; h < 8; h++)
                     for (size_t w = 0; w < 8; w++, n+=n)
                         for (size_t k = 0; k < 3; k++)
                             *prev-- = (kFont[int(*s)] & n) ? 255 : 0;
@@ -785,7 +786,7 @@ void engine::screenShot() {
             }
             for (size_t h = 0; h < 8; h++) {
                 unsigned char *s = output.get() + 8*pixelData.size()*3*h;
-                unsigned char *d = temp.get() + neoWidth()*3*8*line + neoWidth()*3*h;
+                unsigned char *d = temp.get() + 8*neoWidth()*3*line + neoWidth()*3*h;
                 memcpy(d, s, 8*pixelData.size()*3);
             }
             line++;
