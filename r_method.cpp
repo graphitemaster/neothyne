@@ -172,6 +172,12 @@ bool method::finalize(const u::initializer_list<attribute> &attributes,
     GLint infoLogLength = 0;
     u::string infoLog;
 
+    for (auto &it : attributes)
+        gl::BindAttribLocation(m_program, it.index, it.name);
+
+    for (auto &it : fragData)
+        gl::BindFragDataLocation(m_program, it.index, it.name);
+
     gl::LinkProgram(m_program);
     gl::GetProgramiv(m_program, GL_LINK_STATUS, &success);
     if (!success) {
@@ -184,12 +190,6 @@ bool method::finalize(const u::initializer_list<attribute> &attributes,
 
     for (auto &it : m_shaders)
         gl::DeleteShader(it);
-
-    for (auto &it : attributes)
-        gl::BindAttribLocation(m_program, it.index, it.name);
-
-    for (auto &it : fragData)
-        gl::BindFragDataLocation(m_program, it.index, it.name);
 
     m_shaders.clear();
     return true;
