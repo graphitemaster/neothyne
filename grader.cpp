@@ -57,8 +57,8 @@ void colorGrader::generateTexture() {
     for (size_t y = 0; y < kHeight; y++) {
         for (size_t x = 0; x < kWidth; x++) {
             *next++ = 17 * (x % 16);
-            *next++ = 17 * y;
             *next++ = 17 * (x / 16);
+            *next++ = 17 * y;
         }
     }
 }

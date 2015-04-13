@@ -78,5 +78,5 @@ void main() {
     fragColor = neoTexture2D(gColorMap, texCoord).rgb;
 #endif
     // Apply color grading
-    fragColor = texture(gColorGradingMap, fragColor.rgb).rbg;
+    fragColor = texture(gColorGradingMap, fragColor.rgb).rgb;
 }
