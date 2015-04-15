@@ -32,6 +32,7 @@ MATH_SOURCES = \
 	m_plane.cpp
 
 RENDERER_SOURCES = \
+	r_aa.cpp \
 	r_billboard.cpp \
 	r_common.cpp \
 	r_gbuffer.cpp \

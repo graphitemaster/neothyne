@@ -2,6 +2,7 @@
 #define R_WORLD_HDR
 #include "kdmap.h"
 
+#include "r_aa.h"
 #include "r_ssao.h"
 #include "r_skybox.h"
 #include "r_billboard.h"
@@ -79,11 +80,9 @@ inline geomMethod::geomMethod()
 {
 }
 
-struct finalMethod : method {
-    finalMethod();
-
+struct compositeMethod : method {
+    compositeMethod();
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
-
     void setWVP(const m::mat4 &wvp);
     void setColorTextureUnit(int unit);
     void setColorGradingTextureUnit(int unit);
@@ -96,7 +95,7 @@ private:
     GLint m_screenSizeLocation;
 };
 
-inline finalMethod::finalMethod()
+inline compositeMethod::compositeMethod()
     : m_WVPLocation(-1)
     , m_colorMapLocation(-1)
     , m_colorGradingMapLocation(-1)
@@ -104,9 +103,9 @@ inline finalMethod::finalMethod()
 {
 }
 
-struct finalComposite {
-    finalComposite();
-    ~finalComposite();
+struct composite {
+    composite();
+    ~composite();
 
     bool init(const m::perspective &p, GLuint depth,
         const unsigned char *const colorGradingData);
@@ -115,7 +114,7 @@ struct finalComposite {
     void bindWriting();
 
     enum {
-        kFinal,
+        kOutput,
         kColorGrading
     };
 
@@ -130,10 +129,11 @@ private:
     void destroy();
 
     GLuint m_fbo;
-    GLuint m_textures[2]; // kFinal, kColorGrading
+    GLuint m_textures[2]; // kOutput, kColorGrading
     size_t m_width;
     size_t m_height;
 };
+
 struct renderTextureBatch {
     int permute;
     size_t start;
@@ -164,12 +164,13 @@ private:
 
     // world shading methods and permutations
     u::vector<geomMethod> m_geomMethods;
-    u::vector<finalMethod> m_finalMethods;
     u::vector<directionalLightMethod> m_directionalLightMethods;
+    compositeMethod m_compositeMethod;
     pointLightMethod m_pointLightMethod;
     spotLightMethod m_spotLightMethod;
     ssaoMethod m_ssaoMethod;
     bboxMethod m_bboxMethod;
+    aaMethod m_aaMethod;
 
     // Other things in the world to render
     skybox m_skybox;
@@ -191,9 +192,10 @@ private:
     u::vector<renderTextureBatch> m_textureBatches;
     u::map<u::string, texture2D*> m_textures2D;
 
+    aa m_aa;
     gBuffer m_gBuffer;
     ssao m_ssao;
-    finalComposite m_final;
+    composite m_final;
 
     m::mat4 m_identity;
     m::frustum m_frustum;

@@ -40,17 +40,8 @@ struct geomPermutation {
     int disp;       // ...
 };
 
-struct finalPermutation {
-    int permute;    // flags of the permutations
-};
-
 struct lightPermutation {
     int permute;    // flags of the permutations
-};
-
-// All the final shader permutations
-enum {
-    kFinalPermFXAA          = 1 << 0
 };
 
 // All the light shader permutations
@@ -72,12 +63,6 @@ enum {
     kGeomPermParallax       = 1 << 4
 };
 
-// The prelude defines to compile that final shader permutation
-// These must be in the same order as the enums
-static const char *finalPermutationNames[] = {
-    "USE_FXAA"
-};
-
 // The prelude defines to compile that light shader permutation
 // These must be in the same order as the enums
 static const char *lightPermutationNames[] = {
@@ -97,12 +82,6 @@ static const char *geomPermutationNames[] = {
     "USE_SPECMAP",
     "USE_SPECPARAMS",
     "USE_PARALLAX"
-};
-
-// All the possible final permutations
-static const finalPermutation finalPermutations[] = {
-    { 0 },
-    { kFinalPermFXAA }
 };
 
 // All the possible light permutations
@@ -141,14 +120,6 @@ static u::vector<const char *> generatePermutation(const T(&list)[N], const U &p
         if (p.permute & (1 << i))
             permutes.push_back(list[i]);
     return permutes;
-}
-
-// Calculate the correct permutation to use for the final composite
-static size_t finalCalculatePermutation() {
-    for (size_t i = 0; i < sizeof(finalPermutations)/sizeof(finalPermutations[0]); i++)
-        if (r_fxaa && (finalPermutations[i].permute & kFinalPermFXAA))
-            return i;
-    return 0;
 }
 
 // Calculate the correct permutation to use for the light buffer
@@ -313,8 +284,8 @@ void geomMethod::setSpecPower(float power) {
     gl::Uniform1f(m_specPowerLocation, power);
 }
 
-///! Final Composite Method
-bool finalMethod::init(const u::vector<const char *> &defines) {
+///! Composite Method
+bool compositeMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
 
@@ -338,25 +309,25 @@ bool finalMethod::init(const u::vector<const char *> &defines) {
     return true;
 }
 
-void finalMethod::setWVP(const m::mat4 &wvp) {
+void compositeMethod::setWVP(const m::mat4 &wvp) {
     gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
-void finalMethod::setColorTextureUnit(int unit) {
+void compositeMethod::setColorTextureUnit(int unit) {
     gl::Uniform1i(m_colorMapLocation, unit);
 }
 
-void finalMethod::setColorGradingTextureUnit(int unit) {
+void compositeMethod::setColorGradingTextureUnit(int unit) {
     gl::Uniform1i(m_colorGradingMapLocation, unit);
 }
 
-void finalMethod::setPerspective(const m::perspective &p) {
+void compositeMethod::setPerspective(const m::perspective &p) {
     gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
     // TODO: frustum in final shader to do other things eventually
     //gl::Uniform2f(m_screenFrustumLocation, project.nearp, perspective.farp);
 }
 
-finalComposite::finalComposite()
+composite::composite()
     : m_fbo(0)
     , m_width(0)
     , m_height(0)
@@ -364,18 +335,18 @@ finalComposite::finalComposite()
     memset(m_textures, 0, sizeof(m_textures));
 }
 
-finalComposite::~finalComposite() {
+composite::~composite() {
     destroy();
 }
 
-void finalComposite::destroy() {
+void composite::destroy() {
     if (m_fbo)
         gl::DeleteFramebuffers(1, &m_fbo);
     if (m_textures[0])
         gl::DeleteTextures(2, m_textures);
 }
 
-void finalComposite::update(const m::perspective &p,
+void composite::update(const m::perspective &p,
     const unsigned char *const colorGradingData)
 {
     const size_t width = p.width;
@@ -387,7 +358,7 @@ void finalComposite::update(const m::perspective &p,
     if (m_width != width || m_height != height) {
         m_width = width;
         m_height = height;
-        gl::BindTexture(format, m_textures[kFinal]);
+        gl::BindTexture(format, m_textures[kOutput]);
         gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA,
             GL_FLOAT, nullptr);
         gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -404,7 +375,7 @@ void finalComposite::update(const m::perspective &p,
     }
 }
 
-bool finalComposite::init(const m::perspective &p, GLuint depth,
+bool composite::init(const m::perspective &p, GLuint depth,
     const unsigned char *const colorGradingData)
 {
     m_width = p.width;
@@ -418,8 +389,8 @@ bool finalComposite::init(const m::perspective &p, GLuint depth,
     GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
-    // final composite
-    gl::BindTexture(format, m_textures[kFinal]);
+    // output composite
+    gl::BindTexture(format, m_textures[kOutput]);
     gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT,
         nullptr);
     gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -427,7 +398,7 @@ bool finalComposite::init(const m::perspective &p, GLuint depth,
     gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format,
-        m_textures[kFinal], 0);
+        m_textures[kOutput], 0);
 
     gl::BindTexture(format, depth);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
@@ -455,11 +426,11 @@ bool finalComposite::init(const m::perspective &p, GLuint depth,
     return true;
 }
 
-void finalComposite::bindWriting() {
+void composite::bindWriting() {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
 }
 
-GLuint finalComposite::texture(size_t index) const {
+GLuint composite::texture(size_t index) const {
     return m_textures[index];
 }
 
@@ -632,18 +603,20 @@ bool world::upload(const m::perspective &p, ::world *map) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
 
-    // final shader permutations
-    static const size_t finalCount = sizeof(finalPermutations)/sizeof(finalPermutations[0]);
-    m_finalMethods.resize(finalCount);
-    for (size_t i = 0; i < finalCount; i++) {
-        const auto &p = finalPermutations[i];
-        if (!m_finalMethods[i].init(generatePermutation(finalPermutationNames, p)))
-            neoFatal("failed to initialize final composite rendering method");
-        m_finalMethods[i].enable();
-        m_finalMethods[i].setColorTextureUnit(0);
-        m_finalMethods[i].setColorGradingTextureUnit(1);
-        m_finalMethods[i].setWVP(m_identity);
-    }
+    // composite shader
+    if (!m_compositeMethod.init())
+        neoFatal("failed to initialize composite rendering method");
+    m_compositeMethod.enable();
+    m_compositeMethod.setColorTextureUnit(0);
+    m_compositeMethod.setColorGradingTextureUnit(1);
+    m_compositeMethod.setWVP(m_identity);
+
+    // aa shader
+    if (!m_aaMethod.init())
+        neoFatal("failed to initialize aa rendering method");
+    m_aaMethod.enable();
+    m_aaMethod.setColorTextureUnit(0);
+    m_aaMethod.setWVP(m_identity);
 
     // geometry shader permutations
     static const size_t geomCount = sizeof(geomPermutations)/sizeof(geomPermutations[0]);
@@ -1227,23 +1200,33 @@ void world::compositePass(const pipeline &pl, ::world *map) {
         m_final.update(pl.perspective(), nullptr);
     }
 
-    // For the final pass it's important we output to the screen
-    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    if (r_fxaa) {
+        m_final.bindWriting();
+    } else {
+        gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    }
 
     GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     gl::ActiveTexture(GL_TEXTURE0);
-    gl::BindTexture(format, m_final.texture(finalComposite::kFinal));
+    gl::BindTexture(format, m_final.texture(composite::kOutput));
 
     gl::ActiveTexture(GL_TEXTURE1);
-    gl::BindTexture(GL_TEXTURE_3D, m_final.texture(finalComposite::kColorGrading));
+    gl::BindTexture(GL_TEXTURE_3D, m_final.texture(composite::kColorGrading));
 
-    const size_t index = finalCalculatePermutation();
-    auto &it = m_finalMethods[index];
-    it.enable();
-    it.setPerspective(pl.perspective());
+    m_compositeMethod.enable();
+    m_compositeMethod.setPerspective(pl.perspective());
     m_quad.render();
+
+    if (r_fxaa) {
+        gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        gl::ActiveTexture(GL_TEXTURE0);
+        gl::BindTexture(format, m_final.texture(composite::kOutput));
+        m_aaMethod.enable();
+        m_aaMethod.setPerspective(pl.perspective());
+        m_quad.render();
+    }
 }
 
 void world::render(const pipeline &pl, ::world *map) {
