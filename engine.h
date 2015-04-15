@@ -5,6 +5,7 @@
 #include "u_map.h"
 #include "u_string.h"
 #include "u_misc.h"
+#include "u_stack.h"
 
 /// Frame timer
 struct frameTimer {
@@ -115,6 +116,8 @@ protected:
 private:
     u::map<u::string, int> m_keyMap;
     u::map<u::string, bindFunction> m_binds;
+    u::stack<u::string, 32> m_textInputHistory;
+    size_t m_textInputHistoryCursor;
     u::string m_userPath;
     u::string m_gamePath;
     mouseState m_mouseState;

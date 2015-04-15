@@ -359,7 +359,8 @@ inline void context::controller::close() {
 static engine gEngine;
 
 inline engine::engine()
-    : m_screenWidth(0)
+    : m_textInputHistoryCursor(0)
+    , m_screenWidth(0)
     , m_screenHeight(0)
     , m_refreshRate(0)
     , m_context(nullptr)
@@ -610,14 +611,36 @@ void engine::swap() {
             if (CTX(m_context)->m_textState == textState::kInputting) {
                 if (e.key.keysym.sym == SDLK_RETURN) {
                     CTX(m_context)->endTextInput();
+                    // Keep input history if not empty-string
+                    if (CTX(m_context)->m_textString.size()) {
+                        if (m_textInputHistory.full()) {
+                            m_textInputHistory.pop_back();
+                            m_textInputHistoryCursor--;
+                        }
+                        m_textInputHistory.push_back(CTX(m_context)->m_textString);
+                        m_textInputHistoryCursor++;
+                    }
                 } else if (e.key.keysym.sym == SDLK_BACKSPACE) {
                     u::string &input = CTX(m_context)->m_textString;
                     if (input.size())
                         input.pop_back();
+                } else if (e.key.keysym.sym == SDLK_UP) {
+                    m_textInputHistoryCursor--;
+                    if (m_textInputHistoryCursor == size_t(-1))
+                        m_textInputHistoryCursor = m_textInputHistory.size() - 1;
+                    CTX(m_context)->m_textString =
+                        m_textInputHistory[m_textInputHistoryCursor];
+                } else if (e.key.keysym.sym == SDLK_DOWN) {
+                    m_textInputHistoryCursor++;
+                    if (m_textInputHistoryCursor >= m_textInputHistory.size())
+                        m_textInputHistoryCursor = 0;
+                    CTX(m_context)->m_textString =
+                        m_textInputHistory[m_textInputHistoryCursor];
                 }
                 break;
             } else if (e.key.keysym.sym == SDLK_SLASH) {
                 CTX(m_context)->begTextInput();
+                m_textInputHistoryCursor = m_textInputHistory.size();
                 break;
             }
             keyName = SDL_GetKeyName(e.key.keysym.sym);
