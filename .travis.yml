@@ -11,11 +11,11 @@ before_install:
     fi
   # clang 3.6.0
   - if [ "$CXX" == "clang++" ]; then
-      wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -;
+      echo "yes" | wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -;
       sudo add-apt-repository --yes 'deb http://llvm.org/apt/precise/ llvm-toolchain-precise main';
       sudo add-apt-repository --yes 'deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.6 main';
     fi
-  - sudo apt-get update -qq
+  - sudo apt-get update
 
   # SDL2
   - curl -O http://www.libsdl.org/release/SDL2-2.0.3.tar.gz
@@ -35,7 +35,7 @@ install:
     fi
 
 script:
-    - make
+    - make -j9
 
 notifications:
     irc:
