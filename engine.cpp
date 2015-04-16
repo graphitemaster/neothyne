@@ -477,6 +477,16 @@ bool engine::initContext() {
     // Hide the cursor for the window
     SDL_ShowCursor(0);
 
+    // Application icon
+    texture icon;
+    if (icon.load("icon")) {
+        SDL_Surface *iconSurface = SDL_CreateRGBSurfaceFrom((void *)icon.data(),
+            icon.width(), icon.height(), icon.bpp()*8, icon.pitch(),
+            0x0000FF, 0x00FF00, 0xFF0000, 0);
+        SDL_SetWindowIcon(ctx->m_window, iconSurface);
+        SDL_FreeSurface(iconSurface);
+    }
+
     // Find all gamepads:
     // We ignore events since we need to calculate the idle state of the joysticks
     // on the devices. These idles states are used to know when the joysticks are
@@ -529,6 +539,12 @@ bool engine::initData(int &argc, char **argv) {
     if (m_gamePath.find(u::kPathSep) == u::string::npos)
         m_gamePath += u::kPathSep;
 
+    // Verify that path even exists
+    if (!u::exists(m_gamePath, u::kDirectory)) {
+        u::print("Game directory `%s' doesn't exist", m_gamePath);
+        return false;
+    }
+
     // Get a path for the user
     auto get = SDL_GetPrefPath("Neothyne", "");
     m_userPath = get;
@@ -537,11 +553,11 @@ bool engine::initData(int &argc, char **argv) {
 
     // Verify all the paths exist for the user directory. If they don't exist
     // create them.
-    static const char *paths[] = {
+    static const char *kPaths[] = {
         "screenshots", "cache"
     };
 
-    for (auto &it : paths) {
+    for (auto &it : kPaths) {
         u::string path = m_userPath + it;
         if (u::exists(path, u::kDirectory))
             continue;

@@ -3,13 +3,18 @@ include include.mk
 # Change this to -m64 for Windows 64
 MACHINE ?= -m32
 
+# Resource compiler
+RES := windres
+
 # When building on a Linux system
 SYS := $(shell $(CC) -dumpmachine)
 ifneq (, $(findstring linux, $(SYS)))
 	ifeq ($(MACHINE),-m32)
 		CC = i686-w64-mingw32-gcc
+		RES = i686-w64-mingw32-windres
 	else
 		CC = x86_64-w64-mingw32-gcc
+		RES = x86_64-w64-mingw32-windres
 	endif
 endif
 
@@ -37,8 +42,11 @@ ENGINE_LDFLAGS = \
 	-lm \
 	-lSDL2
 
-$(GAME_BIN): $(GAME_OBJECTS)
-	$(CXX) $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@
+resources.o:
+	$(RES) neothyne.rc resources.o
+
+$(GAME_BIN): resources.o $(GAME_OBJECTS)
+	$(CXX) resources.o $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@
 
 .cpp.o:
 	$(CXX) -MD -c $(ENGINE_CXXFLAGS) $< -o $@
