@@ -15,7 +15,7 @@ before_install:
   # clang 3.6.0
   - if [ "$CXX" == "clang++" ]; then
       wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -;
-      sudo add-apt-repository --yes ppa:h-rayflood/llvm
+      sudo add-apt-repository --yes ppa:h-rayflood/llvm;
       sudo add-apt-repository --yes 'deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.6 main';
       sudo add-apt-repository --yes 'deb http://llvm.org/apt/precise/ llvm-toolchain-precise main';
     fi
