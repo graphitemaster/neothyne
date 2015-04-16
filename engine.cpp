@@ -535,8 +535,8 @@ bool engine::initData(int &argc, char **argv) {
         directory = nullptr;
     }
 
-    m_gamePath = directory ? directory : u::format(".%cgame%c", u::kPathSep, u::kPathSep);
-    if (m_gamePath.find(u::kPathSep) == u::string::npos)
+    m_gamePath = directory ? directory : u::format(".%cgame", u::kPathSep);
+    if (m_gamePath.end()[-1] != u::kPathSep)
         m_gamePath += u::kPathSep;
 
     // Verify that path even exists

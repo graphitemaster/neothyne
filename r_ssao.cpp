@@ -160,14 +160,15 @@ void ssao::update(const m::perspective &p) {
     size_t width = p.width / 2;
     size_t height = p.height / 2;
 
-    if (m_width != width || m_height != height) {
-        GLenum format = gl::has(gl::ARB_texture_rectangle)
-            ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
-        m_width = width;
-        m_height = height;
-        gl::BindTexture(format, m_textures[kBuffer]);
-        gl::TexImage2D(format, 0, GL_R16F, m_width, m_height, 0, GL_RED, GL_FLOAT, nullptr);
-    }
+    if (m_width == width && m_height == height)
+        return;
+
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    m_width = width;
+    m_height = height;
+    gl::BindTexture(format, m_textures[kBuffer]);
+    gl::TexImage2D(format, 0, GL_R16F, m_width, m_height, 0, GL_RED, GL_FLOAT, nullptr);
 }
 
 void ssao::destroy() {

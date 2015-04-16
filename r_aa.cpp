@@ -66,15 +66,16 @@ void aa::update(const m::perspective &p) {
     size_t width = p.width;
     size_t height = p.height;
 
-    if (m_width != width || m_height != height) {
-        GLenum format = gl::has(gl::ARB_texture_rectangle)
-            ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
-        m_width = width;
-        m_height = height;
+    if (m_width == width && m_height == height)
+        return;
 
-        gl::BindTexture(format, m_texture);
-        gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
-    }
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    m_width = width;
+    m_height = height;
+
+    gl::BindTexture(format, m_texture);
+    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
 }
 
 bool aa::init(const m::perspective &p) {

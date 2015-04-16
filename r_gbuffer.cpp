@@ -29,25 +29,26 @@ void gBuffer::update(const m::perspective &p) {
     size_t width = p.width;
     size_t height = p.height;
 
-    if (m_width != width || m_height != height) {
-        GLenum format = gl::has(gl::ARB_texture_rectangle)
-            ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
-        m_width = width;
-        m_height = height;
+    if (m_width == width && m_height != height)
+        return;
 
-        // diffuse + specular
-        gl::BindTexture(format, m_textures[kColor]);
-        gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    m_width = width;
+    m_height = height;
 
-        // normals + specular
-        gl::BindTexture(format, m_textures[kNormal]);
-        gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    // diffuse + specular
+    gl::BindTexture(format, m_textures[kColor]);
+    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
 
-        // depth
-        gl::BindTexture(format, m_textures[kDepth]);
-        gl::TexImage2D(format, 0, GL_DEPTH24_STENCIL8,
-            m_width, m_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
-    }
+    // normals + specular
+    gl::BindTexture(format, m_textures[kNormal]);
+    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+
+    // depth
+    gl::BindTexture(format, m_textures[kDepth]);
+    gl::TexImage2D(format, 0, GL_DEPTH24_STENCIL8,
+        m_width, m_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
 }
 
 bool gBuffer::init(const m::perspective &p) {
