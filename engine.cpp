@@ -528,14 +528,21 @@ bool engine::initData(int &argc, char **argv) {
         }
     }
 
-    // Verify the game directory even exists
-    if (directory && !u::exists(directory, u::kDirectory)) {
-        u::print("Game directory `%s' doesn't exist (falling back to .%cgame%c)\n",
-            directory, u::kPathSep, u::kPathSep);
-        directory = nullptr;
+    // Check if the game directory even exists. But fix it to the platforms
+    // path separator rules before verifying.
+    u::string fixedDirectory;
+    if (directory) {
+        fixedDirectory = u::fixPath(directory);
+        if (!u::exists(fixedDirectory, u::kDirectory)) {
+            u::print("Game directory `%s' doesn't exist (falling back to .%cgame%c)\n",
+                fixedDirectory, u::kPathSep, u::kPathSep);
+        }
     }
 
-    m_gamePath = directory ? directory : u::format(".%cgame", u::kPathSep);
+    m_gamePath = fixedDirectory.empty()
+        ? u::format(".%cgame", u::kPathSep) : fixedDirectory;
+
+    // Add trailing path separator
     if (m_gamePath.end()[-1] != u::kPathSep)
         m_gamePath += u::kPathSep;
 
@@ -549,6 +556,7 @@ bool engine::initData(int &argc, char **argv) {
     auto get = SDL_GetPrefPath("Neothyne", "");
     m_userPath = get;
     m_userPath.pop_back(); // Remove additional path separator
+    m_userPath = u::fixPath(m_userPath); // Fix path separator (w.r.t platform)
     SDL_free(get);
 
     // Verify all the paths exist for the user directory. If they don't exist

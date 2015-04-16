@@ -28,6 +28,8 @@ private:
     FILE *m_handle;
 };
 
+u::string fixPath(const u::string &path);
+
 enum pathType {
     kFile,
     kDirectory

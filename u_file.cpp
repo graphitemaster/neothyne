@@ -44,33 +44,40 @@ FILE *file::get() {
     return m_handle;
 }
 
-static inline u::string fixPath(const u::string &path) {
-#ifdef _WIN32
-    u::string fix(path);
-    const size_t size = fix.size();
-    for (size_t i = 0; i < size; i++) {
-        if (!strchr("/\\", fix[i]))
-            continue;
-        fix[i] = u::kPathSep;
-    }
+u::string fixPath(const u::string &path) {
+    u::string fix = path;
+    for (auto &it : fix)
+        if (strchr("/\\", it))
+            it = u::kPathSep;
     return fix;
-#endif
-    return path;
 }
 
 // file system stuff
 bool exists(const u::string &path, pathType type) {
-    if (type == kFile) {
-        // fixPath not called since u::fopen fixes the path
-        return u::fopen(path, "rb").get();
-    }
+    if (type == kFile)
+        return dir::isFile(path);
 
     // type == kDirectory
+#ifndef _WIN32
     struct stat info;
-    if (stat(fixPath(path).c_str(), &info) != 0)
+    if (stat(path.c_str(), &info) != 0)
         return false; // Couldn't stat directory
-    if (!(info.st_mode & S_IFDIR)) // S_ISDIR not suported everywhere
+    if (!(info.st_mode & S_IFDIR))
         return false; // Not a directory
+#else
+    // _stat does not like trailing path separators
+    u::string strip = path;
+    if (strip.end()[-1] == u::kPathSep)
+        strip.pop_back();
+    struct _stat info;
+    if (_stat(strip.c_str(), &info) != 0)
+        return false;
+#ifndef S_IFDIR
+#  define S_IFDIR _S_IFDIR
+#endif
+    if (!(info.st_mode & _S_IFDIR))
+        return false;
+#endif
     return true;
 }
 
