@@ -3,6 +3,9 @@ include include.mk
 # Change this to -m64 for Windows 64
 MACHINE ?= -m32
 
+# Change this to pe-x86-64 for Windows 64
+RESFLAGS = -F pe-x86-64
+
 # Resource compiler
 RES := windres
 
@@ -12,11 +15,11 @@ ifneq (, $(findstring linux, $(SYS)))
 	ifeq ($(MACHINE),-m32)
 		CC = i686-w64-mingw32-gcc
 		RES = i686-w64-mingw32-windres
-		RESFLAGS = pe-i386
+		RESFLAGS = -F pe-i386
 	else
 		CC = x86_64-w64-mingw32-gcc
 		RES = x86_64-w64-mingw32-windres
-		RESFLAGS = pe-x86-64
+		RESFLAGS = -F pe-x86-64
 	endif
 endif
 
@@ -45,7 +48,7 @@ ENGINE_LDFLAGS = \
 	-lSDL2
 
 resources.o:
-	$(RES) -F $(RESFLAGS) neothyne.rc resources.o
+	$(RES) $(RESFLAGS) neothyne.rc resources.o
 
 $(GAME_BIN): resources.o $(GAME_OBJECTS)
 	$(CXX) resources.o $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@
