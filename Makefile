@@ -32,4 +32,8 @@ $(GAME_BIN): $(GAME_OBJECTS)
 			-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
 		rm -f $*.d
 
+clean:
+	rm -f $(GAME_OBJECTS) $(GAME_OBJECTS:.o=.P)
+	rm -f $(GAME_BIN)
+
 -include *.P

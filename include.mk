@@ -60,6 +60,3 @@ GAME_DIR = game
 
 all: $(GAME_BIN)
 
-clean:
-	rm -f $(GAME_OBJECTS) $(GAME_OBJECTS:.o=.P)
-	rm -f $(GAME_BIN)
