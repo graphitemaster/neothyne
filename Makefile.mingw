@@ -4,7 +4,7 @@ include include.mk
 MACHINE ?= -m32
 
 # Change this to pe-x86-64 for Windows 64
-RESFLAGS := -F pe-x86-64
+RESFLAGS := -F pe-i386
 
 # Resource compiler
 RES := windres
