@@ -78,11 +78,7 @@ An imgur album of screenshots showing the engine and development of it can
 be found [here](http://imgur.com/a/Y3Rfi)
 
 ## Build
-Neothyne depends on the following libraries:
-
-* SDL2
-
-Verify that you have this installed, then run `make'.
+Please check the [build documentation](docs/BUILDING.md)
 
 ## System requirements
 Neothyne requires a GPU which is capable of GL 3.0. Modern low profile GPUs may
