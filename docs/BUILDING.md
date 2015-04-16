@@ -4,7 +4,7 @@ Neothyne only depends on SDL2. Make sure you have it installed correctly for you
 tool chain and Neothyne should build out of the box.
 
 ## Linux
-Linux users can built Neothyne from source by invoking make.
+Linux users can build Neothyne from source by invoking make.
 ```
 $ make
 ```
