@@ -32,7 +32,7 @@ static void setBinds() {
     });
 
     neoBindSet("EscapeDn", []() {
-        if (gPlaying && gMenuState & kMenuMain) {
+        if (gPlaying && (gMenuState & kMenuMain)) {
             if (gMenuState & kMenuConsole) {
                 gMenuState = kMenuConsole;
             } else {
@@ -40,19 +40,19 @@ static void setBinds() {
             }
         } else if (!(gMenuState & kMenuEdit) && !(gMenuState & kMenuColorGrading)) {
             // If the console is opened leave it open
+            if (!(gMenuState & kMenuMain)) {
+                neoRelativeMouse(false);
+                neoCenterMouse();
+            }
             gMenuState = (gMenuState & kMenuConsole)
                 ? kMenuMain | kMenuConsole
                 : kMenuMain;
         } else {
-            if (gMenuState & kMenuEdit)
-                gMenuState &= ~kMenuEdit;
-            else if (gMenuState & kMenuColorGrading)
-                gMenuState &= ~kMenuColorGrading;
-            else if (gMenuState & kMenuDeveloper)
-                gMenuState &= ~kMenuDeveloper;
+            gMenuState &= ~kMenuEdit;
+            gMenuState &= ~kMenuColorGrading;
+            gMenuState &= ~kMenuDeveloper;
         }
-        neoRelativeMouse(gPlaying && !(gMenuState & kMenuMain));
-        neoCenterMouse();
+        neoRelativeMouse(gPlaying && (gMenuState & ~kMenuConsole) == 0);
         menuReset();
     });
 
@@ -263,7 +263,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             pp.fov = 45.0f;
             p.setPerspective(pp);
             p.setWorld({0, 0, 0});
-            p.setPosition({-2.5f, 0, -35});
+            p.setPosition({0, 0, -35});
             p.setScale({1, 1, 1});
 
             gui::drawModel(x, y, w, h, "models/logo", p);
