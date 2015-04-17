@@ -11,7 +11,6 @@
 
 #include "u_file.h"
 #include "u_misc.h"
-#include "u_pair.h"
 
 // Game globals
 bool gRunning = true;
@@ -25,17 +24,6 @@ m::perspective gPerspective;
 VAR(float, cl_fov, "field of view", 45.0f, 270.0f, 90.0f);
 VAR(float, cl_nearp, "near plane", 0.0f, 10.0f, 0.1f);
 VAR(float, cl_farp, "far plane", 128.0f, 4096.0f, 2048.0f);
-
-static u::pair<size_t, size_t> scaleImage(size_t iw, size_t ih, size_t w, size_t h) {
-    float ratio = float(iw) / float(ih);
-    size_t ow = w;
-    size_t oh = h;
-    if (w > h)
-        oh = size_t(float(ow) / ratio);
-    else
-        ow = size_t(float(oh) * ratio);
-    return { ow, oh };
-}
 
 static void setBinds() {
     neoBindSet("MouseDnL", []() {
@@ -245,8 +233,8 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
 
             p.setPerspective(pp);
             p.setWorld({0, 0, 0});
-            p.setPosition({0, 0, -40});
-            p.setScale({25, 25, 25});
+            p.setPosition({0, 0, -1.5f});
+            p.setScale({1, 1, 1});
 
             gui::drawModel(128 / neoWidth(),
                            neoHeight() / 128 + 16, // 16 to keep above command line
@@ -263,12 +251,21 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             gui::drawLine(neoWidth() / 2 - 10, neoHeight() / 2, neoWidth() / 2 - 4, neoHeight() / 2, 2, 0xFFFFFFE1);
         }
         if (!gPlaying) {
-            const size_t w = (neoWidth() / 3); // 1/3rd the screen width
-            const size_t h = (neoHeight() / 3); // 1/3rd the screen height
+            const size_t w = (neoWidth() / 2);
+            const size_t h = (neoHeight() / 3);
             const size_t x = neoWidth() / 2 - w / 2; // Center on X
             const size_t y = neoHeight() - h;
-            auto size = scaleImage(640, 200, w, h); // resize (while preserving aspect ratio)
-            gui::drawImage(x, y, u::get<0>(size), u::get<1>(size), "<nocompress>textures/menu_logo", true);
+
+            r::pipeline p;
+            m::perspective pp = gPerspective;
+            pp.width = w;
+            pp.height = h;
+            p.setPerspective(pp);
+            p.setWorld({0, 0, 0});
+            p.setPosition({-2.5f, 0, -15});
+            p.setScale({1, 1, 1});
+
+            gui::drawModel(x, y, w, h, "models/logo", p);
         }
 
         menuUpdate();
