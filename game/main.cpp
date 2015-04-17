@@ -230,10 +230,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
         if (!gPlaying) {
             // Render the model (for testing only)
             r::pipeline p;
-            p.setPerspective(gPerspective);
-            p.setWorld({0, 0, 0});
-            p.setPosition({0, 0, -40});
-            p.setScale({25, 25, 25});
+            m::perspective pp = gPerspective;
 
             const m::vec3 rot(0.0f, -(gPipeline.time() / 10.0f), 0.0f);
             m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
@@ -241,10 +238,20 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             ry.getMatrix(&rotate);
             p.setRotate(rotate);
 
+            int w = neoWidth() / 12;
+            int h = neoHeight() / 12;
+            pp.width = w;
+            pp.height = h;
+
+            p.setPerspective(pp);
+            p.setWorld({0, 0, 0});
+            p.setPosition({0, 0, -40});
+            p.setScale({25, 25, 25});
+
             gui::drawModel(128 / neoWidth(),
                            neoHeight() / 128 + 16, // 16 to keep above command line
-                           neoWidth() / 12,
-                           neoHeight() / 12, "models/icon", p);
+                           w,
+                           h, "models/icon", p);
         }
 
         // Must come first as we want the menu to go over the cross hair if it's
