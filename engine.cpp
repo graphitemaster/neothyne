@@ -480,9 +480,19 @@ bool engine::initContext() {
     // Application icon
     texture icon;
     if (icon.load("icon")) {
-        SDL_Surface *iconSurface = SDL_CreateRGBSurfaceFrom((void *)icon.data(),
-            icon.width(), icon.height(), icon.bpp()*8, icon.pitch(),
-            0x0000FF, 0x00FF00, 0xFF0000, 0);
+        SDL_Surface *iconSurface = nullptr;
+        if (icon.bpp() == 4) {
+            iconSurface = SDL_CreateRGBSurfaceFrom((void *)icon.data(),
+                icon.width(), icon.height(), icon.bpp()*8, icon.pitch(),
+                0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+        } else if (icon.bpp() == 3) {
+            iconSurface = SDL_CreateRGBSurfaceFrom((void *)icon.data(),
+                icon.width(), icon.height(), icon.bpp()*8, icon.pitch(),
+                0x0000FF, 0x00FF00, 0xFF0000, 0);
+        } else {
+            neoFatal("Application icon must be 3bpp or 4bpp");
+            return false;
+        }
         SDL_SetWindowIcon(ctx->m_window, iconSurface);
         SDL_FreeSurface(iconSurface);
     }
