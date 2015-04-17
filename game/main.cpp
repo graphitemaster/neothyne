@@ -232,8 +232,8 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             r::pipeline p;
             p.setPerspective(gPerspective);
             p.setWorld({0, 0, 0});
-            p.setPosition({0, 0, -30});
-            p.setScale({20, 20, 20});
+            p.setPosition({0, 0, -40});
+            p.setScale({25, 25, 25});
 
             const m::vec3 rot(0.0f, -(gPipeline.time() / 10.0f), 0.0f);
             m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
@@ -243,8 +243,8 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
 
             gui::drawModel(128 / neoWidth(),
                            neoHeight() / 128 + 16, // 16 to keep above command line
-                           neoWidth() / 16,
-                           neoHeight() / 16, "models/icon", p);
+                           neoWidth() / 12,
+                           neoHeight() / 12, "models/icon", p);
         }
 
         // Must come first as we want the menu to go over the cross hair if it's
