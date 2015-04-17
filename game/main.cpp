@@ -260,9 +260,10 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             m::perspective pp = gPerspective;
             pp.width = w;
             pp.height = h;
+            pp.fov = 45.0f;
             p.setPerspective(pp);
             p.setWorld({0, 0, 0});
-            p.setPosition({-2.5f, 0, -15});
+            p.setPosition({-2.5f, 0, -35});
             p.setScale({1, 1, 1});
 
             gui::drawModel(x, y, w, h, "models/logo", p);
