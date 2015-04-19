@@ -1023,9 +1023,14 @@ static int entryPoint(int argc, char **argv) {
     auto version = (const char *)gl::GetString(GL_VERSION);
     auto shader = (const char *)gl::GetString(GL_SHADING_LANGUAGE_VERSION);
 
-    // Intel online texture compression is slow
-    if (strstr(vendor, "Intel"))
-        gl::Hint(GL_TEXTURE_COMPRESSION_HINT, GL_FASTEST);
+    gl::Hint(GL_TEXTURE_COMPRESSION_HINT, GL_FASTEST);
+
+    // Intel online texture compression is slow (even with the compression hint.)
+    if (strstr(vendor, "Intel")) {
+        // Silently fails if not compiled with -DDXT_COMPRESSOR
+        auto &dxtCompressor = varGet<int>("r_dxt_compressor");
+        dxtCompressor.set(1);
+    }
 
     u::print("OS: %s\nVendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\nExtensions:\n",
         gOperatingSystem, vendor, renderer, version, shader);

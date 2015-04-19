@@ -23,6 +23,12 @@ ifneq (, $(findstring linux, $(SYS)))
 	endif
 endif
 
+ifneq (, $(findstring -g, $(CXXFLAGS)))
+	STRIP = true
+else
+	STRIP = strip
+endif
+
 CXX = $(CC)
 CXXFLAGS = \
 	-std=c++11 \
@@ -34,6 +40,7 @@ CXXFLAGS = \
 	-fno-rtti \
 	-I. \
 	-DDEBUG_GL \
+	-DDXT_COMPRESSOR \
 	-O3 \
 	$(MACHINE) \
 	-fno-omit-frame-pointer
@@ -52,6 +59,7 @@ resources.o:
 
 $(GAME_BIN): resources.o $(GAME_OBJECTS)
 	$(CXX) resources.o $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@
+	$(STRIP) $@
 
 .cpp.o:
 	$(CXX) -MD -c $(ENGINE_CXXFLAGS) $< -o $@

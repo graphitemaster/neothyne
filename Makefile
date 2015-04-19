@@ -12,7 +12,14 @@ CXXFLAGS = \
 	-fno-rtti \
 	-I. \
 	-DDEBUG_GL \
+	-DDXT_COMPRESSOR \
 	-O3
+
+ifneq (, $(findstring -g, $(CXXFLAGS)))
+	STRIP = true
+else
+	STRIP = strip
+endif
 
 ENGINE_CXXFLAGS = \
 	$(CXXFLAGS) \
@@ -24,6 +31,7 @@ ENGINE_LDFLAGS = \
 
 $(GAME_BIN): $(GAME_OBJECTS)
 	$(CXX) $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@
+	$(STRIP) $@
 
 .cpp.o:
 	$(CXX) -MD -c $(ENGINE_CXXFLAGS) $< -o $@

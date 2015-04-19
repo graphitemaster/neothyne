@@ -9,6 +9,8 @@
 #include "u_algorithm.h"
 #include "u_misc.h"
 
+#include "m_const.h"
+
 VAR(int, r_texcomp, "texture compression", 0, 1, 1);
 VAR(int, r_texcompcache, "cache compressed textures", 0, 1, 1);
 VAR(int, r_aniso, "anisotropic filtering", 0, 16, 4);
@@ -16,6 +18,13 @@ VAR(int, r_bilinear, "bilinear filtering", 0, 1, 1);
 VAR(int, r_trilinear, "trilinear filtering", 0, 1, 1);
 VAR(int, r_mipmaps, "mipmaps", 0, 1, 1);
 VAR(int, r_dxt_optimize, "DXT endpoints optimization", 0, 1, 1);
+
+#ifdef DXT_COMPRESSOR
+VAR(int, r_dxt_compressor, "DXT compressor", 0, 1, 1);
+#else
+VAR(int, r_dxt_compressor, "DXT compressor", 0, 0, 0);
+#endif
+
 VAR(float, r_texquality, "texture quality", 0.0f, 1.0f, 1.0f);
 
 namespace r {
@@ -146,6 +155,242 @@ static size_t dxtOptimize(unsigned char *data, size_t width, size_t height) {
     return count;
 }
 
+#ifdef DXT_COMPRESSOR
+
+#ifdef DXT_HIGHP
+typedef double real;
+#else
+typedef float real;
+#endif
+
+// Color line refinement iterations:
+// Minimum is 1
+// Default is 3
+//
+// The maximum really has a lot to do with how much error you'll eventually
+// introduce due to precision of the `real' type used in the color line algorithm.
+//
+// It's suggested you use #define DXT_HIGHP if you want to increase this.
+static constexpr size_t kRefineIterations = 3;
+
+template <size_t C>
+static inline void dxtComputeColorLine(const unsigned char *const uncompressed,
+    float (&point)[3], float (&direction)[3])
+{
+    static constexpr real kSixteen = real(16.0);
+    static constexpr real kOne = real(1.0);
+    static constexpr real kZero = real(0.0);
+    static constexpr real kInv16 = kOne / kSixteen;
+    real sumR = kZero, sumG = kZero, sumB = kZero;
+    real sumRR = kZero, sumGG = kZero, sumBB = kZero;
+    real sumRG = kZero, sumRB = kZero, sumGB = kZero;
+
+    for (size_t i = 0; i < 16*C; i += C) {
+        sumR += uncompressed[i+0];
+        sumG += uncompressed[i+1];
+        sumB += uncompressed[i+2];
+        sumRR += uncompressed[i+0] * uncompressed[i+0];
+        sumGG += uncompressed[i+1] * uncompressed[i+1];
+        sumBB += uncompressed[i+2] * uncompressed[i+2];
+        sumRG += uncompressed[i+0] * uncompressed[i+1];
+        sumRB += uncompressed[i+0] * uncompressed[i+2];
+        sumGB += uncompressed[i+1] * uncompressed[i+2];
+    }
+    // Average all sums
+    sumR *= kInv16;
+    sumG *= kInv16;
+    sumB *= kInv16;
+    // Convert squares to squares of the value minus their average
+    sumRR -= kSixteen * sumR * sumR;
+    sumGG -= kSixteen * sumG * sumG;
+    sumBB -= kSixteen * sumB * sumB;
+    sumRG -= kSixteen * sumR * sumG;
+    sumRB -= kSixteen * sumR * sumB;
+    sumGB -= kSixteen * sumG * sumB;
+    // The point on the color line is the average
+    point[0] = sumR;
+    point[1] = sumG;
+    point[2] = sumB;
+    // RYGDXT covariance matrix
+    direction[0] = real(1.0);
+    direction[1] = real(2.718281828);
+    direction[2] = real(3.141592654);
+    for (size_t i = 0; i < kRefineIterations; ++i) {
+        sumR = direction[0];
+        sumG = direction[1];
+        sumB = direction[2];
+        direction[0] = float(sumR*sumRR + sumG*sumRG + sumB*sumRB);
+        direction[1] = float(sumR*sumRG + sumG*sumGG + sumB*sumGB);
+        direction[2] = float(sumR*sumRB + sumG*sumGB + sumB*sumBB);
+    }
+}
+
+template <size_t C>
+static inline void dxtLSEMasterColorsClamp(uint16_t (&colors)[2],
+    const unsigned char *const uncompressed)
+{
+    float sumx1[] = { 0.0f, 0.0f, 0.0f };
+    float sumx2[] = { 0.0f, 0.0f, 0.0f };
+    dxtComputeColorLine<C>(uncompressed, sumx1, sumx2);
+
+    float length = 1.0f / (0.00001f + sumx2[0]*sumx2[0] + sumx2[1]*sumx2[1] + sumx2[2]*sumx2[2]);
+    // Calcualte range for vector values
+    float dotMax = sumx2[0] * uncompressed[0] +
+                   sumx2[1] * uncompressed[1] +
+                   sumx2[2] * uncompressed[2];
+    float dotMin = dotMax;
+    for (size_t i = 1; i < 16; ++i) {
+        const float dot = sumx2[0] * uncompressed[i*C+0] +
+                          sumx2[1] * uncompressed[i*C+1] +
+                          sumx2[2] * uncompressed[i*C+2];
+        if (dot < dotMin)
+            dotMin = dot;
+        else if (dot > dotMax)
+            dotMax = dot;
+    }
+
+    // Calculate offset from the average location
+    float dot = sumx2[0]*sumx1[0] + sumx2[1]*sumx1[1] + sumx2[2]*sumx1[2];
+    dotMin -= dot;
+    dotMax -= dot;
+    dotMin *= length;
+    dotMax *= length;
+    // Build the master colors
+    uint16_t c0[3];
+    uint16_t c1[3];
+    for (size_t i = 0; i < 3; ++i) {
+        c0[i] = m::clamp(int(0.5f + sumx1[i] + dotMax * sumx2[i]), 0, 255);
+        c1[i] = m::clamp(int(0.5f + sumx1[i] + dotMin * sumx2[i]), 0, 255);
+    }
+    // Down sample the master colors to RGB565
+    const uint16_t i = dxtPack565(c0[0], c0[1], c0[2]);
+    const uint16_t j = dxtPack565(c1[0], c1[1], c1[2]);
+    if (i > j)
+        colors[0] = i, colors[1] = j;
+    else
+        colors[1] = i, colors[0] = j;
+}
+
+template <size_t C>
+static inline void dxtCompressColorBlock(const unsigned char *const uncompressed, unsigned char (&compressed)[8]) {
+    uint16_t encodeColor[2];
+    dxtLSEMasterColorsClamp<C>(encodeColor, uncompressed);
+    // Store 565 color
+    compressed[0] = encodeColor[0] & 255;
+    compressed[1] = (encodeColor[0] >> 8) & 255;
+    compressed[2] = encodeColor[1] & 255;
+    compressed[3] = (encodeColor[1] >> 8) & 255;
+    for (size_t i = 4; i < 8; i++)
+        compressed[i] = 0;
+
+    // Reconstitute master color vectors
+    uint16_t c0[3];
+    uint16_t c1[3];
+    dxtUnpack565(encodeColor[0], c0[0], c0[1], c0[2]);
+    dxtUnpack565(encodeColor[1], c1[0], c1[1], c1[2]);
+
+    float colorLine[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float length = 0.0f;
+    for (size_t i = 0; i < 3; ++i) {
+        colorLine[i] = float(c1[i] - c0[i]);
+        length += colorLine[i] * colorLine[i];
+    }
+    if (length > 0.0f)
+        length = 1.0f / length;
+    // Scaling
+    for (size_t i = 0; i < 3; i++)
+        colorLine[i] *= length;
+    // Offset portion of dot product
+    const float dotOffset = colorLine[0]*c0[0] + colorLine[1]*c0[1] + colorLine[2]*c0[2];
+    // Store rest of bits
+    size_t nextBit = 8*4;
+    for (size_t i = 0; i < 16; ++i) {
+        // Find the dot product for this color, to place it on the line with
+        // A range of [-1, 1]
+        float dotProduct = colorLine[0] * uncompressed[i*C+0] +
+                           colorLine[1] * uncompressed[i*C+1] +
+                           colorLine[2] * uncompressed[i*C+2] - dotOffset;
+        // Map to [0, 3]
+        int nextValue = m::clamp(int(dotProduct * 3.0f + 0.5f), 0, 3);
+        compressed[nextBit >> 3] |= "\x0\x2\x3\x1"[nextValue] << (nextBit & 7);
+        nextBit += 2;
+    }
+}
+
+static inline void dxtCompressAlphaBlock(const unsigned char *const uncompressed, unsigned char (&compressed)[8]) {
+    unsigned char a0 = uncompressed[3];
+    unsigned char a1 = uncompressed[3];
+    for (size_t i = 4+3; i < 16*4; i += 4) {
+        if (uncompressed[i] > a0) a0 = uncompressed[i];
+        if (uncompressed[i] < a1) a1 = uncompressed[i];
+    }
+    compressed[0] = a0;
+    compressed[1] = a1;
+    for (size_t i = 2; i < 8; i++)
+        compressed[i] = 0;
+    size_t nextBit = 8*2;
+    const float scale = 7.9999f / (a0 - a1);
+    for (size_t i = 3; i < 16*4; i += 4) {
+        const unsigned char value = "\x1\x7\x6\x5\x4\x3\x2\x0"[size_t((uncompressed[i] - a1) * scale) & 7];
+        compressed[nextBit >> 3] |= value << (nextBit & 7);
+        // Spans two bytes
+        if ((nextBit & 7) > 5)
+            compressed[1 + (nextBit >> 3)] |= value >> (8 - (nextBit & 7));
+        nextBit += 3;
+    }
+}
+
+template <dxtType T>
+static u::vector<unsigned char> dxtCompress(const unsigned char *const uncompressed,
+    size_t width, size_t height, size_t channels)
+{
+    size_t index = 0;
+    const size_t chanStep = channels < 3 ? 0 : 1;
+    const int hasAlpha = 1 - (channels & 1);
+    const size_t outSize = ((width + 3) >> 2) * ((height + 3) >> 2) * (T == kDXT1 ? 8 : 16);
+    u::vector<unsigned char> compressed(outSize);
+    unsigned char ublock[16 * (T == kDXT1 ? 3 : 4)];
+    unsigned char cblock[8];
+    for (size_t j = 0; j < height; j += 4) {
+        for (size_t i = 0; i < width; i += 4) {
+            size_t z = 0;
+            const size_t my = j + 4 >= height ? height - j : 4;
+            const size_t mx = i + 4 >= width ? width - i : 4;
+            for (size_t y = 0; y < my; ++y) {
+                for (size_t x = 0; x < mx; ++x) {
+                    for (size_t p = 0; p < 3; ++p)
+                        ublock[z++] = uncompressed[((((j+y)*width)*channels)+((i+x)*channels))+(chanStep * p)];
+                    if (T == kDXT5)
+                        ublock[z++] = hasAlpha * uncompressed[(j+y)*width*channels+(i+x)*channels+channels-1] + (1 - hasAlpha) * 255;
+                }
+                for (size_t x = mx; x < 4; ++x)
+                    for (size_t p = 0; p < (T == kDXT1 ? 3 : 4); ++p)
+                        ublock[z++] = ublock[p];
+            }
+            for (size_t y = my; y < 4; ++y)
+                for (size_t x = 0; x < 4; ++x)
+                    for (size_t p = 0; p < (T == kDXT1 ? 3 : 4); ++p)
+                        ublock[z++] = ublock[p];
+            if (T == kDXT5) {
+                dxtCompressAlphaBlock(ublock, cblock);
+                for (size_t x = 0; x < 8; ++x)
+                    compressed[index++] = cblock[x];
+            }
+            dxtCompressColorBlock<(T == kDXT1 ? 3 : 4)>(ublock, cblock);
+            for (size_t x = 0; x < 8; ++x)
+                compressed[index++] = cblock[x];
+        }
+    }
+    return compressed;
+}
+
+template u::vector<unsigned char> dxtCompress<kDXT1>(const unsigned char *const uncompressed,
+    size_t width, size_t height, size_t channels);
+template u::vector<unsigned char> dxtCompress<kDXT5>(const unsigned char *const uncompressed,
+    size_t width, size_t height, size_t channels);
+
+#endif //! DXT_COMPRESSOR
+
 static const unsigned char kTextureCacheVersion = 0x02;
 
 struct textureCacheHeader {
@@ -258,6 +503,67 @@ static bool readCache(texture &tex, GLuint &internal) {
     return true;
 }
 
+static bool writeCacheData(textureFormat format,
+                           size_t texSize,
+                           const u::string &cacheString,
+                           const unsigned char *const compressedData,
+                           size_t compressedWidth,
+                           size_t compressedHeight,
+                           size_t compressedSize,
+                           GLuint internal,
+                           const char *from = "driver")
+{
+    // Build the header
+    textureCacheHeader head;
+    head.version = kTextureCacheVersion;
+    head.width = u::endianSwap(compressedWidth);
+    head.height = u::endianSwap(compressedHeight);
+    head.internal = u::endianSwap(internal);
+    head.format = u::endianSwap(format);
+
+    // Prepare the data
+    u::vector<unsigned char> data;
+    data.resize(sizeof(head) + compressedSize);
+    memcpy(&data[0], &head, sizeof(head));
+
+    // Copy the compressed image
+    memcpy(&data[0] + sizeof(head), compressedData, compressedSize);
+
+    // Apply DXT optimizations if we can
+    const bool dxt = internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
+                     internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+
+    size_t dxtOptimCount = 0;
+    if (r_dxt_optimize && dxt) {
+        dxtOptimCount = (internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT)
+            ? dxtOptimize<kDXT1>(&data[0] + sizeof(head), compressedWidth, compressedHeight)
+            : dxtOptimize<kDXT5>(&data[0] + sizeof(head), compressedWidth, compressedHeight);
+    }
+
+    u::print("[cache] => wrote %.50s... %s (compressed %s to %s with %s compressor)",
+        cacheString,
+        cacheFormat(internal),
+        sizeMetric(texSize),
+        sizeMetric(compressedSize),
+        from
+    );
+
+    if (dxt && dxtOptimCount) {
+        const float blockCount = (compressedWidth / 4.0f) * (compressedHeight / 4.0f);
+        const float blockDifference = blockCount - dxtOptimCount;
+        const float blockPercent = (blockDifference / blockCount) * 100.0f;
+        u::print(" (optimized endpoints in %.2f%% of blocks)",
+            sizeMetric(texSize),
+            sizeMetric(compressedSize),
+            blockPercent
+        );
+    }
+    u::print("\n");
+
+    // Write it out
+    return u::write(data, neoUserPath() + cacheString);
+}
+
 static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     if (!r_texcompcache)
         return false;
@@ -303,54 +609,13 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     gl::GetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &compressedWidth);
     gl::GetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &compressedHeight);
 
-    // Build the header
-    textureCacheHeader head;
-    head.version = kTextureCacheVersion;
-    head.width = u::endianSwap(compressedWidth);
-    head.height = u::endianSwap(compressedHeight);
-    head.internal = u::endianSwap(internal);
-    head.format = u::endianSwap(tex.format());
-
-    // Prepare the data
-    u::vector<unsigned char> data;
-    data.resize(sizeof(head) + compressedSize);
-    memcpy(&data[0], &head, sizeof(head));
-
     // Read the compressed image
-    gl::GetCompressedTexImage(GL_TEXTURE_2D, 0, &data[0] + sizeof(head));
+    u::vector<unsigned char> compressedData;
+    compressedData.resize(compressedSize);
+    gl::GetCompressedTexImage(GL_TEXTURE_2D, 0, &compressedData[0]);
 
-    // Apply DXT optimizations if we can
-    const bool dxt = internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
-                     internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-
-    size_t dxtOptimCount = 0;
-    if (r_dxt_optimize && dxt) {
-        dxtOptimCount = (internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT)
-            ? dxtOptimize<kDXT1>(&data[0] + sizeof(head), compressedWidth, compressedHeight)
-            : dxtOptimize<kDXT5>(&data[0] + sizeof(head), compressedWidth, compressedHeight);
-    }
-
-    u::print("[cache] => wrote %.50s... %s (compressed %s to %s)",
-        cacheString,
-        cacheFormat(head.internal),
-        sizeMetric(tex.size()),
-        sizeMetric(compressedSize)
-    );
-
-    if (dxt && dxtOptimCount) {
-        const float blockCount = (compressedWidth / 4.0f) * (compressedHeight / 4.0f);
-        const float blockDifference = blockCount - dxtOptimCount;
-        const float blockPercent = (blockDifference / blockCount) * 100.0f;
-        u::print(" (optimized endpoints in %.2f%% of blocks)",
-            sizeMetric(tex.size()),
-            sizeMetric(compressedSize),
-            blockPercent
-        );
-    }
-    u::print("\n");
-
-    // Write it to disk!
-    return u::write(data, file);
+    return writeCacheData(tex.format(), tex.size(), cacheString, &compressedData[0],
+        compressedWidth, compressedHeight, compressedSize, internal);
 }
 
 struct queryFormat {
@@ -440,19 +705,29 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
                 case kTexFormatBGRA:
                     tex.convert<kTexFormatRGBA>();
                 case kTexFormatRGBA:
-                    return queryFormat(GL_RGBA, R_TEX_DATA_RGBA,
-                        bptc ? GL_COMPRESSED_RGBA_BPTC_UNORM_ARB : GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
+                    if (bptc || s3tc) {
+                        return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, bptc
+                            ? GL_COMPRESSED_RGBA_BPTC_UNORM_ARB
+                            : GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
+                    }
+                    break;
                 case kTexFormatBGR:
                     tex.convert<kTexFormatRGB>();
                 case kTexFormatRGB:
-                    if (bptc)
-                        return queryFormat(GL_RGB, R_TEX_DATA_RGB, GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB);
-                    // Extend RGB->RGBA for DXT1
-                    return queryFormat(GL_RGB, R_TEX_DATA_RGB, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
+                    if (bptc || s3tc) {
+                        return queryFormat(GL_RGB, R_TEX_DATA_RGB, bptc
+                            ? GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB
+                            : GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
+                    }
+                    break;
                 case kTexFormatRG:
-                    return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
+                    if (rgtc)
+                        return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
+                    break;
                 case kTexFormatLuminance:
-                    return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
+                    if (rgtc)
+                        return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
+                    break;
                 default:
                     break;
             }
@@ -601,20 +876,56 @@ bool texture2D::upload() {
             if (!query)
                 return false;
             format = *query;
-            gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_texture));
-            gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_texture.pitch() / m_texture.bpp());
-            gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
-                m_texture.height(), 0, format.format, format.data, m_texture.data());
-            gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-            gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
 
-            if (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
-                format.internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT)
+#ifdef DXT_COMPRESSOR
+            // Use our DXT compressor instead of the driver
+            if (r_dxt_compressor &&
+                (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
+                 format.internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT))
             {
-                needsCache = false;
-                cache(format.internal);
-                if (!useCache())
+                u::vector<unsigned char> compressed;
+                if (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) {
+                    compressed = dxtCompress<kDXT1>(m_texture.data(), m_texture.width(),
+                        m_texture.height(), m_texture.bpp());
+                } else {
+                    compressed = dxtCompress<kDXT5>(m_texture.data(), m_texture.width(),
+                        m_texture.height(), m_texture.bpp());
+                }
+
+                // Write cache data
+                const u::string cacheString = u::format("cache%c%s", u::kPathSep,
+                    m_texture.hashString());
+                if (!writeCacheData(m_texture.format(),
+                                    m_texture.size(),
+                                    cacheString,
+                                    &compressed[0],
+                                    m_texture.width(),
+                                    m_texture.height(),
+                                    compressed.size(),
+                                    format.internal,
+                                    "our") || !useCache())
+                {
                     neoFatal("failed to cache");
+                }
+            }
+            else
+#endif
+            {
+                gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_texture));
+                gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_texture.pitch() / m_texture.bpp());
+                gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
+                    m_texture.height(), 0, format.format, format.data, m_texture.data());
+                gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+                gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
+
+                if (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
+                    format.internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT)
+                {
+                    needsCache = false;
+                    cache(format.internal);
+                    if (!useCache())
+                        neoFatal("failed to cache");
+                }
             }
         }
 
