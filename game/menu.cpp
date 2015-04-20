@@ -208,11 +208,21 @@ static void menuDeveloper() {
     auto &nearp = varGet<float>("cl_nearp");
     auto &farp = varGet<float>("cl_farp");
 
+    // Calculate texture compression cache contents
     gui::areaBegin("Developer", x, y, w, h, D(scroll));
         gui::heading();
         gui::indent();
             if (gui::check("Texture compression cache", texcompcache))
                 texcompcache.toggle();
+            if (gui::button("Clear texture cache")) {
+                const u::string cachePath = neoUserPath() + "cache";
+                for (const auto &it : u::dir(cachePath)) {
+                    const u::string cacheFile = cachePath + u::kPathSep + it;
+                    if (u::remove(cacheFile))
+                        u::print("[cache] => removed cache%c%.50s...\n", u::kPathSep, it);
+                }
+                u::print("[cache] => cleared\n");
+            }
             gui::label("Texture filtering");
             gui::indent();
                 if (gui::check("Mipmaps", mipmaps.get()))

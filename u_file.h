@@ -9,9 +9,9 @@
 namespace u {
 
 #ifdef _WIN32
-static constexpr int kPathSep = '\\';
+static constexpr char kPathSep = '\\';
 #else
-static constexpr int kPathSep = '/';
+static constexpr char kPathSep = '/';
 #endif
 
 // A little unique_ptr like file wrapper to achieve RAII. We can't use

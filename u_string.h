@@ -95,6 +95,10 @@ inline string operator+(const string &lhs, const string &rhs) {
     return string(lhs).append(rhs.c_str(), rhs.size());
 }
 
+inline string operator+(const string &lhs, const char ch) {
+    return string(lhs).append(ch);
+}
+
 inline void operator+=(string &lhs, const char *rhs) {
     lhs.append(rhs, strlen(rhs));
 }

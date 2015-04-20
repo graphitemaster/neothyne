@@ -110,6 +110,10 @@ string &string::append(const char *str) {
     return append(str, strlen(str));
 }
 
+string &string::append(const char ch) {
+    return append(&ch, 1);
+}
+
 string &string::replace_all(const char *before, const char *after) {
     const size_t beforeLength = strlen(before);
     string result;

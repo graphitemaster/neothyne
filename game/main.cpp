@@ -61,6 +61,8 @@ static void setBinds() {
     });
 
     neoBindSet("F9Dn", []() {
+        neoRelativeMouse(false);
+        neoCenterMouse();
         gMenuState ^= kMenuDeveloper;
     });
 
