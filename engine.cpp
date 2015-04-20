@@ -83,30 +83,40 @@ static struct queryOperatingSystem {
             TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"),
             0, KEY_QUERY_VALUE, &key);
         if (n != ERROR_SUCCESS)
-            goto failedCurrentVersion;
+            goto failedProductName;
         if (RegQueryValueEx(key, "ProductName", nullptr, &type,
             (LPBYTE)&name[0], &size) != ERROR_SUCCESS)
-            goto failedCurrentVersion;
+            goto failedProductName;
         if (RegQueryValueEx(key, "CSDVersion", nullptr, &type,
             (LPBYTE)&version[0], &size) != ERROR_SUCCESS)
-            goto failedCurrentVersion;
+            goto failedCSDVersion;
         RegCloseKey(key);
         static constexpr const char *kStripBuf = "Microsoft ";
         static constexpr size_t kStripLen = strlen(kStripBuf);
         if (char *strip = strstr(name, kStripBuf))
             memmove(name, strip + kStripLen, 1 + strlen(strip + kStripLen));
-    #if defined(_WIN32)
+#if defined(_WIN32)
         snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s (32-bit)",
             name, version);
-    #elif defined(_WIN64)
+#elif defined(_WIN64)
         snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s (64-bit)",
             name, version);
-    #else
+#else
         snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s",
             name, version);
-    #endif
+#endif
         return;
-failedCurrentVersion:
+failedCSDVersion:
+        RegCloseKey(key);
+#if defined(_WIN32)
+        snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s (32-bit)", name);
+#elif defined(_WIN64)
+        snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s (64-bit)", name);
+#else
+        strcpy(gOperatingSystem, name);
+#endif
+        return;
+failedProductName:
         if (key)
             RegCloseKey(key);
 #if defined(_WIN32)
