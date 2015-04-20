@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <signal.h>
 #include <stdint.h>
+#include <string.h>
 #include <time.h>
 
 #include <SDL2/SDL.h>
@@ -57,6 +58,9 @@ static const uint64_t kFont[128] = {
 static char gOperatingSystem[1024];
 #if !defined(_WIN32) && !defined(_WIN64)
 #  include <sys/utsname.h>
+#else
+#  define _WIN32_LEAN_AND_MEAN
+#  include <windows.h>
 #endif
 static struct queryOperatingSystem {
     queryOperatingSystem() {
@@ -65,11 +69,53 @@ static struct queryOperatingSystem {
 #if !defined(_WIN32) && !defined(_WIN64)
         struct utsname n;
         if (uname(&n) == 0)
-            snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s %s", n.sysname, n.release, n.machine);
-#elif defined(_WIN32)
+            snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s %s",
+                n.sysname, n.release, n.machine);
+#else
+        // Find the version using the registry
+        static const size_t kRegQuerySize = 255;
+        static char name[kRegQuerySize];
+        static char version[kRegQuerySize];
+        ULONG type = REG_SZ;
+        ULONG size = kRegQuerySize;
+        HKEY key = nullptr;
+        LONG n = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+            TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"),
+            0, KEY_QUERY_VALUE, &key);
+        if (n != ERROR_SUCCESS)
+            goto failedCurrentVersion;
+        if (RegQueryValueEx(key, "ProductName", nullptr, &type,
+            (LPBYTE)&name[0], &size) != ERROR_SUCCESS)
+            goto failedCurrentVersion;
+        if (RegQueryValueEx(key, "CSDVersion", nullptr, &type,
+            (LPBYTE)&version[0], &size) != ERROR_SUCCESS)
+            goto failedCurrentVersion;
+        RegCloseKey(key);
+        static constexpr const char *kStripBuf = "Microsoft ";
+        static constexpr size_t kStripLen = strlen(kStripBuf);
+        if (char *strip = strstr(name, kStripBuf))
+            memmove(name, strip + kStripLen, 1 + strlen(strip + kStripLen));
+    #if defined(_WIN32)
+        snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s (32-bit)",
+            name, version);
+    #elif defined(_WIN64)
+        snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s (64-bit)",
+            name, version);
+    #else
+        snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s",
+            name, version);
+    #endif
+        return;
+failedCurrentVersion:
+        if (key)
+            RegCloseKey(key);
+#if defined(_WIN32)
         strcpy(gOperatingSystem, "Windows 32-bit");
 #elif defined(_WIN64)
         strcpy(gOperatingSystem, "Windows 64-bit");
+#else
+        strcpy(gOperatingSystem, "Windows");
+#endif
 #endif
     }
 } gQueryOperatingSystem;
