@@ -265,7 +265,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             pp.fov = 20.0f;
             p.setPerspective(pp);
             p.setWorld({0, 0, 0});
-            p.setPosition({0, 0, -75});
+            p.setPosition({0, 0, -130});
             p.setScale({1, 1, 1});
 
             gui::drawModel(x, y, w, h, "models/logo", p);
