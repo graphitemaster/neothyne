@@ -55,8 +55,4 @@ GAME_OBJECTS = \
 	$(GAME_SOURCES:.cpp=.o) \
 	$(ENGINE_SOURCES:.cpp=.o)
 
-GAME_BIN = neothyne
 GAME_DIR = game
-
-all: $(GAME_BIN)
-

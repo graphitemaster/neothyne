@@ -3,6 +3,8 @@ include include.mk
 CC ?= clang
 CXX = $(CC)
 
+GAME_BIN = neothyne
+
 CXXFLAGS = \
 	-std=c++11 \
 	-Wall \
@@ -28,6 +30,8 @@ ENGINE_CXXFLAGS = \
 ENGINE_LDFLAGS = \
 	-lm \
 	`sdl2-config --libs`
+
+all: $(GAME_BIN)
 
 $(GAME_BIN): $(GAME_OBJECTS)
 	$(CXX) $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@

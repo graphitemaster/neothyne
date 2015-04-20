@@ -9,6 +9,8 @@ RESFLAGS := -F pe-i386
 # Resource compiler
 RES := windres
 
+GAME_BIN = neothyne.exe
+
 # When building on a Linux system
 SYS := $(shell $(CC) -dumpmachine)
 ifneq (, $(findstring linux, $(SYS)))
@@ -53,6 +55,8 @@ ENGINE_LDFLAGS = \
 	$(MACHINE) \
 	-lm \
 	-lSDL2
+
+all: $(GAME_BIN)
 
 resources.o:
 	$(RES) $(RESFLAGS) neothyne.rc resources.o
