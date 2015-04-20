@@ -253,8 +253,8 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             gui::drawLine(neoWidth() / 2 - 10, neoHeight() / 2, neoWidth() / 2 - 4, neoHeight() / 2, 2, 0xFFFFFFE1);
         }
         if (!gPlaying) {
-            const size_t w = (neoWidth() / 2);
-            const size_t h = (neoHeight() / 3);
+            const size_t w = neoWidth();
+            const size_t h = (neoHeight() / 2);
             const size_t x = neoWidth() / 2 - w / 2; // Center on X
             const size_t y = neoHeight() - h;
 
