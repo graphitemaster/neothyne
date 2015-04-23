@@ -1,13 +1,327 @@
+#define __STDC_LIMIT_MACROS
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <limits.h>
+
+#ifndef NDEBUG
+#include <stdio.h>
+#endif
 
 #include "u_algorithm.h"
 #include "u_string.h"
 #include "u_hash.h"
 #include "u_new.h"
+#include "u_memory.h"
 
 namespace u {
 
+///! stringMemory
+struct stringMemory {
+    static constexpr size_t kMemorySize = 32 << 20; // 32MB pool
+    static constexpr size_t kMinChunkSize = 0x20; // 32 byte smallest chunk
+
+    stringMemory();
+    ~stringMemory();
+
+    char *allocate(size_t size);
+    void deallocate(char *ptr);
+    char *reallocate(char *ptr, size_t size);
+
+    void print();
+protected:
+    struct region {
+        void setSize(uint32_t size);
+        void setFree(bool free);
+        void resize();
+        uint32_t size() const;
+        bool free() const;
+    private:
+        int32_t m_store; ///< Sign bit indicates if region is free or not, stores
+                         ///  the size of the given region in both cases.
+    };
+
+    static region *nextRegion(region *reg);
+    region *findAvailable(size_t size);
+    bool mergeFree();
+    region *divideRegion(region *reg, size_t size);
+    size_t getSize(size_t size);
+
+private:
+    region *m_head;
+    region *m_tail;
+};
+
+inline void stringMemory::region::setSize(uint32_t size) {
+    assert(size < INT32_MAX);
+    const bool used = free();
+    m_store = int32_t(size);
+    setFree(used);
+}
+
+inline void stringMemory::region::setFree(bool free) {
+    m_store = free ? size() : -size();
+}
+
+inline uint32_t stringMemory::region::size() const {
+    // Remove sign bit
+    const uint32_t mask = m_store >> ((sizeof(uint32_t) * CHAR_BIT) - 1);
+    return (m_store + mask) ^ mask;
+}
+
+inline bool stringMemory::region::free() const {
+    return m_store > 0;
+}
+
+inline void stringMemory::region::resize() {
+    setSize(size() * 2);
+}
+
+inline stringMemory::stringMemory()
+    : m_head(neoMalloc(kMemorySize))
+{
+    m_head->setSize(kMemorySize);
+    m_head->setFree(true);
+    m_tail = nextRegion(m_head);
+}
+
+inline stringMemory::~stringMemory() {
+#ifndef NDEBUG
+    print();
+#endif
+    neoFree(m_head);
+}
+
+char *stringMemory::allocate(size_t size) {
+    assert(m_head);
+    if (size == 0)
+        return allocate(1);
+    const size_t totalSize = getSize(size);
+    region *available = findAvailable(totalSize);
+    if (available) {
+        available->setFree(false);
+        return (char *)(available + 1);
+    } else {
+        // Merge free blocks until they're all merged
+        while (mergeFree())
+            ;
+        // Now try and find a free block
+        available = findAvailable(totalSize);
+        // Got a free block
+        if (available) {
+            available->setFree(false);
+            return (char *)(available + 1);
+        }
+    }
+    abort();
+}
+
+inline void stringMemory::deallocate(char *ptr) {
+    if (!ptr)
+        return;
+    // Mark the block as free
+    region *freeRegion = ((region *)ptr) - 1;
+    assert(freeRegion >= m_head);
+    assert(freeRegion <= (m_tail - 1));
+    freeRegion->setFree(true);
+}
+
+char *stringMemory::reallocate(char *ptr, size_t size) {
+    if (!ptr)
+        return allocate(size);
+
+    region *reg = ((region *)ptr) - 1;
+
+    assert(reg >= m_head);
+    assert(reg <= (m_tail - 1));
+
+    if (size == 0) {
+        deallocate(ptr);
+        return nullptr;
+    }
+
+    const size_t totalSize = getSize(size);
+    if (totalSize <= reg->size())
+        return ptr;
+
+    char *block = allocate(size);
+    memcpy(block, ptr, reg->size() - sizeof(region));
+    deallocate(ptr);
+
+    return block;
+}
+
+inline stringMemory::region *stringMemory::nextRegion(region *reg) {
+    return (region *)(((unsigned char *)reg) + reg->size());
+}
+
+// Finds a free block that matches the size passed in.
+// If it cannot find one of that size, but there is a larger free block, then
+// it divides the larger block into smaller ones. If there is no larger block
+// then it returns nullptr.
+//
+// Merges adjacent free blocks as it searches the list.
+stringMemory::region *stringMemory::findAvailable(size_t size) {
+    assert(m_head);
+
+    region *reg = m_head;
+    region *buddy = nextRegion(reg);
+    region *closest = nullptr;
+
+    if (buddy == m_tail && reg->free())
+        return divideRegion(reg, size);
+
+    // Find minimum-sized match within the area of memory available
+    while (reg < m_tail && buddy < m_tail) {
+        // When both the region and buddy are free
+        if (reg->free() && buddy->free() && reg->size() == buddy->size()) {
+            reg->resize();
+            if (size <= reg->size() && (!closest || reg->size() <= closest->size()))
+                closest = reg;
+            reg = nextRegion(buddy);
+            if (reg < m_tail)
+                buddy = nextRegion(reg);
+        } else {
+            if (reg->free() && size <= reg->size() && (!closest || reg->size() <= closest->size()))
+                closest = reg;
+            if (buddy->free() && size <= buddy->size() && (!closest || buddy->size() <= closest->size()))
+                closest = buddy;
+            // Buddy has been split up into smaller chunks
+            if (reg->size() > buddy->size()) {
+                reg = buddy;
+                buddy = nextRegion(buddy);
+            } else {
+                // Jump ahead two regions
+                reg = nextRegion(buddy);
+                if (reg < m_tail)
+                    buddy = nextRegion(reg);
+            }
+        }
+    }
+
+    if (closest) {
+        if (closest->size() == size)
+            return closest;
+        return divideRegion(closest, size);
+    }
+    return nullptr;
+}
+
+// Single level merge of adjacent free blocks
+bool stringMemory::mergeFree() {
+    assert(m_head);
+
+    region *reg = m_head;
+    region *buddy = nextRegion(reg);
+    bool modified = false;
+
+    while (reg < m_tail && buddy < m_tail) {
+        // Both region and buddy are free
+        if (reg->free() && buddy->free() && reg->size() == buddy->size()) {
+            reg->resize();
+            reg = nextRegion(buddy);
+            if (reg < m_tail)
+                buddy = nextRegion(reg);
+            modified = true;
+        } else if (reg->size() > buddy->size()) {
+            // Buddy has been split up into smaller chunks
+            reg = buddy;
+            buddy = nextRegion(buddy);
+        } else {
+            // Jump ahead two regions
+            reg = nextRegion(buddy);
+            if (reg < m_tail)
+                buddy = nextRegion(reg);
+        }
+    }
+    return modified;
+}
+
+// Given a region of free memory and a size, split it in half repeatedly until the
+// desired size is reached and return a pointer to that new free region.
+inline stringMemory::region *stringMemory::divideRegion(region *reg, size_t size) {
+    assert(reg);
+
+    while (reg->size() > size) {
+        const size_t regionSize = reg->size() / 2;
+        reg->setSize(regionSize);
+        reg = nextRegion(reg);
+        reg->setSize(regionSize);
+        reg->setFree(true);
+    }
+    return reg;
+}
+
+inline size_t stringMemory::getSize(size_t size) {
+    size += sizeof(region);
+    size_t totalSize = kMinChunkSize;
+    while (size > totalSize)
+        totalSize *= 2;
+    return totalSize;
+}
+
+void stringMemory::print() {
+    auto escapeString = [](const char *str) {
+        size_t length = strlen(str);
+        // The longest possible sequence would be a string with "x[0-F][0-F]"
+        // for all, which is 3x as large as the input sequence, we also need + 1
+        // for null terminator.
+        u::unique_ptr<char> data(new char[length * 3 + 1]);
+        char *put = data.get();
+        for (const char *s = str; *s; s++) {
+            unsigned char ch = *s;
+            if (ch > ' ' && ch <= '~' && ch != '\\' && ch != '"')
+                *put++ = ch;
+            else {
+                *put++ = '\\';
+                switch (ch) {
+                    case '"':  *put++ = '"';  break;
+                    case '\\': *put++ = '\\'; break;
+                    case '\t': *put++ = 't';  break;
+                    case '\r': *put++ = 'r';  break;
+                    case '\n': *put++ = 'n';  break;
+                    default:
+                        *put++ = 'x';
+                        *put++ = "0123456789ABCDEF"[ch >> 4];
+                        *put++ = "0123456789ABCDEF"[ch & 0xF];
+                        break;
+                }
+            }
+        }
+        *put++ = '\0';
+        return data;
+    };
+
+    for (region *reg = m_head; reg < m_tail; reg = nextRegion(reg)) {
+        if (reg->free()) {
+            printf("Free (%p) [ size: %" PRIu32 " ]\n", reg, reg->size());
+        } else {
+            auto escape = escapeString((const char *)(reg + 1));
+            printf("Used (%p) [ size: %" PRIu32 " contents: \"%.50s...\" ]\n",
+                reg,
+                reg->size(),
+                escape.get()
+            );
+        }
+    }
+}
+
+// We utilize deferred data here due to C++ lacking any sort of primitives for
+// specifying initialization order of statics.
+static deferred_data<stringMemory, false> gStringMemory;
+
+#define STR_MALLOC(SIZE) \
+    gStringMemory()->allocate((SIZE))
+
+#define STR_REALLOC(PTR, SIZE) \
+    gStringMemory()->reallocate((PTR), (SIZE))
+
+#define STR_FREE(PTR) \
+    gStringMemory()->deallocate((PTR))
+
+///! string
 string::string()
     : m_first(nullptr)
     , m_last(nullptr)
@@ -44,7 +358,7 @@ string::string(const char *sz, size_t len)
 }
 
 string::~string() {
-    neoFree(m_first);
+    STR_FREE(m_first);
 }
 
 string& string::operator=(const string& other) {
@@ -66,7 +380,7 @@ bool string::empty() const {
 
 char *string::copy() const {
     const size_t length = size() + 1;
-    return (char *)memcpy(neoMalloc(length), m_first, length);
+    return (char *)memcpy(STR_MALLOC(length), m_first, length);
 }
 
 void string::reserve(size_t capacity) {
@@ -75,7 +389,7 @@ void string::reserve(size_t capacity) {
 
     const size_t size = m_last - m_first;
 
-    char *newfirst = neoRealloc(m_first, capacity + 1);
+    char *newfirst = STR_REALLOC(m_first, capacity + 1);
     m_first = newfirst;
     m_last = newfirst + size;
     m_capacity = m_first + capacity;

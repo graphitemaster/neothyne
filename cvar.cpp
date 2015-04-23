@@ -2,10 +2,11 @@
 #include "cvar.h"
 
 #include "u_file.h"
+#include "u_memory.h"
 
 struct varReference;
 
-static u::map<u::string, varReference> *gVariables = nullptr;
+static u::deferred_data<u::map<u::string, varReference>> gVariables;
 
 struct varReference {
     varReference()
@@ -27,22 +28,16 @@ struct varReference {
     varType type;
 };
 
-static u::map<u::string, varReference> &variables() {
-    if (gVariables)
-        return *gVariables;
-    return *(gVariables = new u::map<u::string, varReference>());
-}
-
 // public API
 void varRegister(const char *name, const char *desc, void *self, varType type) {
-    if (variables().find(name) != variables().end())
+    if (gVariables()->find(name) != gVariables()->end())
         return;
-    variables()[name] = varReference(desc, self, type);
+    (*gVariables())[name] = varReference(desc, self, type);
 }
 
 template <typename T>
 var<T> &varGet(const char *name) {
-    auto &ref = variables()[name];
+    auto &ref = (*gVariables())[name];
     auto &val = *(var<T>*)(ref.self);
     return val;
 }
@@ -51,10 +46,10 @@ template var<int> &varGet<int>(const char *name);
 template var<float> &varGet<float>(const char *name);
 
 u::optional<u::string> varValue(const u::string &name) {
-    if (variables().find(name) == variables().end())
+    if (gVariables()->find(name) == gVariables()->end())
         return u::none;
 
-    auto &ref = variables()[name];
+    auto &ref = (*gVariables())[name];
 
     switch (ref.type) {
         case kVarFloat:
@@ -70,9 +65,9 @@ u::optional<u::string> varValue(const u::string &name) {
 
 template <typename T>
 static inline varStatus varSet(const u::string &name, const T &value, bool callback) {
-    if (variables().find(name) == variables().end())
+    if (gVariables()->find(name) == gVariables()->end())
         return kVarNotFoundError;
-    auto &ref = variables()[name];
+    auto &ref = (*gVariables())[name];
     if (ref.type != varTypeTraits<T>::type)
         return kVarTypeError;
     auto &val = *(var<T>*)(ref.self);
@@ -83,9 +78,9 @@ static inline varStatus varSet(const u::string &name, const T &value, bool callb
 }
 
 varStatus varChange(const u::string &name, const u::string &value, bool callback) {
-    if (variables().find(name) == variables().end())
+    if (gVariables()->find(name) == gVariables()->end())
         return kVarNotFoundError;
-    auto &ref = variables()[name];
+    auto &ref = (*gVariables())[name];
     if (ref.type == kVarInt) {
         for (int it : value)
             if (!strchr("0123456789", it))
@@ -130,7 +125,7 @@ bool writeConfig(const u::string &userPath) {
             }
         }
     };
-    for (auto &it : variables())
+    for (auto &it : *gVariables())
         writeLine(file, it.first, it.second);
     return true;
 }

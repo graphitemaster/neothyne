@@ -18,17 +18,16 @@ static struct stringPool {
     const char *operator()(const char *what);
     void reset();
 private:
-    u::set<u::string> m_pool;
+    u::vector<u::string> m_strings;
 } gStringPool;
 
 inline const char *stringPool::operator()(const char *what) {
-    if (m_pool.find(what) == m_pool.end())
-        m_pool.insert(what);
-    return m_pool.find(what)->c_str();
+    m_strings.push_back(what);
+    return m_strings.back().c_str();
 }
 
 inline void stringPool::reset() {
-    m_pool.clear();
+    m_strings.clear();
 }
 
 void queue::addScissor(int x, int y, int w, int h) {
