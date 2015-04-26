@@ -62,7 +62,7 @@ static m::vec3 randomColor() {
 }
 
 static void menuMain() {
-    const size_t w = neoWidth() / 8;
+    const size_t w = neoWidth() / 10;
     const size_t h = neoHeight() / 4.5;
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() / 2 - h / 2;

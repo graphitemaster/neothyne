@@ -276,7 +276,6 @@ var<T> &varGet(const char *name);
 
 u::optional<u::string> varValue(const u::string &name);
 
-
 #define VAR(TYPE, NAME, ...) \
     static var<TYPE> NAME(kVarPersist, #NAME, __VA_ARGS__)
 
