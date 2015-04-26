@@ -534,7 +534,7 @@ bool item(const char *contents, bool enabled) {
 bool check(const char *contents, bool checked, bool enabled) {
     const auto id = (A << 16) | ++W.id;
 
-    const int x = W.x;
+    const int x = W.x + kDefaultSpacing;
     const int y = W.y - kButtonHeight;
     const int w = W.w;
     const int h = kButtonHeight;
