@@ -347,7 +347,7 @@ static constexpr int kCollapseSize = 8;
 static constexpr int kCheckBoxSize = 20;
 static constexpr int kDefaultSpacing = 6;
 static constexpr int kTextHeight = 8;
-static constexpr int kScrollAreaPadding = 6;
+static constexpr int kScrollAreaPadding = 8;
 static constexpr int kIndentationSize = 16;
 static constexpr int kAreaHeader = 25;
 
