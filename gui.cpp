@@ -11,6 +11,7 @@
 #include "m_const.h"
 
 VAR(int, ui_scroll_speed, "mouse scroll speed", 1, 10, 5);
+VAR(float, ui_scale, "ui scale", 0.25, 4, 1);
 
 namespace gui {
 
@@ -347,7 +348,7 @@ static constexpr int kCollapseSize = 8;
 static constexpr int kCheckBoxSize = 20;
 static constexpr int kDefaultSpacing = 6;
 static constexpr int kTextHeight = 8;
-static constexpr int kScrollAreaPadding = 8;
+static constexpr int kScrollAreaPadding = 7;
 static constexpr int kIndentationSize = 16;
 static constexpr int kAreaHeader = 28;
 
@@ -376,28 +377,29 @@ bool areaBegin(const char *contents, int x, int y, int w, int h, int &value, boo
 
     S.m_insideCurrentScroll = B.inside;
     if (style) {
+		// Didn't test the side menus... Could very well be broken, knowing myself. :>  --acerspyro
         if (x == 0 && y == totalHeight-h && w == totalWidth) {
-            Q.addImage(0, y, w, 25, "<nocompress>textures/ui/menu_b");
-            Q.addImage(0, y+25, w, h-25, "<nocompress>textures/ui/menu_c");
+            Q.addImage(0, y-7, w, 25, "<nocompress>textures/ui/menu_b");
+            Q.addImage(0, y+18, w, h-18, "<nocompress>textures/ui/menu_c");
         } else if (x == 0 && y == 0 && w == totalWidth) {
-            Q.addImage(0, h-25, w, 25, "<nocompress>textures/ui/menu_t");
-            Q.addImage(0, 0, w, h-25, "<nocompress>textures/ui/menu_c");
+            Q.addImage(0, h-18, w, 25, "<nocompress>textures/ui/menu_t");
+            Q.addImage(0, 0, w, h-18, "<nocompress>textures/ui/menu_c");
         } else if (x == 0 && y == 0 && h == totalHeight) {
-            Q.addImage(w-25, 0, 25, h, "<nocompress>textures/ui/menu_l");
-            Q.addImage(0, 0, w-25, h, "<nocompress>textures/ui/menu_c");
+            Q.addImage(w-18, 0, 25, h, "<nocompress>textures/ui/menu_l");
+            Q.addImage(0, 0, w-18, h, "<nocompress>textures/ui/menu_c");
         } else if (x == totalWidth-w && y == 0 && h == totalHeight) {
-            Q.addImage(x, 0, 25, h, "<nocompress>textures/ui/menu_r");
-            Q.addImage(x+25, y, w-25, h, "<nocompress>textures/ui/menu_c");
+            Q.addImage(x-7, 0, 25, h, "<nocompress>textures/ui/menu_r");
+            Q.addImage(x+18, y, w-18, h, "<nocompress>textures/ui/menu_c");
         } else {
-            Q.addImage(x, y+h-25, 25, 25, "<nocompress>textures/ui/menu_tl");
-            Q.addImage(x+w-25, y+h-25, 25, 25, "<nocompress>textures/ui/menu_tr");
-            Q.addImage(x, y, 25, 25, "<nocompress>textures/ui/menu_bl");
-            Q.addImage(x+w-25, y, 25, 25, "<nocompress>textures/ui/menu_br");
-            Q.addImage(x+25, y+h-25, w-50, 25, "<nocompress>textures/ui/menu_t");
-            Q.addImage(x+25, y, w-50, 25, "<nocompress>textures/ui/menu_b");
-            Q.addImage(x, y+25, 25, h-50, "<nocompress>textures/ui/menu_l");
-            Q.addImage(x+w-25, y+25, 25, h-50, "<nocompress>textures/ui/menu_r");
-            Q.addImage(x+25, y+25, w-50, h-50, "<nocompress>textures/ui/menu_c");
+            Q.addImage(x-7, y+h-18, 25, 25, "<nocompress>textures/ui/menu_tl");
+            Q.addImage(x+w-18, y+h-18, 25, 25, "<nocompress>textures/ui/menu_tr");
+            Q.addImage(x-7, y-7, 25, 25, "<nocompress>textures/ui/menu_bl");
+            Q.addImage(x+w-18, y-7, 25, 25, "<nocompress>textures/ui/menu_br");
+            Q.addImage(x+18, y+h-18, w-36, 25, "<nocompress>textures/ui/menu_t");
+            Q.addImage(x+18, y-7, w-36, 25, "<nocompress>textures/ui/menu_b");
+            Q.addImage(x-7, y+18, 25, h-36, "<nocompress>textures/ui/menu_l");
+            Q.addImage(x+w-18, y+18, 25, h-36, "<nocompress>textures/ui/menu_r");
+            Q.addImage(x+18, y+18, w-36, h-36, "<nocompress>textures/ui/menu_c");
         }
     }
     if (contents) {
@@ -449,16 +451,16 @@ void areaFinish(int inc, bool autoScroll) {
             }
             // Background
             Q.addImage(x, y+h-6, w, 6, "<nocompress>textures/ui/scrollbar_vt");
-            Q.addImage(x, y+6, w, h-12, "<nocompress>textures/ui/scrollbar_vm");
+            Q.addImage(x, y+6, w, h-11, "<nocompress>textures/ui/scrollbar_vm");
             Q.addImage(x, y, w, 6, "<nocompress>textures/ui/scrollbar_vb");
             // Bar
             if (S.isActive(id)) {
-                Q.addImage(hx, hy+hh-6, hw, 6, "<nocompress>textures/ui/scrollbarknob_v1t");
-                Q.addImage(hx, hy+6, hw, hh-12, "<nocompress>textures/ui/scrollbarknob_vm");
+                Q.addImage(hx, hy+hh-5, hw, 6, "<nocompress>textures/ui/scrollbarknob_v1t");
+                Q.addImage(hx, hy+6, hw, hh-11, "<nocompress>textures/ui/scrollbarknob_vm");
                 Q.addImage(hx, hy, hw, 6, "<nocompress>textures/ui/scrollbarknob_v1b");
             } else {
-                Q.addImage(hx, hy+hh-6, hw, 6, "<nocompress>textures/ui/scrollbarknob_v0t");
-                Q.addImage(hx, hy+6, hw, hh-12, "<nocompress>textures/ui/scrollbarknob_vm");
+                Q.addImage(hx, hy+hh-5, hw, 6, "<nocompress>textures/ui/scrollbarknob_v0t");
+                Q.addImage(hx, hy+6, hw, hh-11, "<nocompress>textures/ui/scrollbarknob_vm");
                 Q.addImage(hx, hy, hw, 6, "<nocompress>textures/ui/scrollbarknob_v0b");
                 //Q.addRectangle(hx, hy, hw, hh, float(w)/2-1,
                 //    S.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
@@ -486,13 +488,13 @@ bool button(const char *contents, bool enabled) {
 
     if (enabled) {
         if (S.isHot(id)) {
-            Q.addImage(x, y, 6, kButtonHeight, "<nocompress>textures/ui/button_1l");
-            Q.addImage(x+5, y, w-10, kButtonHeight, "<nocompress>textures/ui/button_1m");
-            Q.addImage(x+w-6, y, 6, kButtonHeight, "<nocompress>textures/ui/button_1r");
+            Q.addImage(x, y, 7, kButtonHeight, "<nocompress>textures/ui/button_1l");
+            Q.addImage(x+6, y, w-13, kButtonHeight, "<nocompress>textures/ui/button_1m");
+            Q.addImage(x+w-7, y, 7, kButtonHeight, "<nocompress>textures/ui/button_1r");
         } else {
-            Q.addImage(x, y, 6, kButtonHeight, "<nocompress>textures/ui/button_0l");
-            Q.addImage(x+5, y, w-10, kButtonHeight, "<nocompress>textures/ui/button_0m");
-            Q.addImage(x+w-6, y, 6, kButtonHeight, "<nocompress>textures/ui/button_0r");
+            Q.addImage(x, y, 7, kButtonHeight, "<nocompress>textures/ui/button_0l");
+            Q.addImage(x+6, y, w-13, kButtonHeight, "<nocompress>textures/ui/button_0m");
+            Q.addImage(x+w-7, y, 7, kButtonHeight, "<nocompress>textures/ui/button_0r");
         }
         Q.addText(x+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
@@ -634,7 +636,7 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
     W.y -= kSliderHeight + kDefaultSpacing;
 
     Q.addImage(x, y, 6, h, "<nocompress>textures/ui/scrollbar_hl");
-    Q.addImage(x+6, y, w-12, h, "<nocompress>textures/ui/scrollbar_hm");
+    Q.addImage(x+6, y, w-11, h, "<nocompress>textures/ui/scrollbar_hm");
     Q.addImage(x+w-6, y, 6, h, "<nocompress>textures/ui/scrollbar_hr");
 
     const int range = w - kSliderMarkerWidth;
@@ -663,12 +665,12 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
     if (S.isActive(id)) {
         Q.addImage(float(x+m), y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h1l");
         if (kSliderMarkerWidth > 12)
-            Q.addImage(float(x+m)+6, y, y+6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
+            Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
         Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h1r");
     } else {
         Q.addImage(float(x+m), y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h0l");
         if (kSliderMarkerWidth > 12)
-            Q.addImage(float(x+m)+6, y, y+6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
+            Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
         Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h0r");
     }
 
