@@ -347,7 +347,7 @@ static constexpr int kCollapseSize = 8;
 static constexpr int kCheckBoxSize = 20;
 static constexpr int kDefaultSpacing = 6;
 static constexpr int kTextHeight = 8;
-static constexpr int kScrollAreaPadding = 7;
+static constexpr int kScrollAreaPadding = 6;
 static constexpr int kIndentationSize = 16;
 static constexpr int kAreaHeader = 25;
 
@@ -450,16 +450,16 @@ void areaFinish(int inc, bool autoScroll) {
             }
             // Background
             Q.addImage(x, y+h-6, w, 6, "<nocompress>textures/ui/scrollbar_vt");
-            Q.addImage(x, y+6, w, h-11, "<nocompress>textures/ui/scrollbar_vm");
+            Q.addImage(x, y+6, w, h-12, "<nocompress>textures/ui/scrollbar_vm");
             Q.addImage(x, y, w, 6, "<nocompress>textures/ui/scrollbar_vb");
             // Bar
             if (S.isActive(id)) {
-                Q.addImage(hx, hy+hh-5, hw, 6, "<nocompress>textures/ui/scrollbarknob_v1t");
-                Q.addImage(hx, hy+6, hw, hh-11, "<nocompress>textures/ui/scrollbarknob_vm");
+                Q.addImage(hx, hy+hh-6, hw, 6, "<nocompress>textures/ui/scrollbarknob_v1t");
+                Q.addImage(hx, hy+6, hw, hh-12, "<nocompress>textures/ui/scrollbarknob_vm");
                 Q.addImage(hx, hy, hw, 6, "<nocompress>textures/ui/scrollbarknob_v1b");
             } else {
-                Q.addImage(hx, hy+hh-5, hw, 6, "<nocompress>textures/ui/scrollbarknob_v0t");
-                Q.addImage(hx, hy+6, hw, hh-11, "<nocompress>textures/ui/scrollbarknob_vm");
+                Q.addImage(hx, hy+hh-6, hw, 6, "<nocompress>textures/ui/scrollbarknob_v0t");
+                Q.addImage(hx, hy+6, hw, hh-12, "<nocompress>textures/ui/scrollbarknob_vm");
                 Q.addImage(hx, hy, hw, 6, "<nocompress>textures/ui/scrollbarknob_v0b");
                 //Q.addRectangle(hx, hy, hw, hh, float(w)/2-1,
                 //    S.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
@@ -635,7 +635,7 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
     W.y -= kSliderHeight + kDefaultSpacing;
 
     Q.addImage(x, y, 6, h, "<nocompress>textures/ui/scrollbar_hl");
-    Q.addImage(x+6, y, w-11, h, "<nocompress>textures/ui/scrollbar_hm");
+    Q.addImage(x+6, y, w-12, h, "<nocompress>textures/ui/scrollbar_hm");
     Q.addImage(x+w-6, y, 6, h, "<nocompress>textures/ui/scrollbar_hr");
 
     const int range = w - kSliderMarkerWidth;

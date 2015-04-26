@@ -1080,6 +1080,7 @@ static int entryPoint(int argc, char **argv) {
     auto shader = (const char *)gl::GetString(GL_SHADING_LANGUAGE_VERSION);
 
     gl::Hint(GL_TEXTURE_COMPRESSION_HINT, GL_FASTEST);
+    gl::Hint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
     // Intel online texture compression is slow (even with the compression hint.)
     if (strstr(vendor, "Intel")) {

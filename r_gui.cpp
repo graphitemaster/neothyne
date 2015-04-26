@@ -679,7 +679,7 @@ void gui::drawText(float x, float y, const char *contents, int align, uint32_t c
 void gui::drawImage(float x, float y, float w, float h, const char *path, bool mipmaps) {
     // Deal with loading of textures
     if (m_textures.find(path) == m_textures.end()) {
-        auto tex = u::unique_ptr<texture2D>(new texture2D(mipmaps, kFilterBilinear));
+        auto tex = u::unique_ptr<texture2D>(new texture2D(mipmaps, kFilterTrilinear));
         if (!tex->load(path) || !tex->upload())
             m_textures[path] = &m_notex;
         else
