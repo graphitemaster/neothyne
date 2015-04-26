@@ -635,7 +635,7 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
     W.y -= kSliderHeight + kDefaultSpacing;
 
     Q.addImage(x, y, 6, h, "<nocompress>textures/ui/scrollbar_hl");
-    Q.addImage(x+6, y, w-12, h, "<nocompress>textures/ui/scrollbar_hm");
+    Q.addImage(x+6, y, w-11, h, "<nocompress>textures/ui/scrollbar_hm");
     Q.addImage(x+w-6, y, 6, h, "<nocompress>textures/ui/scrollbar_hr");
 
     const int range = w - kSliderMarkerWidth;
