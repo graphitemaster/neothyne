@@ -2020,23 +2020,27 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
 }
 
 u::optional<u::string> texture::find(const u::string &infile) {
+    static struct tag {
+        const char *name;
+        int flag;
+    } tags[] = {
+        { "normal", kTexFlagNormal },
+        { "grey", kTexFlagGrey },
+        { "premul", kTexFlagPremul },
+        { "nocompress", kTexFlagNoCompress }
+    };
+
     u::string file = infile;
 
-    auto beg = file.find('<');
-    if (beg != u::string::npos) {
+    for (auto beg = file.find('<'); beg != u::string::npos; beg = file.find('<')) {
         auto end = file.find('>');
         if (end == u::string::npos)
             return u::none;
-        const u::string tag(file.begin() + beg + 1, file.begin() + end);
-        if (tag == "normal")
-            m_flags |= kTexFlagNormal;
-        else if (tag == "grey")
-            m_flags |= kTexFlagGrey;
-        else if (tag == "premul")
-            m_flags |= kTexFlagPremul;
-        else if (tag == "nocompress")
-            m_flags |= kTexFlagNoCompress;
-        file.erase(beg, end + 1);
+        const size_t length = end - beg - 1;
+        for (auto &it : tags)
+            if (!strncmp(&file[beg+1], it.name, length))
+                m_flags |= it.flag;
+        file.erase(beg, end+1);
     }
 
     static const char *extensions[] = { "png", "jpg", "jpeg", "tga", "dds" };
