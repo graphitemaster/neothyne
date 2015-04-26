@@ -661,18 +661,6 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
         }
     }
 
-    if (S.isActive(id)) {
-        Q.addImage(float(x+m), y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h1l");
-        if (kSliderMarkerWidth > 12)
-            Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
-        Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h1r");
-    } else {
-        Q.addImage(float(x+m), y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h0l");
-        if (kSliderMarkerWidth > 12)
-            Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
-        Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h0r");
-    }
-
     const int digits = int(ceilf(log10f(inc)));
     u::string msg = u::is_floating_point<T>::value
         ? u::format("%.*f", digits >= 0 ? 0 : -digits, value)
@@ -688,6 +676,18 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
             contents, RGBA(128, 128, 128, 200));
         Q.addText(x+w-kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignRight,
             msg.c_str(), RGBA(128, 128, 128, 200));
+    }
+
+    if (S.isActive(id)) {
+        Q.addImage(float(x+m), y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h1l");
+        if (kSliderMarkerWidth > 12)
+            Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
+        Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h1r");
+    } else {
+        Q.addImage(float(x+m), y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h0l");
+        if (kSliderMarkerWidth > 12)
+            Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
+        Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h0r");
     }
 
     return result || changed;
