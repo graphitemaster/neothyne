@@ -341,7 +341,7 @@ static state S; // [S]tate
 
 // Constants
 static constexpr int kButtonHeight = 20;
-static constexpr int kSliderHeight = 16;
+static constexpr int kSliderHeight = 20;
 static constexpr int kSliderMarkerWidth = 12;
 static constexpr int kCollapseSize = 8;
 static constexpr int kCheckBoxSize = 20;
@@ -349,7 +349,7 @@ static constexpr int kDefaultSpacing = 6;
 static constexpr int kTextHeight = 8;
 static constexpr int kScrollAreaPadding = 7;
 static constexpr int kIndentationSize = 16;
-static constexpr int kAreaHeader = 28;
+static constexpr int kAreaHeader = 25;
 
 bool areaBegin(const char *contents, int x, int y, int w, int h, int &value, bool style) {
     A++;
@@ -376,7 +376,7 @@ bool areaBegin(const char *contents, int x, int y, int w, int h, int &value, boo
 
     S.m_insideCurrentScroll = B.inside;
     if (style) {
-		// Didn't test the side menus... Could very well be broken, knowing myself. :>  --acerspyro
+        // Didn't test the side menus... Could very well be broken, knowing myself. :>  --acerspyro
         if (x == 0 && y == totalHeight-h && w == totalWidth) {
             Q.addImage(0, y-7, w, 25, "<nocompress>textures/ui/menu_b");
             Q.addImage(0, y+18, w, h-18, "<nocompress>textures/ui/menu_c");
@@ -575,7 +575,7 @@ bool collapse(const char *contents, const char *subtext, bool checked, bool enab
     const int w = W.w;
     const int h = kButtonHeight;
 
-    W.y -= kButtonHeight + kDefaultSpacing;
+    W.y -= kButtonHeight;
 
     const int cx = x+kButtonHeight/2-kCollapseSize/2;
     const int cy = y+kButtonHeight/2-kCollapseSize/2;
