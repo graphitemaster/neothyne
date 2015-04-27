@@ -1,6 +1,5 @@
 #ifndef M_VEC3_HDR
 #define M_VEC3_HDR
-#include <math.h>
 #include <stddef.h>
 
 #include "m_const.h"
@@ -98,10 +97,6 @@ inline constexpr vec3::vec3(float a)
 
 inline float vec3::absSquared() const {
     return x * x + y * y + z * z;
-}
-
-inline float vec3::abs() const {
-    return sqrtf(x * x + y * y + z * z);
 }
 
 inline void vec3::normalize() {
@@ -228,9 +223,9 @@ inline float operator*(const vec3 &a, const vec3 &b) {
 }
 
 inline bool operator==(const vec3 &a, const vec3 &b) {
-    return (fabs(a.x - b.x) < kEpsilon)
-        && (fabs(a.y - b.y) < kEpsilon)
-        && (fabs(a.z - b.z) < kEpsilon);
+    return (m::abs(a.x - b.x) < kEpsilon)
+        && (m::abs(a.y - b.y) < kEpsilon)
+        && (m::abs(a.z - b.z) < kEpsilon);
 }
 
 inline bool operator!=(const vec3 &a, const vec3 &b) {

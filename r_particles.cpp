@@ -177,7 +177,7 @@ void particleSystem::update(const pipeline &p) {
         it.velocity.y -= m_gravity*dt;
         it.lifeTime -= dt;
         const float f = it.lifeTime / it.totalLifeTime;
-        const float scale = sinf(f / m::kPi);
+        const float scale = m::sin(f / m::kPi);
         it.currentAlpha = it.startAlpha * scale;
         it.currentSize = scale * it.startSize + 0.1f;
     }

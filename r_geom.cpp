@@ -78,12 +78,14 @@ bool sphere::upload() {
     for (size_t i = 0; i < kStacks + 1; i++) {
         float s = 0.0f;
         const float rho = m::kPi * (1.0f - t);
-        const float sinrho = i && i < kStacks ? sinf(rho) : 0.0f;
-        const float cosrho = !i ? 1.0f : (i < kStacks ? cosf(rho) : -1.0f);
+        const float sinrho = i && i < kStacks ? m::sin(rho) : 0.0f;
+        const float cosrho = !i ? 1.0f : (i < kStacks ? m::cos(rho) : -1.0f);
         for (size_t j = 0; j < kSlices + 1; j++) {
             float theta = j==kSlices ? 0 : 2*m::kPi*s;
             auto &v = vertices[i*(kSlices+1) + j];
-            v = m::vec3(sinf(theta)*sinrho, cosf(theta)*sinrho, -cosrho);
+            float sv, cv;
+            m::sincos(theta, sv, cv);
+            v = m::vec3(sv*sinrho, cv*sinrho, -cosrho);
             s += ds;
         }
         t -= dt;

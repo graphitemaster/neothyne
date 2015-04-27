@@ -44,17 +44,27 @@ void mat4::setRotateTrans(float rotateX, float rotateY, float rotateZ) {
     const float y = toRadian(rotateY);
     const float z = toRadian(rotateZ);
 
+    float xsin;
+    float xcos;
+    float ysin;
+    float ycos;
+    float zsin;
+    float zcos;
+    m::sincos(x, xsin, xcos);
+    m::sincos(y, ysin, ycos);
+    m::sincos(z, zsin, zcos);
+
     mat4 rx, ry, rz;
     rx.a = { 1.0f, 0.0f, 0.0f, 0.0f };
-    rx.b = { 0.0f, cosf(x), -sinf(x), 0.0f };
-    rx.c = { 0.0f, sinf(x), cosf(x), 0.0f };
+    rx.b = { 0.0f, xcos, -xsin, 0.0f };
+    rx.c = { 0.0f, xsin, xcos, 0.0f };
     rx.d = { 0.0f, 0.0f, 0.0f, 1.0f };
-    ry.a = { cosf(y), 0.0f, -sinf(y), 0.0f };
+    ry.a = { ycos, 0.0f, -ysin, 0.0f };
     ry.b = { 0.0f, 1.0f, 0.0f, 0.0f };
-    ry.c = { sinf(y), 0.0f, cosf(y), 0.0f };
+    ry.c = { ysin, 0.0f, ycos, 0.0f };
     ry.d = { 0.0f, 0.0f, 0.0f, 1.0f };
-    rz.a = { cosf(z), -sinf(z), 0.0f, 0.0f };
-    rz.b = { sinf(z), cosf(z), 0.0f, 0.0f };
+    rz.a = { zcos, -zsin, 0.0f, 0.0f };
+    rz.b = { zsin, zcos, 0.0f, 0.0f };
     rz.c = { 0.0f, 0.0f, 1.0f, 0.0f };
     rz.d = { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -100,7 +110,7 @@ void mat4::setCameraTrans(const vec3 &p, const quat &q) {
 void mat4::setPerspectiveTrans(const m::perspective &p) {
     const float ar = p.width / p.height;
     const float range = p.nearp - p.farp;
-    const float halfFov = tanf(m::toRadian(p.fov / 2.0f));
+    const float halfFov = m::tan(m::toRadian(p.fov / 2.0f));
     a = { 1.0f / (halfFov * ar), 0.0f, 0.0f, 0.0f };
     b = { 0.0f, 1.0f / halfFov, 0.0f, 0.0f };
     c = { 0.0f, 0.0f, (-p.nearp - p.farp) / range, 2.0f * p.farp * p.nearp / range };

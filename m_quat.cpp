@@ -1,3 +1,4 @@
+#include <math.h> // sqrtf
 #include "u_misc.h"
 
 #include "m_quat.h"

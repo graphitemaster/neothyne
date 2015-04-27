@@ -31,8 +31,9 @@ inline constexpr quat::quat(float x, float y, float z, float w)
 }
 
 inline quat::quat(float angle, const vec3 &vec) {
-    const float s = sinf(angle / 2.0f);
-    const float c = cosf(angle / 2.0f);
+    float s;
+    float c;
+    m::sincos(angle / 2.0f, s, c);
 
     const vec3 normal = vec.normalized();
     x = s * normal.x;

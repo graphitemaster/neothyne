@@ -1,5 +1,3 @@
-#include <math.h>
-
 #include "engine.h"
 #include "gui.h"
 #include "cvar.h"
@@ -11,7 +9,6 @@
 #include "m_const.h"
 
 VAR(int, ui_scroll_speed, "mouse scroll speed", 1, 10, 5);
-VAR(float, ui_scale, "ui scale", 0.25, 4, 1);
 
 namespace gui {
 
@@ -655,16 +652,15 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
         if (S.m_drag[0] != S.m_mouse.x) { // Mouse and drag don't share same coordinate on the X axis
             const float u = m::clamp(S.m_dragOrigin + float(S.m_mouse.x - S.m_drag[0]) / float(range), 0.0f, 1.0f);
             value = min + u * (max - min);
-            value = floorf(value / inc + 0.5f) * inc; // Snap to increments
+            value = m::floor(value / inc + 0.5f) * inc; // Snap to increments
             m = int(u * range);
             changed = true;
         }
     }
 
-    const int digits = int(ceilf(log10f(inc)));
-    u::string msg = u::is_floating_point<T>::value
-        ? u::format("%.*f", digits >= 0 ? 0 : -digits, value)
-        : u::format("%.*d", digits >= 0 ? 1 : -digits, value);
+    const u::string msg = u::is_floating_point<T>::value
+                              ? u::format("%.2f", value)
+                              : u::format("%d", value);
 
     if (enabled) {
         Q.addText(x+kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignLeft,

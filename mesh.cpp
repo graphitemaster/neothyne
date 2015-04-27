@@ -1,3 +1,4 @@
+#include <math.h> // powf
 #include <assert.h>
 
 #include "mesh.h"

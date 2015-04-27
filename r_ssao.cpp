@@ -1,5 +1,3 @@
-#include <math.h>
-
 #include "r_ssao.h"
 
 #include "m_const.h"
@@ -20,7 +18,7 @@ bool ssaoMethod::init(const u::vector<const char *> &defines) {
         method::define("HAS_TEXTURE_RECTANGLE");
 
     method::define("kKernelSize", kKernelSize);
-    method::define("kKernelFactor", sinf(m::kPi / float(kKernelSize)));
+    method::define("kKernelFactor", m::sin(m::kPi / float(kKernelSize)));
     method::define("kKernelOffset", 1.0f / kKernelSize);
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/ssao.vs"))

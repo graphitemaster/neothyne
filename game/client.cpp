@@ -1,3 +1,4 @@
+#include <math.h> // powf
 #include "engine.h"
 #include "client.h"
 #include "kdmap.h"

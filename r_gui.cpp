@@ -1,3 +1,4 @@
+#include <math.h> // sqrtf
 #include <assert.h>
 
 #include "engine.h"
@@ -198,8 +199,10 @@ gui::gui()
 {
     for (size_t i = 0; i < kCircleVertices; ++i) {
         const float a = float(i) / float(kCircleVertices) * m::kTau;
-        m_circleVertices[i*2+0] = cosf(a);
-        m_circleVertices[i*2+1] = sinf(a);
+        float s, c;
+        m::sincos(a, s, c);
+        m_circleVertices[i*2+0] = c;
+        m_circleVertices[i*2+1] = s;
     }
 }
 
@@ -574,8 +577,8 @@ u::optional<gui::glyphQuad> gui::getGlyphQuad(int pw, int ph, size_t index, floa
         return u::none;
 
     auto &b = m_glyphs[index];
-    const int roundX = int(floorf(xpos + b.xoff));
-    const int roundY = int(floorf(ypos - b.yoff));
+    const int roundX = int(m::floor(xpos + b.xoff));
+    const int roundY = int(m::floor(ypos - b.yoff));
 
     glyphQuad q;
     q.x0 = float(roundX);
@@ -637,7 +640,7 @@ void gui::drawText(float x, float y, const char *contents, int align, uint32_t c
             if (it < 32 || m_glyphs.size() <= size_t(it - 32))
                 continue;
             auto &b = m_glyphs[it - 32];
-            const int round = int(floorf(position + b.xoff) + 0.5f);
+            const int round = int(m::floor(position + b.xoff) + 0.5f);
             length = round + b.x1 - b.x0;
             position += b.xadvance;
         }

@@ -99,7 +99,7 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
 
     this->specParams = specParams;
     this->specIntensity = specIntensity / 2.0f;
-    this->specPower = log2f(specPower) / 8.0f;
+    this->specPower = m::log2(specPower) / 8.0f;
     this->dispScale = dispScale;
     this->dispBias = dispBias;
 

@@ -149,10 +149,13 @@ bool spotLightMethod::init(const u::vector<const char *> &defines) {
 void spotLightMethod::setLight(const spotLight &light) {
     const float x = m::toRadian(light.direction.x);
     const float y = m::toRadian(light.direction.y);
-    const float sx = sinf(x);
-    const float sy = sinf(y);
-    const float cx = cosf(x);
-    const float cy = cosf(y);
+
+    float sx;
+    float cx;
+    float sy;
+    float cy;
+    m::sincos(x, sx, cx);
+    m::sincos(y, sy, cy);
 
     m::vec3 direction = m::vec3(sx, -(sy * cx), -(cy * cx)).normalized();
 
@@ -162,7 +165,7 @@ void spotLightMethod::setLight(const spotLight &light) {
     gl::Uniform3fv(m_spotLightLocation.position, 1, &light.position.x);
     gl::Uniform1f(m_spotLightLocation.radius, light.radius);
     gl::Uniform3fv(m_spotLightLocation.direction, 1, &direction.x);
-    gl::Uniform1f(m_spotLightLocation.cutOff, cosf(m::toRadian(light.cutOff)));
+    gl::Uniform1f(m_spotLightLocation.cutOff, m::cos(m::toRadian(light.cutOff)));
 }
 
 }

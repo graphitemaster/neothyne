@@ -1,3 +1,5 @@
+#include <math.h> // sqrtf
+
 #include "u_misc.h"
 #include "u_algorithm.h"
 
@@ -12,8 +14,10 @@ const vec3 vec3::zAxis(0.0f, 0.0f, 1.0f);
 const vec3 vec3::origin(0.0f, 0.0f, 0.0f);
 
 void vec3::rotate(float angle, const vec3 &axe) {
-    const float s = sinf(m::toRadian(angle / 2.0f));
-    const float c = cosf(m::toRadian(angle / 2.0f));
+    const float radian = m::toRadian(angle / 2.0f);
+    float s;
+    float c;
+    m::sincos(radian, s, c);
     const float rx = axe.x * s;
     const float ry = axe.y * s;
     const float rz = axe.z * s;
@@ -22,6 +26,10 @@ void vec3::rotate(float angle, const vec3 &axe) {
     quat conjugateQ = rotateQ.conjugate();
     quat W = rotateQ * (*this) * conjugateQ;
     x = W.x, y = W.y, z = W.z;
+}
+
+float vec3::abs() const {
+    return sqrtf(absSquared());
 }
 
 void vec3::endianSwap() {
@@ -68,7 +76,7 @@ bool vec3::raySphereIntersect(const vec3 &start, const vec3 &direction,
     const float t = b * b - a * c;
     if (t <= 0.0f)
         return false;
-    *fraction = -(b + fabs(sqrtf(t))) / a;
+    *fraction = -(b + m::abs(sqrtf(t))) / a;
     return true;
 }
 
