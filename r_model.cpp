@@ -161,22 +161,40 @@ bool model::upload() {
     geom::upload();
 
     const auto &indices = m_model.indices();
-    const auto &vertices = m_model.vertices();
-
     m_indices = indices.size();
 
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::vertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), ATTRIB_OFFSET(0)); // vertex
-    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), ATTRIB_OFFSET(3)); // normals
-    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), ATTRIB_OFFSET(6)); // texCoord
-    gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), ATTRIB_OFFSET(8)); // tangent
-    gl::EnableVertexAttribArray(0);
-    gl::EnableVertexAttribArray(1);
-    gl::EnableVertexAttribArray(2);
-    gl::EnableVertexAttribArray(3);
+    if (m_model.animated()) {
+        const auto &vertices = m_model.animVertices();
+        mesh::animVertex *vert = nullptr;
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::animVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_FLOAT,         GL_FALSE, sizeof(mesh::animVertex), &vert->position); // vertex
+        gl::VertexAttribPointer(1, 3, GL_FLOAT,         GL_FALSE, sizeof(mesh::animVertex), &vert->normal); // normals
+        gl::VertexAttribPointer(2, 2, GL_FLOAT,         GL_FALSE, sizeof(mesh::animVertex), &vert->coordinate); // texCoord
+        gl::VertexAttribPointer(3, 4, GL_FLOAT,         GL_FALSE, sizeof(mesh::animVertex), &vert->tangent); // tangent
+        gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animVertex), &vert->blendWeight); // blend weight
+        gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animVertex), &vert->blendIndex); // blend index
+        gl::EnableVertexAttribArray(0);
+        gl::EnableVertexAttribArray(1);
+        gl::EnableVertexAttribArray(2);
+        gl::EnableVertexAttribArray(3);
+        gl::EnableVertexAttribArray(4);
+        gl::EnableVertexAttribArray(5);
+    } else {
+        const auto &vertices = m_model.vertices();
+        mesh::vertex *vert = nullptr;
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::vertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), &vert->position); // vertex
+        gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), &vert->normal); // normals
+        gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), &vert->coordinate); // texCoord
+        gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), &vert->tangent); // tangent
+        gl::EnableVertexAttribArray(0);
+        gl::EnableVertexAttribArray(1);
+        gl::EnableVertexAttribArray(2);
+        gl::EnableVertexAttribArray(3);
+    }
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
@@ -194,8 +212,15 @@ void model::render() {
     // TODO: multiple materials
     const auto &batches = m_model.batches();
     for (const auto &it : batches)
-        gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
-            (const GLvoid*)(sizeof(GLuint) * it.index));
+        gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT, it.offset);
+}
+
+void model::animate(float curFrame) {
+    m_model.animate(curFrame);
+}
+
+bool model::animated() const {
+    return m_model.animated();
 }
 
 }

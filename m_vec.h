@@ -15,6 +15,7 @@ struct vec3 {
     };
 
     constexpr vec3();
+    constexpr vec3(const float (&vals)[3]);
     constexpr vec3(float nx, float ny, float nz);
     constexpr vec3(float a);
 
@@ -22,7 +23,6 @@ struct vec3 {
 
     void rotate(float angle, const vec3 &axe);
 
-    float absSquared() const;
     float abs() const;
 
     void normalize();
@@ -38,11 +38,13 @@ struct vec3 {
 
     vec3 cross(const vec3 &v) const;
 
-    vec3 &operator +=(const vec3 &vec);
-    vec3 &operator -=(const vec3 &vec);
-    vec3 &operator *=(float value);
-    vec3 &operator /=(float value);
-    vec3 operator -() const;
+    vec3 &operator+=(const vec3 &vec);
+    vec3 &operator-=(const vec3 &vec);
+    vec3 &operator*=(const vec3 &vec);
+    vec3 &operator*=(float value);
+    vec3 &operator/=(float value);
+
+    vec3 operator-() const;
     float operator[](size_t index) const;
     float &operator[](size_t index);
 
@@ -81,6 +83,13 @@ inline constexpr vec3::vec3()
 {
 }
 
+inline constexpr vec3::vec3(const float (&vals)[3])
+    : x(vals[0])
+    , y(vals[1])
+    , z(vals[2])
+{
+}
+
 inline constexpr vec3::vec3(float nx, float ny, float nz)
     : x(nx)
     , y(ny)
@@ -93,10 +102,6 @@ inline constexpr vec3::vec3(float a)
     , y(a)
     , z(a)
 {
-}
-
-inline float vec3::absSquared() const {
-    return x * x + y * y + z * z;
 }
 
 inline void vec3::normalize() {
@@ -150,21 +155,28 @@ inline vec3 vec3::cross(const vec3 &v) const {
     return vec3(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
 }
 
-inline vec3 &vec3::operator +=(const vec3 &vec) {
+inline vec3 &vec3::operator+=(const vec3 &vec) {
     x += vec.x;
     y += vec.y;
     z += vec.z;
     return *this;
 }
 
-inline vec3 &vec3::operator -=(const vec3 &vec) {
+inline vec3 &vec3::operator-=(const vec3 &vec) {
     x -= vec.x;
     y -= vec.y;
     z -= vec.z;
     return *this;
 }
 
-inline vec3 &vec3::operator *=(float value) {
+inline vec3 &vec3::operator*=(const vec3 &vec) {
+    x *= vec.x;
+    y *= vec.y;
+    z *= vec.z;
+    return *this;
+}
+
+inline vec3 &vec3::operator*=(float value) {
     x *= value;
     y *= value;
     z *= value;
@@ -247,19 +259,47 @@ struct vec4 {
     };
 
     constexpr vec4();
+    constexpr vec4(const float (&vals)[4]);
+    constexpr vec4(const vec3 &vec, float w);
     constexpr vec4(float x, float y, float z, float w);
 
     float &operator[](size_t index);
     const float &operator[](size_t index) const;
+    constexpr vec4 addw(float f) const;
+
+    vec4 &operator*=(float k);
+    vec4 &operator+=(const vec4 &o);
+
+    float abs() const;
 
     void endianSwap();
+
+    friend float operator*(const vec4 &l, const vec4 &r);
+    friend vec4 operator*(const vec4 &l, float k);
+    friend vec4 operator+(const vec4 &l, const vec4 &r);
 };
 
 inline constexpr vec4::vec4()
     : x(0.0f)
     , y(0.0f)
     , z(0.0f)
-    , w(0.0f)
+    , w(1.0f)
+{
+}
+
+inline constexpr vec4::vec4(const float (&vals)[4])
+    : x(vals[0])
+    , y(vals[1])
+    , z(vals[2])
+    , w(vals[3])
+{
+}
+
+inline constexpr vec4::vec4(const vec3 &vec, float w)
+    : x(vec.x)
+    , y(vec.y)
+    , z(vec.z)
+    , w(w)
 {
 }
 
@@ -277,6 +317,38 @@ inline float &vec4::operator[](size_t index) {
 
 inline const float &vec4::operator[](size_t index) const {
     return m[index];
+}
+
+inline constexpr vec4 vec4::addw(float f) const {
+    return { x, y, z, w + f };
+}
+
+inline vec4 &vec4::operator*=(float k) {
+    x *= k;
+    y *= k;
+    z *= k;
+    w *= k;
+    return *this;
+}
+
+inline vec4 &vec4::operator+=(const vec4 &o) {
+    x += o.x;
+    y += o.y;
+    z += o.z;
+    w += o.w;
+    return *this;
+}
+
+inline float operator*(const vec4 &l, const vec4 &r) {
+    return l.x*r.x + l.y*r.y + l.z*r.z + l.w*r.w;
+}
+
+inline vec4 operator*(const vec4 &l, float k) {
+    return { l.x*k, l.y*k, l.z*k, l.w*k };
+}
+
+inline vec4 operator+(const vec4 &l, const vec4 &r) {
+    return { l.x+r.x, l.y+r.y, l.z+r.z, l.w+r.w };
 }
 
 }

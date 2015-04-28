@@ -41,6 +41,10 @@ quat operator*(const quat &l, const quat &r) {
     return { x, y, z, w };
 }
 
+quat operator*(const quat &l, float k) {
+    return { l.x*k, l.y*k, l.z*k, l.w*k };
+}
+
 void quat::getMatrix(mat4 *mat) const {
     const float n = 1.0f / sqrtf(x*x + y*y + z*z + w*w);
     const float qx = x*n;

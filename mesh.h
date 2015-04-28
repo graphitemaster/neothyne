@@ -11,21 +11,22 @@ namespace u {
 struct model;
 struct obj;
 
-struct mesh {
+namespace mesh {
     struct vertex {
         float position[3];
         float normal[3];
         float coordinate[2];
-        float tangent[4];
+        float tangent[4]; // w = sign of bitangent
     };
 
-private:
-    friend struct model;
-    friend struct obj;
-
-    m::bbox m_bounds;
-    u::vector<vertex> m_vertices;
-    u::vector<unsigned int> m_indices;
+    struct animVertex {
+        float position[3];
+        float normal[3];
+        float coordinate[2];
+        float tangent[4]; // w = sign of bitangent
+        unsigned char blendIndex[4];
+        unsigned char blendWeight[4];
+    };
 };
 
 struct vertexCacheData {

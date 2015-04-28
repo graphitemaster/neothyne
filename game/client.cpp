@@ -240,7 +240,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
     }
 
     if (cl_edit) {
-        if (newDirection.absSquared() > 0.1f)
+        if (newDirection*newDirection > 0.1f)
             newDirection.setLength(cl_edit_speed);
         m_lastDirection = direction;
         m_velocity = newDirection;
@@ -262,7 +262,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
         }
 
         newDirection.y = 0;
-        if (newDirection.absSquared() > 0.1f)
+        if (newDirection*newDirection > 0.1f)
             newDirection.setLength(clientSpeed);
         newDirection.y += velocity.y;
         if (m_isOnGround)

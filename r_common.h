@@ -60,6 +60,7 @@ void Uniform1i(GLint location, GLint v0 GL_INFOP);
 void Uniform1f(GLint location, GLfloat v0 GL_INFOP);
 void Uniform2f(GLint location, GLfloat v0, GLfloat v1 GL_INFOP);
 void Uniform3fv(GLint location, GLsizei count, const GLfloat* value GL_INFOP);
+void UniformMatrix3x4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value GL_INFOP);
 void GenerateMipmap(GLenum target GL_INFOP);
 void DeleteShader(GLuint shader GL_INFOP);
 void GetShaderiv(GLuint shader, GLenum pname, GLint* params GL_INFOP);
@@ -146,6 +147,7 @@ void BindFragDataLocation(GLuint program, GLuint colorNumber, const GLchar* name
 #   define Uniform1f(...)                Uniform1f(__VA_ARGS__, __FILE__, __LINE__)
 #   define Uniform2f(...)                Uniform2f(__VA_ARGS__, __FILE__, __LINE__)
 #   define Uniform3fv(...)               Uniform3fv(__VA_ARGS__, __FILE__, __LINE__)
+#   define UniformMatrix3x4fv(...)       UniformMatrix3x4fv(__VA_ARGS__, __FILE__, __LINE__)
 #   define GenerateMipmap(...)           GenerateMipmap(__VA_ARGS__, __FILE__, __LINE__)
 #   define DeleteShader(...)             DeleteShader(__VA_ARGS__, __FILE__, __LINE__)
 #   define GetShaderiv(...)              GetShaderiv(__VA_ARGS__, __FILE__, __LINE__)

@@ -7,7 +7,8 @@ namespace m {
 struct mat4;
 
 struct quat : vec4 {
-    constexpr quat() = default;
+    constexpr quat();
+    constexpr quat(const float (&vals)[4]);
     constexpr quat(float x, float y, float z, float w);
 
     quat(float angle, const vec3 &vec);
@@ -22,8 +23,18 @@ struct quat : vec4 {
 
     friend quat operator*(const quat &l, const vec3 &v);
     friend quat operator*(const quat &l, const quat &r);
+    friend quat operator*(const quat &l, float k);
+
+    quat normalize() const;
 
 };
+
+inline constexpr quat::quat() = default;
+
+inline constexpr quat::quat(const float (&vals)[4])
+    : vec4(vals)
+{
+}
 
 inline constexpr quat::quat(float x, float y, float z, float w)
     : vec4(x, y, z, w)
@@ -44,6 +55,10 @@ inline quat::quat(float angle, const vec3 &vec) {
 
 inline constexpr quat quat::conjugate() const {
     return quat(-x, -y, -z, -w);
+}
+
+inline quat quat::normalize() const {
+    return *this * (1.0f / abs());
 }
 
 }

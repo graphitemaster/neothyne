@@ -4,6 +4,7 @@
 
 namespace m {
 
+///! mat4x4
 void mat4::loadIdentity() {
     a = { 1.0f, 0.0f, 0.0f, 0.0f };
     b = { 0.0f, 1.0f, 0.0f, 0.0f };
@@ -177,6 +178,43 @@ mat4 mat4::inverse() {
     m.d.z = -det3x3(a1, a2, a3, b1, b2, b3, d1, d2, d3) * id;
     m.d.w = det3x3(a1, a2, a3, b1, b2, b3, c1, c2, c3) * id;
     return m;
+}
+
+///! mat3x3
+void mat3x3::convertQuaternion(const quat &q) {
+    const float x = q.x;
+    const float y = q.y;
+    const float z = q.z;
+    const float w = q.w;
+    const float tx = 2*x;
+    const float ty = 2*y;
+    const float tz = 2*z;
+    const float txx = tx*x;
+    const float tyy = ty*y;
+    const float tzz = tz*z;
+    const float txy = tx*y;
+    const float txz = tx*z;
+    const float tyz = ty*z;
+    const float twx = w*tx;
+    const float twy = w*ty;
+    const float twz = w*tz;
+    a = { 1 - (tyy + tzz), txy - twz, txz + twy };
+    b = { txy + twz, 1 - (txx + tzz), tyz - twx };
+    c = { txz - twy, tyz + twx, 1 - (txx + tyy) };
+}
+
+///! mat3x4
+void mat3x4::invert(const mat3x4 &o) {
+    mat3x3 inv(vec3(o.a.x, o.b.x, o.c.x),
+               vec3(o.a.y, o.b.y, o.c.y),
+               vec3(o.a.z, o.b.z, o.c.z));
+    inv.a /= (inv.a * inv.a);
+    inv.b /= (inv.b * inv.b);
+    inv.c /= (inv.c * inv.c);
+    vec3 trans(o.a.w, o.b.w, o.c.w);
+    a = vec4(inv.a, -inv.a*trans);
+    b = vec4(inv.b, -inv.b*trans);
+    c = vec4(inv.c, -inv.c*trans);
 }
 
 }

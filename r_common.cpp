@@ -53,6 +53,7 @@ typedef void (APIENTRYP MYPFNGLUNIFORM1IPROC)(GLint, GLint);
 typedef void (APIENTRYP MYPFNGLUNIFORM1FPROC)(GLint, GLfloat);
 typedef void (APIENTRYP MYPFNGLUNIFORM2FPROC)(GLint, GLfloat, GLfloat);
 typedef void (APIENTRYP MYPFNGLUNIFORM3FVPROC)(GLint, GLsizei, const GLfloat*);
+typedef void (APIENTRYP MYPFNGLUNIFORMMATRIX3X4FVPROC)(GLint, GLsizei, GLboolean, const GLfloat*);
 typedef void (APIENTRYP MYPFNGLGENERATEMIPMAPPROC)(GLenum);
 typedef void (APIENTRYP MYPFNGLDELETESHADERPROC)(GLuint);
 typedef void (APIENTRYP MYPFNGLGETSHADERIVPROC)(GLuint, GLenum, GLint*);
@@ -137,6 +138,7 @@ static MYPFNGLUNIFORM1IPROC                 glUniform1i_                = nullpt
 static MYPFNGLUNIFORM1FPROC                 glUniform1f_                = nullptr;
 static MYPFNGLUNIFORM2FPROC                 glUniform2f_                = nullptr;
 static MYPFNGLUNIFORM3FVPROC                glUniform3fv_               = nullptr;
+static MYPFNGLUNIFORMMATRIX3X4FVPROC        glUniformMatrix3x4fv_       = nullptr;
 static MYPFNGLGENERATEMIPMAPPROC            glGenerateMipmap_           = nullptr;
 static MYPFNGLDELETESHADERPROC              glDeleteShader_             = nullptr;
 static MYPFNGLGETSHADERIVPROC               glGetShaderiv_              = nullptr;
@@ -463,6 +465,7 @@ void init() {
     glUniform1f_                = (MYPFNGLUNIFORM1FPROC)neoGetProcAddress("glUniform1f");
     glUniform2f_                = (MYPFNGLUNIFORM2FPROC)neoGetProcAddress("glUniform2f");
     glUniform3fv_               = (MYPFNGLUNIFORM3FVPROC)neoGetProcAddress("glUniform3fv");
+    glUniformMatrix3x4fv_       = (MYPFNGLUNIFORMMATRIX3X4FVPROC)neoGetProcAddress("glUniformMatrix3x4fv");
     glGenerateMipmap_           = (MYPFNGLGENERATEMIPMAPPROC)neoGetProcAddress("glGenerateMipmap");
     glDeleteShader_             = (MYPFNGLDELETESHADERPROC)neoGetProcAddress("glDeleteShader");
     glGetShaderiv_              = (MYPFNGLGETSHADERIVPROC)neoGetProcAddress("glGetShaderiv");
@@ -676,6 +679,11 @@ void Uniform2f(GLint location, GLfloat v0, GLfloat v1 GL_INFOP) {
 void Uniform3fv(GLint location, GLsizei count, const GLfloat* value GL_INFOP) {
     glUniform3fv_(location, count, value);
     GL_CHECK("78*c", location, count, value);
+}
+
+void UniformMatrix3x4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value GL_INFOP) {
+    glUniformMatrix3x4fv_(location, count, transpose, value);
+    GL_CHECK("783*c", location, count, transpose, value);
 }
 
 void GenerateMipmap(GLenum target GL_INFOP) {

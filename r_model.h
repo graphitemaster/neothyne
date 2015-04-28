@@ -36,6 +36,11 @@ struct model : geom {
     bool upload();
     void render();
 
+    void animate(float curFrame);
+    bool animated() const;
+    const float *bones() const;
+    size_t joints() const;
+
     // The material for this model (TODO: many materials)
     material mat;
     m::vec3 scale;
@@ -50,6 +55,14 @@ private:
 
 inline m::bbox model::bounds() const {
     return m_model.bounds();
+}
+
+inline const float *model::bones() const {
+    return m_model.bones();
+}
+
+inline size_t model::joints() const {
+    return m_model.joints();
 }
 
 }

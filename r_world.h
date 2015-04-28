@@ -52,6 +52,7 @@ struct geomMethod : method {
     void setSpecIntensity(float intensity);
     void setEyeWorldPos(const m::vec3 &position);
     void setParallax(float scale, float bias);
+    void setBoneMats(size_t numJoints, const float *mats);
 
 private:
     GLint m_WVPLocation;
@@ -64,6 +65,7 @@ private:
     GLint m_specIntensityLocation;
     GLint m_eyeWorldPositionLocation;
     GLint m_parallaxLocation;
+    GLint m_boneMatsLocation;
 };
 
 inline geomMethod::geomMethod()
@@ -77,6 +79,7 @@ inline geomMethod::geomMethod()
     , m_specIntensityLocation(-1)
     , m_eyeWorldPositionLocation(-1)
     , m_parallaxLocation(-1)
+    , m_boneMatsLocation(-1)
 {
 }
 

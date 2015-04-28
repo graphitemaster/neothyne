@@ -1,3 +1,4 @@
+#include <math.h> // fmodf
 #include "engine.h"
 #include "gui.h"
 #include "world.h"
@@ -173,9 +174,9 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
 
     // and some map models
     mapModel m;
-    m.name = "models/lg";
-    m.position = { 40, 120, 0 };
-    m.rotate = { 0, 90, 0 };
+    m.name = "models/iqmtest";
+    m.position = { 40, 95, 0 };
+    m.rotate = { 0, -90, 0 };
     gWorld.insert(m);
 
     if (!gWorld.load("garden.kdgz"))
@@ -222,7 +223,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             r::pipeline p;
             m::perspective pp = gPerspective;
 
-            const m::vec3 rot(0.0f, -(gPipeline.time() / 10.0f), 0.0f);
+            const m::vec3 rot(0.0f, -(fmodf(gPipeline.time() / 10.0f, 361.0f)), 0.0f);
             m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
             m::mat4 rotate;
             ry.getMatrix(&rotate);

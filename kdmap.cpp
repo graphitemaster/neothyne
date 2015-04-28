@@ -232,8 +232,8 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
         const m::vec3 q1 = p1 - p0;
         const m::vec3 q2 = p2 - p0;
         const float q1q2 = q1 * q2;
-        const float q1Squared = q1.absSquared();
-        const float q2Squared = q2.absSquared();
+        const float q1Squared = q1*q1;
+        const float q2Squared = q2*q2;
         const float invertDet = 1.0f / (q1Squared * q2Squared - q1q2 * q1q2);
         const float rq1 = r * q1;
         const float rq2 = r * q2;

@@ -22,14 +22,16 @@ void vec3::rotate(float angle, const vec3 &axe) {
     const float ry = axe.y * s;
     const float rz = axe.z * s;
     const float rw = c;
-    quat rotateQ(rx, ry, rz, rw);
-    quat conjugateQ = rotateQ.conjugate();
-    quat W = rotateQ * (*this) * conjugateQ;
-    x = W.x, y = W.y, z = W.z;
+    const quat rotateQ(rx, ry, rz, rw);
+    const quat conjugateQ = rotateQ.conjugate();
+    const quat W = rotateQ * (*this) * conjugateQ;
+    x = W.x;
+    y = W.y;
+    z = W.z;
 }
 
 float vec3::abs() const {
-    return sqrtf(absSquared());
+    return sqrtf(*this * *this);
 }
 
 void vec3::endianSwap() {
@@ -43,17 +45,17 @@ bool vec3::rayCylinderIntersect(const vec3 &start, const vec3 &direction,
 {
     const m::vec3 pa = edgeEnd - edgeStart;
     const m::vec3 s0 = start - edgeStart;
-    const float paSquared = pa.absSquared();
+    const float paSquared = pa*pa;
     const float paInvSquared = 1.0f / paSquared;
 
     // a
     const float pva = direction * pa;
-    const float a = direction.absSquared() - pva * pva * paInvSquared;
+    const float a = (direction*direction) - pva * pva * paInvSquared;
     // b
     const float b = s0 * direction - (s0 * pa) * pva * paInvSquared;
     // c
     const float ps0a = s0 * pa;
-    const float c = s0.absSquared() - radius * radius - ps0a * ps0a * paInvSquared;
+    const float c = (s0*s0) - radius * radius - ps0a * ps0a * paInvSquared;
 
     // test
     const float distance = b*b - a*c;
@@ -67,10 +69,10 @@ bool vec3::rayCylinderIntersect(const vec3 &start, const vec3 &direction,
 bool vec3::raySphereIntersect(const vec3 &start, const vec3 &direction,
     const vec3 &sphere, float radius, float *fraction)
 {
-    const float a = direction.absSquared();
+    const float a = direction*direction;
     const vec3  s = start - sphere;
     const float b = direction * s;
-    const float c1 = s.absSquared();
+    const float c1 = s * s;
     const float c4 = radius * radius;
     const float c = c1 - c4;
     const float t = b * b - a * c;
@@ -84,6 +86,10 @@ vec3 vec3::rand(float mx, float my, float mz) {
     return { mx * ((float)(u::randu() % 20000) * 0.0001f - 1.0f),
              my * ((float)(u::randu() % 20000) * 0.0001f - 1.0f),
              mz * ((float)(u::randu() % 20000) * 0.0001f - 1.0f) };
+}
+
+float vec4::abs() const {
+    return sqrtf(*this * *this);
 }
 
 void vec4::endianSwap() {

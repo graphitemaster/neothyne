@@ -4,6 +4,8 @@
 #include "u_file.h"
 #include "u_map.h"
 
+#include "m_quat.h"
+
 /// Tangent and Bitangent calculation
 static void calculateTangent(const u::vector<m::vec3> &vertices,
                              const u::vector<m::vec3> &coordinates,
@@ -96,10 +98,10 @@ static void createTangents(const u::vector<m::vec3> &vertices,
 
 ///! OBJ Loader
 struct obj {
-    bool load(const u::string &file, u::vector<mesh*> &meshes);
+    bool load(const u::string &file, model *store);
 };
 
-bool obj::load(const u::string &file, u::vector<mesh*> &meshes) {
+bool obj::load(const u::string &file, model *store) {
     u::file fp = fopen(neoGamePath() + file + ".obj", "r");
     if (!fp)
         return false;
@@ -220,16 +222,10 @@ bool obj::load(const u::string &file, u::vector<mesh*> &meshes) {
     u::vector<float> bitangents_(count);
     createTangents(positions_, coordinates_, normals_, indices, tangents_, bitangents_);
 
-    u::unique_ptr<mesh> mesh_(new mesh);
-
-    // Calculate bounding box
-    for (const auto &it : positions_)
-        mesh_->m_bounds.expand(it);
-
     // Interleave for GPU
-    mesh_->m_vertices.resize(count);
+    store->m_vertices.resize(count);
     for (size_t i = 0; i < count; i++) {
-        auto &vert = mesh_->m_vertices[i];
+        auto &vert = store->m_vertices[i];
         for (size_t j = 0; j < 3; j++) {
             vert.position[j] = positions_[i][j];
             vert.normal[j] = normals_[i][j];
@@ -241,39 +237,347 @@ bool obj::load(const u::string &file, u::vector<mesh*> &meshes) {
     }
 
     // size_t -> unsigned int
-    mesh_->m_indices.reserve(count);
+    store->m_indices.reserve(count);
     for (auto &it : indices)
-        mesh_->m_indices.push_back(it);
+        store->m_indices.push_back(it);
 
-    meshes.push_back(mesh_.release());
+    // TODO: multiple mesh support
+    model::batch b;
+    b.offset = (void *)0;
+    b.count = store->m_indices.size();
+
+    store->m_batches.push_back(b);
+
     return true;
 }
 
-model::~model() {
-    for (auto it : m_meshes)
-        delete it;
+///! IQM loader
+struct iqm {
+    bool load(const u::string &file, model *store);
+protected:
+    struct iqmHeader {
+        static constexpr const char *kMagic = "INTERQUAKEMODEL";
+        static constexpr uint32_t kVersion = 2;
+        char magic[16];
+        uint32_t version;
+        uint32_t fileSize;
+        uint32_t flags;
+        uint32_t numText, ofsText;
+        uint32_t numMeshes, ofsMeshes;
+        uint32_t numVertexArrays, numVertexes, ofsVertexArrays;
+        uint32_t numTriangles, ofsTriangles, ofsAdjacency;
+        uint32_t numJoints, ofsJoints;
+        uint32_t numPoses, ofsPoses;
+        uint32_t numAnims, ofsAnims;
+        uint32_t numFrames, numFrameChannels, ofsFrames, ofsBounds;
+        uint32_t numComment, ofsComment;
+        uint32_t numExtensions, ofsExtensions;
+        void endianSwap();
+    };
+
+    struct iqmMesh {
+        uint32_t name;
+        uint32_t material;
+        uint32_t firstVertex, numVertexes;
+        uint32_t firstTriangle, numTriangles;
+    };
+
+    enum {
+        kPosition     = 0,
+        kTexCoord     = 1,
+        kNormal       = 2,
+        kTangent      = 3,
+        kBlendIndexes = 4,
+        kBlendWeights = 5
+    };
+
+    static constexpr int kUByte = 1;
+    static constexpr int kFloat = 7;
+
+    struct iqmTriangle {
+        uint32_t vertex[3];
+    };
+
+    struct iqmJoint {
+        uint32_t name;
+        int32_t parent;
+        float translate[3];
+        float rotate[4];
+        float scale[3];
+    };
+
+    struct iqmPose {
+        int32_t parent;
+        uint32_t mask;
+        float channelOffset[10];
+        float channelScale[10];
+    };
+
+    struct iqmAnim {
+        uint32_t name;
+        uint32_t firstFrame, numFrames;
+        float frameRate;
+        uint32_t flags;
+    };
+
+    struct iqmVertexArray {
+        uint32_t type;
+        uint32_t flags;
+        uint32_t format;
+        uint32_t size;
+        uint32_t offset;
+    };
+
+    bool loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store);
+    bool loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store);
+
+private:
+    u::vector<m::mat3x4> m_baseFrame;
+    u::vector<m::mat3x4> m_inverseBaseFrame;
+};
+
+inline void iqm::iqmHeader::endianSwap() {
+    u::endianSwap(&version, (sizeof(iqmHeader) - sizeof(magic)) / sizeof(uint32_t));
 }
 
-bool model::load(const u::string &file) {
-    obj o;
-    if (!o.load(file, m_meshes))
-        return false;
+bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
+    u::endianSwap((uint32_t*)&buf[hdr->ofsVertexArrays],
+        hdr->numVertexArrays*sizeof(iqmVertexArray)/sizeof(uint32_t));
+    u::endianSwap((uint32_t*)&buf[hdr->ofsTriangles],
+        hdr->numTriangles*sizeof(iqmTriangle)/sizeof(uint32_t));
+    u::endianSwap((uint32_t*)&buf[hdr->ofsMeshes],
+        hdr->numMeshes*sizeof(iqmMesh)/sizeof(uint32_t));
+    u::endianSwap((uint32_t*)&buf[hdr->ofsJoints],
+        hdr->numJoints*sizeof(iqmJoint)/sizeof(uint32_t));
 
-    // Copy the vertex and index data while generating batches for rendering
-    batch b;
-    for (auto it : m_meshes) {
-        b.index = m_indices.size();
-        b.count = it->m_indices.size();
-        const size_t index = m_vertices.size();
-        const size_t count = it->m_vertices.size();
-        m_vertices.resize(index + count);
-        memcpy(&m_vertices[index], &it->m_vertices[0], sizeof(mesh::vertex)*count);
-        m_indices.resize(b.index + b.count);
-        memcpy(&m_indices[b.index], &it->m_indices[0], sizeof(unsigned int)*b.count);
-        m_batches.push_back(b);
-        // Also adjust bounding box
-        m_bounds.expand(it->m_bounds);
+    float *inPosition = nullptr;
+    float *inNormal = nullptr;
+    float *inTangent = nullptr;
+    float *inCoordinate = nullptr;
+    unsigned char *inBlendIndex = nullptr;
+    unsigned char *inBlendWeight = nullptr;
+
+    iqmVertexArray *vertexArrays = (iqmVertexArray*)&buf[hdr->ofsVertexArrays];
+    for (uint32_t i = 0; i < hdr->numVertexArrays; i++) {
+        iqmVertexArray &va = vertexArrays[i];
+        #define check(TYPE, SIZE) \
+            if (va.format != (TYPE) || va.size != (SIZE)) \
+                return false
+        switch (va.type) {
+        case iqm::kPosition:
+            check(kFloat, 3);
+            inPosition = (float *)&buf[va.offset];
+            break;
+        case iqm::kNormal:
+            check(kFloat, 3);
+            inNormal = (float *)&buf[va.offset];
+            break;
+        case iqm::kTangent:
+            check(kFloat, 4);
+            inTangent = (float *)&buf[va.offset];
+            break;
+        case iqm::kTexCoord:
+            check(kFloat, 2);
+            inCoordinate = (float *)&buf[va.offset];
+            break;
+        case iqm::kBlendIndexes:
+            check(kUByte, 4);
+            inBlendIndex = (unsigned char *)&buf[va.offset];
+            break;
+        case iqm::kBlendWeights:
+            check(kUByte, 4);
+            inBlendWeight = (unsigned char *)&buf[va.offset];
+            break;
+        }
+        #undef check
+    }
+
+    const iqmJoint *joints = (iqmJoint*)&buf[hdr->ofsJoints];
+
+    const bool animated = hdr->numFrames != 0;
+    store->m_numFrames = hdr->numFrames;
+    if (animated) {
+        store->m_numJoints = hdr->numJoints;
+        store->m_outFrame.resize(hdr->numJoints);
+        store->m_parents.resize(hdr->numJoints);
+        for (uint32_t i = 0; i < hdr->numJoints; i++)
+            store->m_parents[i] = joints[i].parent;
+        m_baseFrame.resize(hdr->numJoints);
+        m_inverseBaseFrame.resize(hdr->numJoints);
+        for (uint32_t i = 0; i < hdr->numJoints; i++) {
+            const iqmJoint &j = joints[i];
+            m_baseFrame[i] = m::mat3x4(m::quat(j.rotate).normalize(),
+                                       m::vec3(j.translate),
+                                       m::vec3(j.scale));
+            m_inverseBaseFrame[i].invert(m_baseFrame[i]);
+            if (j.parent >= 0) {
+                m_baseFrame[i] = m_baseFrame[j.parent] * m_baseFrame[i];
+                m_inverseBaseFrame[i] *= m_inverseBaseFrame[j.parent];
+            }
+        }
+    }
+
+    // indices
+    const iqmTriangle *triangles = (iqmTriangle*)&buf[hdr->ofsTriangles];
+    store->m_indices.reserve(hdr->numTriangles);
+    for (uint32_t i = 0; i < hdr->numTriangles; i++) {
+        const iqmTriangle &triangle = triangles[i];
+        store->m_indices.push_back(triangle.vertex[0]);
+        store->m_indices.push_back(triangle.vertex[2]);
+        store->m_indices.push_back(triangle.vertex[1]);
+    }
+
+    if (inPosition)   u::endianSwap(inPosition, 3*hdr->numVertexes);
+    if (inNormal)     u::endianSwap(inNormal, 3*hdr->numVertexes);
+    if (inTangent)    u::endianSwap(inTangent, 4*hdr->numVertexes);
+    if (inCoordinate) u::endianSwap(inCoordinate, 2*hdr->numVertexes);
+
+    if (animated) {
+        store->m_animVertices.resize(hdr->numVertexes);
+        for (uint32_t i = 0; i < hdr->numVertexes; i++) {
+            mesh::animVertex &v = store->m_animVertices[i];
+            if (inPosition)    memcpy(v.position, &inPosition[i*3], sizeof(v.position));
+            if (inCoordinate)  memcpy(v.coordinate, &inCoordinate[i*2], sizeof(v.coordinate));
+            if (inTangent)     memcpy(v.tangent, &inTangent[i*4], sizeof(v.tangent));
+            if (inBlendIndex)  memcpy(v.blendIndex, &inBlendIndex[i*4], sizeof(v.blendIndex));
+            if (inBlendWeight) memcpy(v.blendWeight, &inBlendWeight[i*4], sizeof(v.blendWeight));
+            if (inNormal) {
+                // Flip normals
+                m::vec3 normal = (-1.0f * m::vec3(inNormal[i*3+0],
+                                                  inNormal[i*3+1],
+                                                  inNormal[i*3+2])).normalized();
+                memcpy(v.normal, &normal[0], sizeof(v.normal));
+            }
+        }
+    } else {
+        store->m_vertices.resize(hdr->numVertexes);
+        for (uint32_t i = 0; i < hdr->numVertexes; i++) {
+            mesh::vertex &v = store->m_vertices[i];
+            if (inPosition)   memcpy(v.position, &inPosition[i*3], sizeof(v.position));
+            if (inCoordinate) memcpy(v.coordinate, &inCoordinate[i*2], sizeof(v.coordinate));
+            if (inTangent)    memcpy(v.tangent, &inTangent[i*4], sizeof(v.tangent));
+            if (inNormal) {
+                // Flip normals
+                m::vec3 normal = (-1.0f * m::vec3(inNormal[i*3+0],
+                                                  inNormal[i*3+1],
+                                                  inNormal[i*3+2])).normalized();
+                memcpy(v.normal, &normal[0], sizeof(v.normal));
+            }
+        }
     }
 
     return true;
+}
+
+bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store) {
+    u::endianSwap((uint32_t *)&buf[hdr->ofsPoses], hdr->numPoses*sizeof(iqmPose)/sizeof(uint32_t));
+    u::endianSwap((uint32_t *)&buf[hdr->ofsAnims], hdr->numAnims*sizeof(iqmAnim)/sizeof(uint32_t));
+    u::endianSwap((uint16_t *)&buf[hdr->ofsFrames], hdr->numFrames*hdr->numFrameChannels);
+
+    const iqmPose *poses = (iqmPose*)&buf[hdr->ofsPoses];
+
+    store->m_frames.resize(hdr->numFrames * hdr->numPoses);
+    uint16_t *frameData = (uint16_t*)&buf[hdr->ofsFrames];
+    for (uint32_t i = 0; i < hdr->numFrames; i++) {
+        for (uint32_t j = 0; j < hdr->numPoses; j++) {
+            const iqmPose &p = poses[j];
+            float data[10];
+            memcpy(data, p.channelOffset, sizeof(p.channelOffset));
+            for (size_t v = 0; v < 10; v++)
+                if (p.mask & (1 << v))
+                    data[v] += (*frameData++) * p.channelScale[v];
+            const m::vec3 translate(data[0], data[1], data[2]);
+            const m::quat rotate(data[3], data[4], data[5], data[6]);
+            const m::vec3 scale(data[7], data[8], data[9]);
+            const m::mat3x4 m(rotate.normalize(), translate, scale);
+            store->m_frames[i*hdr->numPoses + j] =
+                p.parent >= 0
+                    ? m_baseFrame[p.parent] * m * m_inverseBaseFrame[j]
+                    : m * m_inverseBaseFrame[j];
+        }
+    }
+
+    return true;
+}
+
+bool iqm::load(const u::string &file, model *store) {
+    auto read = u::read(neoGamePath() + file + ".iqm", "rb");
+    if (!read)
+        return false;
+    auto data = *read;
+
+    iqmHeader *hdr = (iqmHeader*)&data[0];
+    if (memcmp(hdr->magic, (const void *)iqmHeader::kMagic, sizeof(hdr->magic)))
+        return false;
+
+    hdr->endianSwap();
+    if (hdr->version != iqmHeader::kVersion)
+        return false;
+    if (hdr->numMeshes > 0 && !loadMeshes(hdr, &data[0], store))
+        return false;
+    if (hdr->numAnims > 0 && !loadAnims(hdr, &data[0], store))
+        return false;
+
+    // batches
+    model::batch b;
+    const char *str = hdr->ofsText ? (char *)&data[hdr->ofsText] : nullptr;
+    const iqmMesh *meshes = (iqmMesh*)&data[hdr->ofsMeshes];
+    for (uint32_t i = 0; i < hdr->numMeshes; i++) {
+        const iqmMesh &m = meshes[i];
+        iqmTriangle *tri = nullptr;
+        b.offset = &tri[m.firstTriangle];
+        b.count = 3*m.numTriangles;
+        b.name = str ? str : "";
+        store->m_batches.push_back(b);
+    }
+
+    return true;
+}
+
+model::~model() = default;
+
+bool model::load(const u::string &file) {
+    const auto iqm_ = u::format("%s%c%s.iqm", neoGamePath(), u::kPathSep, file);
+    const auto obj_ = u::format("%s%c%s.obj", neoGamePath(), u::kPathSep, file);
+    if (u::exists(iqm_) && !iqm().load(file, this))
+        return false;
+    else if (u::exists(obj_) && !obj().load(file, this))
+        return false;
+    // calculate bounds
+    if (animated()) {
+        for (const auto &it : m_animVertices)
+            m_bounds.expand(m::vec3(it.position));
+    } else {
+        for (const auto &it : m_vertices)
+            m_bounds.expand(m::vec3(it.position));
+    }
+    return true;
+}
+
+void model::animate(float curFrame) {
+    if (m_numFrames == 0)
+        return;
+
+    int frame1 = int(m::floor(curFrame));
+    int frame2 = frame1 + 1;
+
+    const float frameOffset = curFrame - frame1;
+
+    frame1 %= m_numFrames;
+    frame2 %= m_numFrames;
+
+    m::mat3x4 *mat1 = &m_frames[frame1 * m_numJoints];
+    m::mat3x4 *mat2 = &m_frames[frame2 * m_numJoints];
+
+    // Interpolate matrices between the two closest frames and concatenate with
+    // parent matrix if necessary.
+    // Concatenate the result with the inverse base pose.
+    for (size_t i = 0; i < m_numJoints; i++) {
+        m::mat3x4 mat = mat1[i]*(1 - frameOffset) + mat2[i] * frameOffset;
+        if (m_parents[i] >= 0)
+            m_outFrame[i] = m_outFrame[m_parents[i]] * mat;
+        else
+            m_outFrame[i] = mat;
+    }
+
 }
