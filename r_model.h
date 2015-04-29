@@ -112,7 +112,9 @@ struct model : geom {
 
     bool load(u::map<u::string, texture2D*> &textures, const u::string &file);
     bool upload();
+
     void render(const r::pipeline &pl, const m::mat4 &w);
+    void render(); // GUI model rendering (diffuse only, single material, entire model)
 
     void animate(float curFrame);
     bool animated() const;

@@ -434,7 +434,7 @@ void gui::render(const pipeline &pl) {
         } else if (it.type == ::gui::kCommandModel) {
             gl::Enable(GL_DEPTH_TEST);
             gl::Clear(GL_DEPTH_BUFFER_BIT);
-            //m_modelMethod.enable();
+            m_modelMethod.enable();
             if (m_models.find(it.asModel.path) == m_models.end()) {
                 gl::Disable(GL_DEPTH_TEST);
                 gl::Viewport(0, 0, neoWidth(), neoHeight());
@@ -443,10 +443,10 @@ void gui::render(const pipeline &pl) {
             auto &mdl = m_models[it.asModel.path];
             auto p = it.asModel.pipeline;
             gl::Viewport(it.asModel.x, it.asModel.y, it.asModel.w, it.asModel.h);
-            //m_modelMethod.setWorld(p.world());
-            //m_modelMethod.setWVP(p.projection() * p.view() * p.world());
-            //mdl->mat.diffuse->bind(GL_TEXTURE0); // TODO: FIX
-            mdl->render(p, p.world());
+            m_modelMethod.setWorld(p.world());
+            m_modelMethod.setWVP(p.projection() * p.view() * p.world());
+            //mdl->mat.diffuse->bind(GL_TEXTURE0);
+            mdl->render();
             gl::Disable(GL_DEPTH_TEST);
             gl::Viewport(0, 0, neoWidth(), neoHeight());
             gl::BindVertexArray(m_vao);

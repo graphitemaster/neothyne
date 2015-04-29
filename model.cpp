@@ -527,7 +527,7 @@ bool iqm::load(const u::string &file, model *store) {
         iqmTriangle *tri = nullptr;
         b.offset = &tri[m.firstTriangle];
         b.count = 3*m.numTriangles;
-        store->m_meshNames.push_back(str ? str : "default");
+        store->m_meshNames.push_back(str ? &str[m.name] : "default");
         store->m_batches.push_back(b);
     }
 

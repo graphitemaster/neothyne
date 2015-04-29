@@ -211,9 +211,10 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
     u::string displacementName;
 
     // Read the material
-    auto fp = u::fopen(neoGamePath() + materialName + ".cfg", "r");
+    const u::string fileName = neoGamePath() + materialName + ".cfg";
+    auto fp = u::fopen(fileName, "r");
     if (!fp) {
-        u::print("Failed to load material: %s\n", materialName);
+        u::print("Failed to load material: %s (%s)\n", materialName, fileName);
         return false;
     }
 
@@ -403,16 +404,20 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
         m_batches[0].material = 0;
     } else {
         m_materials.resize(materialNames.size());
-        for (size_t i = 0; i < materialNames.size(); i++)
-            if (!m_materials[i].load(textures, materialFiles[i], "models/"))
+        u::string fileName;
+        for (size_t i = 0; i < materialNames.size(); i++) {
+            fileName = u::format("models%c%s", u::kPathSep, materialFiles[i]);
+            if (!m_materials[i].load(textures, fileName, "models/"))
                 return false;
+        }
         const auto &meshNames = m_model.meshNames();
         if (materialNames.size() > meshNames.size())
             u::print("[model] => config contains more materials than model contains meshes\n");
         // Resolve material indices
-        for (size_t i = 0; i < meshNames.size(); i++)
+        for (size_t i = 0; i < meshNames.size(); i++) {
             if (meshNames[i] == materialNames[i])
                 m_batches[i].material = i;
+        }
     }
 
     return true;
@@ -474,7 +479,7 @@ bool model::upload() {
 void model::render(const r::pipeline &pl, const m::mat4 &w) {
     gl::BindVertexArray(vao);
 
-    if (animated()) { // Hoisted invariant out of loop because GCC can't
+    if (animated()) { // Hoisted invariant out of loop because the compiler fails too
         for (const auto &it : m_batches) {
             auto *method = m_materials[it.material].bind(pl, w, true);
             method->setBoneMats(m_model.joints(), m_model.bones());
@@ -486,6 +491,12 @@ void model::render(const r::pipeline &pl, const m::mat4 &w) {
             gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT, it.offset);
         }
     }
+}
+
+void model::render() {
+    gl::BindVertexArray(vao);
+    m_materials[0].diffuse->bind(GL_TEXTURE0);
+    gl::DrawElements(GL_TRIANGLES, m_batches[0].count, GL_UNSIGNED_INT, 0);
 }
 
 void model::animate(float curFrame) {
