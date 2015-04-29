@@ -29,6 +29,11 @@ enum textureFormat {
     kTexFormatBC5S
 };
 
+enum saveFormat {
+    kSaveBMP,
+    kSaveTGA
+};
+
 struct texture {
     texture()
         : m_width(0)
@@ -47,6 +52,8 @@ struct texture {
     bool load(const u::string &file, float quality = 1.0f);
     bool from(const unsigned char *const data, size_t length, size_t width,
         size_t height, bool normal, textureFormat format);
+
+    bool save(const u::string &file, saveFormat save = kSaveBMP, float quality = 1.0f);
 
     template <size_t S>
     static void halve(unsigned char *src, size_t sw, size_t sh, size_t stride,
@@ -88,6 +95,9 @@ struct texture {
     void unload();
 
 private:
+    void writeTGA(u::vector<unsigned char> &outData);
+    void writeBMP(u::vector<unsigned char> &outData);
+
     u::optional<u::string> find(const u::string &file);
     template <typename T>
     bool decode(const u::vector<unsigned char> &data, const char *fileName,

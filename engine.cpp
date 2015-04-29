@@ -137,107 +137,6 @@ static void neoSignalHandler(int) {
     gShutdown = true;
 }
 
-/// Utility for saving a BMP
-template <typename T>
-static inline void memput(unsigned char *&store, const T &data) {
-    memcpy(store, &data, sizeof(T));
-    store += sizeof(T);
-}
-
-static bool bmpWrite(const u::string &file, int width, int height, unsigned char *rgb) {
-    struct {
-        char bfType[2];
-        int32_t bfSize;
-        int32_t bfReserved;
-        int32_t bfDataOffset;
-        int32_t biSize;
-        int32_t biWidth;
-        int32_t biHeight;
-        int16_t biPlanes;
-        int16_t biBitCount;
-        int32_t biCompression;
-        int32_t biSizeImage;
-        int32_t biXPelsPerMeter;
-        int32_t biYPelsPerMeter;
-        int32_t biClrUsed;
-        int32_t biClrImportant;
-    } bmph;
-
-    const size_t bytesPerLine = (3 * (width + 1) / 4) * 4;
-    const size_t headerSize = 54;
-    const size_t imageSize = bytesPerLine * height;
-    const size_t dataSize = headerSize + imageSize;
-
-    // Populate header
-    memcpy(bmph.bfType, (const void *)"BM", 2);
-    bmph.bfSize = dataSize;
-    bmph.bfReserved = 0;
-    bmph.bfDataOffset = headerSize;
-    bmph.biSize = 40;
-    bmph.biWidth = width;
-    bmph.biHeight = height;
-    bmph.biPlanes = 1;
-    bmph.biBitCount = 24;
-    bmph.biCompression = 0;
-    bmph.biSizeImage = imageSize;
-    bmph.biXPelsPerMeter = 0;
-    bmph.biYPelsPerMeter = 0;
-    bmph.biClrUsed = 0;
-    bmph.biClrImportant = 0;
-
-    // line and data buffer
-    u::vector<unsigned char> line;
-    line.resize(bytesPerLine);
-    u::vector<unsigned char> data;
-    data.resize(dataSize);
-
-    bmph.bfSize = u::endianSwap(bmph.bfSize);
-    bmph.bfReserved = u::endianSwap(bmph.bfReserved);
-    bmph.bfDataOffset = u::endianSwap(bmph.bfDataOffset);
-    bmph.biSize = u::endianSwap(bmph.biSize);
-    bmph.biWidth = u::endianSwap(bmph.biWidth);
-    bmph.biHeight = u::endianSwap(bmph.biHeight);
-    bmph.biPlanes = u::endianSwap(bmph.biPlanes);
-    bmph.biBitCount = u::endianSwap(bmph.biBitCount);
-    bmph.biCompression = u::endianSwap(bmph.biCompression);
-    bmph.biSizeImage = u::endianSwap(bmph.biSizeImage);
-    bmph.biXPelsPerMeter = u::endianSwap(bmph.biXPelsPerMeter);
-    bmph.biYPelsPerMeter = u::endianSwap(bmph.biYPelsPerMeter);
-    bmph.biClrUsed = u::endianSwap(bmph.biClrUsed);
-    bmph.biClrImportant = u::endianSwap(bmph.biClrImportant);
-
-    unsigned char *store = &data[0];
-    memput(store, bmph.bfType);
-    memput(store, bmph.bfSize);
-    memput(store, bmph.bfReserved);
-    memput(store, bmph.bfDataOffset);
-    memput(store, bmph.biSize);
-    memput(store, bmph.biWidth);
-    memput(store, bmph.biHeight);
-    memput(store, bmph.biPlanes);
-    memput(store, bmph.biBitCount);
-    memput(store, bmph.biCompression);
-    memput(store, bmph.biSizeImage);
-    memput(store, bmph.biXPelsPerMeter);
-    memput(store, bmph.biYPelsPerMeter);
-    memput(store, bmph.biClrUsed);
-    memput(store, bmph.biClrImportant);
-
-    // Write the bitmap
-    for (int i = height - 1; i >= 0; i--) {
-        for (int j = 0; j < width; j++) {
-            int ipos = 3 * (width * i + j);
-            line[3*j]   = rgb[ipos + 2];
-            line[3*j+1] = rgb[ipos + 1];
-            line[3*j+2] = rgb[ipos];
-        }
-        memcpy(store, &line[0], line.size());
-        store += line.size();
-    }
-
-    return u::write(data, file, "wb");
-}
-
 // maximum resolution is 15360x8640 (8640p) (16:9)
 // default resolution is 1024x768 (XGA) (4:3)
 static constexpr int kDefaultScreenWidth = 1024;
@@ -251,6 +150,7 @@ VAR(int, vid_height, "resolution height", 0, 8640, 0);
 VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
 VAR(int, scr_sysinfo, "show system info in screenshots", 0, 1, 1);
+VAR(int, scr_format, "screenshot file format", 0, 1, 1);
 
 /// pimpl context
 struct context {
@@ -849,7 +749,7 @@ void engine::screenShot() {
     // Generate a unique filename from the time
     time_t t = time(nullptr);
     struct tm tm = *localtime(&t);
-    u::string file = u::format("%sscreenshots%c%d-%d-%d-%d%d%d.bmp",
+    u::string file = u::format("%sscreenshots%c%d-%d-%d-%d%d%d",
         neoUserPath(), u::kPathSep, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
         tm.tm_hour, tm.tm_min, tm.tm_sec);
 
@@ -871,6 +771,8 @@ void engine::screenShot() {
     auto temp = u::unique_ptr<unsigned char>(new unsigned char[screenSize * 3]);
     texture::reorient(pixels.get(), screenWidth, screenHeight, 3, screenWidth * 3,
         temp.get(), false, true, false);
+
+    //auto temp = u::move(pixels);
 
     // Rasterize some information into the screen shot
     if (scr_sysinfo) {
@@ -924,8 +826,20 @@ void engine::screenShot() {
         }
     }
 
-    if (bmpWrite(file, screenWidth, screenHeight, temp.get()))
-        u::print("[screenshot] => %s\n", file);
+    texture tex;
+    if (!tex.from(temp.get(), screenSize*3, screenWidth, screenHeight, false, kTexFormatRGB))
+        u::print("[screenshot] => failed to create screenshot texture");
+
+    switch (scr_format) {
+    case kSaveBMP:
+        if (tex.save(file, kSaveBMP))
+            u::print("[screenshot] => %s.bmp\n", file);
+        break;
+    case kSaveTGA:
+        if (tex.save(file, kSaveTGA))
+            u::print("[screenshot] => %s.tga\n", file);
+        break;
+    }
 }
 
 const u::string &engine::userPath() const {

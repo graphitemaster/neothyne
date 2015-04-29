@@ -60,13 +60,8 @@ struct vec3 {
     static bool raySphereIntersect(const vec3 &start, const vec3 &direction,
         const vec3 &sphere, float radius, float *fraction);
 
-    static inline vec3 min(const vec3 &lhs, const vec3 &rhs) {
-        return { u::min(lhs.x, rhs.x), u::min(lhs.y, rhs.y), u::min(lhs.z, rhs.z) };
-    }
-
-    static inline vec3 max(const vec3 &lhs, const vec3 &rhs) {
-        return { u::max(lhs.x, rhs.x), u::max(lhs.y, rhs.y), u::max(lhs.z, rhs.z) };
-    }
+    static vec3 min(const vec3 &lhs, const vec3 &rhs);
+    static vec3 max(const vec3 &lhs, const vec3 &rhs);
 
     static vec3 rand(float mx, float my, float mz);
 
@@ -113,7 +108,7 @@ inline void vec3::normalize() {
 
 inline vec3 vec3::normalized() const {
     const float scale = 1.0f / abs();
-    return vec3(x * scale, y * scale, z * scale);
+    return { x * scale, y * scale, z * scale };
 }
 
 inline bool vec3::isNormalized() const {
@@ -244,6 +239,14 @@ inline bool operator!=(const vec3 &a, const vec3 &b) {
     return (m::abs(a.x - b.x) > kEpsilon)
         || (m::abs(a.y - b.y) > kEpsilon)
         || (m::abs(a.z - b.z) > kEpsilon);
+}
+
+inline vec3 vec3::min(const vec3 &lhs, const vec3 &rhs) {
+    return { u::min(lhs.x, rhs.x), u::min(lhs.y, rhs.y), u::min(lhs.z, rhs.z) };
+}
+
+inline vec3 vec3::max(const vec3 &lhs, const vec3 &rhs) {
+    return { u::max(lhs.x, rhs.x), u::max(lhs.y, rhs.y), u::max(lhs.z, rhs.z) };
 }
 
 inline vec3 clamp(const vec3 &current, const vec3 &min, const vec3 &max) {

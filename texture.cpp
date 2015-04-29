@@ -13,7 +13,8 @@
 
 #include "m_const.h"
 
-VAR(int, tex_jpeg_chroma, "chroma filtering method", 0, 1, 0);
+VAR(int, tex_jpg_chroma, "chroma filtering method", 0, 1, 0);
+VAR(int, tex_tga_compress, "compress TGA", 0, 1, 1);
 
 #define returnResult(E) \
     do { \
@@ -1452,6 +1453,8 @@ struct tga : decoder {
     }
 
 private:
+    friend struct texture;
+
     void read(unsigned char *dest, size_t size) {
         memcpy(dest, m_position, size);
         seek(size);
@@ -1961,6 +1964,17 @@ template void texture::convert<kTexFormatRGB>();
 template void texture::convert<kTexFormatRGBA>();
 template void texture::convert<kTexFormatLuminance>();
 
+static inline float textureQualityScale(float quality) {
+    // Add 0.5 to the mantissa then zero it. If the mantissa overflows, let
+    // the carry bit carry into the exponent; thus increasing the exponent.
+    // If the carry happens then the value is rounded up, otherwise it rounds
+    // down. This also works +/- INF as well since INF has zero mantissa.
+    m::floatShape u = { quality };
+    u.asInt += 0x00400000u;
+    u.asInt &= 0xFF800000u;
+    return u.asFloat;
+}
+
 template <typename T>
 bool texture::decode(const u::vector<unsigned char> &data, const char *name, float quality) {
     auto decode = u::unique_ptr<T>(new T(data));
@@ -1983,15 +1997,9 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
     } else {
         // Quality will resize the texture accordingly
         if (quality != 1.0f) {
-            // Add 0.5 to the mantissa then zero it. If the mantissa overflows, let
-            // the carry bit carry into the exponent; thus increasing the exponent.
-            // If the carry happens then the value is rounded up, otherwise it rounds
-            // down. This also works +/- INF as well since INF has zero mantissa.
-            union { float f; uint32_t i; } u = { quality };
-            u.i += 0x00400000u;
-            u.i &= 0xFF800000u;
-            size_t w = m_width * u.f;
-            size_t h = m_height * u.f;
+            const float f = textureQualityScale(quality);
+            size_t w = m_width * f;
+            size_t h = m_height * f;
             if (w == 0) w = 1;
             if (h == 0) h = 1;
             resize(w, h);
@@ -2111,6 +2119,186 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
             break;
     }
     m_pitch = m_width * m_bpp;
+}
+
+void texture::writeTGA(u::vector<unsigned char> &outData) {
+    tga::header hdr;
+    memset(&hdr, 0, sizeof(hdr));
+    outData.resize(sizeof(hdr));
+    hdr.pixelSize = m_bpp*8;
+    hdr.width[0] = m_width & 0xFF;
+    hdr.width[1] = (m_width >> 8) & 0xFF;
+    hdr.height[0] = m_height & 0xFF;
+    hdr.height[1] = (m_height >> 8) & 0xFF;
+    hdr.imageType = tex_tga_compress ? 10 : 2;
+    memcpy(&outData[0], &hdr, sizeof(hdr));
+    outData.reserve(outData.size() * m_width*m_height*3);
+
+    unsigned char buffer[128*4];
+    for (size_t i = 0; i < m_height; i++) {
+        unsigned char *src = &m_data[0] + (m_height - i - 1) * m_pitch;
+        for (int remaining = int(m_width); remaining > 0; ) {
+            int raw = 1;
+            if (tex_tga_compress) {
+                int run = 1;
+                for (unsigned char *scan = src; run < u::min(remaining, 128); run++) {
+                    scan += m_bpp;
+                    if (src[0] != scan[0] || src[1] != scan[1] || src[2] != scan[2] || (m_bpp == 4 && src[3] != scan[3]))
+                        break;
+                }
+                if (run > 1) {
+                    outData.push_back(0x80 | (run - 1));
+                    for (int i = 2; i >= 0; i--)
+                        outData.push_back(src[i]);
+                    if (m_bpp == 4)
+                        outData.push_back(src[3]);
+                    src += run*m_bpp;
+                    remaining -= run;
+                    if (remaining <= 0)
+                        break;
+                }
+                for (unsigned char *scan = src; raw < u::min(remaining, 128); raw++) {
+                    scan += m_bpp;
+                    if (src[0] == scan[0] || src[1] == scan[1] || src[2] == scan[2] || (m_bpp != 4 && src[3] == scan[3]))
+                        break;
+                }
+                outData.push_back(raw - 1);
+            } else {
+                raw = u::min(remaining, 128);
+            }
+            unsigned char *dst = buffer;
+            for (int j = 0; j < raw; j++) {
+                for (int v = 2; v >= 0; v--)
+                    dst[2-v] = src[v];
+                if (m_bpp == 4)
+                    dst[3] = src[3];
+                dst += m_bpp;
+                src += m_bpp;
+            }
+            for (size_t j = 0; j < raw*m_bpp; j++)
+                outData.push_back(buffer[j]);
+            remaining -= raw;
+        }
+    }
+}
+
+
+template <typename T>
+static inline void memput(unsigned char *&store, const T &data) {
+    memcpy(store, &data, sizeof(T));
+    store += sizeof(T);
+}
+
+void texture::writeBMP(u::vector<unsigned char> &outData) {
+    struct {
+        char bfType[2];
+        int32_t bfSize;
+        int32_t bfReserved;
+        int32_t bfDataOffset;
+        int32_t biSize;
+        int32_t biWidth;
+        int32_t biHeight;
+        int16_t biPlanes;
+        int16_t biBitCount;
+        int32_t biCompression;
+        int32_t biSizeImage;
+        int32_t biXPelsPerMeter;
+        int32_t biYPelsPerMeter;
+        int32_t biClrUsed;
+        int32_t biClrImportant;
+    } bmph;
+
+    const size_t bytesPerLine = (3 * (m_width + 1) / 4) * 4;
+    const size_t headerSize = 54;
+    const size_t imageSize = bytesPerLine * m_height;
+    const size_t dataSize = headerSize + imageSize;
+
+    // Populate header
+    memcpy(bmph.bfType, (const void *)"BM", 2);
+    bmph.bfSize = dataSize;
+    bmph.bfReserved = 0;
+    bmph.bfDataOffset = headerSize;
+    bmph.biSize = 40;
+    bmph.biWidth = m_width;
+    bmph.biHeight = m_height;
+    bmph.biPlanes = 1;
+    bmph.biBitCount = 24;
+    bmph.biCompression = 0;
+    bmph.biSizeImage = imageSize;
+    bmph.biXPelsPerMeter = 0;
+    bmph.biYPelsPerMeter = 0;
+    bmph.biClrUsed = 0;
+    bmph.biClrImportant = 0;
+
+    // line and data buffer
+    u::vector<unsigned char> line;
+    line.resize(bytesPerLine);
+    outData.resize(dataSize);
+    bmph.bfSize = u::endianSwap(bmph.bfSize);
+    bmph.bfReserved = u::endianSwap(bmph.bfReserved);
+    bmph.bfDataOffset = u::endianSwap(bmph.bfDataOffset);
+    bmph.biSize = u::endianSwap(bmph.biSize);
+    bmph.biWidth = u::endianSwap(bmph.biWidth);
+    bmph.biHeight = u::endianSwap(bmph.biHeight);
+    bmph.biPlanes = u::endianSwap(bmph.biPlanes);
+    bmph.biBitCount = u::endianSwap(bmph.biBitCount);
+    bmph.biCompression = u::endianSwap(bmph.biCompression);
+    bmph.biSizeImage = u::endianSwap(bmph.biSizeImage);
+    bmph.biXPelsPerMeter = u::endianSwap(bmph.biXPelsPerMeter);
+    bmph.biYPelsPerMeter = u::endianSwap(bmph.biYPelsPerMeter);
+    bmph.biClrUsed = u::endianSwap(bmph.biClrUsed);
+    bmph.biClrImportant = u::endianSwap(bmph.biClrImportant);
+
+    unsigned char *store = &outData[0];
+    memput(store, bmph.bfType);
+    memput(store, bmph.bfSize);
+    memput(store, bmph.bfReserved);
+    memput(store, bmph.bfDataOffset);
+    memput(store, bmph.biSize);
+    memput(store, bmph.biWidth);
+    memput(store, bmph.biHeight);
+    memput(store, bmph.biPlanes);
+    memput(store, bmph.biBitCount);
+    memput(store, bmph.biCompression);
+    memput(store, bmph.biSizeImage);
+    memput(store, bmph.biXPelsPerMeter);
+    memput(store, bmph.biYPelsPerMeter);
+    memput(store, bmph.biClrUsed);
+    memput(store, bmph.biClrImportant);
+
+    // Write the bitmap
+    for (int i = int(m_height) - 1; i >= 0; i--) {
+        for (int j = 0; j < int(m_width); j++) {
+            const int ipos = 3 * (m_width * i + j);
+            line[3*j] = m_data[ipos + 2];
+            line[3*j+1] = m_data[ipos + 1];
+            line[3*j+2] = m_data[ipos];
+        }
+        memcpy(store, &line[0], line.size());
+        store += line.size();
+    }
+}
+
+bool texture::save(const u::string &file, saveFormat format, float quality) {
+    if (m_data.empty())
+        return false;
+
+    if (quality != 1.0f) {
+        const float f = textureQualityScale(quality);
+        size_t w = m_width * f;
+        size_t h = m_height * f;
+        if (w == 0) w = 1;
+        if (h == 0) h = 1;
+        resize(w, h);
+    }
+
+    u::vector<unsigned char> data;
+
+    if (format == kSaveTGA)
+        writeTGA(data);
+    else if (format == kSaveBMP)
+        writeBMP(data);
+    return u::write(data, file + (format == kSaveTGA ? ".tga" : ".bmp"), "wb");
 }
 
 bool texture::from(const unsigned char *const data, size_t length, size_t width,

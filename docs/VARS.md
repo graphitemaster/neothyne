@@ -37,6 +37,20 @@ value to cap framerate to or 0 for no framerate capping
 #### vid_driver
 the driver to use for rendering enclosed in quotes
 
+## Screen capture
+
+##### scr_sysinfo
+Embed system information in screenshots
+
+* 0 = disable
+* 1 = enable
+
+##### scr_format
+Screenshot output format
+
+* 0 = BMP
+* 1 = TGA
+
 
 ## Renderer
 
@@ -155,11 +169,17 @@ Sensitivity of mouse
 
 
 ## Texture
-##### tex_jpeg_chroma
+##### tex_jpg_chroma
 Chroma upsampling filter for decoding JPEGs
 
 * 0 = bicubic (slow)
 * 1 = pixel repetition (fast)
+
+##### tex_tga_compress
+RLE compression for saving TGAs
+
+* 0 = disabled
+* 1 = enabled
 
 
 ## UI

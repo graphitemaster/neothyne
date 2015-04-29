@@ -706,7 +706,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_ssaoMethod.setWVP(m_identity);
     m_ssaoMethod.setOccluderBias(0.05f);
     m_ssaoMethod.setSamplingRadius(15.0f);
-    m_ssaoMethod.setAttenuation(1.0f, 0.000005f);
+    m_ssaoMethod.setAttenuation(1.5f, 0.0000005f);
     m_ssaoMethod.setNormalTextureUnit(ssaoMethod::kNormal);
     m_ssaoMethod.setDepthTextureUnit(ssaoMethod::kDepth);
     m_ssaoMethod.setRandomTextureUnit(ssaoMethod::kRandom);
