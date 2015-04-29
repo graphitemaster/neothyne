@@ -8,5 +8,5 @@ out vec3 fragColor;
 void main() {
     vec2 texCoord = calcTexCoord();
     fragColor = neoTexture2D(gColorMap, texCoord).rgb;
-    fragColor = texture(gColorGradingMap, fragColor.rgb).rgb;
+    fragColor = texture(gColorGradingMap, fragColor).rgb;
 }
