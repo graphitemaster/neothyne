@@ -604,16 +604,10 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
     gl::Enable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
 
-    //auto setup = [this](material &mat, pipeline &p, const m::mat4 &rw, bool skeletal = false) {
-    //
-    //    return &method;
-    //};
-
     // Render the map
     const m::mat4 &rw = p.world();
     gl::BindVertexArray(vao);
     for (auto &it : m_textureBatches) {
-        //setup(it.mat, p, rw);
         it.mat.bind(p, rw);
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
@@ -653,13 +647,9 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
             pm.setRotate(rotate);
 
             if (mdl->animated()) {
-               // auto *method = setup(mdl->mat, pm, rw, true);
-                //method->setBoneMats(mdl->joints(), mdl->bones());
                 // HACK: Testing only
                 mdl->animate(it->curFrame);
                 it->curFrame += 0.25f;
-            } else {
-                //setup(mdl->mat, pm, rw);
             }
             mdl->render(pm, rw);
         }
@@ -720,7 +710,6 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
             p.setScale({0.1, 0.1, 0.1});
             p.setPosition({-0.15, 0.2, -0.35});
             p.setWorld({0, 0, 0});
-            //setup(m_gun.mat, p, rw);
             m_gun.render(p, rw);
         }
 #endif
