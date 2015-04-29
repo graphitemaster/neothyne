@@ -120,8 +120,8 @@ inline typename set<K>::iterator set<K>::find(const K &key) const {
 
 template <typename K>
 inline pair<typename set<K>::iterator, bool> set<K>::insert(const K &key) {
-    pair<iterator, bool> result(find(key), false);
-    if (get<0>(result).node != 0)
+    auto result = make_pair(find(key), false);
+    if (result.first().node != 0)
         return result;
 
     unsigned char *data = neoMalloc(sizeof(hash_node<K, void>));
@@ -148,8 +148,8 @@ inline pair<typename set<K>::iterator, bool> set<K>::insert(const K &key) {
         }
     }
 
-    result.first.node = newnode;
-    result.second = true;
+    result.first().node = newnode;
+    result.second() = true;
     return result;
 }
 

@@ -1,11 +1,33 @@
 #ifndef U_MEMORY_HDR
 #define U_MEMORY_HDR
-#include "u_pair.h"
 #include "u_traits.h"
 
 namespace u {
 
 typedef decltype(nullptr) nullptr_t;
+
+/// A basic pair for unique_ptr (we don't use u::pair here)
+template <typename T1, typename T2>
+struct basic_pair {
+    constexpr basic_pair();
+    constexpr basic_pair(T1 f, T2 s);
+    T1 first;
+    T2 second;
+};
+
+template <typename T1, typename T2>
+inline constexpr basic_pair<T1, T2>::basic_pair()
+    : first()
+    , second()
+{
+}
+
+template <typename T1, typename T2>
+inline constexpr basic_pair<T1, T2>::basic_pair(T1 f, T2 s)
+    : first(forward<T1>(f))
+    , second(forward<T2>(s))
+{
+}
 
 /// default_delete<T>
 template <typename T>
@@ -34,7 +56,7 @@ struct unique_ptr {
     typedef element_type* pointer;
     typedef element_type& reference;
     typedef D deleter_type;
-    typedef pair<pointer, D> pair_type;
+    typedef basic_pair<pointer, D> pair_type;
 
     pointer get() const;
     const D &get_deleter() const;
@@ -74,7 +96,7 @@ struct unique_ptr<T[], D> {
     typedef T* pointer;
     typedef T& reference;
     typedef D deleter_type;
-    typedef pair<T*,D> pair_type;
+    typedef basic_pair<T*,D> pair_type;
 
     pointer get() const;
     const D& get_deleter() const;

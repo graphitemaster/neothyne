@@ -91,6 +91,20 @@ struct remove_reference<T&&> {
     typedef T type;
 };
 
+/// remove_extent
+template <typename T>
+struct remove_extent {
+    typedef T type;
+};
+template <typename T>
+struct remove_extent<T[]> {
+    typedef T type;
+};
+template <typename T, detail::size_type E>
+struct remove_extent<T[E]> {
+    typedef T type;
+};
+
 /// remove_all_extents
 template <typename T>
 struct remove_all_extents {
@@ -268,6 +282,31 @@ namespace detail {
 }
 template <typename T>
 struct is_class : integral_constant<bool, sizeof(detail::class_test<T>(0)) == 1 && !is_union<T>::value> {};
+
+/// is_empty
+#if HAS_FEATURE(is_empty)
+template <typename T>
+struct is_empty : integral_constant<bool, __is_empty(T)> {};
+#else
+namespace detail {
+    template <typename T>
+    struct is_empty1 : T {
+        double l;
+    };
+
+    struct is_empty2 {
+        double l;
+    };
+
+    template <typename T, bool = is_class<T>::value>
+    struct is_empty : integral_constant<bool, sizeof(is_empty1<T>) == sizeof(is_empty2)> {};
+
+    template <typename T>
+    struct is_empty<T, false> : false_type {};
+}
+template <typename T>
+struct is_empty : detail::is_empty<T> {};
+#endif
 
 /// is_same
 template <typename T, typename U>
@@ -624,6 +663,25 @@ namespace detail {
 /// is_signed
 template <typename T>
 struct is_signed : detail::is_signed<T> {};
+
+/// add_pointer
+template <typename T>
+struct add_pointer {
+    typedef typename remove_reference<T>::type *type;
+};
+
+/// decay
+template <typename T>
+struct decay {
+private:
+    typedef typename remove_reference<T>::type U;
+public:
+    typedef typename conditional<is_array<U>::value,
+                                 typename remove_extent<U>::type*,
+                                 typename conditional<is_function<U>::value,
+                                                      typename add_pointer<U>::type,
+                                                      typename remove_cv<U>::type>::type>::type type;
+};
 
 }
 

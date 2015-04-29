@@ -148,17 +148,17 @@ inline typename map<K, V>::const_iterator map<K, V>::find(const K &key) const {
 
 template <typename K, typename V>
 inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(const pair<K, V> &p) {
-    pair<iterator, bool> result(find(p.first), false);
-    if (get<0>(result).node != 0)
+    auto result = make_pair(find(p.first()), false);
+    if (result.first().node != 0)
         return result;
 
     unsigned char *data = neoMalloc(sizeof(hash_node<K, V>));
-    hash_node<K, V> *newnode = new(data) hash_node<K, V>(p.first, p.second);
+    hash_node<K, V> *newnode = new(data) hash_node<K, V>(p.first(), p.second());
     newnode->next = 0;
     newnode->prev = 0;
 
     const size_t nbuckets = size_t(m_buckets.last - m_buckets.first);
-    hash_node_insert(newnode, hash(p.first), m_buckets.first, nbuckets - 1);
+    hash_node_insert(newnode, hash(p.first()), m_buckets.first, nbuckets - 1);
 
     ++m_size;
     if (m_size + 1 > 4 * nbuckets) {
@@ -178,8 +178,8 @@ inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(const pair<K, 
         }
     }
 
-    result.first.node = newnode;
-    result.second = true;
+    result.first().node = newnode;
+    result.second() = true;
     return result;
 }
 
@@ -194,7 +194,7 @@ void map<K, V>::erase(const_iterator where) {
 
 template <typename K, typename V>
 V &map<K, V>::operator[](const K &key) {
-    return insert(pair<K, V>(key, V())).first->second;
+    return insert(make_pair(key, V())).first()->second;
 }
 
 template <typename K, typename V>
