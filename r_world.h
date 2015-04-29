@@ -37,52 +37,6 @@ inline bboxMethod::bboxMethod()
 {
 }
 
-struct geomMethod : method {
-    geomMethod();
-
-    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
-
-    void setWVP(const m::mat4 &wvp);
-    void setWorld(const m::mat4 &wvp);
-    void setColorTextureUnit(int unit);
-    void setNormalTextureUnit(int unit);
-    void setSpecTextureUnit(int unit);
-    void setDispTextureUnit(int unit);
-    void setSpecPower(float power);
-    void setSpecIntensity(float intensity);
-    void setEyeWorldPos(const m::vec3 &position);
-    void setParallax(float scale, float bias);
-    void setBoneMats(size_t numJoints, const float *mats);
-
-private:
-    GLint m_WVPLocation;
-    GLint m_worldLocation;
-    GLint m_colorTextureUnitLocation;
-    GLint m_normalTextureUnitLocation;
-    GLint m_specTextureUnitLocation;
-    GLint m_dispTextureUnitLocation;
-    GLint m_specPowerLocation;
-    GLint m_specIntensityLocation;
-    GLint m_eyeWorldPositionLocation;
-    GLint m_parallaxLocation;
-    GLint m_boneMatsLocation;
-};
-
-inline geomMethod::geomMethod()
-    : m_WVPLocation(-1)
-    , m_worldLocation(-1)
-    , m_colorTextureUnitLocation(-1)
-    , m_normalTextureUnitLocation(-1)
-    , m_specTextureUnitLocation(-1)
-    , m_dispTextureUnitLocation(-1)
-    , m_specPowerLocation(-1)
-    , m_specIntensityLocation(-1)
-    , m_eyeWorldPositionLocation(-1)
-    , m_parallaxLocation(-1)
-    , m_boneMatsLocation(-1)
-{
-}
-
 struct compositeMethod : method {
     compositeMethod();
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
@@ -166,7 +120,7 @@ private:
     void spotLightPass(const pipeline &pl, const ::world *const map);
 
     // world shading methods and permutations
-    u::vector<geomMethod> m_geomMethods;
+    geomMethods *m_geomMethods;
     u::vector<directionalLightMethod> m_directionalLightMethods;
     compositeMethod m_compositeMethod;
     pointLightMethod m_pointLightMethod;

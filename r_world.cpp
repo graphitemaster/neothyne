@@ -31,15 +31,6 @@ NVAR(int, r_debug, "debug visualizations", 0, 4, 0);
 
 namespace r {
 
-/// shader permutations
-struct geomPermutation {
-    int permute;    // flags of the permutations
-    int color;      // color texture unit (or -1 if not to be used)
-    int normal;     // normal texture unit (or -1 if not to be used)
-    int spec;       // ...
-    int disp;       // ...
-};
-
 struct lightPermutation {
     int permute;    // flags of the permutations
 };
@@ -54,16 +45,6 @@ enum {
     kLightPermDebugSSAO     = 1 << 5
 };
 
-// All the geometry shader permutations
-enum {
-    kGeomPermDiffuse        = 1 << 0,
-    kGeomPermNormalMap      = 1 << 1,
-    kGeomPermSpecMap        = 1 << 2,
-    kGeomPermSpecParams     = 1 << 3,
-    kGeomPermParallax       = 1 << 4,
-    kGeomPermSkeletal       = 1 << 5
-};
-
 // The prelude defines to compile that light shader permutation
 // These must be in the same order as the enums
 static const char *lightPermutationNames[] = {
@@ -73,17 +54,6 @@ static const char *lightPermutationNames[] = {
     "USE_DEBUG_NORMAL",
     "USE_DEBUG_POSITION",
     "USE_DEBUG_SSAO"
-};
-
-// The prelude defines to compile that geometry shader permutation
-// These must be in the same order as the enums
-static const char *geomPermutationNames[] = {
-    "USE_DIFFUSE",
-    "USE_NORMALMAP",
-    "USE_SPECMAP",
-    "USE_SPECPARAMS",
-    "USE_PARALLAX",
-    "USE_SKELETAL"
 };
 
 // All the possible light permutations
@@ -97,32 +67,6 @@ static const lightPermutation lightPermutations[] = {
     { kLightPermDebugNormal },
     { kLightPermDebugPosition },
     { kLightPermDebugSSAO },
-};
-
-// All the possible geometry permutations
-static const geomPermutation geomPermutations[] = {
-    { 0,                                                                                                   -1, -1, -1, -1 },
-    { kGeomPermDiffuse,                                                                                     0, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap,                                                                0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermSpecMap,                                                                  0, -1,  1, -1 },
-    { kGeomPermDiffuse | kGeomPermSpecParams,                                                               0, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap,                                                                0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap,                                            0,  1,  2, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams,                                         0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermParallax,                                           0,  1, -1,  2 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermParallax,                     0,  1,  2,  3 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermParallax,                     0,  1, -1,  2 },
-    { kGeomPermSkeletal,                                                                                   -1, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermSkeletal,                                                                 0, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSkeletal,                                           0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermSpecMap    | kGeomPermSkeletal,                                           0, -1,  1, -1 },
-    { kGeomPermDiffuse | kGeomPermSpecParams | kGeomPermSkeletal,                                           0, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSkeletal,                                           0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermSkeletal,                     0,  1,  2, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermSkeletal,                     0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermParallax   | kGeomPermSkeletal,                     0,  1, -1,  2 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermParallax | kGeomPermSkeletal, 0,  1,  2,  3 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermParallax | kGeomPermSkeletal, 0,  1, -1,  2 }
 };
 
 // Generate the list of permutation names for the shader
@@ -168,29 +112,6 @@ static size_t lightCalculatePermutation(bool stencil) {
     return 0;
 }
 
-// Calculate the correct permutation to use for a given material
-static void geomCalculatePermutation(material &mat, bool skeletal = false) {
-    int permute = 0;
-    if (skeletal)
-        permute |= kGeomPermSkeletal;
-    if (mat.diffuse)
-        permute |= kGeomPermDiffuse;
-    if (mat.normal)
-        permute |= kGeomPermNormalMap;
-    if (mat.spec && r_spec)
-        permute |= kGeomPermSpecMap;
-    if (mat.displacement && r_parallax)
-        permute |= kGeomPermParallax;
-    if (mat.specParams && r_spec)
-        permute |= kGeomPermSpecParams;
-    for (auto &it : geomPermutations) {
-        if (it.permute == permute) {
-            mat.permute = &it - geomPermutations;
-            return;
-        }
-    }
-}
-
 ///! Bounding box Rendering method
 bool bboxMethod::init() {
     if (!method::init())
@@ -219,90 +140,6 @@ void bboxMethod::setWVP(const m::mat4 &wvp) {
 
 void bboxMethod::setColor(const m::vec3 &color) {
     gl::Uniform3fv(m_colorLocation, 1, &color.x);
-}
-
-///! Geomety Rendering Method
-bool geomMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init())
-        return false;
-
-    for (auto &it : defines)
-        method::define(it);
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/geom.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/geom.fs"))
-        return false;
-
-    if (!finalize({ { 0, "position"   },
-                    { 1, "normal"     },
-                    { 2, "texCoord"   },
-                    { 3, "tangent"    },
-                    { 4, "weights"    },
-                    { 5, "bones"      } }
-                , { { 0, "diffuseOut" },
-                    { 1, "normalOut"  } }))
-    {
-        return false;
-    }
-
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_worldLocation = getUniformLocation("gWorld");
-    m_colorTextureUnitLocation = getUniformLocation("gColorMap");
-    m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
-    m_specTextureUnitLocation = getUniformLocation("gSpecMap");
-    m_dispTextureUnitLocation = getUniformLocation("gDispMap");
-    m_specPowerLocation = getUniformLocation("gSpecPower");
-    m_specIntensityLocation = getUniformLocation("gSpecIntensity");
-    m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
-    m_parallaxLocation = getUniformLocation("gParallax");
-    m_boneMatsLocation = getUniformLocation("gBoneMats");
-
-    return true;
-}
-
-void geomMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
-}
-
-void geomMethod::setWorld(const m::mat4 &worldInverse) {
-    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, worldInverse.ptr());
-}
-
-void geomMethod::setEyeWorldPos(const m::vec3 &position) {
-    gl::Uniform3fv(m_eyeWorldPositionLocation, 1, &position.x);
-}
-
-void geomMethod::setParallax(float scale, float bias) {
-    gl::Uniform2f(m_parallaxLocation, scale, bias);
-}
-
-void geomMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorTextureUnitLocation, unit);
-}
-
-void geomMethod::setNormalTextureUnit(int unit) {
-    gl::Uniform1i(m_normalTextureUnitLocation, unit);
-}
-
-void geomMethod::setDispTextureUnit(int unit) {
-    gl::Uniform1i(m_dispTextureUnitLocation, unit);
-}
-
-void geomMethod::setSpecTextureUnit(int unit) {
-    gl::Uniform1i(m_specTextureUnitLocation, unit);
-}
-
-void geomMethod::setSpecIntensity(float intensity) {
-    gl::Uniform1f(m_specIntensityLocation, intensity);
-}
-
-void geomMethod::setSpecPower(float power) {
-    gl::Uniform1f(m_specPowerLocation, power);
-}
-
-void geomMethod::setBoneMats(size_t numJoints, const float *mats) {
-    gl::UniformMatrix3x4fv(m_boneMatsLocation, numJoints, GL_FALSE, mats);
 }
 
 ///! Composite Method
@@ -457,7 +294,8 @@ GLuint composite::texture(size_t index) const {
 
 ///! renderer
 world::world()
-    : m_uploaded(false)
+    : m_geomMethods(&geomMethods::instance())
+    , m_uploaded(false)
 {
 }
 
@@ -555,7 +393,7 @@ bool world::load(const kdMap &map) {
     for (auto &it : m_textureBatches) {
         if (!it.mat.load(m_textures2D, map.textures[it.index].name, "textures/"))
             neoFatal("failed to load material\n");
-        geomCalculatePermutation(it.mat);
+        it.mat.calculatePermutation();
     }
 
     // HACK: Testing only
@@ -639,19 +477,8 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_aaMethod.setColorTextureUnit(0);
     m_aaMethod.setWVP(m_identity);
 
-    // geometry shader permutations
-    static const size_t geomCount = sizeof(geomPermutations)/sizeof(geomPermutations[0]);
-    m_geomMethods.resize(geomCount);
-    for (size_t i = 0; i < geomCount; i++) {
-        const auto &p = geomPermutations[i];
-        if (!m_geomMethods[i].init(generatePermutation(geomPermutationNames, p)))
-            neoFatal("failed to initialize geometry rendering method");
-        m_geomMethods[i].enable();
-        if (p.color  != -1) m_geomMethods[i].setColorTextureUnit(p.color);
-        if (p.normal != -1) m_geomMethods[i].setNormalTextureUnit(p.normal);
-        if (p.spec   != -1) m_geomMethods[i].setSpecTextureUnit(p.spec);
-        if (p.disp   != -1) m_geomMethods[i].setDispTextureUnit(p.disp);
-    }
+    if (!m_geomMethods->init())
+        neoFatal("failed to initialize geometry rendering method");
 
     // directional light shader permutations
     static const size_t lightCount = sizeof(lightPermutations)/sizeof(lightPermutations[0]);
@@ -777,40 +604,17 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
     gl::Enable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
 
-    auto setup = [this](material &mat, pipeline &p, const m::mat4 &rw, bool skeletal = false) {
-        // Calculate permutation incase a console variable changes
-        geomCalculatePermutation(mat, skeletal);
-
-        auto &permutation = geomPermutations[mat.permute];
-        auto &method = m_geomMethods[mat.permute];
-        method.enable();
-        method.setWVP(p.projection() * p.view() * p.world());
-        method.setWorld(rw);
-        if (permutation.permute & kGeomPermParallax) {
-            method.setEyeWorldPos(p.position());
-            method.setParallax(mat.dispScale, mat.dispBias);
-        }
-        if (permutation.permute & kGeomPermSpecParams) {
-            method.setSpecIntensity(mat.specIntensity);
-            method.setSpecPower(mat.specPower);
-        }
-        if (permutation.permute & kGeomPermDiffuse)
-            mat.diffuse->bind(GL_TEXTURE0 + permutation.color);
-        if (permutation.permute & kGeomPermNormalMap)
-            mat.normal->bind(GL_TEXTURE0 + permutation.normal);
-        if (permutation.permute & kGeomPermSpecMap)
-            mat.spec->bind(GL_TEXTURE0 + permutation.spec);
-        if (permutation.permute & kGeomPermParallax)
-            mat.displacement->bind(GL_TEXTURE0 + permutation.disp);
-
-        return &method;
-    };
+    //auto setup = [this](material &mat, pipeline &p, const m::mat4 &rw, bool skeletal = false) {
+    //
+    //    return &method;
+    //};
 
     // Render the map
     const m::mat4 &rw = p.world();
     gl::BindVertexArray(vao);
     for (auto &it : m_textureBatches) {
-        setup(it.mat, p, rw);
+        //setup(it.mat, p, rw);
+        it.mat.bind(p, rw);
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(sizeof(GLuint) * it.start));
     }
@@ -857,7 +661,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
             } else {
                 //setup(mdl->mat, pm, rw);
             }
-            mdl->render();
+            mdl->render(pm, rw);
         }
     }
 
@@ -917,7 +721,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
             p.setPosition({-0.15, 0.2, -0.35});
             p.setWorld({0, 0, 0});
             //setup(m_gun.mat, p, rw);
-            m_gun.render();
+            m_gun.render(p, rw);
         }
 #endif
 
