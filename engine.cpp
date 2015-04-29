@@ -149,8 +149,10 @@ VAR(int, vid_width, "resolution width", 0, 15360, 0);
 VAR(int, vid_height, "resolution height", 0, 8640, 0);
 VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
-VAR(int, scr_sysinfo, "show system info in screenshots", 0, 1, 1);
+
+VAR(int, scr_info, "embed engine info in screenshot", 0, 1, 1);
 VAR(int, scr_format, "screenshot file format", 0, 1, 1);
+VAR(float, scr_quality, "screenshot quality", 0.0f, 1.0f, 1.0f);
 
 /// pimpl context
 struct context {
@@ -772,10 +774,8 @@ void engine::screenShot() {
     texture::reorient(pixels.get(), screenWidth, screenHeight, 3, screenWidth * 3,
         temp.get(), false, true, false);
 
-    //auto temp = u::move(pixels);
-
     // Rasterize some information into the screen shot
-    if (scr_sysinfo) {
+    if (scr_info) {
         size_t line = 0;
         auto drawString = [&temp, &line](const char *s) {
             u::vector<unsigned char *> pixelData;
@@ -828,15 +828,15 @@ void engine::screenShot() {
 
     texture tex;
     if (!tex.from(temp.get(), screenSize*3, screenWidth, screenHeight, false, kTexFormatRGB))
-        u::print("[screenshot] => failed to create screenshot texture");
+        u::print("[screenshot] => failed to create screenshot texture\n");
 
     switch (scr_format) {
     case kSaveBMP:
-        if (tex.save(file, kSaveBMP))
+        if (tex.save(file, kSaveBMP, scr_quality))
             u::print("[screenshot] => %s.bmp\n", file);
         break;
     case kSaveTGA:
-        if (tex.save(file, kSaveTGA))
+        if (tex.save(file, kSaveTGA, scr_quality))
             u::print("[screenshot] => %s.tga\n", file);
         break;
     }

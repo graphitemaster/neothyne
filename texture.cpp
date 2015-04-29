@@ -139,7 +139,7 @@ struct jpeg : decoder {
         memset(m_qtab, 0, sizeof(m_qtab));
         memset(m_block, 0, sizeof(m_block));
 
-        decode(data, chromaFilter(tex_jpeg_chroma.get()));
+        decode(data, chromaFilter(tex_jpg_chroma.get()));
 
         switch (m_bpp) {
             case 1:

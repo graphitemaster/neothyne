@@ -39,17 +39,23 @@ the driver to use for rendering enclosed in quotes
 
 ## Screen capture
 
-##### scr_sysinfo
-Embed system information in screenshots
+##### scr_info
+embed system information in screenshots
 
 * 0 = disable
 * 1 = enable
 
 ##### scr_format
-Screenshot output format
+screenshot output format
 
 * 0 = BMP
 * 1 = TGA
+
+
+##### scr_quality
+adjust screenshot resolution
+
+* any value in the range [0.0, 1.0]
 
 
 ## Renderer
