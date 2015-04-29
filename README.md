@@ -31,6 +31,7 @@ embodies the following:
   * Fast approximate anti-aliasing (FXAA)
   * Screen space ambient occlusion (SSAO)
   * View frustum culling
+  * Skeletal model animation (IQM)
   * Hardware occlusion query culling
   * Variable color grading (supporting)
     * Color balance (shadows, midtones and highlights)
@@ -67,7 +68,6 @@ embodies the following:
 
 ## Goals
 
-* Particles
 * Shadow mapping
 * Networking (client/server model)
 * Build the game
