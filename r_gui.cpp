@@ -445,7 +445,7 @@ void gui::render(const pipeline &pl) {
             gl::Viewport(it.asModel.x, it.asModel.y, it.asModel.w, it.asModel.h);
             m_modelMethod.setWorld(p.world());
             m_modelMethod.setWVP(p.projection() * p.view() * p.world());
-            mdl->mat.diffuse->bind(GL_TEXTURE0);
+            //mdl->mat.diffuse->bind(GL_TEXTURE0); // TODO: FIX
             mdl->render();
             gl::Disable(GL_DEPTH_TEST);
             gl::Viewport(0, 0, neoWidth(), neoHeight());

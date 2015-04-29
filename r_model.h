@@ -42,13 +42,15 @@ struct model : geom {
     size_t joints() const;
 
     // The material for this model (TODO: many materials)
-    material mat;
+    //material mat;
     m::vec3 scale;
     m::vec3 rotate;
 
     m::bbox bounds() const;
 
 private:
+    u::vector<material> m_materials;
+    u::vector<::model::batch> m_batches;
     size_t m_indices;
     ::model m_model;
 };

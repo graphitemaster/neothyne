@@ -12,22 +12,18 @@ struct model;
 struct obj;
 
 namespace mesh {
-    struct vertex {
+    struct basicVertex {
         float position[3];
         float normal[3];
         float coordinate[2];
         float tangent[4]; // w = sign of bitangent
     };
 
-    struct animVertex {
-        float position[3];
-        float normal[3];
-        float coordinate[2];
-        float tangent[4]; // w = sign of bitangent
+    struct animVertex : basicVertex {
         unsigned char blendIndex[4];
         unsigned char blendWeight[4];
     };
-};
+}
 
 struct vertexCacheData {
     u::vector<size_t> indices;

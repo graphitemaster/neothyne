@@ -130,6 +130,8 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
     if (!fp)
         return false;
 
+    u::vector<u::string> materialNames;
+    u::vector<u::string> materialFiles;
     u::string name;
     while (auto getline = u::getline(fp)) {
         auto split = u::split(*getline);
@@ -145,15 +147,42 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
             rotate.x = u::atof(split[1]);
             if (split.size() > 2) rotate.y = u::atof(split[2]);
             if (split.size() > 3) rotate.z = u::atof(split[3]);
+        } else if (split[0] == "material" && split.size() > 2) {
+            materialNames.push_back(split[1]);
+            materialFiles.push_back(split[2]);
         }
     }
 
     // Now use that to load the mesh
     if (!m_model.load("models/" + name))
         return false;
-    // Load the model file all over again, except we treat it as a material file
-    if (!mat.load(textures, file, "models/"))
-        return false;
+
+    // Copy the model batches
+    m_batches = m_model.batches();
+
+    // If there are no material definitions in the model configuration file it more
+    // than likely implies that the model only has one material, which would be
+    // inline with the model configuration file.
+    if (materialNames.empty()) {
+        m_materials.resize(1);
+        if (!m_materials[0].load(textures, file, "models/"))
+            return false;
+        // Model only has one batch. Therefor the material index for it will be 0
+        m_batches[0].material = 0;
+    } else {
+        m_materials.resize(materialNames.size());
+        for (size_t i = 0; i < materialNames.size(); i++)
+            if (!m_materials[i].load(textures, materialFiles[i], "models/"))
+                return false;
+        const auto &meshNames = m_model.meshNames();
+        if (materialNames.size() > meshNames.size())
+            u::print("[model] => config contains more materials than model contains meshes\n");
+        // Resolve material indices
+        for (size_t i = 0; i < meshNames.size(); i++)
+            if (meshNames[i] == materialNames[i])
+                m_batches[i].material = i;
+    }
+
     return true;
 }
 
@@ -183,13 +212,13 @@ bool model::upload() {
         gl::EnableVertexAttribArray(4);
         gl::EnableVertexAttribArray(5);
     } else {
-        const auto &vertices = m_model.vertices();
-        mesh::vertex *vert = nullptr;
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::vertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), &vert->position); // vertex
-        gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), &vert->normal); // normals
-        gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), &vert->coordinate); // texCoord
-        gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(mesh::vertex), &vert->tangent); // tangent
+        const auto &vertices = m_model.basicVertices();
+        mesh::basicVertex *vert = nullptr;
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::basicVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), &vert->position); // vertex
+        gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), &vert->normal); // normals
+        gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), &vert->coordinate); // texCoord
+        gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), &vert->tangent); // tangent
         gl::EnableVertexAttribArray(0);
         gl::EnableVertexAttribArray(1);
         gl::EnableVertexAttribArray(2);
@@ -199,9 +228,10 @@ bool model::upload() {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
 
-    // TODO: multiple materials
-    if (!mat.upload())
-        return false;
+    // Upload materials
+    for (auto &mat : m_materials)
+        if (!mat.upload())
+            return false;
 
     return true;
 }
@@ -209,10 +239,10 @@ bool model::upload() {
 void model::render() {
     gl::BindVertexArray(vao);
 
-    // TODO: multiple materials
-    const auto &batches = m_model.batches();
-    for (const auto &it : batches)
+    for (const auto &it : m_batches) {
+        m_materials[it.material].diffuse->bind(GL_TEXTURE0);
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT, it.offset);
+    }
 }
 
 void model::animate(float curFrame) {

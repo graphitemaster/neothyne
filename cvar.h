@@ -280,7 +280,7 @@ u::optional<u::string> varValue(const u::string &name);
     static var<TYPE> NAME(kVarPersist, #NAME, __VA_ARGS__)
 
 #define NVAR(TYPE, NAME, ...) \
-    static var<TYPE> NAME(0, #NAME, __VA_ARGS__);
+    static var<TYPE> NAME(0, #NAME, __VA_ARGS__)
 
 bool writeConfig(const u::string &userPath);
 bool readConfig(const u::string &userPath);

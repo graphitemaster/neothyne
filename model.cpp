@@ -223,9 +223,9 @@ bool obj::load(const u::string &file, model *store) {
     createTangents(positions_, coordinates_, normals_, indices, tangents_, bitangents_);
 
     // Interleave for GPU
-    store->m_vertices.resize(count);
+    store->m_basicVertices.resize(count);
     for (size_t i = 0; i < count; i++) {
-        auto &vert = store->m_vertices[i];
+        auto &vert = store->m_basicVertices[i];
         for (size_t j = 0; j < 3; j++) {
             vert.position[j] = positions_[i][j];
             vert.normal[j] = normals_[i][j];
@@ -450,9 +450,9 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
             }
         }
     } else {
-        store->m_vertices.resize(hdr->numVertexes);
+        store->m_basicVertices.resize(hdr->numVertexes);
         for (uint32_t i = 0; i < hdr->numVertexes; i++) {
-            mesh::vertex &v = store->m_vertices[i];
+            mesh::basicVertex &v = store->m_basicVertices[i];
             if (inPosition)   memcpy(v.position, &inPosition[i*3], sizeof(v.position));
             if (inCoordinate) memcpy(v.coordinate, &inCoordinate[i*2], sizeof(v.coordinate));
             if (inTangent)    memcpy(v.tangent, &inTangent[i*4], sizeof(v.tangent));
@@ -527,7 +527,7 @@ bool iqm::load(const u::string &file, model *store) {
         iqmTriangle *tri = nullptr;
         b.offset = &tri[m.firstTriangle];
         b.count = 3*m.numTriangles;
-        b.name = str ? str : "";
+        store->m_meshNames.push_back(str ? str : "default");
         store->m_batches.push_back(b);
     }
 
@@ -548,7 +548,7 @@ bool model::load(const u::string &file) {
         for (const auto &it : m_animVertices)
             m_bounds.expand(m::vec3(it.position));
     } else {
-        for (const auto &it : m_vertices)
+        for (const auto &it : m_basicVertices)
             m_bounds.expand(m::vec3(it.position));
     }
     return true;

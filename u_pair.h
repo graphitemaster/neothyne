@@ -299,7 +299,7 @@ namespace detail {
     inline void compressed_pair<T1, T2, pair_type::both>::swap(compressed_pair &) {
         // Cannot swap
     }
-};
+}
 
 template <typename T1, typename T2>
 struct pair : private detail::compressed_pair<T1, T2> {

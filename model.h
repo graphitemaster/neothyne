@@ -13,17 +13,18 @@ struct model {
     struct batch {
         void *offset;
         size_t count;
-        u::string name;
+        size_t material; // Material index for rendering (calculated in r_model.cpp)
     };
 
     bool load(const u::string &file);
 
-    u::vector<mesh::vertex> vertices() const;
-    u::vector<mesh::animVertex> animVertices() const;
-    u::vector<unsigned int> indices() const;
-    u::vector<batch> batches() const;
+    const u::vector<mesh::basicVertex> &basicVertices() const;
+    const u::vector<mesh::animVertex> &animVertices() const;
+    const u::vector<unsigned int> &indices() const;
+    const u::vector<batch> &batches() const;
+    const u::vector<u::string> &meshNames() const;
 
-    m::bbox bounds() const;
+    const m::bbox &bounds() const;
 
     bool animated() const;
     void animate(float curFrame);
@@ -38,15 +39,23 @@ private:
     u::vector<batch> m_batches;
     u::vector<unsigned int> m_indices;
 
+    // When loading OBJs the only mesh name this is populated with for now is
+    // "default", as the OBJ loader only supports one mesh.
+    // When loading IQMs however, this is populated with the names of the meshes
+    // of the IQM is composed of. The IQM file must have mesh names, otherwise
+    // this gets populated with a bunch of "default" strings.
+    u::vector<u::string> m_meshNames;
+
     // these are only initialized when m_animated
-    size_t m_numFrames; // number of frames (for animation only)
-    size_t m_numJoints; // number of joints (for animation only)
+    size_t m_numFrames; // number of frames
+    size_t m_numJoints; // number of joints
     u::vector<m::mat3x4> m_frames; // frames
     u::vector<m::mat3x4> m_outFrame; // animated frames
     u::vector<int32_t> m_parents; // parent joint indices
-    u::vector<mesh::animVertex> m_animVertices; // generated data for animated
 
-    u::vector<mesh::vertex> m_vertices; // generated data for unanimated
+
+    u::vector<mesh::animVertex> m_animVertices; // generated data for animated models
+    u::vector<mesh::basicVertex> m_basicVertices; // generated data for unanimated models
 };
 
 inline model::model()
@@ -55,23 +64,27 @@ inline model::model()
 {
 }
 
-inline u::vector<mesh::vertex> model::vertices() const {
-    return m_vertices;
+inline const u::vector<mesh::basicVertex> &model::basicVertices() const {
+    return m_basicVertices;
 }
 
-inline u::vector<mesh::animVertex> model::animVertices() const {
+inline const u::vector<mesh::animVertex> &model::animVertices() const {
     return m_animVertices;
 }
 
-inline u::vector<unsigned int> model::indices() const {
+inline const u::vector<unsigned int> &model::indices() const {
     return m_indices;
 }
 
-inline u::vector<model::batch> model::batches() const {
+inline const u::vector<model::batch> &model::batches() const {
     return m_batches;
 }
 
-inline m::bbox model::bounds() const {
+inline const u::vector<u::string> &model::meshNames() const {
+    return m_meshNames;
+}
+
+inline const m::bbox &model::bounds() const {
     return m_bounds;
 }
 

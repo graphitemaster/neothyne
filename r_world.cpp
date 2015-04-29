@@ -849,13 +849,13 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
             pm.setRotate(rotate);
 
             if (mdl->animated()) {
-                auto *method = setup(mdl->mat, pm, rw, true);
-                method->setBoneMats(mdl->joints(), mdl->bones());
+               // auto *method = setup(mdl->mat, pm, rw, true);
+                //method->setBoneMats(mdl->joints(), mdl->bones());
                 // HACK: Testing only
                 mdl->animate(it->curFrame);
                 it->curFrame += 0.25f;
             } else {
-                setup(mdl->mat, pm, rw);
+                //setup(mdl->mat, pm, rw);
             }
             mdl->render();
         }
@@ -916,7 +916,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
             p.setScale({0.1, 0.1, 0.1});
             p.setPosition({-0.15, 0.2, -0.35});
             p.setWorld({0, 0, 0});
-            setup(m_gun.mat, p, rw);
+            //setup(m_gun.mat, p, rw);
             m_gun.render();
         }
 #endif

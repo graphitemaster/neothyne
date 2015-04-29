@@ -296,11 +296,11 @@ void stringMemory::print() {
 
     for (region *reg = m_head; reg < m_tail; reg = nextRegion(reg)) {
         if (reg->free()) {
-            printf("Free (%p) [ size: %" PRIu32 " ]\n", reg, reg->size());
+            printf("Free (%p) [ size: %" PRIu32 " ]\n", (void *)reg, reg->size());
         } else {
             auto escape = escapeString((const char *)(reg + 1));
             printf("Used (%p) [ size: %" PRIu32 " contents: \"%.50s...\" ]\n",
-                reg,
+                (void *)reg,
                 reg->size(),
                 escape.get()
             );

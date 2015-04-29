@@ -13,7 +13,7 @@ namespace detail {
     /// To avoid including stddef.h we evaluate the type of sizeof
     /// which the standard says is size_t
     typedef decltype(sizeof(0)) size_type;
-};
+}
 
 /// nullptr_t
 typedef decltype(nullptr) nullptr_t;
