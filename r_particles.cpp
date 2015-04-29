@@ -20,7 +20,8 @@ particle::particle()
 
 ///! particleSystemMethod
 particleSystemMethod::particleSystemMethod()
-    : m_colorTextureUnitLocation(0)
+    : m_VPLocation(0)
+    , m_colorTextureUnitLocation(0)
 {
 }
 

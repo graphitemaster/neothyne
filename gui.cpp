@@ -418,7 +418,8 @@ void areaFinish(int inc, bool autoScroll) {
 
     const int stop = B.areaTop;
     const int sbot = W.y;
-    const int sh = stop - sbot;
+    const int scmp = stop - sbot;
+    const int sh = m::clamp(scmp, 1, scmp);
 
     const float barHeight = sh ? float(h) / float(sh) : float(h);
 
@@ -652,7 +653,7 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
         if (S.m_drag[0] != S.m_mouse.x) { // Mouse and drag don't share same coordinate on the X axis
             const float u = m::clamp(S.m_dragOrigin + float(S.m_mouse.x - S.m_drag[0]) / float(range), 0.0f, 1.0f);
             value = min + u * (max - min);
-            value = m::floor(value / inc + 0.5f) * inc; // Snap to increments
+            value = m::floor(value / float(inc) + 0.5f) * float(inc); // Snap to increments
             m = int(u * range);
             changed = true;
         }

@@ -4,6 +4,12 @@
 namespace r {
 
 ///! method
+billboardMethod::billboardMethod()
+    : m_VPLocation(0)
+    , m_colorMapLocation(0)
+{
+}
+
 bool billboardMethod::init() {
     if (!method::init())
         return false;

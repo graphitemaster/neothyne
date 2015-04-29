@@ -21,6 +21,8 @@ namespace r {
 struct pipeline;
 
 struct billboardMethod : method {
+    billboardMethod();
+
     bool init();
 
     void setVP(const m::mat4 &vp);

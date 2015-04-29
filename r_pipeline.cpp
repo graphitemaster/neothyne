@@ -7,6 +7,7 @@ namespace r {
 pipeline::pipeline()
     : m_scale(1.0f, 1.0f, 1.0f)
     , m_time(0.0f)
+    , m_delta(0.0f)
 {
     m_rotate.setRotateTrans(0.0f, 0.0f, 0.0f);
 }
