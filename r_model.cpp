@@ -201,6 +201,7 @@ material::material()
     , specIntensity(0.0f)
     , dispScale(0.0f)
     , dispBias(0.0f)
+    , m_geomMethods(&geomMethods::instance())
 {
 }
 
@@ -327,7 +328,7 @@ geomMethod *material::bind(const r::pipeline &pl, const m::mat4 &rw, bool skelet
     calculatePermutation(skeletal);
     r::pipeline p = pl;
     auto &permutation = kGeomPermutations[permute];
-    auto &method = geomMethods::instance()[permute];
+    auto &method = (*m_geomMethods)[permute];
     method.enable();
     method.setWVP(p.projection() * p.view() * p.world());
     method.setWorld(rw);

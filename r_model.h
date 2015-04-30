@@ -105,6 +105,9 @@ struct material {
     geomMethod *bind(const r::pipeline &pl, const m::mat4 &rw, bool skeletal = false);
     bool load(u::map<u::string, texture2D*> &textures, const u::string &file, const u::string &basePath);
     bool upload();
+
+private:
+    geomMethods *m_geomMethods;
 };
 
 struct model : geom {
