@@ -443,7 +443,7 @@ geomMethod *material::bind(const r::pipeline &pl, const m::mat4 &rw, bool skelet
     if (m_animFrames) {
         const float mspf = 1.0f / (float(m_animFramerate) / 1000.0f);
         if (pl.time() - m_animMillis >= mspf) {
-            m_animFrame = m_animFrame >= m_animFrames ? 0 : m_animFrame + 1;
+            m_animFrame = (m_animFrame + 1) % m_animFrames;
             method.setAnimation((m_animFrame % m_animFramesPerRow),
                                 (m_animFrame / m_animFramesPerRow),
                                 (m_animFlipU ? -1.0f : 1.0f),
