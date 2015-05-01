@@ -179,6 +179,10 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     m.rotate = { 0, -90, 0 };
     gWorld.insert(m);
 
+    m.name = "models/cube";
+    m.position = { 85, 112, 35 };
+    gWorld.insert(m);
+
     if (!gWorld.load("garden.kdgz"))
         neoFatal("failed to load world");
 #endif

@@ -36,6 +36,12 @@ uniform float gSpecIntensity;
 uniform vec2 gParallax; // { scale, bias }
 #endif
 
+#ifdef USE_ANIMATION
+uniform ivec2 gAnimOffset;
+uniform vec2 gAnimFlip;
+uniform vec2 gAnimScale;
+#endif
+
 #ifdef USE_NORMALMAP
 vec3 calcBump(vec2 texCoord) {
     vec3 normal;
@@ -77,10 +83,16 @@ vec2 parallax(vec2 texCoord) {
 #endif
 
 void main() {
-#if defined(USE_PARALLAX)
-    vec2 texCoord = parallax(texCoord0);
+#if defined(USE_ANIMATION)
+    vec2 texCoordBase = (texCoord0 * gAnimFlip + gAnimOffset) * gAnimScale;
 #else
-    vec2 texCoord = texCoord0;
+    vec2 texCoordBase = texCoord0;
+#endif
+
+#if defined(USE_PARALLAX)
+    vec2 texCoord = parallax(texCoordBase);
+#else
+    vec2 texCoord = texCoordBase;
 #endif
 
 #ifdef USE_DIFFUSE

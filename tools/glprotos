@@ -20,6 +20,7 @@ void: DeleteProgram(GLuint: program);
 void: DeleteBuffers(GLsizei: n, const GLuint*: buffers);
 void: DeleteVertexArrays(GLsizei: n, const GLuint*: arrays);
 void: Uniform1i(GLint: location, GLint: v0);
+void: Uniform2i(GLint: location, GLint: v0, GLint: v1);
 void: Uniform1f(GLint: location, GLfloat: v0);
 void: Uniform2f(GLint: location, GLfloat: v0, GLfloat: v1);
 void: Uniform3fv(GLint: location, GLsizei: count, const GLfloat*: value);

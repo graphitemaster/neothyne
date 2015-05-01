@@ -24,6 +24,8 @@ struct texture2D {
     void bind(GLenum unit);
     void resize(size_t width, size_t height);
     textureFormat format() const;
+    size_t width() const;
+    size_t height() const;
 
 private:
     bool useCache();
@@ -34,6 +36,14 @@ private:
     bool m_mipmaps;
     int m_filter;
 };
+
+inline size_t texture2D::width() const {
+    return m_texture.width();
+}
+
+inline size_t texture2D::height() const {
+    return m_texture.height();
+}
 
 struct texture3D {
     texture3D();

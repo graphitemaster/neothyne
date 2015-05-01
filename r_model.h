@@ -30,6 +30,7 @@ struct geomMethod : method {
     void setEyeWorldPos(const m::vec3 &position);
     void setParallax(float scale, float bias);
     void setBoneMats(size_t numJoints, const float *mats);
+    void setAnimation(int x, int y, float flipu, float flipv, float w, float h);
 
 private:
     GLint m_WVPLocation;
@@ -43,6 +44,9 @@ private:
     GLint m_eyeWorldPositionLocation;
     GLint m_parallaxLocation;
     GLint m_boneMatsLocation;
+    GLint m_animOffsetLocation;
+    GLint m_animFlipLocation;
+    GLint m_animScaleLocation;
 };
 
 inline geomMethod::geomMethod()
@@ -57,6 +61,9 @@ inline geomMethod::geomMethod()
     , m_eyeWorldPositionLocation(-1)
     , m_parallaxLocation(-1)
     , m_boneMatsLocation(-1)
+    , m_animOffsetLocation(-1)
+    , m_animFlipLocation(-1)
+    , m_animScaleLocation(-1)
 {
 }
 
@@ -107,6 +114,18 @@ struct material {
     bool upload();
 
 private:
+    int m_animFrameWidth;   // The width of one frame of animation
+    int m_animFrameHeight;  // The height of one frame of animation
+    int m_animFramerate;    // The framerate to playback the animation
+    int m_animFrames;       // The amount of frames in the animation
+    int m_animFrame;        // The current frame being rendered
+    int m_animFramesPerRow; // How many frames are in a row
+    float m_animWidth;      // spriteWidth/textureWidth (uv coordinate)
+    float m_animHeight;     // spriteHeight/textureHeight (uv coordinate)
+    bool m_animFlipU;       // Flip U for animation uvs
+    bool m_animFlipV;       // Flip V for animation uvs
+    uint32_t m_animMillis;  // Last frame update time
+
     geomMethods *m_geomMethods;
 };
 

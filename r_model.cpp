@@ -49,6 +49,9 @@ bool geomMethod::init(const u::vector<const char *> &defines) {
     m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
     m_parallaxLocation = getUniformLocation("gParallax");
     m_boneMatsLocation = getUniformLocation("gBoneMats");
+    m_animOffsetLocation = getUniformLocation("gAnimOffset");
+    m_animFlipLocation = getUniformLocation("gAnimFlip");
+    m_animScaleLocation = getUniformLocation("gAnimScale");
 
     return true;
 }
@@ -97,6 +100,12 @@ void geomMethod::setBoneMats(size_t numJoints, const float *mats) {
     gl::UniformMatrix3x4fv(m_boneMatsLocation, numJoints, GL_FALSE, mats);
 }
 
+void geomMethod::setAnimation(int x, int y, float flipu, float flipv, float w, float h) {
+    gl::Uniform2i(m_animOffsetLocation, x, y);
+    gl::Uniform2f(m_animFlipLocation, flipu, flipv);
+    gl::Uniform2f(m_animScaleLocation, w, h);
+}
+
 // Generate the list of permutation names for the shader
 template <typename T, size_t N, typename U>
 static inline u::vector<const char *> generatePermutation(const T(&list)[N], const U &p) {
@@ -122,33 +131,60 @@ enum {
     kGeomPermSpecMap        = 1 << 2,
     kGeomPermSpecParams     = 1 << 3,
     kGeomPermParallax       = 1 << 4,
-    kGeomPermSkeletal       = 1 << 5
+    kGeomPermSkeletal       = 1 << 5,
+    kGeomPermAnimated       = 1 << 6
 };
 
 ///! Geometry shading permutation singleton
 static const geomPermutation kGeomPermutations[] = {
-    { 0,                                                                                                   -1, -1, -1, -1 },
-    { kGeomPermDiffuse,                                                                                     0, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap,                                                                0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermSpecMap,                                                                  0, -1,  1, -1 },
-    { kGeomPermDiffuse | kGeomPermSpecParams,                                                               0, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap,                                                                0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap,                                            0,  1,  2, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams,                                         0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermParallax,                                           0,  1, -1,  2 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermParallax,                     0,  1,  2,  3 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermParallax,                     0,  1, -1,  2 },
-    { kGeomPermSkeletal,                                                                                   -1, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermSkeletal,                                                                 0, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSkeletal,                                           0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermSpecMap    | kGeomPermSkeletal,                                           0, -1,  1, -1 },
-    { kGeomPermDiffuse | kGeomPermSpecParams | kGeomPermSkeletal,                                           0, -1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSkeletal,                                           0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermSkeletal,                     0,  1,  2, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermSkeletal,                     0,  1, -1, -1 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermParallax   | kGeomPermSkeletal,                     0,  1, -1,  2 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermParallax | kGeomPermSkeletal, 0,  1,  2,  3 },
-    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermParallax | kGeomPermSkeletal, 0,  1, -1,  2 }
+    // Null permutation
+    { 0,                                                                                                                       -1, -1, -1, -1 },
+    // Geometry permutations (static)
+    { kGeomPermDiffuse,                                                                                                         0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap,                                                                                    0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecMap,                                                                                      0, -1,  1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecParams,                                                                                   0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap,                                                                                    0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap,                                                                0,  1,  2, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams,                                                             0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermParallax,                                                               0,  1, -1,  2 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermParallax,                                         0,  1,  2,  3 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermParallax,                                         0,  1, -1,  2 },
+    // Geometry permutations (animated)
+    { kGeomPermDiffuse | kGeomPermAnimated,                                                                                     0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermAnimated,                                                               0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecMap    | kGeomPermAnimated,                                                               0, -1,  1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecParams | kGeomPermAnimated,                                                               0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermAnimated,                                                               0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermAnimated,                                         0,  1,  2, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermAnimated,                                         0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermParallax   | kGeomPermAnimated,                                         0,  1, -1,  2 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermParallax | kGeomPermAnimated,                     0,  1,  2,  3 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermParallax | kGeomPermAnimated,                     0,  1, -1,  2 },
+    // Skeletal permutations (static)
+    { kGeomPermSkeletal,                                                                                                       -1, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermSkeletal,                                                                                     0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSkeletal,                                                               0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecMap    | kGeomPermSkeletal,                                                               0, -1,  1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecParams | kGeomPermSkeletal,                                                               0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSkeletal,                                                               0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermSkeletal,                                         0,  1,  2, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermSkeletal,                                         0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermParallax   | kGeomPermSkeletal,                                         0,  1, -1,  2 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermParallax | kGeomPermSkeletal,                     0,  1,  2,  3 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermParallax | kGeomPermSkeletal,                     0,  1, -1,  2 },
+    // Skeletal permutations (animated)
+    { kGeomPermDiffuse | kGeomPermAnimated,                                                                                     0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermSkeletal   | kGeomPermAnimated,                                                               0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSkeletal   | kGeomPermAnimated,                                         0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecMap    | kGeomPermSkeletal   | kGeomPermAnimated,                                         0, -1,  1, -1 },
+    { kGeomPermDiffuse | kGeomPermSpecParams | kGeomPermSkeletal   | kGeomPermAnimated,                                         0, -1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSkeletal   | kGeomPermAnimated,                                         0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermSkeletal | kGeomPermAnimated,                     0,  1,  2, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermSkeletal | kGeomPermAnimated,                     0,  1, -1, -1 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermParallax   | kGeomPermSkeletal | kGeomPermAnimated,                     0,  1, -1,  2 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecMap    | kGeomPermParallax | kGeomPermSkeletal | kGeomPermAnimated, 0,  1,  2,  3 },
+    { kGeomPermDiffuse | kGeomPermNormalMap  | kGeomPermSpecParams | kGeomPermParallax | kGeomPermSkeletal | kGeomPermAnimated, 0,  1, -1,  2 }
 };
 
 static const char *kGeomPermutationNames[] = {
@@ -157,7 +193,8 @@ static const char *kGeomPermutationNames[] = {
     "USE_SPECMAP",
     "USE_SPECPARAMS",
     "USE_PARALLAX",
-    "USE_SKELETAL"
+    "USE_SKELETAL",
+    "USE_ANIMATION"
 };
 
 ///! Singleton representing all the possible geometry methods (used by model and world.)
@@ -201,6 +238,16 @@ material::material()
     , specIntensity(0.0f)
     , dispScale(0.0f)
     , dispBias(0.0f)
+    , m_animFrameWidth(0)
+    , m_animFrameHeight(0)
+    , m_animFramerate(0)
+    , m_animFrames(0)
+    , m_animFramesPerRow(0)
+    , m_animWidth(0.0f)
+    , m_animHeight(0.0f)
+    , m_animFlipU(false)
+    , m_animFlipV(false)
+    , m_animMillis(0)
     , m_geomMethods(&geomMethods::instance())
 {
 }
@@ -249,6 +296,13 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
             dispScale = u::atof(value);
             if (split.size() > 2)
                 dispBias = u::atof(split[2]);
+        } else if (key == "animation" && split.size() > 4) {
+            m_animFrameWidth = u::atoi(split[1]);
+            m_animFrameHeight = u::atoi(split[2]);
+            m_animFramerate = u::atoi(split[3]);
+            m_animFrames = u::atoi(split[4]);
+            if (split.size() > 5) m_animFlipU = u::atoi(split[5]);
+            if (split.size() > 6) m_animFlipV = u::atoi(split[6]);
         }
     }
 
@@ -273,6 +327,42 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
     loadTexture(normalName, &normal);
     loadTexture(specName, &spec);
     loadTexture(displacementName, &displacement);
+
+    // Sanitize animated inputs
+    auto checkSize = [this, &fileName](texture2D *tex) {
+        if (tex && m_animFrameWidth*m_animFramesPerRow > int(tex->width())) {
+            u::print("[material] => `%s' animation frame width and frames per row exceeds animation texture width\n", fileName);
+            return false;
+        }
+        return true;
+    };
+
+    if (m_animFrames && diffuse) {
+        if (m_animFrameWidth <= 0 || m_animFrameHeight <= 0 ||
+            m_animFramerate <= 0 || m_animFrames <= 0)
+        {
+            u::print("[material] => `%s' invalid animation sequence\n", fileName);
+            return false;
+        }
+
+        if (!checkSize(diffuse)) return false;
+        if (!checkSize(normal)) return false;
+        if (!checkSize(spec)) return false;
+        if (!checkSize(displacement)) return false;
+
+        m_animFramesPerRow = diffuse->width() / m_animFrameWidth;
+        m_animWidth = float(m_animFrameWidth) / diffuse->width();
+        m_animHeight = float(m_animFrameHeight) / diffuse->height();
+
+        if (m_animFrames / m_animFramesPerRow > int(diffuse->height()) / m_animFrameHeight) {
+            u::print("[material] => `%s' frame-count exceeds the geometry of the animation sequence\n", fileName);
+            return false;
+        }
+        if (m_animFramerate > m_animFrames) {
+            u::print("[material] => `%s' frame-rate exceeds the amount of frames in animation sequence\n", fileName);
+            return false;
+        }
+    }
 
     // If there is a specular map, silently drop the specular parameters
     if (spec && specParams)
@@ -306,6 +396,8 @@ void material::calculatePermutation(bool skeletal) {
     int p = 0;
     if (skeletal)
         p |= kGeomPermSkeletal;
+    if (m_animFrames)
+        p |= kGeomPermAnimated;
     if (diffuse)
         p |= kGeomPermDiffuse;
     if (normal)
@@ -348,6 +440,19 @@ geomMethod *material::bind(const r::pipeline &pl, const m::mat4 &rw, bool skelet
         spec->bind(GL_TEXTURE0 + permutation.spec);
     if (permutation.permute & kGeomPermParallax)
         displacement->bind(GL_TEXTURE0 + permutation.disp);
+    if (m_animFrames) {
+        const float mspf = 1.0f / (float(m_animFramerate) / 1000.0f);
+        if (pl.time() - m_animMillis >= mspf) {
+            m_animFrame = m_animFrame >= m_animFrames ? 0 : m_animFrame + 1;
+            method.setAnimation((m_animFrame % m_animFramesPerRow),
+                                (m_animFrame / m_animFramesPerRow),
+                                (m_animFlipU ? -1.0f : 1.0f),
+                                (m_animFlipV ? -1.0f : 1.0f),
+                                m_animWidth,
+                                m_animHeight);
+            m_animMillis = pl.time();
+        }
+    }
     return &method;
 }
 

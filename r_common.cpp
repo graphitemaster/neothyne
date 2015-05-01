@@ -50,6 +50,7 @@ typedef void (APIENTRYP MYPFNGLDELETEPROGRAMPROC)(GLuint);
 typedef void (APIENTRYP MYPFNGLDELETEBUFFERSPROC)(GLsizei, const GLuint*);
 typedef void (APIENTRYP MYPFNGLDELETEVERTEXARRAYSPROC)(GLsizei, const GLuint*);
 typedef void (APIENTRYP MYPFNGLUNIFORM1IPROC)(GLint, GLint);
+typedef void (APIENTRYP MYPFNGLUNIFORM2IPROC)(GLint, GLint, GLint);
 typedef void (APIENTRYP MYPFNGLUNIFORM1FPROC)(GLint, GLfloat);
 typedef void (APIENTRYP MYPFNGLUNIFORM2FPROC)(GLint, GLfloat, GLfloat);
 typedef void (APIENTRYP MYPFNGLUNIFORM3FVPROC)(GLint, GLsizei, const GLfloat*);
@@ -135,6 +136,7 @@ static MYPFNGLDELETEPROGRAMPROC             glDeleteProgram_            = nullpt
 static MYPFNGLDELETEBUFFERSPROC             glDeleteBuffers_            = nullptr;
 static MYPFNGLDELETEVERTEXARRAYSPROC        glDeleteVertexArrays_       = nullptr;
 static MYPFNGLUNIFORM1IPROC                 glUniform1i_                = nullptr;
+static MYPFNGLUNIFORM2IPROC                 glUniform2i_                = nullptr;
 static MYPFNGLUNIFORM1FPROC                 glUniform1f_                = nullptr;
 static MYPFNGLUNIFORM2FPROC                 glUniform2f_                = nullptr;
 static MYPFNGLUNIFORM3FVPROC                glUniform3fv_               = nullptr;
@@ -462,6 +464,7 @@ void init() {
     glDeleteBuffers_            = (MYPFNGLDELETEBUFFERSPROC)neoGetProcAddress("glDeleteBuffers");
     glDeleteVertexArrays_       = (MYPFNGLDELETEVERTEXARRAYSPROC)neoGetProcAddress("glDeleteVertexArrays");
     glUniform1i_                = (MYPFNGLUNIFORM1IPROC)neoGetProcAddress("glUniform1i");
+    glUniform2i_                = (MYPFNGLUNIFORM2IPROC)neoGetProcAddress("glUniform2i");
     glUniform1f_                = (MYPFNGLUNIFORM1FPROC)neoGetProcAddress("glUniform1f");
     glUniform2f_                = (MYPFNGLUNIFORM2FPROC)neoGetProcAddress("glUniform2f");
     glUniform3fv_               = (MYPFNGLUNIFORM3FVPROC)neoGetProcAddress("glUniform3fv");
@@ -664,6 +667,11 @@ void DeleteVertexArrays(GLsizei n, const GLuint* arrays GL_INFOP) {
 void Uniform1i(GLint location, GLint v0 GL_INFOP) {
     glUniform1i_(location, v0);
     GL_CHECK("77", location, v0);
+}
+
+void Uniform2i(GLint location, GLint v0, GLint v1 GL_INFOP) {
+    glUniform2i_(location, v0, v1);
+    GL_CHECK("777", location, v0, v1);
 }
 
 void Uniform1f(GLint location, GLfloat v0 GL_INFOP) {

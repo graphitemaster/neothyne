@@ -57,6 +57,7 @@ void DeleteProgram(GLuint program GL_INFOP);
 void DeleteBuffers(GLsizei n, const GLuint* buffers GL_INFOP);
 void DeleteVertexArrays(GLsizei n, const GLuint* arrays GL_INFOP);
 void Uniform1i(GLint location, GLint v0 GL_INFOP);
+void Uniform2i(GLint location, GLint v0, GLint v1 GL_INFOP);
 void Uniform1f(GLint location, GLfloat v0 GL_INFOP);
 void Uniform2f(GLint location, GLfloat v0, GLfloat v1 GL_INFOP);
 void Uniform3fv(GLint location, GLsizei count, const GLfloat* value GL_INFOP);
@@ -144,6 +145,7 @@ void BindFragDataLocation(GLuint program, GLuint colorNumber, const GLchar* name
 #   define DeleteBuffers(...)            DeleteBuffers(__VA_ARGS__, __FILE__, __LINE__)
 #   define DeleteVertexArrays(...)       DeleteVertexArrays(__VA_ARGS__, __FILE__, __LINE__)
 #   define Uniform1i(...)                Uniform1i(__VA_ARGS__, __FILE__, __LINE__)
+#   define Uniform2i(...)                Uniform2i(__VA_ARGS__, __FILE__, __LINE__)
 #   define Uniform1f(...)                Uniform1f(__VA_ARGS__, __FILE__, __LINE__)
 #   define Uniform2f(...)                Uniform2f(__VA_ARGS__, __FILE__, __LINE__)
 #   define Uniform3fv(...)               Uniform3fv(__VA_ARGS__, __FILE__, __LINE__)
