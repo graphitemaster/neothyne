@@ -583,6 +583,9 @@ void engine::swap() {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
+        case SDL_QUIT:
+            gShutdown = true;
+            break;
         case SDL_CONTROLLERDEVICEADDED:
             CTX(m_context)->addController(e.cdevice.which);
             break;
