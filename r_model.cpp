@@ -518,13 +518,23 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
             if (!m_materials[i].load(textures, fileName, "models/"))
                 return false;
         }
+
         const auto &meshNames = m_model.meshNames();
-        if (materialNames.size() > meshNames.size())
-            u::print("[model] => config contains more materials than model contains meshes\n");
+        if (materialNames.size() != meshNames.size()) {
+            u::print("[model] => config contains %s materials than meshes\n",
+                materialNames.size() > meshNames.size() ? "more" : "less");
+            return false;
+        }
+
         // Resolve material indices
-        for (size_t i = 0; i < meshNames.size(); i++) {
-            if (meshNames[i] == materialNames[i])
-                m_batches[i].material = i;
+        for (size_t i = 0; i < materialNames.size(); i++) {
+            auto find = u::find(meshNames.begin(), meshNames.end(), materialNames[i]);
+            if (find == meshNames.end()) {
+                u::print("[model] => config contains `%s' material but model doesn't\n",
+                    materialNames[i]);
+                return false;
+            }
+            m_batches[i].material = i;
         }
     }
 
