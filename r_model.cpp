@@ -378,6 +378,8 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
 }
 
 bool material::upload() {
+    if (!m_geomMethods->init())
+        return false;
     if (diffuse && !diffuse->upload())
         return false;
     if (normal && !normal->upload())
