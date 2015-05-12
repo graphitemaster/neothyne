@@ -59,6 +59,7 @@ embodies the following:
 
 * Console (which allows for)
   * Global configuration
+  * History and tab completion
   * Reactive changes to various engine components (including renderer)
 
 * Asset optimization (which can do)
