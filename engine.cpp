@@ -318,6 +318,7 @@ static engine gEngine;
 
 inline engine::engine()
     : m_textInputHistoryCursor(0)
+    , m_autoCompleteCursor(0)
     , m_screenWidth(0)
     , m_screenHeight(0)
     , m_refreshRate(0)
@@ -604,6 +605,11 @@ void engine::swap() {
             break;
         case SDL_KEYDOWN:
             if (CTX(m_context)->m_textState == textState::kInputting) {
+                if (e.key.keysym.sym != SDLK_TAB) {
+                    m_autoComplete.destroy();
+                    m_autoCompleteCursor = 0;
+                }
+
                 if (e.key.keysym.sym == SDLK_RETURN) {
                     CTX(m_context)->endTextInput();
                     // Keep input history if not empty-string
@@ -619,13 +625,21 @@ void engine::swap() {
                     u::string &input = CTX(m_context)->m_textString;
                     if (input.size())
                         input.pop_back();
-                } else if (e.key.keysym.sym == SDLK_UP) {
+                } else if (e.key.keysym.sym == SDLK_TAB) {
+                    if (m_autoComplete.empty())
+                        m_autoComplete = varAutoComplete(CTX(m_context)->m_textString);
+                    if (m_autoComplete.size()) {
+                        if (m_autoComplete.size() <= m_autoCompleteCursor)
+                            m_autoCompleteCursor = 0;
+                        CTX(m_context)->m_textString = m_autoComplete[m_autoCompleteCursor++];
+                    }
+                } else if (e.key.keysym.sym == SDLK_UP && m_textInputHistory.size()) {
                     m_textInputHistoryCursor--;
                     if (m_textInputHistoryCursor == size_t(-1))
                         m_textInputHistoryCursor = m_textInputHistory.size() - 1;
                     CTX(m_context)->m_textString =
                         m_textInputHistory[m_textInputHistoryCursor];
-                } else if (e.key.keysym.sym == SDLK_DOWN) {
+                } else if (e.key.keysym.sym == SDLK_DOWN && m_textInputHistory.size()) {
                     m_textInputHistoryCursor++;
                     if (m_textInputHistoryCursor >= m_textInputHistory.size())
                         m_textInputHistoryCursor = 0;

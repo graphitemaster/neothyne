@@ -118,6 +118,8 @@ private:
     u::map<u::string, bindFunction> m_binds;
     u::stack<u::string, 32> m_textInputHistory;
     size_t m_textInputHistoryCursor;
+    u::vector<u::string> m_autoComplete;
+    size_t m_autoCompleteCursor;
     u::string m_userPath;
     u::string m_gamePath;
     mouseState m_mouseState;
