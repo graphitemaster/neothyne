@@ -115,14 +115,18 @@ static inline int rempio2(float x, double &y) {
     static const double kPIO2H = 1.57079631090164184570e+00;
     static const double kPIO2T = 1.58932547735281966916e-08;
     floatShape shape = { x };
-    uint32_t ix = shape.asInt & 0x7FFFFFFF;
+    const uint32_t ix = shape.asInt & 0x7FFFFFFF;
     if (ix < 0x4DC90FDB) { // |x| ~< 2^28*(pi/2)
         const f64 fn = x*kInvPio2 + kToInt - kToInt;
         const int n = int32_t(fn);
         y = x - fn*kPIO2H - fn*kPIO2T;
         return n;
     }
-    // value is far too large, something it pathologically wrong
+    if (ix >= 0x7F800000) {
+        y = x-x;
+        return 0;
+    }
+    // value is far too large, something is pathologically wrong
     assert(0 && "function called with a huge value");
 }
 

@@ -634,6 +634,8 @@ static void menuCreate() {
     const size_t y = neoHeight() / 2 - h / 2;
 
     if (D(browse)) {
+        if (gMenuPaths.empty())
+            STR(directory) = neoUserPath();
         gui::areaBegin(STR(directory).c_str(), x, y, w, h, D(browseScroll));
             // When it isn't the user path we need a way to go back
             if (STR(directory) != neoUserPath() && gui::item("..")) {
