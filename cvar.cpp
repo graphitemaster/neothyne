@@ -38,8 +38,7 @@ inline autoComplete::~autoComplete() {
 
 inline int autoComplete::at(int ch) {
     const char *find = strchr(kAlphabet, ch);
-    assert(find);
-    return find - kAlphabet;
+    return find ? find - kAlphabet : -1;
 }
 
 inline autoComplete *autoComplete::insert(const u::string &c, bool term) {
@@ -48,6 +47,7 @@ inline autoComplete *autoComplete::insert(const u::string &c, bool term) {
     autoComplete *p = this;
     for (auto &it : c) {
         const int i = at(it);
+        assert(i != -1);
         if (!p->m_array[i])
             p->m_array[i] = new autoComplete;
         p = p->m_array[i];
@@ -72,7 +72,7 @@ inline autoComplete *autoComplete::insert(autoComplete *h, const u::string &c) {
 inline void autoComplete::search(autoComplete *n, const char *s, u::vector<u::string> &matches, const u::string &item) {
     if (*s) {
         const int f = at(*s);
-        if (n->m_array[f])
+        if (f != -1 && n->m_array[f])
             search(n->m_array[f], s+1, matches, item + *s);
     } else {
         for (size_t i = 0; i < sizeof(kAlphabet) - 1; i++)
