@@ -883,6 +883,7 @@ bool texture2D::upload() {
                 (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
                  format.internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT))
             {
+                needsCache = false;
                 u::vector<unsigned char> compressed;
                 if (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) {
                     compressed = dxtCompress<kDXT1>(m_texture.data(), m_texture.width(),
