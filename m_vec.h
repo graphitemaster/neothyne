@@ -8,6 +8,44 @@
 
 namespace m {
 
+struct vec2 {
+    union {
+        struct { float x, y; };
+        float m[2];
+    };
+
+    constexpr vec2();
+    constexpr vec2(const float (&vals)[2]);
+    constexpr vec2(float nx, float ny);
+    constexpr vec2(float a);
+
+    void endianSwap();
+};
+
+inline constexpr vec2::vec2()
+    : x(0.0f)
+    , y(0.0f)
+{
+}
+
+inline constexpr vec2::vec2(const float (&vals)[2])
+    : x(vals[0])
+    , y(vals[1])
+{
+}
+
+inline constexpr vec2::vec2(float nx, float ny)
+    : x(nx)
+    , y(ny)
+{
+}
+
+inline constexpr vec2::vec2(float a)
+    : x(a)
+    , y(a)
+{
+}
+
 struct vec3 {
     union {
         struct { float x, y, z; };

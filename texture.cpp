@@ -2051,7 +2051,7 @@ u::optional<u::string> texture::find(const u::string &infile) {
         file.erase(beg, end+1);
     }
 
-    static const char *extensions[] = { "png", "jpg", "jpeg", "tga", "dds" };
+    static const char *extensions[] = { "png", "jpg", "tga", "dds" };
     size_t bits = 0;
     for (size_t i = 0; i < sizeof(extensions)/sizeof(*extensions); i++)
         if (u::exists(u::format("%s.%s", file.c_str(), extensions[i])))

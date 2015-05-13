@@ -8,7 +8,7 @@
 
 /// Tangent and Bitangent calculation
 static void calculateTangent(const u::vector<m::vec3> &vertices,
-                             const u::vector<m::vec3> &coordinates,
+                             const u::vector<m::vec2> &coordinates,
                              size_t v0,
                              size_t v1,
                              size_t v2,
@@ -43,7 +43,7 @@ static void calculateTangent(const u::vector<m::vec3> &vertices,
 }
 
 static void createTangents(const u::vector<m::vec3> &vertices,
-                           const u::vector<m::vec3> &coordinates,
+                           const u::vector<m::vec2> &coordinates,
                            const u::vector<m::vec3> &normals,
                            const u::vector<size_t> &indices,
                            u::vector<m::vec3> &tangents_,
@@ -109,7 +109,7 @@ bool obj::load(const u::string &file, model *store) {
     // Processed vertices, normals and coordinates from the OBJ file
     u::vector<m::vec3> vertices;
     u::vector<m::vec3> normals;
-    u::vector<m::vec3> coordinates;
+    u::vector<m::vec2> coordinates;
     u::vector<m::vec3> tangents;
     u::vector<float> bitangents;
 
@@ -145,7 +145,7 @@ bool obj::load(const u::string &file, model *store) {
             normals.push_back({x * -1.0f, y * -1.0f, z});
         } else if (u::sscanf(line, "vt %f %f", &x, &y) == 2) {
             // vt float float
-            coordinates.push_back({x, 1.0f - y, 0.0f});
+            coordinates.push_back({x, 1.0f - y});
         } else if (line[0] == 'g') {
             group++;
         } else if (line[0] == 'f' && group == 0) { // Only process the first group faces
@@ -198,7 +198,7 @@ bool obj::load(const u::string &file, model *store) {
     // Construct the model, indices are already generated
     u::vector<m::vec3> positions_(count);
     u::vector<m::vec3> normals_(count);
-    u::vector<m::vec3> coordinates_(count);
+    u::vector<m::vec2> coordinates_(count);
     for (auto &it : uniques) {
         const auto &first = it.first;
         const auto &second = it.second;
