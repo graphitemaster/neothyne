@@ -8,6 +8,7 @@
 #include "r_billboard.h"
 #include "r_particles.h"
 #include "r_geom.h"
+#include "r_grader.h"
 #include "r_model.h"
 #include "r_light.h"
 #include "r_hoq.h"
@@ -64,18 +65,11 @@ struct composite {
     composite();
     ~composite();
 
-    bool init(const m::perspective &p, GLuint depth,
-        const unsigned char *const colorGradingData);
-    void update(const m::perspective &p,
-        const unsigned char *const colorGradingData);
+    bool init(const m::perspective &p, GLuint depth);
+    void update(const m::perspective &p);
     void bindWriting();
 
-    enum {
-        kOutput,
-        kColorGrading
-    };
-
-    GLuint texture(size_t index) const;
+    GLuint texture() const;
 
 private:
     enum {
@@ -86,7 +80,7 @@ private:
     void destroy();
 
     GLuint m_fbo;
-    GLuint m_textures[2]; // kOutput, kColorGrading
+    GLuint m_texture;
     size_t m_width;
     size_t m_height;
 };
@@ -128,6 +122,7 @@ private:
     ssaoMethod m_ssaoMethod;
     bboxMethod m_bboxMethod;
     aaMethod m_aaMethod;
+    defaultMethod m_defaultMethod;
 
     // Other things in the world to render
     skybox m_skybox;
@@ -153,6 +148,7 @@ private:
     gBuffer m_gBuffer;
     ssao m_ssao;
     composite m_final;
+    grader m_colorGrader;
 
     m::mat4 m_identity;
     m::frustum m_frustum;

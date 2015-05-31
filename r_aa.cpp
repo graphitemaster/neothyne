@@ -96,6 +96,7 @@ bool aa::init(const m::perspective &p) {
     gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format, m_texture, 0);
 
     static GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };

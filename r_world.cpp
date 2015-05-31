@@ -187,10 +187,10 @@ void compositeMethod::setPerspective(const m::perspective &p) {
 
 composite::composite()
     : m_fbo(0)
+    , m_texture(0)
     , m_width(0)
     , m_height(0)
 {
-    memset(m_textures, 0, sizeof(m_textures));
 }
 
 composite::~composite() {
@@ -200,55 +200,45 @@ composite::~composite() {
 void composite::destroy() {
     if (m_fbo)
         gl::DeleteFramebuffers(1, &m_fbo);
-    if (m_textures[0])
-        gl::DeleteTextures(2, m_textures);
+    if (m_texture)
+        gl::DeleteTextures(1, &m_texture);
 }
 
-void composite::update(const m::perspective &p,
-    const unsigned char *const colorGradingData)
-{
+void composite::update(const m::perspective &p) {
     const size_t width = p.width;
     const size_t height = p.height;
 
     GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
-    if (m_width != width || m_height != height) {
-        m_width = width;
-        m_height = height;
-        gl::BindTexture(format, m_textures[kOutput]);
-        gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA,
-            GL_FLOAT, nullptr);
-        gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    }
+    if (m_width == width && m_height == height)
+        return;
 
-    // Need to update color grading data if any is passed at all
-    if (colorGradingData) {
-        gl::BindTexture(GL_TEXTURE_3D, m_textures[kColorGrading]);
-        gl::TexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, 16, 16, 16, GL_RGB,
-            GL_UNSIGNED_BYTE, colorGradingData);
-    }
+    m_width = width;
+    m_height = height;
+    gl::BindTexture(format, m_texture);
+    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA,
+        GL_FLOAT, nullptr);
+    gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 }
 
-bool composite::init(const m::perspective &p, GLuint depth,
-    const unsigned char *const colorGradingData)
-{
+bool composite::init(const m::perspective &p, GLuint depth) {
     m_width = p.width;
     m_height = p.height;
 
     gl::GenFramebuffers(1, &m_fbo);
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
 
-    gl::GenTextures(2, m_textures);
+    gl::GenTextures(1, &m_texture);
 
     GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     // output composite
-    gl::BindTexture(format, m_textures[kOutput]);
+    gl::BindTexture(format, m_texture);
     gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT,
         nullptr);
     gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -256,7 +246,7 @@ bool composite::init(const m::perspective &p, GLuint depth,
     gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format,
-        m_textures[kOutput], 0);
+        m_texture, 0);
 
     gl::BindTexture(format, depth);
     gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
@@ -270,17 +260,6 @@ bool composite::init(const m::perspective &p, GLuint depth,
         return false;
 
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-    // Color grading texture
-    gl::BindTexture(GL_TEXTURE_3D, m_textures[kColorGrading]);
-    gl::TexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    gl::TexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    gl::TexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl::TexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl::TexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    gl::TexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, 16, 16, 16, 0, GL_RGB,
-        GL_UNSIGNED_BYTE, colorGradingData);
-
     return true;
 }
 
@@ -288,8 +267,8 @@ void composite::bindWriting() {
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
 }
 
-GLuint composite::texture(size_t index) const {
-    return m_textures[index];
+GLuint composite::texture() const {
+    return m_texture;
 }
 
 ///! renderer
@@ -517,13 +496,24 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_bboxMethod.enable();
     m_bboxMethod.setColor({1.0f, 1.0f, 1.0f}); // White by default
 
+    // default method
+    if (!m_defaultMethod.init())
+        neoFatal("failed to initialize default rendering method");
+    m_defaultMethod.enable();
+    m_defaultMethod.setColorTextureUnit(0);
+    m_defaultMethod.setWVP(m_identity);
+
     // setup g-buffer
     if (!m_gBuffer.init(p))
         neoFatal("failed to initialize world renderer");
     if (!m_ssao.init(p))
         neoFatal("failed to initialize world renderer");
-    if (!m_final.init(p, m_gBuffer.texture(gBuffer::kDepth), map->getColorGrader().data()))
+    if (!m_final.init(p, m_gBuffer.texture(gBuffer::kDepth)))
         neoFatal("failed to initialize world renderer");
+
+    // post-fx stuff
+    if (!m_colorGrader.init(p, map->getColorGrader().data()))
+        neoFatal("failed to initialize color grading renderer");
 
     if (!m_ssaoMethod.init())
         neoFatal("failed to initialize ssao rendering method");
@@ -1015,41 +1005,70 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
 }
 
 void world::compositePass(const pipeline &pl, ::world *map) {
-    // We're going to be reading from the final composite
+    // Writing to color grader
+    m_colorGrader.bindWriting();
+
     auto &colorGrading = map->getColorGrader();
     if (colorGrading.updated()) {
         colorGrading.grade();
-        m_final.update(pl.perspective(), map->getColorGrader().data());
+        m_colorGrader.update(pl.perspective(), colorGrading.data());
         colorGrading.update();
     } else {
-        m_final.update(pl.perspective(), nullptr);
+        m_colorGrader.update(pl.perspective(), nullptr);
     }
 
-    if (r_fxaa) {
-        m_final.bindWriting();
-    } else {
-        gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    }
-
-    GLenum format = gl::has(gl::ARB_texture_rectangle)
+    const GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
+    // take final composite on unit 0
     gl::ActiveTexture(GL_TEXTURE0);
-    gl::BindTexture(format, m_final.texture(composite::kOutput));
+    gl::BindTexture(format, m_final.texture());
 
+    // take color grading lut on unit 1
     gl::ActiveTexture(GL_TEXTURE1);
-    gl::BindTexture(GL_TEXTURE_3D, m_final.texture(composite::kColorGrading));
+    gl::BindTexture(GL_TEXTURE_3D, m_colorGrader.texture(grader::kColorGrading));
 
+    // render to color grading buffer
     m_compositeMethod.enable();
     m_compositeMethod.setPerspective(pl.perspective());
     m_quad.render();
 
     if (r_fxaa) {
-        gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        // write to aa buffer
+        m_aa.bindWriting();
+
+        // take color grading result on unit 0
         gl::ActiveTexture(GL_TEXTURE0);
-        gl::BindTexture(format, m_final.texture(composite::kOutput));
+        gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
+
+        // render aa buffer
         m_aaMethod.enable();
         m_aaMethod.setPerspective(pl.perspective());
+        m_quad.render();
+
+        // write to window buffer
+        gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+        // take the aa result on unit 0
+        gl::ActiveTexture(GL_TEXTURE0);
+        gl::BindTexture(format, m_aa.texture());
+
+        // render window buffer
+        m_defaultMethod.enable();
+        m_defaultMethod.setPerspective(pl.perspective());
+        m_quad.render();
+
+    } else {
+        // write to window buffer
+        gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+        // take color grading result on unit 0
+        gl::ActiveTexture(GL_TEXTURE0);
+        gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
+
+        // render window buffer
+        m_defaultMethod.enable();
+        m_defaultMethod.setPerspective(pl.perspective());
         m_quad.render();
     }
 }

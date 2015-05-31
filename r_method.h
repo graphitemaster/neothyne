@@ -6,6 +6,13 @@
 #include "u_vector.h"
 #include "u_optional.h"
 
+namespace m {
+
+struct mat4;
+struct perspective;
+
+}
+
 namespace r {
 
 struct attribute {
@@ -42,6 +49,18 @@ private:
     u::string m_fragmentSource;
     u::string m_geometrySource;
     u::vector<GLuint> m_shaders;
+};
+
+struct defaultMethod : method {
+    defaultMethod();
+    bool init();
+    void setColorTextureUnit(int unit);
+    void setWVP(const m::mat4 &wvp);
+    void setPerspective(const m::perspective &p);
+private:
+    GLint m_WVPLocation;
+    GLint m_screenSizeLocation;
+    GLint m_colorTextureUnitLocation;
 };
 
 }

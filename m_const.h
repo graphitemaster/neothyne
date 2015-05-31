@@ -128,6 +128,7 @@ static inline int rempio2(float x, double &y) {
     }
     // value is far too large, something is pathologically wrong
     assert(0 && "function called with a huge value");
+    return 0;
 }
 
 static inline float cos(float x) {

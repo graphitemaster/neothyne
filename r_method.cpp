@@ -5,6 +5,8 @@
 #include "u_file.h"
 #include "u_misc.h"
 
+#include "m_mat.h"
+
 namespace r {
 
 method::method()
@@ -193,6 +195,45 @@ bool method::finalize(const u::initializer_list<attribute> &attributes,
 
     m_shaders.clear();
     return true;
+}
+
+///! defaultMethod
+defaultMethod::defaultMethod()
+    : m_WVPLocation(-1)
+    , m_screenSizeLocation(-1)
+    , m_colorTextureUnitLocation(-1)
+{
+}
+
+bool defaultMethod::init() {
+    if (!method::init())
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/default.vs"))
+        return false;
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/default.fs"))
+        return false;
+    if (!finalize({ { 0, "position" } }))
+        return false;
+
+    m_WVPLocation = getUniformLocation("gWVP");
+    m_screenSizeLocation = getUniformLocation("gScreenSize");
+    m_colorTextureUnitLocation = getUniformLocation("gColorMap");
+
+    return true;
+}
+
+void defaultMethod::setColorTextureUnit(int unit) {
+    gl::Uniform1i(m_colorTextureUnitLocation, unit);
+}
+
+void defaultMethod::setWVP(const m::mat4 &wvp) {
+    // Will set an identity matrix as this will be a screen space QUAD
+    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
+}
+
+void defaultMethod::setPerspective(const m::perspective &p) {
+    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
 }
 
 }
