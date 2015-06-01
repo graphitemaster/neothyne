@@ -1,8 +1,9 @@
 #include <shaders/screenspace.h>
+#include <shaders/utils.h>
 
 uniform neoSampler2D gColorMap;
 
-out vec3 fragColor;
+out vec4 fragColor;
 
 void main() {
     vec2 texCoord = calcTexCoord();
@@ -12,20 +13,20 @@ void main() {
     const float FXAA_REDUCE_MIN = (1.0/128.0);
 
 #ifdef HAS_TEXTURE_RECTANGLE
-    vec3 rgbNW = neoTexture2D(gColorMap, texCoord.xy + (vec2(-1.0f, -1.0f))).xyz;
-    vec3 rgbNE = neoTexture2D(gColorMap, texCoord.xy + (vec2(+1.0f, -1.0f))).xyz;
-    vec3 rgbSW = neoTexture2D(gColorMap, texCoord.xy + (vec2(-1.0f, +1.0f))).xyz;
-    vec3 rgbSE = neoTexture2D(gColorMap, texCoord.xy + (vec2(+1.0f, +1.0f))).xyz;
+    vec4 rgbNW = neoTexture2D(gColorMap, texCoord.xy + (vec2(-1.0f, -1.0f)));
+    vec4 rgbNE = neoTexture2D(gColorMap, texCoord.xy + (vec2(+1.0f, -1.0f)));
+    vec4 rgbSW = neoTexture2D(gColorMap, texCoord.xy + (vec2(-1.0f, +1.0f)));
+    vec4 rgbSE = neoTexture2D(gColorMap, texCoord.xy + (vec2(+1.0f, +1.0f)));
 #else
     vec2 texCoordOffset = vec2(1.0f, 1.0f) / gScreenSize;
-    vec3 rgbNW = neoTexture2D(gColorMap, texCoord.xy + (vec2(-1.0f, -1.0f) * texCoordOffset)).xyz;
-    vec3 rgbNE = neoTexture2D(gColorMap, texCoord.xy + (vec2(+1.0f, -1.0f) * texCoordOffset)).xyz;
-    vec3 rgbSW = neoTexture2D(gColorMap, texCoord.xy + (vec2(-1.0f, +1.0f) * texCoordOffset)).xyz;
-    vec3 rgbSE = neoTexture2D(gColorMap, texCoord.xy + (vec2(+1.0f, +1.0f) * texCoordOffset)).xyz;
+    vec4 rgbNW = neoTexture2D(gColorMap, texCoord.xy + (vec2(-1.0f, -1.0f) * texCoordOffset));
+    vec4 rgbNE = neoTexture2D(gColorMap, texCoord.xy + (vec2(+1.0f, -1.0f) * texCoordOffset));
+    vec4 rgbSW = neoTexture2D(gColorMap, texCoord.xy + (vec2(-1.0f, +1.0f) * texCoordOffset));
+    vec4 rgbSE = neoTexture2D(gColorMap, texCoord.xy + (vec2(+1.0f, +1.0f) * texCoordOffset));
 #endif
-    vec3 rgbM  = neoTexture2D(gColorMap, texCoord.xy).xyz;
+    vec4 rgbM  = neoTexture2D(gColorMap, texCoord.xy);
 
-    vec3 luma = vec3(0.299f, 0.587f, 0.114f);
+    vec4 luma = vec4(0.299f, 0.587f, 0.114f, 1.0f);
     float lumaNW = dot(rgbNW, luma);
     float lumaNE = dot(rgbNE, luma);
     float lumaSW = dot(rgbSW, luma);
@@ -50,17 +51,15 @@ void main() {
     dir *= texCoordOffset;
 #endif
 
-    vec3 rgbA = (1.0/2.0) * (
-              neoTexture2D(gColorMap, texCoord.xy + dir * (1.0/3.0 - 0.5)).xyz +
-              neoTexture2D(gColorMap, texCoord.xy + dir * (2.0/3.0 - 0.5)).xyz);
-    vec3 rgbB = rgbA * (1.0/2.0) + (1.0/4.0) * (
-              neoTexture2D(gColorMap, texCoord.xy + dir * (0.0/3.0 - 0.5)).xyz +
-              neoTexture2D(gColorMap, texCoord.xy + dir * (3.0/3.0 - 0.5)).xyz);
+    vec4 rgbA = 0.5f * (neoTexture2D(gColorMap, texCoord.xy + dir * (1.0f/3.0f - 0.5f)) +
+                        neoTexture2D(gColorMap, texCoord.xy + dir * (2.0f/3.0f - 0.5f)));
+    vec4 rgbB = rgbA * 0.5f + 0.25f * (neoTexture2D(gColorMap, texCoord.xy + dir * (3.0f/3.0f - 0.5f)) +
+                                       neoTexture2D(gColorMap, texCoord.xy + dir * (4.0f/3.0f - 0.5f)));
     float lumaB = dot(rgbB, luma);
 
-    if((lumaB < lumaMin) || (lumaB > lumaMax)) {
-        fragColor = rgbA;
+    if (lumaB < lumaMin || lumaB > lumaMax) {
+        fragColor = MASK_ALPHA(rgbA);
     } else {
-        fragColor = rgbB;
+        fragColor = MASK_ALPHA(rgbB);
     }
 }

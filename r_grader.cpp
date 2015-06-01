@@ -28,23 +28,24 @@ void grader::update(const m::perspective &p, const unsigned char *const colorGra
     size_t width = p.width;
     size_t height = p.height;
 
-    if (m_width == width && m_height == height)
-        return;
-
-    GLenum format = gl::has(gl::ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
-    m_width = width;
-    m_height = height;
-
-    gl::BindTexture(format, m_textures[kOutput]);
-    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
-
     // Need to update color grading data if any is passed at all
     if (colorGradingData) {
         gl::BindTexture(GL_TEXTURE_3D, m_textures[kColorGrading]);
         gl::TexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, 16, 16, 16, GL_RGB,
             GL_UNSIGNED_BYTE, colorGradingData);
     }
+
+    if (m_width == width && m_height == height)
+        return;
+
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+
+    m_width = width;
+    m_height = height;
+
+    gl::BindTexture(format, m_textures[kOutput]);
+    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
 }
 
 bool grader::init(const m::perspective &p, const unsigned char *const colorGradingData) {

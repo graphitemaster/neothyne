@@ -503,20 +503,9 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_defaultMethod.setColorTextureUnit(0);
     m_defaultMethod.setWVP(m_identity);
 
-    // setup g-buffer
-    if (!m_gBuffer.init(p))
-        neoFatal("failed to initialize world renderer");
-    if (!m_ssao.init(p))
-        neoFatal("failed to initialize world renderer");
-    if (!m_final.init(p, m_gBuffer.texture(gBuffer::kDepth)))
-        neoFatal("failed to initialize world renderer");
-
-    // post-fx stuff
-    if (!m_colorGrader.init(p, map->getColorGrader().data()))
-        neoFatal("failed to initialize color grading renderer");
-
+    // ssao method
     if (!m_ssaoMethod.init())
-        neoFatal("failed to initialize ssao rendering method");
+        neoFatal("failed to initialize ambient-occlusion rendering method");
 
     // Setup default uniforms for ssao
     m_ssaoMethod.enable();
@@ -527,6 +516,18 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_ssaoMethod.setNormalTextureUnit(ssaoMethod::kNormal);
     m_ssaoMethod.setDepthTextureUnit(ssaoMethod::kDepth);
     m_ssaoMethod.setRandomTextureUnit(ssaoMethod::kRandom);
+
+    // render buffers
+    if (!m_gBuffer.init(p))
+        neoFatal("failed to initialize world render buffer");
+    if (!m_ssao.init(p))
+        neoFatal("failed to initialize ambient-occlusion render buffer");
+    if (!m_final.init(p, m_gBuffer.texture(gBuffer::kDepth)))
+        neoFatal("failed to initialize final composite render buffer");
+    if (!m_aa.init(p))
+        neoFatal("failed to initialize anti-aliasing render buffer");
+    if (!m_colorGrader.init(p, map->getColorGrader().data()))
+        neoFatal("failed to initialize color grading render buffer");
 
     // setup occlusion stuff
     if (!m_queries.init())
@@ -651,7 +652,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
     // Screen space ambient occlusion pass
     if (r_ssao) {
         // Read from the gbuffer, write to the ssao pass
-        m_ssao.update(p.perspective());
+        m_ssao.update(pl.perspective());
         m_ssao.bindWriting();
 
         // Write to SSAO
@@ -791,6 +792,7 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
     auto p = pl;
 
     // Write to the final composite
+    m_final.update(p.perspective());
     m_final.bindWriting();
 
     // Lighting will require blending
@@ -856,7 +858,8 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
 }
 
 void world::forwardPass(const pipeline &pl, ::world *map) {
-    m_final.bindWriting();
+    //m_final.update(p
+    //m_final.bindWriting();
 
     gl::Enable(GL_DEPTH_TEST);
 
@@ -1005,9 +1008,6 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
 }
 
 void world::compositePass(const pipeline &pl, ::world *map) {
-    // Writing to color grader
-    m_colorGrader.bindWriting();
-
     auto &colorGrading = map->getColorGrader();
     if (colorGrading.updated()) {
         colorGrading.grade();
@@ -1016,6 +1016,9 @@ void world::compositePass(const pipeline &pl, ::world *map) {
     } else {
         m_colorGrader.update(pl.perspective(), nullptr);
     }
+
+    // Writing to color grader
+    m_colorGrader.bindWriting();
 
     const GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;

@@ -39,7 +39,6 @@ struct aa {
     bool init(const m::perspective &p);
 
     void update(const m::perspective &p);
-    void bindReading();
     void bindWriting();
 
     GLuint texture() const;

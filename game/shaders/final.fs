@@ -1,12 +1,14 @@
 #include <shaders/screenspace.h>
+#include <shaders/utils.h>
 
 uniform neoSampler2D gColorMap;
 uniform sampler3D gColorGradingMap;
 
-out vec3 fragColor;
+out vec4 fragColor;
 
 void main() {
     vec2 texCoord = calcTexCoord();
-    fragColor = neoTexture2D(gColorMap, texCoord).rgb;
-    fragColor = texture(gColorGradingMap, fragColor).rgb;
+    vec4 color = neoTexture2D(gColorMap, texCoord);
+    vec4 graded = texture(gColorGradingMap, color.rgb);
+    fragColor = MASK_ALPHA(graded);
 }
