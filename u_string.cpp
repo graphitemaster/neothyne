@@ -82,6 +82,7 @@ inline void stringMemory::region::resize() {
 inline stringMemory::stringMemory()
     : m_head(neoMalloc(kMemorySize))
 {
+    memset(m_head, 0, kMemorySize);
     m_head->setSize(kMemorySize);
     m_head->setFree(true);
     m_tail = nextRegion(m_head);
@@ -265,10 +266,10 @@ inline size_t stringMemory::getSize(size_t size) {
 void stringMemory::print() {
     auto escapeString = [](const char *str) {
         size_t length = strlen(str);
-        // The longest possible sequence would be a string with "x[0-F][0-F]"
-        // for all, which is 3x as large as the input sequence, we also need + 1
+        // The longest possible sequence would be a string with "\x[0-F][0-F]"
+        // for all, which is 4x as large as the input sequence, we also need + 1
         // for null terminator.
-        u::unique_ptr<char> data(new char[length * 3 + 1]);
+        u::unique_ptr<char> data(new char[length * 4 + 1]);
         char *put = data.get();
         for (const char *s = str; *s; s++) {
             unsigned char ch = *s;
@@ -283,6 +284,7 @@ void stringMemory::print() {
                     case '\r': *put++ = 'r';  break;
                     case '\n': *put++ = 'n';  break;
                     default:
+                        *put++ = '\\';
                         *put++ = 'x';
                         *put++ = "0123456789ABCDEF"[ch >> 4];
                         *put++ = "0123456789ABCDEF"[ch & 0xF];
