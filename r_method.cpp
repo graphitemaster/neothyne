@@ -209,6 +209,9 @@ bool defaultMethod::init() {
     if (!method::init())
         return false;
 
+    if (gl::has(gl::ARB_texture_rectangle))
+        method::define("HAS_TEXTURE_RECTANGLE");
+
     if (!addShader(GL_VERTEX_SHADER, "shaders/default.vs"))
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/default.fs"))
