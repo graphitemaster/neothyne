@@ -9,17 +9,20 @@
 
 namespace r {
 
+method::shader::shader()
+    : source("#version 130\n")
+    , object(0)
+{
+}
+
 method::method()
     : m_program(0)
-    , m_vertexSource("#version 130\n")
-    , m_fragmentSource("#version 130\n")
-    , m_geometrySource("#version 130\n")
 {
 }
 
 method::~method() {
     for (auto &it : m_shaders)
-        gl::DeleteShader(it);
+        gl::DeleteShader(it.object);
     if (m_program)
         gl::DeleteProgram(m_program);
 }
@@ -31,23 +34,20 @@ bool method::init() {
 
 void method::define(const char *macro) {
     auto prelude = u::format("#define %s\n", macro);
-    m_vertexSource += prelude;
-    m_fragmentSource += prelude;
-    m_geometrySource += prelude;
+    for (auto &it : m_shaders)
+        it.source += prelude;
 }
 
 void method::define(const char *macro, size_t value) {
     auto prelude = u::format("#define %s %zu\n", macro, value);
-    m_vertexSource += prelude;
-    m_fragmentSource += prelude;
-    m_geometrySource += prelude;
+    for (auto &it : m_shaders)
+        it.source += prelude;
 }
 
 void method::define(const char *macro, float value) {
     auto prelude = u::format("#define %s %f\n", macro, value);
-    m_vertexSource += prelude;
-    m_fragmentSource += prelude;
-    m_geometrySource += prelude;
+    for (auto &it : m_shaders)
+        it.source += prelude;
 }
 
 u::optional<u::string> method::preprocess(const u::string &file) {
@@ -102,56 +102,50 @@ u::optional<u::string> method::preprocess(const u::string &file) {
     return result;
 }
 
-bool method::addShader(GLenum shaderType, const char *shaderFile) {
-    u::string *shaderSource = nullptr;
-    switch (shaderType) {
-        case GL_VERTEX_SHADER:
-            shaderSource = &m_vertexSource;
-            break;
-        case GL_FRAGMENT_SHADER:
-            shaderSource = &m_fragmentSource;
-            break;
-        case GL_GEOMETRY_SHADER:
-            shaderSource = &m_geometrySource;
-            break;
-        default:
-            return false;
+bool method::addShader(GLenum type, const char *shaderFile) {
+    int index = -1;
+    switch (type) {
+    case GL_VERTEX_SHADER:
+        index = shader::kVertex;
+        break;
+    case GL_FRAGMENT_SHADER:
+        index = shader::kFragment;
+        break;
     }
+    assert(index != -1);
 
     auto pp = preprocess(shaderFile);
     if (!pp)
         neoFatal("failed preprocessing `%s'", shaderFile);
 
-    *shaderSource += *pp;
-
-    GLuint shaderObject = gl::CreateShader(shaderType);
-    if (!shaderObject)
+    GLuint object = gl::CreateShader(type);
+    if (!object)
         return false;
 
-    m_shaders.push_back(shaderObject);
+    auto &entry = m_shaders[index];
+    entry.source += *pp;
+    entry.object = object;
 
-    const GLchar *shaderSources[1];
-    GLint shaderLengths[1];
+    const auto &data = entry.source;
+    const GLchar *source = &data[0];
+    const GLint size = data.size();
 
-    shaderSources[0] = (GLchar *)&(*shaderSource)[0];
-    shaderLengths[0] = (GLint)shaderSource->size();
+    gl::ShaderSource(object, 1, &source, &size);
+    gl::CompileShader(object);
 
-    gl::ShaderSource(shaderObject, 1, shaderSources, shaderLengths);
-    gl::CompileShader(shaderObject);
-
-    GLint shaderCompileStatus = 0;
-    gl::GetShaderiv(shaderObject, GL_COMPILE_STATUS, &shaderCompileStatus);
-    if (shaderCompileStatus == 0) {
-        u::string infoLog;
-        GLint infoLogLength = 0;
-        gl::GetShaderiv(shaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
-        infoLog.resize(infoLogLength);
-        gl::GetShaderInfoLog(shaderObject, infoLogLength, nullptr, &infoLog[0]);
-        u::print("shader compilation error `%s':\n%s\n", shaderFile, infoLog);
+    GLint status = 0;
+    gl::GetShaderiv(object, GL_COMPILE_STATUS, &status);
+    if (status == 0) {
+        u::string log;
+        GLint length = 0;
+        gl::GetShaderiv(object, GL_INFO_LOG_LENGTH, &length);
+        log.resize(length);
+        gl::GetShaderInfoLog(object, length, nullptr, &log[0]);
+        u::print("shader compilation error `%s':\n%s\n", shaderFile, log);
         return false;
     }
 
-    gl::AttachShader(m_program, shaderObject);
+    gl::AttachShader(m_program, object);
     return true;
 }
 
@@ -190,10 +184,12 @@ bool method::finalize(const u::initializer_list<attribute> &attributes,
         return false;
     }
 
-    for (auto &it : m_shaders)
-        gl::DeleteShader(it);
+    // Don't need these anymore
+    for (auto &it : m_shaders) {
+        if (it.object)
+            gl::DeleteShader(it.object);
+    }
 
-    m_shaders.clear();
     return true;
 }
 

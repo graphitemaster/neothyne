@@ -44,11 +44,17 @@ protected:
     GLint getUniformLocation(const u::string &name);
 
 private:
+    struct shader {
+        shader();
+        enum {
+            kVertex,
+            kFragment
+        };
+        u::string source;
+        GLuint object;
+    };
+    shader m_shaders[2]; // shader::kVertex, shader::kFragment
     GLuint m_program;
-    u::string m_vertexSource;
-    u::string m_fragmentSource;
-    u::string m_geometrySource;
-    u::vector<GLuint> m_shaders;
 };
 
 struct defaultMethod : method {
