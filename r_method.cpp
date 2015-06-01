@@ -21,8 +21,10 @@ method::method()
 }
 
 method::~method() {
-    for (auto &it : m_shaders)
-        gl::DeleteShader(it.object);
+    for (auto &it : m_shaders) {
+        if (it.object)
+            gl::DeleteShader(it.object);
+    }
     if (m_program)
         gl::DeleteProgram(m_program);
 }
@@ -186,8 +188,10 @@ bool method::finalize(const u::initializer_list<attribute> &attributes,
 
     // Don't need these anymore
     for (auto &it : m_shaders) {
-        if (it.object)
+        if (it.object) {
             gl::DeleteShader(it.object);
+            it.object = 0;
+        }
     }
 
     return true;
