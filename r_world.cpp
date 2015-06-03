@@ -18,16 +18,19 @@ enum {
     kDebugDepth = 1,
     kDebugNormal,
     kDebugPosition,
-    kDebugSSAO
+    kDebugSSAO,
+    kDebugSMAAEdge,
+    kDebugSMAABlend
 };
 
 VAR(int, r_fxaa, "fast approximate anti-aliasing", 0, 1, 1);
+VAR(int, r_smaa, "subpixel morphlogical anti-aliasing", 0, 4, 4);
 VAR(int, r_parallax, "parallax mapping", 0, 1, 1);
 VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 VAR(int, r_spec, "specularity mapping", 0, 1, 1);
 VAR(int, r_hoq, "hardware occlusion queries", 0, 1, 1);
 VAR(int, r_fog, "fog", 0, 1, 1);
-NVAR(int, r_debug, "debug visualizations", 0, 4, 0);
+NVAR(int, r_debug, "debug visualizations", 0, 6, 0);
 
 namespace r {
 
@@ -274,6 +277,7 @@ GLuint composite::texture() const {
 ///! renderer
 world::world()
     : m_geomMethods(&geomMethods::instance())
+    , m_smaaMethods(&smaaMethods::instance())
     , m_uploaded(false)
 {
 }
@@ -449,15 +453,18 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_compositeMethod.setColorGradingTextureUnit(1);
     m_compositeMethod.setWVP(m_identity);
 
-    // aa shader
-    if (!m_aaMethod.init())
-        neoFatal("failed to initialize aa rendering method");
-    m_aaMethod.enable();
-    m_aaMethod.setColorTextureUnit(0);
-    m_aaMethod.setWVP(m_identity);
+    // fxaa shader
+    if (!m_fxaaMethod.init())
+        neoFatal("failed to initialize fxaa rendering method");
+    m_fxaaMethod.enable();
+    m_fxaaMethod.setColorTextureUnit(0);
+    m_fxaaMethod.setWVP(m_identity);
 
     if (!m_geomMethods->init())
-        neoFatal("failed to initialize geometry rendering method");
+        neoFatal("failed to initialize geometry rendering methods");
+
+    if (!m_smaaMethods->init())
+        neoFatal("failed to initialize SMAA rendering methods");
 
     // directional light shader permutations
     static const size_t lightCount = sizeof(lightPermutations)/sizeof(lightPermutations[0]);
@@ -524,8 +531,10 @@ bool world::upload(const m::perspective &p, ::world *map) {
         neoFatal("failed to initialize ambient-occlusion render buffer");
     if (!m_final.init(p, m_gBuffer.texture(gBuffer::kDepth)))
         neoFatal("failed to initialize final composite render buffer");
-    if (!m_aa.init(p))
-        neoFatal("failed to initialize anti-aliasing render buffer");
+    if (!m_fxaa.init(p))
+        neoFatal("failed to initialize FXAA render buffers");
+    if (!m_smaa.init(p))
+        neoFatal("failed to initialize SMAA render buffers");
     if (!m_colorGrader.init(p, map->getColorGrader().data()))
         neoFatal("failed to initialize color grading render buffer");
 
@@ -1002,6 +1011,12 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
         case kDebugSSAO:
             gui::drawText(x, y, gui::kAlignCenter, "Ambient Occlusion", gui::RGBA(255, 0, 0));
             break;
+        case kDebugSMAABlend:
+            gui::drawText(x, y, gui::kAlignCenter, "SMAA: Blending Weights", gui::RGBA(255, 0, 0));
+            break;
+        case kDebugSMAAEdge:
+            gui::drawText(x, y, gui::kAlignCenter, "SMAA: Edge Detect", gui::RGBA(255, 0, 0));
+            break;
         default:
             break;
     }
@@ -1036,17 +1051,112 @@ void world::compositePass(const pipeline &pl, ::world *map) {
     m_compositeMethod.setPerspective(pl.perspective());
     m_quad.render();
 
-    if (r_fxaa) {
+    if (r_smaa) {
+        const auto quality = smaaMethods::quality(r_smaa.get());
+
+        // write to edge buffer
+        m_smaa.update(pl.perspective());
+        m_smaa.bindWriting(smaa::kEdgeFBO);
+
+        // take color grading result on unit 0 (our albedo)
+        gl::ActiveTexture(GL_TEXTURE0);
+        gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
+
+        // run edge detect pass
+        auto &edge = m_smaaMethods->edge(quality);
+        edge.enable();
+        edge.setPerspective(pl.perspective());
+        m_quad.render();
+
+        if (r_debug == kDebugSMAAEdge) {
+            // write to window buffer
+            gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+            // take the smaa edge result on unit 0
+            gl::ActiveTexture(GL_TEXTURE0);
+            gl::BindTexture(GL_TEXTURE_2D, m_smaa.texture(smaa::kEdgeTex));
+
+            // render window buffer
+            m_defaultMethod.enable();
+            m_defaultMethod.setPerspective(pl.perspective());
+            m_quad.render();
+        } else {
+            // write to blending weights buffer
+            m_smaa.bindWriting(smaa::kBlendFBO);
+
+            // take edge texture on unit 0
+            gl::ActiveTexture(GL_TEXTURE0);
+            gl::BindTexture(GL_TEXTURE_2D, m_smaa.texture(smaa::kEdgeTex));
+
+            // take area texture on unit 1
+            gl::ActiveTexture(GL_TEXTURE1);
+            gl::BindTexture(GL_TEXTURE_2D, m_smaa.texture(smaa::kAreaTex));
+
+            // take search texture on unit 2
+            gl::ActiveTexture(GL_TEXTURE2);
+            gl::BindTexture(GL_TEXTURE_2D, m_smaa.texture(smaa::kSearchTex));
+
+            // run blending weights pass
+            auto &blend = m_smaaMethods->blend(quality);
+            blend.enable();
+            blend.setPerspective(pl.perspective());
+            m_quad.render();
+
+            if (r_debug == kDebugSMAABlend) {
+                 // write to window buffer
+                gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+                // take the smaa blending result on unit 0
+                gl::ActiveTexture(GL_TEXTURE0);
+                gl::BindTexture(GL_TEXTURE_2D, m_smaa.texture(smaa::kBlendTex));
+
+                // render window buffer
+                m_defaultMethod.enable();
+                m_defaultMethod.setPerspective(pl.perspective());
+                m_quad.render();
+            } else {
+                // write to neighborhood blending buffer
+                m_smaa.bindWriting(smaa::kNeighborFBO);
+
+                // take color grading result on unit 0 (our albedo)
+                gl::ActiveTexture(GL_TEXTURE0);
+                gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
+
+                // take blend texture on unit 1
+                gl::ActiveTexture(GL_TEXTURE1);
+                gl::BindTexture(GL_TEXTURE_2D, m_smaa.texture(smaa::kBlendTex));
+
+                // run neighborhood blending pass
+                auto &neighbor = m_smaaMethods->neighbor(quality);
+                neighbor.enable();
+                neighbor.setPerspective(pl.perspective());
+                m_quad.render();
+
+                // write to window buffer
+                gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+                // take the smaa result on unit 0
+                gl::ActiveTexture(GL_TEXTURE0);
+                gl::BindTexture(GL_TEXTURE_2D, m_smaa.texture(smaa::kNeighborTex));
+
+                // render window buffer
+                m_defaultMethod.enable();
+                m_defaultMethod.setPerspective(pl.perspective());
+                m_quad.render();
+            }
+        }
+    } else if (r_fxaa) {
         // write to aa buffer
-        m_aa.bindWriting();
+        m_fxaa.update(pl.perspective());
+        m_fxaa.bindWriting();
 
         // take color grading result on unit 0
         gl::ActiveTexture(GL_TEXTURE0);
         gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
 
         // render aa buffer
-        m_aaMethod.enable();
-        m_aaMethod.setPerspective(pl.perspective());
+        m_fxaaMethod.enable();
+        m_fxaaMethod.setPerspective(pl.perspective());
         m_quad.render();
 
         // write to window buffer
@@ -1054,13 +1164,12 @@ void world::compositePass(const pipeline &pl, ::world *map) {
 
         // take the aa result on unit 0
         gl::ActiveTexture(GL_TEXTURE0);
-        gl::BindTexture(format, m_aa.texture());
+        gl::BindTexture(format, m_fxaa.texture());
 
         // render window buffer
         m_defaultMethod.enable();
         m_defaultMethod.setPerspective(pl.perspective());
         m_quad.render();
-
     } else {
         // write to window buffer
         gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);

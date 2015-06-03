@@ -240,7 +240,7 @@ template <typename T>
 inline void buffer<T>::move_urange_traits(T *dest, T *first, T *last,
     detail::is_pod<T, false>)
 {
-    for (T* it = first; it != last; ++it, ++dest)
+    for (T *it = first; it != last; ++it, ++dest)
         move_construct(dest, *it);
     destroy_range(first, last);
 }

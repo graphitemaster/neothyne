@@ -16,6 +16,8 @@ struct initializer_list {
 
     initializer_list();
 
+    const T &operator[](size_t index) const;
+
     size_t size() const;
     const T* begin() const;
     const T* end() const;
@@ -31,6 +33,11 @@ inline initializer_list<T>::initializer_list()
     : m_begin(nullptr)
     , m_size(0)
 {
+}
+
+template <typename T>
+inline const T &initializer_list<T>::operator[](size_t index) const {
+    return m_begin[index];
 }
 
 template <typename T>

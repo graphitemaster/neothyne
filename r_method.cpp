@@ -60,9 +60,10 @@ u::optional<u::string> method::preprocess(const u::string &file) {
     size_t lineno = 1;
     while (auto read = u::getline(fp)) {
         auto line = *read;
-        while (line[0] && strchr(" \t", line[0])) line.pop_front();
-        if (line[0] == '#') {
-            auto split = u::split(&line[1]);
+        char *front = &line[0];
+        while (*front && strchr(" \t", *front)) front++;
+        if (*front == '#') {
+            auto split = u::split(front + 1);
             if (split.size() == 2 && split[0] == "include") {
                 auto thing = split[1];
                 auto front = thing.pop_front(); // '"' or '<'
@@ -143,7 +144,16 @@ bool method::addShader(GLenum type, const char *shaderFile) {
         gl::GetShaderiv(object, GL_INFO_LOG_LENGTH, &length);
         log.resize(length);
         gl::GetShaderInfoLog(object, length, nullptr, &log[0]);
-        u::print("shader compilation error `%s':\n%s\n", shaderFile, log);
+
+        // dump the preprocessed output for later checking
+        const char *step = strrchr(shaderFile, u::kPathSep);
+        const char *dump = step ? step + 1 : shaderFile;
+        const u::string dumpName(u::string(dump) + ".dump");
+        u::file dumpFile = u::fopen(dumpName, "w");
+        if (dump)
+            u::fprint(dumpFile, "%s", &data[0]);
+
+        u::print("shader compilation error `%s':\n%s\ndumped source to `%s'\n", shaderFile, log, dumpName);
         return false;
     }
 

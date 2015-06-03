@@ -115,13 +115,14 @@ private:
 
     // world shading methods and permutations
     geomMethods *m_geomMethods;
+    smaaMethods *m_smaaMethods;
     u::vector<directionalLightMethod> m_directionalLightMethods;
     compositeMethod m_compositeMethod;
     pointLightMethod m_pointLightMethod;
     spotLightMethod m_spotLightMethod;
     ssaoMethod m_ssaoMethod;
     bboxMethod m_bboxMethod;
-    aaMethod m_aaMethod;
+    fxaaMethod m_fxaaMethod;
     defaultMethod m_defaultMethod;
 
     // Other things in the world to render
@@ -144,7 +145,8 @@ private:
     u::vector<renderTextureBatch> m_textureBatches;
     u::map<u::string, texture2D*> m_textures2D;
 
-    aa m_aa;
+    fxaa m_fxaa;
+    smaa m_smaa;
     gBuffer m_gBuffer;
     ssao m_ssao;
     composite m_final;
