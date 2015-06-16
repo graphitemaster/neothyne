@@ -285,6 +285,34 @@ static void menuOptions() {
                 auto &height = varGet<int>("vid_height");
                 gui::slider("Width", width.get(), width.min(), width.max(), 1);
                 gui::slider("Height", height.get(), height.min(), height.max(), 1);
+
+                // TODO: actually make logic work this is place holder
+                static const u::initializer_list<const char *> kAspectRatios = {
+                    "3:2", "4:3", "5:3", "5:4", "16:9", "16:10", "17:9"
+                };
+
+                static const u::initializer_list<u::initializer_list<const char *>> kResolutions = {
+                    // 3:2
+                    { "720x480", "1152x768", "1280x854", "1440x960", "2880x1920"},
+                    // 4:3
+                    { "320x240",   "640x480",   "800x600",   "1024x768",  "1152x864",
+                      "1280x960",  "1400x1050", "1600x1200", "2048x1536", "3200x2400",
+                      "4000x3000", "6400x4800" },
+                    // 5:3
+                    { "800x480", "1280x768" },
+                    // 5:4
+                    { "1280x1024", "2560x2048", "5120x4096" },
+                    // 16:9
+                    { "852x480", "1280x720", "1365x768", "1600x900", "1920x1080" },
+                    // 16:10
+                    { "320x200",   "640x400",   "1280x800",  "1440x900", "1680x1050",
+                      "1920x1200", "2560x1600", "3840x2400", "7680x4800" },
+                    // 17:9
+                    { "2048x1080" }
+                };
+
+                D(ratio) = gui::selector(nullptr, D(ratio), kAspectRatios);
+                D(resolution) = gui::selector(nullptr, D(resolution), kResolutions[D(ratio)]);
             gui::dedent();
 
         }

@@ -8,17 +8,19 @@ namespace std {
 template <typename T>
 struct initializer_list {
     typedef T value_type;
-    typedef const T& reference;
-    typedef const T& const_reference;
+    typedef const T &reference;
+    typedef const T &const_reference;
     typedef size_t size_type;
-    typedef const T* iterator;
-    typedef const T* const_iterator;
+    typedef const T *iterator;
+    typedef const T *const_iterator;
 
     initializer_list();
 
     size_t size() const;
     const T* begin() const;
     const T* end() const;
+
+    const T &operator[](size_t index) const;
 
 private:
     initializer_list(const T* data, size_t size);
@@ -39,13 +41,18 @@ inline size_t initializer_list<T>::size() const {
 }
 
 template <typename T>
-inline const T* initializer_list<T>::begin() const {
+inline const T *initializer_list<T>::begin() const {
     return m_begin;
 }
 
 template <typename T>
-inline const T* initializer_list<T>::end() const {
+inline const T *initializer_list<T>::end() const {
     return m_begin + m_size;
+}
+
+template <typename T>
+inline const T &initializer_list<T>::operator[](size_t index) const {
+    return *(m_begin + index);
 }
 
 template <typename T>

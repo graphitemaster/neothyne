@@ -503,6 +503,70 @@ bool button(const char *contents, bool enabled) {
     return result;
 }
 
+int selector(const char *title, int selected, const u::initializer_list<const char *> &elements, bool enabled) {
+    const auto prev = (A << 16) | ++W.id;
+    const auto next = (A << 16) | ++W.id;
+
+    const int y = W.y - kButtonHeight;
+    const int w = W.w / 8;
+    const int h = kButtonHeight;
+
+    const int prevX = W.x;
+    const int textX = W.x + w;
+    const int nextX = W.x + W.w - w;
+    const int textW = W.w - w*2;
+
+    W.y -= kButtonHeight + kDefaultSpacing;
+
+    const bool overPrev = S.inRectangle(prevX, y, w, h);
+    const bool overNext = S.inRectangle(nextX, y, w, h);
+    const bool resultPrev = S.buttonLogic(prev, overPrev);
+    const bool resultNext = S.buttonLogic(next, overNext);
+
+    const int last = int(elements.size()) - 1;
+
+    selected = m::clamp(selected, 0, last);
+
+    if (enabled) {
+        if (S.isHot(prev)) {
+            // TODO: previous button (hover)
+            Q.addImage(prevX, y, w, h, "<nocompress>textures/ui/check_1");
+        } else {
+            // TODO: previous button (idle)
+            Q.addImage(prevX, y, w, h, "<nocompress>textures/ui/check_0");
+        }
+        if (S.isHot(next)) {
+            // TODO: next button (hover)
+            Q.addImage(nextX, y, w, h, "<nocompress>textures/ui/check_1");
+        } else {
+            // TODO: next button (idle)
+            Q.addImage(nextX, y, w, h, "<nocompress>textures/ui/check_0");
+        }
+        if (resultPrev && --selected < 0)
+            selected = last;
+        if (resultNext && ++selected > last)
+            selected = 0;
+        // TODO: background for selector (enabled)
+        Q.addImage(textX+6, y, textW-13, kButtonHeight, "<nocompress>textures/ui/button_1m");
+    } else {
+        // TODO: previous button (disabled)
+        // TODO: next button (disabled)
+        // TODO: background for selector (disabled)
+        Q.addImage(prevX, y, w, h, "<nocompress>textures/ui/check_2");
+        Q.addImage(nextX, y, w, h, "<nocompress>textures/ui/check_2");
+        Q.addImage(textX+6, y, textW-13, kButtonHeight, "<nocompress>textures/ui/button_0m");
+    }
+
+    if (title && *title)
+        Q.addText(textX+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
+            title, RGBA(255, 255, 255, 255));
+
+    Q.addText(textX+textW/2-kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignCenter,
+        elements[selected], RGBA(255, 255, 225, 255));
+
+    return selected;
+}
+
 bool item(const char *contents, bool enabled) {
     const auto id = (A << 16) | ++W.id;
 
