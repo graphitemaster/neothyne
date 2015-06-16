@@ -337,11 +337,11 @@ static state S; // [S]tate
 #define B (S.m_scroll) // Scroll [B]ar
 
 // Constants
-static constexpr int kButtonHeight = 20;
-static constexpr int kSliderHeight = 20;
+static constexpr int kButtonHeight = 17;
+static constexpr int kSliderHeight = 17;
 static constexpr int kSliderMarkerWidth = 12;
 static constexpr int kCollapseSize = 8;
-static constexpr int kCheckBoxSize = 20;
+static constexpr int kCheckBoxSize = 17;
 static constexpr int kDefaultSpacing = 6;
 static constexpr int kTextHeight = 8;
 static constexpr int kScrollAreaPadding = 8;
@@ -485,13 +485,13 @@ bool button(const char *contents, bool enabled) {
 
     if (enabled) {
         if (S.isHot(id)) {
-            Q.addImage(x, y, 7, kButtonHeight, "<nocompress>textures/ui/button_1l");
-            Q.addImage(x+6, y, w-13, kButtonHeight, "<nocompress>textures/ui/button_1m");
-            Q.addImage(x+w-7, y, 7, kButtonHeight, "<nocompress>textures/ui/button_1r");
+            Q.addImage(x, y, 6, kButtonHeight, "<nocompress>textures/ui/button_1l");
+            Q.addImage(x+6, y, w-11, kButtonHeight, "<nocompress>textures/ui/button_1m");
+            Q.addImage(x+w-6, y, 6, kButtonHeight, "<nocompress>textures/ui/button_1r");
         } else {
-            Q.addImage(x, y, 7, kButtonHeight, "<nocompress>textures/ui/button_0l");
-            Q.addImage(x+6, y, w-13, kButtonHeight, "<nocompress>textures/ui/button_0m");
-            Q.addImage(x+w-7, y, 7, kButtonHeight, "<nocompress>textures/ui/button_0r");
+            Q.addImage(x, y, 6, kButtonHeight, "<nocompress>textures/ui/button_0l");
+            Q.addImage(x+6, y, w-11, kButtonHeight, "<nocompress>textures/ui/button_0m");
+            Q.addImage(x+w-6, y, 6, kButtonHeight, "<nocompress>textures/ui/button_0r");
         }
         Q.addText(x+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
@@ -508,7 +508,7 @@ int selector(const char *title, int selected, const u::initializer_list<const ch
     const auto next = (A << 16) | ++W.id;
 
     const int y = W.y - kButtonHeight;
-    const int w = W.w / 8;
+    const int w = 30;
     const int h = kButtonHeight;
 
     const int prevX = W.x;
@@ -528,33 +528,17 @@ int selector(const char *title, int selected, const u::initializer_list<const ch
     selected = m::clamp(selected, 0, last);
 
     if (enabled) {
-        if (S.isHot(prev)) {
-            // TODO: previous button (hover)
-            Q.addImage(prevX, y, w, h, "<nocompress>textures/ui/check_1");
-        } else {
-            // TODO: previous button (idle)
-            Q.addImage(prevX, y, w, h, "<nocompress>textures/ui/check_0");
-        }
-        if (S.isHot(next)) {
-            // TODO: next button (hover)
-            Q.addImage(nextX, y, w, h, "<nocompress>textures/ui/check_1");
-        } else {
-            // TODO: next button (idle)
-            Q.addImage(nextX, y, w, h, "<nocompress>textures/ui/check_0");
-        }
+        Q.addImage(textX-w+20, y, textW+20, kButtonHeight, "<nocompress>textures/ui/selector_m");
+        Q.addImage(prevX, y, 30, h, S.isHot(prev) ? "<nocompress>textures/ui/arrow_p1" : "<nocompress>textures/ui/arrow_p0");
+        Q.addImage(nextX, y, 30, h, S.isHot(next) ? "<nocompress>textures/ui/arrow_n1" : "<nocompress>textures/ui/arrow_n0");
         if (resultPrev && --selected < 0)
             selected = last;
         if (resultNext && ++selected > last)
             selected = 0;
-        // TODO: background for selector (enabled)
-        Q.addImage(textX+6, y, textW-13, kButtonHeight, "<nocompress>textures/ui/button_1m");
     } else {
-        // TODO: previous button (disabled)
-        // TODO: next button (disabled)
-        // TODO: background for selector (disabled)
-        Q.addImage(prevX, y, w, h, "<nocompress>textures/ui/check_2");
-        Q.addImage(nextX, y, w, h, "<nocompress>textures/ui/check_2");
-        Q.addImage(textX+6, y, textW-13, kButtonHeight, "<nocompress>textures/ui/button_0m");
+        Q.addImage(prevX, y, 30, h, "<nocompress>textures/ui/arrow_p2");
+        Q.addImage(textX, y, textW, kButtonHeight, "<nocompress>textures/ui/selector_m");
+        Q.addImage(nextX, y, 30, h, "<nocompress>textures/ui/arrow_n2");
     }
 
     if (title && *title)
