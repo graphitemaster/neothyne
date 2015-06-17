@@ -599,6 +599,7 @@ void gui::render(const pipeline &pl) {
     gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
     gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
 
+    bool rebind = false;
     int method = -1;
     batch *b = &m_batches[0];
     gl::Disable(GL_SCISSOR_TEST);
@@ -617,13 +618,16 @@ void gui::render(const pipeline &pl) {
             }
             if (it.type == ::gui::kCommandText) {
                 m_font.bind(GL_TEXTURE0);
-            } else {
+                rebind = true;
+            } else if (rebind) {
                 gl::ActiveTexture(GL_TEXTURE0);
                 gl::BindTexture(GL_TEXTURE_2D, m_atlasTexture);
+                rebind = false;
             }
             gl::DrawArrays(GL_TRIANGLES, b->start, b->count);
             b++;
         } else if (it.type == ::gui::kCommandModel) {
+            rebind = true;
             gl::Enable(GL_DEPTH_TEST);
             gl::Clear(GL_DEPTH_BUFFER_BIT);
             m_modelMethod.enable();
