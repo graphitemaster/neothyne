@@ -103,11 +103,10 @@ void queue::addText(int x, int y, int align, const char *contents, uint32_t colo
     cmd.asText.contents = gStringPool(contents);
 }
 
-void queue::addImage(int x, int y, int w, int h, const char *path, bool mipmaps) {
+void queue::addImage(int x, int y, int w, int h, const char *path) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandImage;
-    cmd.flags = mipmaps;
     cmd.color = 0;
     cmd.asImage.x = x;
     cmd.asImage.y = y;
@@ -375,27 +374,27 @@ bool areaBegin(const char *contents, int x, int y, int w, int h, int &value, boo
     if (style) {
         // Didn't test the side menus... Could very well be broken, knowing myself. :>  --acerspyro
         if (x == 0 && y == totalHeight-h && w == totalWidth) {
-            Q.addImage(0, y-7, w, 25, "<nocompress>textures/ui/menu_b");
-            Q.addImage(0, y+18, w, h-18, "<nocompress>textures/ui/menu_c");
+            Q.addImage(0, y-7, w, 25, "textures/ui/menu_b");
+            Q.addImage(0, y+18, w, h-18, "textures/ui/menu_c");
         } else if (x == 0 && y == 0 && w == totalWidth) {
-            Q.addImage(0, h-18, w, 25, "<nocompress>textures/ui/menu_t");
-            Q.addImage(0, 0, w, h-18, "<nocompress>textures/ui/menu_c");
+            Q.addImage(0, h-18, w, 25, "textures/ui/menu_t");
+            Q.addImage(0, 0, w, h-18, "textures/ui/menu_c");
         } else if (x == 0 && y == 0 && h == totalHeight) {
-            Q.addImage(w-18, 0, 25, h, "<nocompress>textures/ui/menu_l");
-            Q.addImage(0, 0, w-18, h, "<nocompress>textures/ui/menu_c");
+            Q.addImage(w-18, 0, 25, h, "textures/ui/menu_l");
+            Q.addImage(0, 0, w-18, h, "textures/ui/menu_c");
         } else if (x == totalWidth-w && y == 0 && h == totalHeight) {
-            Q.addImage(x-7, 0, 25, h, "<nocompress>textures/ui/menu_r");
-            Q.addImage(x+18, y, w-18, h, "<nocompress>textures/ui/menu_c");
+            Q.addImage(x-7, 0, 25, h, "textures/ui/menu_r");
+            Q.addImage(x+18, y, w-18, h, "textures/ui/menu_c");
         } else {
-            Q.addImage(x-7, y+h-18, 25, 25, "<nocompress>textures/ui/menu_tl");
-            Q.addImage(x+w-18, y+h-18, 25, 25, "<nocompress>textures/ui/menu_tr");
-            Q.addImage(x-7, y-7, 25, 25, "<nocompress>textures/ui/menu_bl");
-            Q.addImage(x+w-18, y-7, 25, 25, "<nocompress>textures/ui/menu_br");
-            Q.addImage(x+18, y+h-18, w-36, 25, "<nocompress>textures/ui/menu_t");
-            Q.addImage(x+18, y-7, w-36, 25, "<nocompress>textures/ui/menu_b");
-            Q.addImage(x-7, y+18, 25, h-36, "<nocompress>textures/ui/menu_l");
-            Q.addImage(x+w-18, y+18, 25, h-36, "<nocompress>textures/ui/menu_r");
-            Q.addImage(x+18, y+18, w-36, h-36, "<nocompress>textures/ui/menu_c");
+            Q.addImage(x-7, y+h-18, 25, 25, "textures/ui/menu_tl");
+            Q.addImage(x+w-18, y+h-18, 25, 25, "textures/ui/menu_tr");
+            Q.addImage(x-7, y-7, 25, 25, "textures/ui/menu_bl");
+            Q.addImage(x+w-18, y-7, 25, 25, "textures/ui/menu_br");
+            Q.addImage(x+18, y+h-18, w-36, 25, "textures/ui/menu_t");
+            Q.addImage(x+18, y-7, w-36, 25, "textures/ui/menu_b");
+            Q.addImage(x-7, y+18, 25, h-36, "textures/ui/menu_l");
+            Q.addImage(x+w-18, y+18, 25, h-36, "textures/ui/menu_r");
+            Q.addImage(x+18, y+18, w-36, h-36, "textures/ui/menu_c");
         }
     }
     if (contents) {
@@ -447,18 +446,18 @@ void areaFinish(int inc, bool autoScroll) {
                 }
             }
             // Background
-            Q.addImage(x, y+h-6, w, 6, "<nocompress>textures/ui/scrollbar_vt");
-            Q.addImage(x, y+6, w, h-11, "<nocompress>textures/ui/scrollbar_vm");
-            Q.addImage(x, y, w, 6, "<nocompress>textures/ui/scrollbar_vb");
+            Q.addImage(x, y+h-6, w, 6, "textures/ui/scrollbar_vt");
+            Q.addImage(x, y+6, w, h-11, "textures/ui/scrollbar_vm");
+            Q.addImage(x, y, w, 6, "textures/ui/scrollbar_vb");
             // Bar
             if (S.isActive(id)) {
-                Q.addImage(hx, hy+hh-5, hw, 6, "<nocompress>textures/ui/scrollbarknob_v1t");
-                Q.addImage(hx, hy+6, hw, hh-11, "<nocompress>textures/ui/scrollbarknob_vm");
-                Q.addImage(hx, hy, hw, 6, "<nocompress>textures/ui/scrollbarknob_v1b");
+                Q.addImage(hx, hy+hh-5, hw, 6, "textures/ui/scrollbarknob_v1t");
+                Q.addImage(hx, hy+6, hw, hh-11, "textures/ui/scrollbarknob_vm");
+                Q.addImage(hx, hy, hw, 6, "textures/ui/scrollbarknob_v1b");
             } else {
-                Q.addImage(hx, hy+hh-5, hw, 6, "<nocompress>textures/ui/scrollbarknob_v0t");
-                Q.addImage(hx, hy+6, hw, hh-11, "<nocompress>textures/ui/scrollbarknob_vm");
-                Q.addImage(hx, hy, hw, 6, "<nocompress>textures/ui/scrollbarknob_v0b");
+                Q.addImage(hx, hy+hh-5, hw, 6, "textures/ui/scrollbarknob_v0t");
+                Q.addImage(hx, hy+6, hw, hh-11, "textures/ui/scrollbarknob_vm");
+                Q.addImage(hx, hy, hw, 6, "textures/ui/scrollbarknob_v0b");
                 //Q.addRectangle(hx, hy, hw, hh, float(w)/2-1,
                 //    S.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
             }
@@ -485,13 +484,13 @@ bool button(const char *contents, bool enabled) {
 
     if (enabled) {
         if (S.isHot(id)) {
-            Q.addImage(x, y, 6, kButtonHeight, "<nocompress>textures/ui/button_1l");
-            Q.addImage(x+6, y, w-11, kButtonHeight, "<nocompress>textures/ui/button_1m");
-            Q.addImage(x+w-6, y, 6, kButtonHeight, "<nocompress>textures/ui/button_1r");
+            Q.addImage(x, y, 6, kButtonHeight, "textures/ui/button_1l");
+            Q.addImage(x+6, y, w-11, kButtonHeight, "textures/ui/button_1m");
+            Q.addImage(x+w-6, y, 6, kButtonHeight, "textures/ui/button_1r");
         } else {
-            Q.addImage(x, y, 6, kButtonHeight, "<nocompress>textures/ui/button_0l");
-            Q.addImage(x+6, y, w-11, kButtonHeight, "<nocompress>textures/ui/button_0m");
-            Q.addImage(x+w-6, y, 6, kButtonHeight, "<nocompress>textures/ui/button_0r");
+            Q.addImage(x, y, 6, kButtonHeight, "textures/ui/button_0l");
+            Q.addImage(x+6, y, w-11, kButtonHeight, "textures/ui/button_0m");
+            Q.addImage(x+w-6, y, 6, kButtonHeight, "textures/ui/button_0r");
         }
         Q.addText(x+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
@@ -528,17 +527,17 @@ int selector(const char *title, int selected, const u::initializer_list<const ch
     selected = m::clamp(selected, 0, last);
 
     if (enabled) {
-        Q.addImage(textX-w+20, y, textW+20, kButtonHeight, "<nocompress>textures/ui/selector_m");
-        Q.addImage(prevX, y, 30, h, S.isHot(prev) ? "<nocompress>textures/ui/arrow_p1" : "<nocompress>textures/ui/arrow_p0");
-        Q.addImage(nextX, y, 30, h, S.isHot(next) ? "<nocompress>textures/ui/arrow_n1" : "<nocompress>textures/ui/arrow_n0");
+        Q.addImage(textX-w+20, y, textW+20, kButtonHeight, "textures/ui/selector_m");
+        Q.addImage(prevX, y, 30, h, S.isHot(prev) ? "textures/ui/arrow_p1" : "textures/ui/arrow_p0");
+        Q.addImage(nextX, y, 30, h, S.isHot(next) ? "textures/ui/arrow_n1" : "textures/ui/arrow_n0");
         if (resultPrev && --selected < 0)
             selected = last;
         if (resultNext && ++selected > last)
             selected = 0;
     } else {
-        Q.addImage(prevX, y, 30, h, "<nocompress>textures/ui/arrow_p2");
-        Q.addImage(textX, y, textW, kButtonHeight, "<nocompress>textures/ui/selector_m");
-        Q.addImage(nextX, y, 30, h, "<nocompress>textures/ui/arrow_n2");
+        Q.addImage(prevX, y, 30, h, "textures/ui/arrow_p2");
+        Q.addImage(textX, y, textW, kButtonHeight, "textures/ui/selector_m");
+        Q.addImage(nextX, y, 30, h, "textures/ui/arrow_n2");
     }
 
     if (title && *title)
@@ -595,12 +594,12 @@ bool check(const char *contents, bool checked, bool enabled) {
 
     if (checked) {
         if (enabled) {
-            Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "<nocompress>textures/ui/check_1");
+            Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "textures/ui/check_1");
         } else {
-            Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "<nocompress>textures/ui/check_2");
+            Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "textures/ui/check_2");
         }
     } else {
-        Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "<nocompress>textures/ui/check_0");
+        Q.addImage(cx-4, cy, kCheckBoxSize, kCheckBoxSize, "textures/ui/check_0");
     }
     if (enabled) {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
@@ -680,9 +679,9 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
 
     W.y -= kSliderHeight + kDefaultSpacing;
 
-    Q.addImage(x, y, 6, h, "<nocompress>textures/ui/scrollbar_hl");
-    Q.addImage(x+6, y, w-11, h, "<nocompress>textures/ui/scrollbar_hm");
-    Q.addImage(x+w-6, y, 6, h, "<nocompress>textures/ui/scrollbar_hr");
+    Q.addImage(x, y, 6, h, "textures/ui/scrollbar_hl");
+    Q.addImage(x+6, y, w-11, h, "textures/ui/scrollbar_hm");
+    Q.addImage(x+w-6, y, 6, h, "textures/ui/scrollbar_hr");
 
     const int range = w - kSliderMarkerWidth;
     const float u = m::clamp((float(value) - min) / float(max - min), 0.0f, 1.0f);
@@ -724,15 +723,15 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
     }
 
     if (S.isActive(id)) {
-        Q.addImage(float(x+m), y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h1l");
+        Q.addImage(float(x+m), y, 6, kSliderHeight, "textures/ui/scrollbarknob_h1l");
         if (kSliderMarkerWidth > 12)
-            Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
-        Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h1r");
+            Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "textures/ui/scrollbarknob_hm");
+        Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "textures/ui/scrollbarknob_h1r");
     } else {
-        Q.addImage(float(x+m), y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h0l");
+        Q.addImage(float(x+m), y, 6, kSliderHeight, "textures/ui/scrollbarknob_h0l");
         if (kSliderMarkerWidth > 12)
-            Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_hm");
-        Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "<nocompress>textures/ui/scrollbarknob_h0r");
+            Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "textures/ui/scrollbarknob_hm");
+        Q.addImage(float(x+m)+kSliderMarkerWidth-6, y, 6, kSliderHeight, "textures/ui/scrollbarknob_h0r");
     }
 
     return result || changed;
@@ -787,8 +786,8 @@ void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
     Q.addTriangle(x, y, w, h, flags, color);
 }
 
-void drawImage(int x, int y, int w, int h, const char *path, bool mipmaps) {
-    Q.addImage(x, y, w, h, path, mipmaps);
+void drawImage(int x, int y, int w, int h, const char *path) {
+    Q.addImage(x, y, w, h, path);
 }
 
 void drawModel(int x, int y, int w, int h, const char *path, const r::pipeline &p) {

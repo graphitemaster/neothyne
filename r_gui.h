@@ -58,7 +58,7 @@ protected:
     void drawRectangle(float x, float y, float w, float h, float r, float fth, uint32_t color);
     void drawLine(float x0, float y0, float x1, float y1, float r, float fth, uint32_t color);
     void drawText(float x, float y, const char *contents, int align, uint32_t color);
-    void drawImage(float x, float y, float w, float h, const char *path, bool mipmaps = false);
+    void drawImage(float x, float y, float w, float h, const char *path);
 
 private:
     struct glyphQuad {
@@ -86,6 +86,34 @@ private:
         float xadvance;
     };
 
+    struct atlas {
+        atlas();
+
+        struct node {
+            node();
+            ~node();
+            node *l, *r;
+            int x, y;
+            int w, h;
+        };
+
+        node *insert(int w, int h);
+
+        float occupancy() const;
+
+        size_t width() const;
+        size_t height() const;
+
+    private:
+        friend struct gui;
+        node m_root;
+        size_t m_width;
+        size_t m_height;
+
+    protected:
+        size_t usedSurfaceArea(const node &n) const;
+        node *insert(node *n, int w, int h);
+    };
 
     struct vertex {
         float x, y;
@@ -100,7 +128,7 @@ private:
         size_t start;
         size_t count;
         int method;
-        texture2D *texture;
+        atlas::node *texture;
     };
 
     u::vector<vertex> m_vertices;
@@ -116,13 +144,19 @@ private:
     GLuint m_vbo;
     GLuint m_vao;
 
-    u::map<u::string, texture2D*> m_textures;
+    u::map<u::string, texture2D*> m_modelTextures;
+    u::map<u::string, atlas::node*> m_textures;
     u::map<u::string, model*> m_models;
 
     texture2D m_font;
-    texture2D m_notex;
+    atlas::node *m_notex;
     guiMethod m_methods[3];
     guiModelMethod m_modelMethod;
+
+    atlas::node *atlasPack(const u::string &file);
+    atlas m_atlas;
+    unsigned char *m_atlasData;
+    GLuint m_atlasTexture;
 };
 
 }

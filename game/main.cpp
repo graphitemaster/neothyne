@@ -325,7 +325,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
 
         // Cursor above all else
         if ((gMenuState & ~kMenuConsole || gMenuState & kMenuEdit || gMenuState & kMenuCreate) && !neoRelativeMouse())
-            gui::drawImage(mouse.x, mouse.y - (32 - 3), 32, 32, "<nocompress>textures/ui/cursor");
+            gui::drawImage(mouse.x, mouse.y - (32 - 3), 32, 32, "textures/ui/cursor");
 
         gui::finish();
     }

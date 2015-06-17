@@ -192,10 +192,119 @@ void guiModelMethod::setEyeWorldPos(const m::vec3 &pos) {
     gl::Uniform3fv(m_eyeWorldPositionLocation, 1, &pos.x);
 }
 
+///! gui::atlas
+gui::atlas::atlas()
+    : m_width(0)
+    , m_height(0)
+{
+}
+
+gui::atlas::node::node() {
+    memset(this, 0, sizeof *this);
+}
+
+gui::atlas::node::~node() {
+    delete l;
+    delete r;
+}
+
+float gui::atlas::occupancy() const {
+    const size_t total = m_width * m_height;
+    const size_t used = usedSurfaceArea(m_root);
+    return (float)used/total;
+}
+
+size_t gui::atlas::usedSurfaceArea(const gui::atlas::node &n) const {
+    if (n.l || n.r) {
+        size_t used = n.w * n.h;
+        if (n.l)
+            used += usedSurfaceArea(*n.l);
+        if (n.r)
+            used += usedSurfaceArea(*n.r);
+        return used;
+    }
+    // Leaf node contains no surface area
+    return 0;
+}
+
+gui::atlas::node *gui::atlas::insert(gui::atlas::node *n, int width, int height) {
+    // Try both leaves for possible space
+    if (n->l || n->r) {
+        if (n->l) {
+            node *newNode = insert(n->l, width, height);
+            if (newNode)
+                return newNode;
+        }
+        if (n->r) {
+            node *newNode = insert(n->r, width, height);
+            if (newNode)
+                return newNode;
+        }
+        // Didn't fit into either subtree
+        return nullptr;
+    }
+
+    // Can the new rectangle fit here?
+    if (width > n->w || height > n->h)
+        return nullptr;
+
+    // Split remaining space along the shorter axis
+    const int w = n->w - width;
+    const int h = n->h - height;
+    n->l = new node;
+    n->r = new node;
+
+    if (w <= h) {
+        // Split the remaining space in horizontal direction
+        n->l->x = n->x + width;
+        n->l->y = n->y;
+        n->l->w = w;
+        n->l->h = height;
+        n->r->x = n->x;
+        n->r->y = n->y + height;
+        n->r->w = n->w;
+        n->r->h = h;
+    } else {
+        // Split the remaining space in vertical direction
+        n->l->x = n->x;
+        n->l->y = n->y + height;
+        n->l->w = width;
+        n->l->h = h;
+        n->r->x = n->x + width;
+        n->r->y = n->y;
+        n->r->w = w;
+        n->r->h = n->h;
+    }
+
+    // Note: as a result of the above technique, it can happen that n->l or
+    // n->r becomes a degenerate (zero area) rectangle. There is no need to do
+    // anything about it (such as removing the "unnecessary" nodes) as they need
+    // to exist as children of this node (can't be a leaf anymore.)
+
+    n->w = width;
+    n->h = height;
+    return n;
+}
+
+gui::atlas::node *gui::atlas::insert(int w, int h) {
+    return insert(&m_root, w, h);
+}
+
+size_t gui::atlas::width() const {
+    return m_width;
+}
+
+size_t gui::atlas::height() const {
+    return m_height;
+}
+
 ///! gui
+static const size_t kAtlasSize = 1024;
+
 gui::gui()
     : m_vbo(0)
     , m_vao(0)
+    , m_atlasData(new unsigned char[kAtlasSize*kAtlasSize*4])
 {
     for (size_t i = 0; i < kCircleVertices; ++i) {
         const float a = float(i) / float(kCircleVertices) * m::kTau;
@@ -204,20 +313,98 @@ gui::gui()
         m_circleVertices[i*2+0] = c;
         m_circleVertices[i*2+1] = s;
     }
+
+    m_atlas.m_width = kAtlasSize;
+    m_atlas.m_height = kAtlasSize;
+    m_atlas.m_root.w = kAtlasSize;
+    m_atlas.m_root.h = kAtlasSize;
 }
+
 
 gui::~gui() {
     if (m_vao)
         gl::DeleteVertexArrays(1, &m_vao);
     if (m_vbo)
         gl::DeleteBuffers(1, &m_vbo);
-    for (auto &it : m_textures) {
-        if (it.second == &m_notex)
-            continue;
-        delete it.second;
-    }
     for (auto &it : m_models)
         delete it.second;
+    for (auto &it : m_modelTextures)
+        delete it.second;
+
+    gl::DeleteTextures(1, &m_atlasTexture);
+
+#ifdef DEBUG_GUI
+    ::texture saveAtlas;
+    saveAtlas.from(m_atlasData, kAtlasSize*kAtlasSize*4, kAtlasSize, kAtlasSize,
+        false, kTexFormatRGBA);
+    if (saveAtlas.save("ui_atlas", kSaveTGA))
+        u::print("wrote ui texture atlas to `ui_atlas.tga'\n");
+#endif
+
+    delete [] m_atlasData;
+
+}
+
+gui::atlas::node *gui::atlasPack(const u::string &file) {
+    auto existing = m_textures.find(file);
+    if (existing != m_textures.end())
+        return existing->second;
+
+    ::texture tex;
+    if (!tex.load(file))
+        return nullptr;
+
+    auto node = m_atlas.insert(tex.width(), tex.height());
+    if (!node)
+        return nullptr;
+
+    // Pack the data
+    const unsigned char *data = tex.data();
+    for (int H = 0; H < node->h; H++) {
+        unsigned char *beg = m_atlasData + m_atlas.width()*4*(node->y+H) + node->x*4;
+        for (int W = 0; W < node->w; W++) {
+            // Convert all texture data into RGBA8
+            switch (tex.format()) {
+            case kTexFormatLuminance:
+                for (size_t i = 0; i < 4; i++)
+                    *beg++ = data[0];
+                data++;
+                break;
+            case kTexFormatBGR:
+                for (size_t i = 0; i < 3; i++)
+                    *beg++ = data[2-i];
+                data += 3;
+                *beg++ = 0xFF;
+                break;
+            case kTexFormatBGRA:
+                for (size_t i = 0; i < 4; i++)
+                    *beg++ = data[3-i];
+                data += 4;
+                break;
+            case kTexFormatRG:
+                for (size_t i = 0; i < 2; i++)
+                    *beg++ = *data++;
+                *beg++ = 0;
+                *beg++ = 0xFF;
+                break;
+            case kTexFormatRGB:
+                for (size_t i = 0; i < 3; i++)
+                    *beg++ = *data++;
+                *beg++ = 0xFF;
+                break;
+            case kTexFormatRGBA:
+                for (size_t i = 0; i < 4; i++)
+                    *beg++ = *data++;
+                break;
+            default:
+                assert(0);
+                break;
+            }
+        }
+    }
+    u::print("[atlas] => inserted (%zux%zu) at (%dx%d) (%.2f%% usage)\n",
+        tex.width(), tex.height(), node->x, node->y, m_atlas.occupancy()*100.0f);
+    return node;
 }
 
 bool gui::load(const u::string &font) {
@@ -250,22 +437,24 @@ bool gui::load(const u::string &font) {
         m_glyphs.push_back(g);
     }
 
-    u::string where = "fonts/" + fontMap; // TODO: strip from font path
-    if (!m_font.load(where))
+    if (!(m_notex = atlasPack("textures/notex")))
         return false;
 
-    if (!m_notex.load("textures/notex"))
-        return false;
-
-    return true;
+    return m_font.load("fonts/" + fontMap);
 }
 
 bool gui::upload() {
     if (!m_font.upload())
         return false;
-    // No texture needed if fail to load a menu texture
-    if (!m_notex.upload())
-        return false;
+
+    gl::GenTextures(1, &m_atlasTexture);
+    gl::BindTexture(GL_TEXTURE_2D, m_atlasTexture);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, kAtlasSize, kAtlasSize, 0, GL_RGBA,
+        GL_UNSIGNED_BYTE, m_atlasData);
 
     gl::GenVertexArrays(1, &m_vao);
     gl::GenBuffers(1, &m_vbo);
@@ -387,13 +576,12 @@ void gui::render(const pipeline &pl) {
                           it.asImage.y,
                           it.asImage.w,
                           it.asImage.h,
-                          it.asImage.path,
-                          it.flags);
+                          it.asImage.path);
                 break;
             case ::gui::kCommandModel:
                 if (m_models.find(it.asModel.path) == m_models.end()) {
                     auto mdl = u::unique_ptr<model>(new model);
-                    if (mdl->load(m_textures, it.asModel.path) && mdl->upload())
+                    if (mdl->load(m_modelTextures, it.asModel.path) && mdl->upload())
                         m_models[it.asModel.path] = mdl.release();
                 }
                 break;
@@ -423,11 +611,15 @@ void gui::render(const pipeline &pl) {
                 gl::Disable(GL_SCISSOR_TEST);
             }
         } else if (it.type != ::gui::kCommandModel) {
-            if (b->texture)
-                b->texture->bind(GL_TEXTURE0);
             if (b->method != method) {
                 method = b->method;
                 m_methods[method].enable();
+            }
+            if (it.type == ::gui::kCommandText) {
+                m_font.bind(GL_TEXTURE0);
+            } else {
+                gl::ActiveTexture(GL_TEXTURE0);
+                gl::BindTexture(GL_TEXTURE_2D, m_atlasTexture);
             }
             gl::DrawArrays(GL_TRIANGLES, b->start, b->count);
             b++;
@@ -445,7 +637,6 @@ void gui::render(const pipeline &pl) {
             gl::Viewport(it.asModel.x, it.asModel.y, it.asModel.w, it.asModel.h);
             m_modelMethod.setWorld(p.world());
             m_modelMethod.setWVP(p.projection() * p.view() * p.world());
-            //mdl->mat.diffuse->bind(GL_TEXTURE0);
             mdl->render();
             gl::Disable(GL_DEPTH_TEST);
             gl::Viewport(0, 0, neoWidth(), neoHeight());
@@ -674,32 +865,46 @@ void gui::drawText(float x, float y, const char *contents, int align, uint32_t c
         m_vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
     }
     b.count = m_vertices.size() - b.start;
-    b.texture = &m_font;
     b.method = kMethodFont;
     m_batches.push_back(b);
 }
 
-void gui::drawImage(float x, float y, float w, float h, const char *path, bool mipmaps) {
+void gui::drawImage(float x, float y, float w, float h, const char *path) {
     // Deal with loading of textures
     if (m_textures.find(path) == m_textures.end()) {
-        auto tex = u::unique_ptr<texture2D>(new texture2D(mipmaps, kFilterTrilinear));
-        if (!tex->load(path) || !tex->upload())
-            m_textures[path] = &m_notex;
-        else
-            m_textures[path] = tex.release();
+        auto insert = atlasPack(path);
+        if (insert) {
+            m_textures[path] = insert;
+            // Update texture atlas data
+            gl::BindTexture(GL_TEXTURE_2D, m_atlasTexture);
+            gl::TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, kAtlasSize, kAtlasSize,
+                GL_RGBA, GL_UNSIGNED_BYTE, m_atlasData);
+        } else {
+            m_textures[path] = m_notex;
+        }
     }
 
     batch b;
+    auto tex = m_textures[path];
+
+    float x1 = float(tex->x) / float(m_atlas.width());
+    float y1 = float(tex->y) / float(m_atlas.height());
+    float x2 = float(tex->x+tex->w) / float(m_atlas.width());
+    float y2 = float(tex->y+tex->h) / float(m_atlas.height());
+
     b.start = m_vertices.size();
     m_vertices.reserve(m_vertices.size() + 6);
-    m_vertices.push_back({x,   y,   0.0f, 1.0f, 0,0,0,0});
-    m_vertices.push_back({x+w, y,   1.0f, 1.0f, 0,0,0,0});
-    m_vertices.push_back({x+w, y+h, 1.0f, 0.0f, 0,0,0,0});
-    m_vertices.push_back({x,   y,   0.0f, 1.0f, 0,0,0,0});
-    m_vertices.push_back({x+w, y+h, 1.0f, 0.0f, 0,0,0,0});
-    m_vertices.push_back({x,   y+h, 0.0f, 0.0f, 0,0,0,0});
+
+    m_vertices.push_back({x,   y,   x1, y2, 0,0,0,0});
+    m_vertices.push_back({x+w, y,   x2, y2, 0,0,0,0});
+    m_vertices.push_back({x,   y+h, x1, y1, 0,0,0,0});
+    m_vertices.push_back({x+w, y,   x2, y2, 0,0,0,0});
+    m_vertices.push_back({x+w, y+h, x2, y1, 0,0,0,0});
+    m_vertices.push_back({x,   y+h, x1, y1, 0,0,0,0});
+
     b.count = m_vertices.size() - b.start;
-    b.texture = m_textures[path];
+
+    b.texture = tex;
     b.method = kMethodImage;
     m_batches.push_back(b);
 }
