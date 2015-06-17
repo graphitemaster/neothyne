@@ -402,7 +402,7 @@ gui::atlas::node *gui::atlasPack(const u::string &file) {
             }
         }
     }
-    u::print("[atlas] => inserted (%zux%zu) at (%dx%d) (%.2f%% usage)\n",
+    u::print("[atlas] => inserted (%zux%zu) at (%d,%d) (%.2f%% usage)\n",
         tex.width(), tex.height(), node->x, node->y, m_atlas.occupancy()*100.0f);
     return node;
 }
