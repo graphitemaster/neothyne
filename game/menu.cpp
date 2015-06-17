@@ -547,18 +547,13 @@ static void menuEdit() {
                     auto &equation = varGet<int>("map_fog_equation");
                     auto &density = varGet<float>("map_fog_density");
                     auto &color = varGet<int>("map_fog_color");
-                   int R = (color.get() >> 16) & 0xFF;
+                    int R = (color.get() >> 16) & 0xFF;
                     int G = (color.get() >> 8) & 0xFF;
                     int B = color.get() & 0xFF;
                     gui::label("Equation");
-                    gui::indent();
-                        if (gui::check("Linear", equation.get() == fog::kLinear) && equation.get() != fog::kLinear)
-                            equation.set(fog::kLinear);
-                        if (gui::check("Exp", equation.get() == fog::kExp) && equation.get() != fog::kExp)
-                            equation.set(fog::kExp);
-                        if (gui::check("Exp2", equation.get() == fog::kExp2) && equation.get() != fog::kExp2)
-                            equation.set(fog::kExp2);
-                    gui::dedent();
+                    static const int kEquations[] = { fog::kLinear, fog::kExp, fog::kExp2 };
+                    D(fogSelect) = gui::selector(nullptr, D(fogSelect), { "Linear", "Exp", "Exp2" });
+                    equation.set(kEquations[D(fogSelect)]);
                     if (equation.get() == fog::kLinear) {
                         auto &start = varGet<float>("map_fog_range_start");
                         auto &end = varGet<float>("map_fog_range_end");
