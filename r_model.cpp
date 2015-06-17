@@ -203,22 +203,27 @@ geomMethods::geomMethods()
 {
 }
 
+void geomMethods::release() {
+    delete m_geomMethods;
+}
+
 bool geomMethods::init() {
     if (m_initialized)
         return true;
 
     // geometry shader permutations
+    m_geomMethods = new u::vector<geomMethod>;
     static const size_t geomCount = sizeof(kGeomPermutations)/sizeof(kGeomPermutations[0]);
-    m_geomMethods.resize(geomCount);
+    (*m_geomMethods).resize(geomCount);
     for (size_t i = 0; i < geomCount; i++) {
         const auto &p = kGeomPermutations[i];
-        if (!m_geomMethods[i].init(generatePermutation(kGeomPermutationNames, p)))
+        if (!(*m_geomMethods)[i].init(generatePermutation(kGeomPermutationNames, p)))
             return false;
-        m_geomMethods[i].enable();
-        if (p.color  != -1) m_geomMethods[i].setColorTextureUnit(p.color);
-        if (p.normal != -1) m_geomMethods[i].setNormalTextureUnit(p.normal);
-        if (p.spec   != -1) m_geomMethods[i].setSpecTextureUnit(p.spec);
-        if (p.disp   != -1) m_geomMethods[i].setDispTextureUnit(p.disp);
+        (*m_geomMethods)[i].enable();
+        if (p.color  != -1) (*m_geomMethods)[i].setColorTextureUnit(p.color);
+        if (p.normal != -1) (*m_geomMethods)[i].setNormalTextureUnit(p.normal);
+        if (p.spec   != -1) (*m_geomMethods)[i].setSpecTextureUnit(p.spec);
+        if (p.disp   != -1) (*m_geomMethods)[i].setDispTextureUnit(p.disp);
     }
 
     return m_initialized = true;

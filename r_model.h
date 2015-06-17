@@ -73,6 +73,7 @@ struct geomMethods {
     }
 
     bool init();
+    void release();
     geomMethod &operator[](size_t index);
     const geomMethod &operator[](size_t index) const;
 
@@ -81,17 +82,17 @@ private:
     geomMethods(const geomMethods &) = delete;
     void operator =(const geomMethods &) = delete;
 
-    u::vector<geomMethod> m_geomMethods;
+    u::vector<geomMethod> *m_geomMethods;
     bool m_initialized;
     static geomMethods m_instance;
 };
 
 inline geomMethod &geomMethods::operator[](size_t index) {
-    return m_geomMethods[index];
+    return (*m_geomMethods)[index];
 }
 
 inline const geomMethod &geomMethods::operator[](size_t index) const {
-    return m_geomMethods[index];
+    return (*m_geomMethods)[index];
 }
 
 struct material {

@@ -11,6 +11,7 @@
 #include "cvar.h"
 
 #include "r_common.h"
+#include "r_model.h"
 
 #include "u_file.h"
 #include "u_misc.h"
@@ -1031,6 +1032,10 @@ static int entryPoint(int argc, char **argv) {
     // Launch the game
     int status = neoMain(gEngine.m_frameTimer, argc, argv, (bool &)gShutdown);
     writeConfig(gEngine.userPath());
+
+    // Instance must be released before OpenGL context is lost
+    r::geomMethods::instance().release();
+
     return status;
 }
 
