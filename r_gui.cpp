@@ -599,7 +599,7 @@ void gui::render(const pipeline &pl) {
     gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
     gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
 
-    bool rebind = false;
+    bool rebind = true;
     int method = -1;
     batch *b = &m_batches[0];
     gl::Disable(GL_SCISSOR_TEST);
