@@ -1009,17 +1009,18 @@ bool texture3D::upload() {
     // find the largest texture in the cubemap and scale all others to it
     size_t mw = 0;
     size_t mh = 0;
-    size_t mi = 0;
     for (size_t i = 0; i < 6; i++) {
-        if (m_textures[i].width() > mw && m_textures[i].height() > mh)
-            mi = i;
+        const size_t w = m_textures[i].width();
+        const size_t h = m_textures[i].height();
+        if (w*h > mw*mh) {
+            mw = w;
+            mh = h;
+        }
     }
 
-    const size_t fw = m_textures[mi].width();
-    const size_t fh = m_textures[mi].height();
     for (size_t i = 0; i < 6; i++) {
-        if (m_textures[i].width() != fw || m_textures[i].height() != fh)
-            m_textures[i].resize(fw, fh);
+        if (m_textures[i].width() != mw || m_textures[i].height() != mh)
+            m_textures[i].resize(mw, mh);
         auto query = getBestFormat(m_textures[i]);
         if (!query)
             return false;
@@ -1027,7 +1028,7 @@ bool texture3D::upload() {
         gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_textures[i]));
         gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_textures[i].pitch() / m_textures[i].bpp());
         gl::TexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-            format.internal, fw, fh, 0, format.format, format.data, m_textures[i].data());
+            format.internal, mw, mh, 0, format.format, format.data, m_textures[i].data());
     }
     gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
