@@ -360,7 +360,7 @@ gui::atlas::node *gui::atlasPack(const u::string &file) {
 
     // Pack the data
     const unsigned char *data = tex.data();
-    for (int H = 0; H < node->h; H++) {
+    for (int H = node->h - 1; H >= 0; H--) {
         unsigned char *beg = m_atlasData + m_atlas.width()*4*(node->y+H) + node->x*4;
         for (int W = 0; W < node->w; W++) {
             // Convert all texture data into RGBA8
@@ -899,12 +899,12 @@ void gui::drawImage(float x, float y, float w, float h, const char *path) {
     b.start = m_vertices.size();
     m_vertices.reserve(m_vertices.size() + 6);
 
-    m_vertices.push_back({x,   y,   x1, y2, 0,0,0,0});
-    m_vertices.push_back({x+w, y,   x2, y2, 0,0,0,0});
-    m_vertices.push_back({x,   y+h, x1, y1, 0,0,0,0});
-    m_vertices.push_back({x+w, y,   x2, y2, 0,0,0,0});
-    m_vertices.push_back({x+w, y+h, x2, y1, 0,0,0,0});
-    m_vertices.push_back({x,   y+h, x1, y1, 0,0,0,0});
+    m_vertices.push_back({x,   y,   x1, y1, 0,0,0,0});
+    m_vertices.push_back({x+w, y+h, x2, y2, 0,0,0,0});
+    m_vertices.push_back({x+w, y,   x2, y1, 0,0,0,0});
+    m_vertices.push_back({x,   y,   x1, y1, 0,0,0,0});
+    m_vertices.push_back({x,   y+h, x1, y2, 0,0,0,0});
+    m_vertices.push_back({x+w, y+h, x2, y2, 0,0,0,0});
 
     b.count = m_vertices.size() - b.start;
 
