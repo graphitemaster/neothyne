@@ -826,15 +826,14 @@ void gui::drawLine(float x0, float y0, float x1, float y1, float r, float fth, u
 
 void gui::drawText(float x, float y, const char *contents, int align, uint32_t color) {
     // Calculate length of text
-    const size_t size = strlen(contents);
-    auto textLength = [this](const char *contents, size_t size) -> float {
+    size_t size = 0;
+    auto textLength = [this,&size](const char *contents) -> float {
         float position = 0;
         float length = 0;
-        for (size_t i = 0; i < size; i++) {
-            const int it = contents[i];
-            if (it < 32 || m_glyphs.size() <= size_t(it - 32))
+        for (const char *ch = contents; *ch; ch++, size++) {
+            if (*ch < 32 || m_glyphs.size() <= size_t(*ch - 32))
                 continue;
-            auto &b = m_glyphs[it - 32];
+            auto &b = m_glyphs[*ch - 32];
             const int round = int(m::floor(position + b.xoff) + 0.5f);
             length = round + b.x1 - b.x0;
             position += b.xadvance;
@@ -844,9 +843,9 @@ void gui::drawText(float x, float y, const char *contents, int align, uint32_t c
 
     // Alignment of text
     if (align == ::gui::kAlignCenter)
-        x -= textLength(contents, size) / 2;
+        x -= textLength(contents) / 2;
     else if (align == ::gui::kAlignRight)
-        x -= textLength(contents, size);
+        x -= textLength(contents);
 
     const float R = float(color & 0xFF) / 255.0f;
     const float G = float((color >> 8) & 0xFF) / 255.0f;
@@ -856,8 +855,8 @@ void gui::drawText(float x, float y, const char *contents, int align, uint32_t c
     batch b;
     b.start = m_vertices.size();
     m_vertices.reserve(m_vertices.size() + 6 * size);
-    for (size_t i = 0; i < size; i++) {
-        auto quad = getGlyphQuad(512, 512, contents[i] - 32, x, y);
+    for (const char *ch = contents; *ch; ch++) {
+        auto quad = getGlyphQuad(512, 512, *ch - 32, x, y);
         if (!quad)
             continue;
         const auto q = *quad;
