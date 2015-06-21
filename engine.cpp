@@ -73,32 +73,57 @@ static struct queryOperatingSystem {
             snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s %s",
                 n.sysname, n.release, n.machine);
 #else
-        // Find the version using the registry
         static const size_t kRegQuerySize = 255;
         static char name[kRegQuerySize];
         static char version[kRegQuerySize];
+        static char architecture[kRegQuerySize] = { '\0' };
         ULONG type = REG_SZ;
         ULONG size = kRegQuerySize;
         HKEY key = nullptr;
+        // Find the CPU architecture using the registry
         LONG n = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+            TEXT("SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"),
+            0, KEY_QUERY_VALUE, &key);
+        if (n != ERROR_SUCCESS)
+            goto failedArchitecture;
+        if (RegQueryValueEx(key, "PROCESSOR_ARCHITECTURE", nullptr, &type,
+            (LPBYTE)&architecture[0], &size) != ERROR_SUCCESS) {
+            RegCloseKey(key);
+            goto failedArchitecture;
+        }
+        RegCloseKey(key);
+failedArchitecture:
+        type = REG_SZ;
+        size = kRegQuerySize;
+        // Find the version using the registry
+        n = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
             TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"),
             0, KEY_QUERY_VALUE, &key);
         if (n != ERROR_SUCCESS)
             goto failedProductName;
         if (RegQueryValueEx(key, "ProductName", nullptr, &type,
-            (LPBYTE)&name[0], &size) != ERROR_SUCCESS)
+            (LPBYTE)&name[0], &size) != ERROR_SUCCESS) {
+            RegCloseKey(key);
             goto failedProductName;
+        }
         if (RegQueryValueEx(key, "CSDVersion", nullptr, &type,
-            (LPBYTE)&version[0], &size) != ERROR_SUCCESS)
+            (LPBYTE)&version[0], &size) != ERROR_SUCCESS) {
+            RegCloseKey(key);
             goto failedCSDVersion;
+        }
         RegCloseKey(key);
         static constexpr const char *kStripBuf = "Microsoft ";
         static constexpr size_t kStripLen = strlen(kStripBuf);
         if (char *strip = strstr(name, kStripBuf))
             memmove(name, strip + kStripLen, 1 + strlen(strip + kStripLen));
 #if defined(_WIN32)
-        snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s (32-bit)",
-            name, version);
+        if (!strcmp(architecture, "AMD64")) {
+            snprintf(gOperatingSystem, sizeof(gOperatingSystem),
+                "%s %s (32-bit binary on 64-bit CPU)", name, version);
+        } else {
+            snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s (32-bit)",
+                name, version);
+        }
 #elif defined(_WIN64)
         snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s (64-bit)",
             name, version);
@@ -108,9 +133,14 @@ static struct queryOperatingSystem {
 #endif
         return;
 failedCSDVersion:
-        RegCloseKey(key);
 #if defined(_WIN32)
-        snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s (32-bit)", name);
+        if (!strcmp(architecture, "AMD64")) {
+            snprintf(gOperatingSystem, sizeof(gOperatingSystem),
+                "%s (32-bit binary on 64-bit CPU)", name);
+        } else {
+            snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s (32-bit)",
+                name);
+        }
 #elif defined(_WIN64)
         snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s (64-bit)", name);
 #else
@@ -118,12 +148,13 @@ failedCSDVersion:
 #endif
         return;
 failedProductName:
-        if (key)
-            RegCloseKey(key);
 #if defined(_WIN32)
-        strcpy(gOperatingSystem, "Windows 32-bit");
+        if (!strcmp(architecture, "AMD64"))
+            strcpy(gOperatingSystem, "Windows (32-bit binary on 64-bit CPU)");
+        else
+            strcpy(gOperatingSystem, "Windows (32-bit)");
 #elif defined(_WIN64)
-        strcpy(gOperatingSystem, "Windows 64-bit");
+        strcpy(gOperatingSystem, "Windows (64-bit)");
 #else
         strcpy(gOperatingSystem, "Windows");
 #endif
