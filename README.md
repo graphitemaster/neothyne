@@ -65,6 +65,7 @@ embodies the following:
 * Asset optimization (which can do)
   * Online texture compression
   * Online linear-speed vertex cache optimization
+  * Online half-precision float conversion
   * DXT end-point optimization (helps old hardware DXT decode fetches)
 
 ## Goals
