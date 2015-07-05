@@ -569,7 +569,7 @@ bool model::upload() {
             // Need to `pull down' basic vertices for now (without blending weights and indices)
             // and feed that through half float conversion code, then assemble mesh::animHalfVerex
             // data.
-            u::vector<mesh::basicVertex> basics(vertices.size());
+            mesh::basicVertex *basics = neoAlignedMalloc(vertices.size() * sizeof(mesh::basicVertex), 16);
             for (size_t i = 0; i < vertices.size(); i++)
                 memcpy(&basics[i], &vertices[i], sizeof(mesh::basicVertex));
             const auto halfData = m::convertToHalf((const float *)&basics[0], kFloats*vertices.size());
@@ -587,6 +587,7 @@ bool model::upload() {
             gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT,    GL_FALSE, sizeof(mesh::animHalfVertex), &vert->tangent); // tangent
             gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animHalfVertex), &vert->blendWeight); // blend weight
             gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animHalfVertex), &vert->blendIndex); // blend index
+            neoAlignedFree(basics);
             u::print("[model] => `%s' using half-precision float\n", m_model.name());
         } else {
             mesh::animVertex *vert = nullptr;
@@ -609,12 +610,15 @@ bool model::upload() {
         if (m_half && gl::has(gl::ARB_half_float_vertex)) {
             static constexpr size_t kFloats = sizeof(mesh::basicVertex)/sizeof(float);
             mesh::basicHalfVertex *vert = nullptr;
-            const auto convert = m::convertToHalf((const float *)&vertices[0], kFloats*vertices.size());
+            mesh::basicVertex *basics = neoAlignedMalloc(sizeof(mesh::basicVertex)*vertices.size(), 16);
+            memcpy(&basics[0], &vertices[0], sizeof(mesh::basicVertex)*vertices.size());
+            const auto convert = m::convertToHalf((const float *)&basics[0], kFloats*vertices.size());
             gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::basicHalfVertex) * convert.size(), &convert[0], GL_STATIC_DRAW);
             gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), &vert->position);
             gl::VertexAttribPointer(1, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), &vert->normal);
             gl::VertexAttribPointer(2, 2, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), &vert->coordinate);
             gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), &vert->tangent);
+            neoAlignedFree(basics);
             u::print("[model] => `%s' using half-precision float\n", m_model.name());
         } else {
             mesh::basicVertex *vert = nullptr;

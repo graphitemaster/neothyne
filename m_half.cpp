@@ -95,7 +95,7 @@ union vectorShape {
 };
 
 template <unsigned int I>
-static inline int extractScalar(__m128i v) {
+static inline uint32_t extractScalar(__m128i v) {
 #ifdef __SSE4_1__
     return _mm_extract_epi32(v, I);
 #else

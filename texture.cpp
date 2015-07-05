@@ -1812,7 +1812,7 @@ void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t stride, uns
     size_t cscale = m::clamp(under, over - 12, 12);
     size_t ascale = m::clamp(12 + under - over, 0, 24);
     size_t dscale = ascale + 12 - cscale;
-    size_t area = ((unsigned long long)darea << ascale) / sarea;
+    size_t area = size_t((unsigned long long)darea << ascale) / sarea;
     dw *= wfrac;
     dh *= hfrac;
     for (size_t y = 0; y < dh; y += hfrac) {

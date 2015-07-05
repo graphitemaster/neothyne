@@ -26,6 +26,8 @@ inline voidptr::operator T*() {
 voidptr neoMalloc(size_t size);
 voidptr neoRealloc(voidptr ptr, size_t size);
 void neoFree(voidptr ptr);
+voidptr neoAlignedMalloc(size_t size, size_t alignment);
+void neoAlignedFree(voidptr ptr);
 
 inline void *operator new(size_t, void *ptr) {
     return ptr;

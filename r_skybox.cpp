@@ -67,7 +67,7 @@ bool skybox::load(const u::string &skyboxName) {
     const auto &tex = m_cubemap.get(texture3D::kUp);
     const auto &data = tex.data();
 
-    uint64_t totals[3] = {0};
+    uint32_t totals[3] = {0};
     const size_t stride = tex.width() * tex.bpp();
     for (size_t y = 0; y < tex.height(); y++) {
         for (size_t x = 0; x < tex.width(); x++) {

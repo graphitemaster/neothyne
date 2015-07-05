@@ -8,9 +8,22 @@ voidptr neoMalloc(size_t size) {
 }
 
 voidptr neoRealloc(voidptr ptr, size_t size) {
+    if (!size) abort();
     void *resize = realloc(ptr, size);
-    if (!resize && !size) abort();
+    if (!resize) abort();
     return resize;
+}
+
+voidptr neoAlignedMalloc(size_t size, size_t alignment) {
+    size_t offset = alignment - 1 + sizeof(void*);
+    voidptr data = neoMalloc(size + offset);
+    void **store = (void**)(((size_t)((void *)data) + offset) & ~(alignment - 1));
+    store[-1] = data;
+    return store;
+}
+
+void neoAlignedFree(voidptr ptr) {
+    neoFree(((void**)ptr)[-1]);
 }
 
 void neoFree(voidptr what) {
