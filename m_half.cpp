@@ -1,7 +1,8 @@
+#include <assert.h>
+
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif
-
 #ifdef __SSE4_1__
 #include <smmintrin.h>
 #endif
@@ -135,6 +136,9 @@ static __m128i convertToHalfSSE2(__m128 f) {
 
 u::vector<half> convertToHalf(const float *in, size_t length) {
     u::vector<half> result(length);
+
+    assert(((uintptr_t)(const void *)in) % 16 == 0);
+
 #ifdef __SSE2__
     const int blocks = int(length) / 4;
     const int remainder = int(length) % 4;
