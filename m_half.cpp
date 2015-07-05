@@ -60,7 +60,7 @@ halfData::halfData() {
         } else if (e < 128) {
             // Large values (numbers less than 2^128) must be mapped to half-float
             // Infinity, They are too large to be represented as half-floats. In
-            // this case the base table is set to 0x&c00 (with sign if negative)
+            // this case the base table is set to 0x7C00 (with sign if negative)
             // and the mantissa is zeroed out, which is accomplished by shifting
             // out all mantissa bits.
             baseTable[i|0x000] = 0x7C00;
@@ -69,9 +69,9 @@ halfData::halfData() {
             shiftTable[i|0x100] = 24;
         } else {
             // Remaining float numbers such as Infs and NaNs should stay Infs and
-            // NaNs after conversion. The base table entries is exactly the same
+            // NaNs after conversion. The base table entries are exactly the same
             // as the previous case, except the mantissa-bits are to be preserved
-            // as much as possible, thus ensuring Infs and NaNs preserve as well.
+            // as much as possible.
             baseTable[i|0x000] = 0x7C00;
             baseTable[i|0x100] = 0xFC00;
             shiftTable[i|0x000] = 13;
