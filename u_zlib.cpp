@@ -552,7 +552,7 @@ void zlib::deflator::deflate(u::vector<unsigned char> &out, const u::vector<unsi
         s1 %= 65521;
         s2 %= 65521;
         j += blockLength;
-        blockLength = 5525;
+        blockLength = 5552;
     }
     out.push_back((unsigned char)(s2 >> 8));
     out.push_back((unsigned char)(s2));
