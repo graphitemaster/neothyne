@@ -1016,6 +1016,8 @@ struct png : decoder {
     }
 
 private:
+    friend struct texture;
+
     void decode(u::vector<unsigned char> &out, const u::vector<unsigned char> &invec) {
         const unsigned char *const in = &invec[0];
         readHeader(&in[0], invec.size());
@@ -1364,7 +1366,7 @@ private:
     }
 
     // Paeth predicter
-    unsigned char paethPredictor(short a, short b, short c) {
+    static unsigned char paethPredictor(short a, short b, short c) {
         short p = a + b - c;
         short pa = p > a ? (p - a) : (a - p);
         short pb = p > b ? (p - b) : (b - p);
@@ -2182,7 +2184,6 @@ void texture::writeTGA(u::vector<unsigned char> &outData) {
     }
 }
 
-
 template <typename T>
 static inline void memput(unsigned char *&store, const T &data) {
     memcpy(store, &data, sizeof(T));
@@ -2279,6 +2280,124 @@ void texture::writeBMP(u::vector<unsigned char> &outData) {
     }
 }
 
+void texture::writePNG(u::vector<unsigned char> &outData) {
+    static constexpr int kMapping[] = { 0, 1, 2, 3, 4 };
+    static constexpr int kFirstMapping[] = { 0, 1, 0, 5, 6 };
+
+    u::vector<unsigned char> filter((m_width*m_bpp+1)*m_height);
+    u::vector<signed char> lineBuffer(m_width*m_bpp);
+    for (size_t j = 0; j < m_height; ++j) {
+        const int *map = j ? kMapping : kFirstMapping;
+        int best = 0;
+        int bestValue = 0x7FFFFFFF;
+        for (int p = 0; p < 2; ++p) {
+            for (int k = p ? best : 0; k < 5; ++k) {
+                const int type = map[k];
+                int estimate = 0;
+                unsigned char *z = &m_data[0] + m_pitch*j;
+                for (size_t i = 0; i < m_bpp; i++) {
+                    switch (type) {
+                    case 0: lineBuffer[i] = z[i]; break;
+                    case 1: lineBuffer[i] = z[i]; break;
+                    case 2: lineBuffer[i] = z[i] - z[i-m_pitch]; break;
+                    case 3: lineBuffer[i] = z[i] - (z[i-m_pitch]>>1); break;
+                    case 4: lineBuffer[i] = (signed char)(z[i] - png::paethPredictor(0, z[i-m_pitch], 0)); break;
+                    case 5: lineBuffer[i] = z[i]; break;
+                    case 6: lineBuffer[i] = z[i]; break;
+                    }
+                }
+
+                for (size_t i = m_bpp; i < m_width*m_bpp; ++i) {
+                    switch (type) {
+                        case 0: lineBuffer[i] = z[i]; break;
+                        case 1: lineBuffer[i] = z[i] - z[i-m_bpp]; break;
+                        case 2: lineBuffer[i] = z[i] - z[i-m_pitch]; break;
+                        case 3: lineBuffer[i] = z[i] - ((z[i-m_bpp] + z[i-m_pitch])>>1); break;
+                        case 4: lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], z[i-m_pitch], z[i-m_pitch-m_bpp]); break;
+                        case 5: lineBuffer[i] = z[i] - (z[i-m_bpp]>>1); break;
+                        case 6: lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], 0, 0); break;
+                    }
+                }
+
+                if (p)
+                    break;
+                for (size_t i = 0; i < m_width*m_bpp; ++i)
+                    estimate += abs((signed char)lineBuffer[i]);
+                if (estimate < bestValue) {
+                    bestValue = estimate;
+                    best = k;
+                }
+            }
+        }
+        // Got filter type
+        filter[j*(m_width*m_bpp+1)] = (unsigned char)best;
+        memmove(&filter[0]+j*(m_width*m_bpp+1)+1, &lineBuffer[0], m_width*m_bpp);
+    }
+    u::zlib z;
+    u::vector<unsigned char> compressed;
+    z.compress(compressed, filter);
+
+    outData.resize(8+12+13+12+12+compressed.size());
+    unsigned char *store = &outData[0];
+
+    auto write = [&store](uint32_t data) {
+        *store++ = (data >> 24) & 0xFF;
+        *store++ = (data >> 16) & 0xFF;
+        *store++ = (data >> 8) & 0xFF;
+        *store++ = data & 0xFF;
+    };
+
+    auto tag = [&store](const char *data) {
+        *store++ = data[0];
+        *store++ = data[1];
+        *store++ = data[2];
+        *store++ = data[3];
+    };
+
+    auto crc32 = [](unsigned char *buffer, size_t length) {
+        unsigned int crc = ~0u;
+        static unsigned int table[256];
+        if (table[0] == 0)
+            for (size_t i = 0, j; i < 256; i++)
+                for (table[i] = i, j = 0; j < 8; ++j)
+                    table[i] = (table[i] >> 1) ^ (table[i] & 1 ? 0xEDB88320 : 0);
+        for (size_t i = 0; i < length; ++i)
+            crc = (crc >> 8) ^ table[buffer[i] ^ (crc & 0xFF)];
+        return ~crc;
+    };
+
+    auto crc = [&crc32, &write](unsigned char *data, size_t length) {
+        write(crc32(data - length - 4, length + 4));
+    };
+
+    // magic + header length
+    memcpy(store, png::kMagic, 8);
+    store += 8;
+    write(13);
+
+    // write header
+    static constexpr int kType[] = { -1, 0, 4, 2, 6 };
+    tag("IHDR");
+    write(m_width);
+    write(m_height);
+    *store++ = 8;
+    *store++ = kType[m_bpp];
+    *store++ = 0;
+    *store++ = 0;
+    *store++ = 0;
+    crc(store, 13);
+    write(compressed.size());
+
+    tag("IDAT");
+    memmove(store, &compressed[0], compressed.size());
+    store += compressed.size();
+    crc(store, compressed.size());
+    write(0);
+
+    tag("IEND");
+    crc(store, 0);
+}
+
 bool texture::save(const u::string &file, saveFormat format, float quality) {
     if (m_data.empty())
         return false;
@@ -2294,11 +2413,18 @@ bool texture::save(const u::string &file, saveFormat format, float quality) {
 
     u::vector<unsigned char> data;
 
-    if (format == kSaveTGA)
+    const char *ext = nullptr;
+    if (format == kSaveTGA) {
         writeTGA(data);
-    else if (format == kSaveBMP)
+        ext = ".tga";
+    } else if (format == kSaveBMP) {
         writeBMP(data);
-    return u::write(data, file + (format == kSaveTGA ? ".tga" : ".bmp"), "wb");
+        ext = ".bmp";
+    } else if (format == kSavePNG) {
+        writePNG(data);
+        ext = ".png";
+    }
+    return u::write(data, file + ext, "wb");
 }
 
 bool texture::from(const unsigned char *const data, size_t length, size_t width,

@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <string.h>
+
 #include "u_zlib.h"
 
 #define returnError() \
@@ -8,28 +11,29 @@
 
 namespace u {
 
-static constexpr size_t kLengthBases[29] = {
+static constexpr size_t kLengthBases[] = {
     3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
-    35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258
+    35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258,
+    259
 };
 
-static constexpr size_t kLengthExtras[29] = {
+static constexpr size_t kLengthExtras[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3,
     3, 4, 4, 4, 4, 5, 5, 5, 5, 0
 };
 
-static constexpr size_t kDistanceBases[30] = {
+static constexpr size_t kDistanceBases[] = {
     1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
     257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
-    8193, 12289, 16385, 24577
+    8193, 12289, 16385, 24577, 32768
 };
 
-static constexpr size_t kDistanceExtras[30] = {
+static constexpr size_t kDistanceExtras[] = {
     0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8,
     8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13
 };
 
-static constexpr size_t kCodeLengthCodeLengths[19] = {
+static constexpr size_t kCodeLengthCodeLengths[] = {
     16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
 };
 
@@ -372,6 +376,194 @@ bool zlib::decompress(u::vector<unsigned char> &out, const u::vector<unsigned ch
         return false;
     inflator.inflate(out, in, 2);
     return inflator.m_error == false;
+}
+
+// zlib compression (fixed huffman only)
+int zlib::deflator::bitReverse(int code, int codeBits) {
+    int result = 0;
+    while (codeBits--) {
+        result = (result << 1) | (code & 1);
+        code >>= 1;
+    }
+    return result;
+}
+
+size_t zlib::deflator::countMatches(const unsigned char *a, const unsigned char *b, int limit) {
+    int i;
+    for (i = 0; i < limit && i < 258; ++i)
+        if (a[i] != b[i])
+            break;
+    return i;
+}
+
+unsigned int zlib::deflator::hash(const unsigned char *data) {
+    unsigned int hash = data[0] + (data[1] << 8) + (data[2] << 16);
+    hash ^= hash << 3;
+    hash += hash >> 5;
+    hash ^= hash << 4;
+    hash += hash >> 17;
+    hash ^= hash << 25;
+    hash += hash >> 6;
+    return hash;
+}
+
+void zlib::deflator::flush() {
+    while (m_bitCount >= 8) {
+        m_data->push_back((unsigned char)(m_bitBuffer));
+        m_bitBuffer >>= 8;
+        m_bitCount -= 8;
+    }
+}
+
+void zlib::deflator::add(int code, int codeBits) {
+    m_bitBuffer |= code << m_bitCount;
+    m_bitCount += codeBits;
+    flush();
+}
+
+void zlib::deflator::huffA(int b, int c) {
+    add(bitReverse(b, c), c);
+}
+
+void zlib::deflator::huffB(int n) {
+    if (n <= 143)
+        huffSwitch<1>(n);
+    else
+        huffSwitch<2>(n);
+}
+
+template <size_t E>
+void zlib::deflator::huffSwitch(int n) {
+    switch (E) {
+    case 1: huffA(0x030+n,     8); break;
+    case 2: huffA(0x190+n-144, 9); break;
+    case 3: huffA(0x000+n-256, 7); break;
+    case 4: huffA(0x0C0+n-280, 8); break;
+    }
+}
+
+void zlib::deflator::huff(int n) {
+    if (n <= 143)
+        huffSwitch<1>(n);
+    else if (n <= 255)
+        huffSwitch<2>(n);
+    else if (n <= 279)
+        huffSwitch<3>(n);
+    else
+        huffSwitch<4>(n);
+}
+
+void zlib::deflator::deflate(u::vector<unsigned char> &out, const u::vector<unsigned char> &in, int quality) {
+    static constexpr size_t kHashSize = 16384;
+    m_data = &out;
+
+    if (quality < 5)
+        quality = 5;
+
+    out.push_back(0x78); // DEFLATE 32K window
+    out.push_back(0x5E); // FLEVEL = 1
+
+    add(1, 1); // BFINAL = 1
+    add(1, 2); // BTYPE = 1 (fixed huffman)
+
+    // Flat hash table
+    u::vector<unsigned char *> hashTable[kHashSize];
+
+    int i = 0;
+    int dataLength = in.size();
+    while (i < dataLength - 3) {
+        auto h = hash(&in[0] + i) & (kHashSize - 1);
+        size_t best = 3;
+        unsigned char *bestLocation = nullptr;
+        auto &hashList = hashTable[h];
+        for (size_t j = 0; j < hashList.size(); ++j) {
+            if (hashList[j] - &in[0] > i-32768) {
+                // entry lies within a window
+                const size_t distance = countMatches(hashList[j], &in[0]+i, dataLength-i);
+                if (distance >= best) {
+                    best = distance;
+                    bestLocation = hashList[j];
+                }
+            }
+        }
+
+        if (hashList.size() == size_t(2*quality)) {
+            // hash table entry too long, delete half the entries
+            unsigned char **dst = &hashTable[h][0];
+            unsigned char **src = (&hashTable[h][0])+quality;
+            memmove(dst, src, sizeof(hashTable[h][0])*quality);
+            hashTable[h].resize(quality);
+        }
+
+        hashList.push_back((unsigned char *)&in[0]+i);
+
+        if (bestLocation) {
+            // lazy matching
+            h = hash(&in[0]+i+1) & (kHashSize - 1);
+            hashList = hashTable[h];
+            for (size_t j = 0; j < hashList.size(); ++j) {
+                const size_t dist = countMatches(hashList[j], &in[0]+i+1, dataLength-i-1);
+                if (dist > best) {
+                    bestLocation = nullptr;
+                    break;
+                }
+            }
+        }
+
+        if (bestLocation) {
+            // distance back
+            int distance = int(&in[0]+i-bestLocation);
+            assert(distance <= 32767);
+            assert(best <= 258);
+            int j;
+            for (j = 0; best > kLengthBases[j+1]-1; ++j);
+            huff(j+257);
+            if (kLengthExtras[j])
+                add(best - kLengthBases[j], kLengthExtras[j]);
+            for (j = 0; distance > int(kDistanceBases[j+1]-1); ++j);
+            add(bitReverse(j, 5), 5);
+            if (kDistanceExtras[j])
+                add(distance - kDistanceBases[j], kDistanceExtras[j]);
+            i += best;
+        } else {
+            huffB(in[i]);
+            ++i;
+        }
+    }
+
+    // write out final bytes
+    for (; i < dataLength; ++i)
+        huffB(in[i]);
+    huff(256); // end of block
+
+    // pad with "zero-bits"
+    while (m_bitCount)
+        add(0, 1);
+
+    // compute adler32
+    unsigned int s1 = 1;
+    unsigned int s2 = 0;
+    unsigned int blockLength = dataLength % 5552;
+    for (int j = 0; j < dataLength; ) {
+        for (unsigned int i = 0; i < blockLength; ++i) {
+            s1 += in[j+i];
+            s2 += s1;
+        }
+        s1 %= 65521;
+        s2 %= 65521;
+        j += blockLength;
+        blockLength = 5525;
+    }
+    out.push_back((unsigned char)(s2 >> 8));
+    out.push_back((unsigned char)(s2));
+    out.push_back((unsigned char)(s1 >> 8));
+    out.push_back((unsigned char)(s1));
+}
+
+bool zlib::compress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in) {
+    deflator deflate;
+    deflate.deflate(out, in);
+    return true;
 }
 
 }

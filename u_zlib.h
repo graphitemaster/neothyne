@@ -7,6 +7,7 @@ namespace u {
 
 struct zlib {
     bool decompress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in);
+    bool compress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in);
 
 private:
     static size_t readBitFromStream(size_t &bitp, const unsigned char *bits);
@@ -21,6 +22,38 @@ private:
         // 2D representation of a huffman tree: The one dimension is "0" or "1",
         // the other contains all nodes and leaves of the tree.
         u::vector<size_t> m_tree2D;
+    };
+
+    struct deflator {
+        deflator()
+            : m_data(nullptr)
+            , m_bitBuffer(0)
+            , m_bitCount(0)
+        {
+        }
+
+        void deflate(u::vector<unsigned char> &out, const u::vector<unsigned char> &in, int quality = 5);
+
+    protected:
+        int bitReverse(int code, int codeBits);
+        size_t countMatches(const unsigned char *a, const unsigned char *b, int limit);
+        unsigned int hash(const unsigned char *data);
+
+        void flush();
+        void add(int code, int codeBits);
+
+        void huffA(int b, int c);
+        void huffB(int n);
+
+        template <size_t E>
+        void huffSwitch(int n);
+
+        void huff(int n);
+
+    private:
+        u::vector<unsigned char> *m_data;
+        unsigned int m_bitBuffer;
+        int m_bitCount;
     };
 
     struct inflator {

@@ -183,7 +183,7 @@ VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
 
 VAR(int, scr_info, "embed engine info in screenshot", 0, 1, 1);
-VAR(int, scr_format, "screenshot file format", 0, 1, 1);
+VAR(int, scr_format, "screenshot file format", 0, 2, 2);
 VAR(float, scr_quality, "screenshot quality", 0.0f, 1.0f, 1.0f);
 
 /// pimpl context
@@ -887,6 +887,10 @@ void engine::screenShot() {
     case kSaveTGA:
         if (tex.save(file, kSaveTGA, scr_quality))
             u::print("[screenshot] => %s.tga\n", file);
+        break;
+    case kSavePNG:
+        if (tex.save(file, kSavePNG, scr_quality))
+            u::print("[screenshot] => %s.png\n", file);
         break;
     }
 }

@@ -31,7 +31,8 @@ enum textureFormat {
 
 enum saveFormat {
     kSaveBMP,
-    kSaveTGA
+    kSaveTGA,
+    kSavePNG
 };
 
 struct texture {
@@ -97,6 +98,7 @@ struct texture {
 private:
     void writeTGA(u::vector<unsigned char> &outData);
     void writeBMP(u::vector<unsigned char> &outData);
+    void writePNG(u::vector<unsigned char> &outData);
 
     u::optional<u::string> find(const u::string &file);
     template <typename T>

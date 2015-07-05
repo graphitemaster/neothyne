@@ -50,6 +50,7 @@ screenshot output format
 
 * 0 = BMP
 * 1 = TGA
+* 2 = PNG (default)
 
 
 ##### scr_quality
