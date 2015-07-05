@@ -30,6 +30,7 @@ struct model {
     void animate(float curFrame);
     size_t joints() const;
     const float *bones() const;
+    const u::string &name() const;
 
 private:
     friend struct obj;
@@ -45,6 +46,8 @@ private:
     // of the IQM is composed of. The IQM file must have mesh names, otherwise
     // this gets populated with a bunch of "default" strings.
     u::vector<u::string> m_meshNames;
+
+    u::string m_name;
 
     // these are only initialized when m_animated
     size_t m_numFrames; // number of frames
@@ -98,6 +101,10 @@ inline const float *model::bones() const {
 
 inline size_t model::joints() const {
     return m_numJoints;
+}
+
+inline const u::string &model::name() const {
+    return m_name;
 }
 
 #endif

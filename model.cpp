@@ -551,6 +551,7 @@ bool model::load(const u::string &file) {
         for (const auto &it : m_basicVertices)
             m_bounds.expand(m::vec3(it.position));
     }
+    m_name = file;
     return true;
 }
 

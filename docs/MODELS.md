@@ -10,9 +10,15 @@ defined in here and `MATERIALS.md'.
 The model file.
 
 ##### scale
-Scaling of the model. Accepts up to three float values where each
-value is `x`, `y` and `z` respectively.
+Scaling of the model. Accepts up to three float values where each value is `x`,
+`y` and `z` respectively.
 
 ##### rotate
-Rotation of the model. Accepts up to three float values where each
-value is `x`, `y` and `z` respectively.
+Rotation of the model. Accepts up to three float values where each value is `x`,
+`y` and `z` respectively.
+
+##### half
+Use half-precision floating-point vertex data. This is useful if the model's
+vertices are within applicable range. The engine will load-time convert the
+data to half-precision for you. This option is silently ignored if half-precision
+is not supported.

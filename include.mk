@@ -5,6 +5,7 @@ GAME_SOURCES = \
 	game/edit.cpp
 
 MATH_SOURCES = \
+	m_half.cpp \
 	m_mat.cpp \
 	m_quat.cpp \
 	m_vec.cpp \

@@ -3,6 +3,7 @@
 #include "u_vector.h"
 
 #include "m_bbox.h"
+#include "m_half.h"
 
 namespace u {
     struct string;
@@ -20,6 +21,18 @@ namespace mesh {
     };
 
     struct animVertex : basicVertex {
+        unsigned char blendIndex[4];
+        unsigned char blendWeight[4];
+    };
+
+    struct basicHalfVertex {
+        m::half position[3];
+        m::half normal[3];
+        m::half coordinate[2];
+        m::half tangent[4]; // w = sign of bitangent
+    };
+
+    struct animHalfVertex : basicHalfVertex {
         unsigned char blendIndex[4];
         unsigned char blendWeight[4];
     };

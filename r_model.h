@@ -153,6 +153,7 @@ private:
     u::vector<::model::batch> m_batches;
     size_t m_indices;
     ::model m_model;
+    bool m_half;
 };
 
 inline m::bbox model::bounds() const {
