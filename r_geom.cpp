@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "r_geom.h"
 
 #include "m_vec.h"
@@ -30,7 +32,7 @@ void geom::upload() {
 bool quad::upload() {
     geom::upload();
 
-    static const GLfloat vertices[] = {
+    alignas(16) static const GLfloat vertices[] = {
         -1.0f,-1.0f, 0.0f, 0.0f,  0.0f,
         -1.0f, 1.0f, 0.0f, 0.0f, -1.0f,
          1.0f, 1.0f, 0.0f, 1.0f, -1.0f,
@@ -122,8 +124,11 @@ bool sphere::upload() {
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
+    float *aligned = nullptr;
     if (gl::has(gl::ARB_half_float_vertex)) {
-        const auto convert = m::convertToHalf((const float *)&vertices[0], numVertices * 3);
+        aligned = neoAlignedMalloc(sizeof(m::vec3) * numVertices, 16);
+        memcpy(aligned, &vertices[0], sizeof(m::vec3) * numVertices);
+        const auto convert = m::convertToHalf(aligned, numVertices * 3);
         gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     } else {
@@ -131,6 +136,9 @@ bool sphere::upload() {
         gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(m::vec3), ATTRIB_OFFSET(0)); // position
     }
     gl::EnableVertexAttribArray(0);
+
+    if (aligned)
+        neoAlignedFree(aligned);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof(GLushort), &indices[0], GL_STATIC_DRAW);
@@ -147,7 +155,7 @@ bool bbox::upload() {
     geom::upload();
 
     // 1x1x1 cube (centered on origin)
-    static const GLfloat vertices[] = {
+    alignas(16) static const GLfloat vertices[] = {
         -0.5f, -0.5f, -0.5f, 1.0f,
          0.5f, -0.5f, -0.5f, 1.0f,
          0.5f,  0.5f, -0.5f, 1.0f,
@@ -193,7 +201,7 @@ void bbox::render() {
 bool cube::upload() {
     geom::upload();
 
-    static const GLfloat vertices[] = {
+    alignas(16) static const GLfloat vertices[] = {
         -1.0, -1.0,  1.0,
          1.0, -1.0,  1.0,
         -1.0,  1.0,  1.0,
