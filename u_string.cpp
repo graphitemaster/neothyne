@@ -15,6 +15,7 @@
 #include "u_hash.h"
 #include "u_new.h"
 #include "u_memory.h"
+#include "u_misc.h"
 
 namespace u {
 
@@ -495,7 +496,7 @@ void string::erase(size_t beg, size_t end) {
     char *mbeg = m_first + beg;
     char *mend = m_first + end;
     const size_t len = m_last - mend;
-    memmove(mbeg, mend, len);
+    moveMemory(mbeg, mend, len);
     m_last = &mbeg[len];
     m_last[0] = '\0';
 }

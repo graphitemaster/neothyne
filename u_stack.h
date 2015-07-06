@@ -113,7 +113,7 @@ inline void stack<T, E>::shift_traits(size_t count, detail::is_pod<T, false>) {
 
 template <typename T, size_t E>
 inline void stack<T, E>::shift_traits(size_t count, detail::is_pod<T, true>) {
-    memmove((void *)m_data, (const void *)&m_data[m_size - count], count);
+    moveMemory((void *)m_data, (const void *)&m_data[m_size - count], count);
 }
 
 }

@@ -115,7 +115,7 @@ failedArchitecture:
         static constexpr const char *kStripBuf = "Microsoft ";
         static constexpr size_t kStripLen = strlen(kStripBuf);
         if (char *strip = strstr(name, kStripBuf))
-            memmove(name, strip + kStripLen, 1 + strlen(strip + kStripLen));
+            u::moveMemory(name, strip + kStripLen, 1 + strlen(strip + kStripLen));
 #if defined(_WIN32)
         if (!strcmp(architecture, "AMD64")) {
             snprintf(gOperatingSystem, sizeof(gOperatingSystem),
@@ -524,7 +524,7 @@ bool engine::initData(int &argc, char **argv) {
             directory = argv[i + 1];
             argc -= 2;
             // Found a game directory, remove it and the directory from argv
-            memmove(argv+i, argv+i+2, (argc-i) * sizeof(char*));
+            u::moveMemory(argv+i, argv+i+2, (argc-i) * sizeof(char*));
             break;
         }
     }

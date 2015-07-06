@@ -2331,7 +2331,7 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
         }
         // Got filter type
         filter[j*(m_width*m_bpp+1)] = (unsigned char)best;
-        memmove(&filter[0]+j*(m_width*m_bpp+1)+1, &lineBuffer[0], m_width*m_bpp);
+        u::moveMemory(&filter[0]+j*(m_width*m_bpp+1)+1, &lineBuffer[0], m_width*m_bpp);
     }
     u::vector<unsigned char> compressed;
     u::zlib::compress(compressed, filter, tex_png_compress_quality);
@@ -2388,7 +2388,7 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
     write(compressed.size());
 
     tag("IDAT");
-    memmove(store, &compressed[0], compressed.size());
+    u::moveMemory(store, &compressed[0], compressed.size());
     store += compressed.size();
     crc(store, compressed.size());
     write(0);

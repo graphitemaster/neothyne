@@ -123,6 +123,8 @@ sls(T x, T n) {
     return (typename make_signed<T>::type)((typename make_unsigned<T>::type)x << n);
 }
 
+void *moveMemory(void *dest, const void *src, size_t n);
+
 // Random number generation facilities
 uint32_t randu(); //[0, UINT32_MAX]
 float randf(); // [0, 1]

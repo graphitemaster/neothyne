@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "u_zlib.h"
+#include "u_misc.h"
 
 #define returnError() \
     do { \
@@ -495,7 +496,7 @@ void zlib::deflator::deflate(u::vector<unsigned char> &out, const unsigned char 
             // hash table entry too long, delete half the entries
             unsigned char **dst = &hashTable[h][0];
             unsigned char **src = (&hashTable[h][0])+quality;
-            memmove(dst, src, sizeof(hashTable[h][0])*quality);
+            u::moveMemory(dst, src, sizeof(hashTable[h][0])*quality);
             hashTable[h].resize(quality);
         }
 
