@@ -85,14 +85,22 @@ Generate mipmaps for textures
 * 0 = disable
 * 1 = enable
 
-##### r_texcomp
+##### r_tex_compress
 Use texture compression if the hardware supports it
 
 * 0 = disable
 * 1 = enable
 
-##### r_texcompcache
-Cache compressed textures to disk for use later. This is useful for systems which have slow on-driver texture compression like Intel.
+##### r_tex_compess_cache
+Cache compressed textures to disk for use later. This is useful for systems which
+have slow on-driver texture compression like Intel.
+
+* 0 = disable
+* 1 = enable
+
+##### r_tex_compress_cache_zlib
+When caching of compressed textures to disk is enabled, this option will compress
+the texture data with deflate for smaller files on disk.
 
 * 0 = disable
 * 1 = enable
@@ -103,7 +111,8 @@ Adjust texture quality
 * any value in the range [0.0, 1.0]
 
 ##### r_dxt_optimize
-Optimize DXT endpoints such that they have a consistent encoding, this helps some hardware and improves on disk compression ratio.
+Optimize DXT endpoints such that they have a consistent encoding, this helps some
+hardware and improves on disk compression ratio.
 
 * 0 = disable
 * 1 = enable
@@ -187,6 +196,13 @@ RLE compression for saving TGAs
 
 * 0 = disabled
 * 1 = enabled
+
+##### tex_png_compress_quality
+Quality of PNG file size. This adjusts the deflate algorithm to allow for more
+opportunities to compress further at the cost of speed. Higher values produce
+smaller files.
+
+* any value in range [5, 128]
 
 
 ## UI
