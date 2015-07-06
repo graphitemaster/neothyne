@@ -15,6 +15,7 @@
 
 VAR(int, tex_jpg_chroma, "chroma filtering method", 0, 1, 0);
 VAR(int, tex_tga_compress, "compress TGA", 0, 1, 1);
+VAR(int, tex_png_compress_quality, "compression quality for PNG", 5, 128, 16);
 
 #define returnResult(E) \
     do { \
@@ -1097,8 +1098,7 @@ private:
         const size_t bpp = calculateBitsPerPixel();
         m_bpp = bpp / 8;
         u::vector<unsigned char> scanlines(((m_width * (m_height * bpp + 7)) / 8) + m_height);
-        u::zlib zlib;
-        if (!zlib.decompress(scanlines, idat))
+        if (!u::zlib::decompress(scanlines, idat))
             returnResult(kMalformatted);
 
         const size_t bytewidth = (bpp + 7) / 8;
@@ -2333,9 +2333,8 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
         filter[j*(m_width*m_bpp+1)] = (unsigned char)best;
         memmove(&filter[0]+j*(m_width*m_bpp+1)+1, &lineBuffer[0], m_width*m_bpp);
     }
-    u::zlib z;
     u::vector<unsigned char> compressed;
-    z.compress(compressed, filter);
+    u::zlib::compress(compressed, filter, tex_png_compress_quality);
 
     outData.resize(8+12+13+12+12+compressed.size());
     unsigned char *store = &outData[0];

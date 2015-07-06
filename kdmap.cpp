@@ -36,9 +36,8 @@ bool kdMap::isLoaded() const {
 }
 
 bool kdMap::load(const u::vector<unsigned char> &compressedData) {
-    u::zlib zlib;
     u::vector<unsigned char> data;
-    if (!zlib.decompress(data, compressedData))
+    if (!u::zlib::decompress(data, compressedData))
         return false;
 
     size_t seek;

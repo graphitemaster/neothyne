@@ -69,10 +69,10 @@ bool world::load(const u::vector<unsigned char> &data) {
     if (!m_map.load(data))
         return false;
     m_billboards.resize(kBillboardCount);
-    m_billboards[kBillboardJumpPad] = { "textures/icons/jumppad", 16.0f, true, { } };
-    m_billboards[kBillboardLight] = { "textures/icons/light", 16.0f, false, { } };
-    m_billboards[kBillboardPlayerStart] = { "textures/icons/playerstart", 16.0f, true, { } };
-    m_billboards[kBillboardTeleport] = { "textures/icons/teleport", 16.0f, true, { } };
+    m_billboards[kBillboardJumpPad] = { "textures/icons/jumppad", 5.0f, true, { } };
+    m_billboards[kBillboardLight] = { "textures/icons/light", 5.0f, false, { } };
+    m_billboards[kBillboardPlayerStart] = { "textures/icons/playerstart", 5.0f, true, { } };
+    m_billboards[kBillboardTeleport] = { "textures/icons/teleport", 5.0f, true, { } };
     return true;
 }
 
@@ -127,9 +127,9 @@ void world::render(const r::pipeline &pl) {
             auto &ent = m_teleports[it.index];
             m_billboards[kBillboardTeleport].add(ent->position, {0.0f, 8.0f, 0.0f}, ent->highlight);
         } else if (it.type == entity::kPointLight) {
-            m_billboards[kBillboardLight].add(m_pointLights[it.index]->position, {0.0f, 16.0f, 0.0f}, false);
+            m_billboards[kBillboardLight].add(m_pointLights[it.index]->position, {0.0f, 8.0f, 0.0f}, false);
         } else if (it.type == entity::kSpotLight) {
-            m_billboards[kBillboardLight].add(m_spotLights[it.index]->position, {0.0f, 16.0f, 0.0f}, false);
+            m_billboards[kBillboardLight].add(m_spotLights[it.index]->position, {0.0f, 8.0f, 0.0f}, false);
         }
     }
 

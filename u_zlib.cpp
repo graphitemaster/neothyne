@@ -106,27 +106,29 @@ bool zlib::huffmanTree::decode(bool &decoded, size_t &r, size_t &treepos, size_t
     return true;
 }
 
-void zlib::inflator::inflate(u::vector<unsigned char> &out, const u::vector<unsigned char> &in, size_t inpos) {
+bool zlib::inflator::inflate(u::vector<unsigned char> &out, const unsigned char *in, size_t length, size_t inpos) {
     size_t bp = 0;
     size_t pos = 0;
     size_t bfinal = 0;
     while (!bfinal && !m_error) {
-        if (bp >> 3 >= in.size())
-            returnError();
+        if (bp >> 3 >= length)
+            return false;
 
         bfinal = readBitFromStream(bp, &in[inpos]);
         size_t btype = readBitFromStream(bp, &in[inpos]);
         btype += 2 * readBitFromStream(bp, &in[inpos]);
 
         if (btype == 3)
-            returnError();
+            return false;
         else if (btype == 0)
-            inflateNoCompression(out, &in[inpos], bp, pos, in.size());
+            inflateNoCompression(out, &in[inpos], bp, pos, length);
         else
-            inflateHuffmanBlock(out, &in[inpos], bp, pos, in.size(), btype);
+            inflateHuffmanBlock(out, &in[inpos], bp, pos, length, btype);
     }
-    if (!m_error)
-        out.resize(pos);
+    if (m_error)
+        return false;
+    out.resize(pos);
+    return true;
 }
 
 // get the tree of a deflated block with fixed tree
@@ -359,8 +361,11 @@ void zlib::inflator::inflateNoCompression(u::vector<unsigned char> &out,
 }
 
 bool zlib::decompress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in) {
-    inflator inflator;
-    if (in.size() < 2)
+    return decompress(out, &in[0], in.size());
+}
+
+bool zlib::decompress(u::vector<unsigned char> &out, const unsigned char *in, size_t length) {
+    if (length < 2)
         return false;
     // 256 * in[0] + in[1] must be a multiple of 31, the FCHECK value is supposed to be made that way
     if ((in[0] * 256 + in[1]) % 31 != 0)
@@ -374,8 +379,7 @@ bool zlib::decompress(u::vector<unsigned char> &out, const u::vector<unsigned ch
     // "The additional flags shall not specify a preset dictionary."
     if (fdict != 0)
         return false;
-    inflator.inflate(out, in, 2);
-    return inflator.m_error == false;
+    return inflator().inflate(out, in, length, 2);
 }
 
 // zlib compression (fixed huffman only)
@@ -453,7 +457,7 @@ void zlib::deflator::huff(int n) {
         huffSwitch<4>(n);
 }
 
-void zlib::deflator::deflate(u::vector<unsigned char> &out, const u::vector<unsigned char> &in, int quality) {
+void zlib::deflator::deflate(u::vector<unsigned char> &out, const unsigned char *in, size_t length, int quality) {
     static constexpr size_t kHashSize = 16384;
     m_data = &out;
 
@@ -470,7 +474,7 @@ void zlib::deflator::deflate(u::vector<unsigned char> &out, const u::vector<unsi
     u::vector<unsigned char *> hashTable[kHashSize];
 
     int i = 0;
-    int dataLength = in.size();
+    int dataLength = length;
     while (i < dataLength - 3) {
         auto h = hash(&in[0] + i) & (kHashSize - 1);
         size_t best = 3;
@@ -560,9 +564,12 @@ void zlib::deflator::deflate(u::vector<unsigned char> &out, const u::vector<unsi
     out.push_back((unsigned char)(s1));
 }
 
-bool zlib::compress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in) {
-    deflator deflate;
-    deflate.deflate(out, in);
+bool zlib::compress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in, int quality) {
+    return compress(out, &in[0], in.size(), quality);
+}
+
+bool zlib::compress(u::vector<unsigned char> &out, const unsigned char *in, size_t length, int quality) {
+    deflator().deflate(out, in, length, quality);
     return true;
 }
 

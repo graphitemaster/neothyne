@@ -8,11 +8,13 @@
 #include "u_file.h"
 #include "u_algorithm.h"
 #include "u_misc.h"
+#include "u_zlib.h"
 
 #include "m_const.h"
 
-VAR(int, r_texcomp, "texture compression", 0, 1, 1);
-VAR(int, r_texcompcache, "cache compressed textures", 0, 1, 1);
+VAR(int, r_tex_compress, "texture compression", 0, 1, 1);
+VAR(int, r_tex_compress_cache, "cache compressed textures", 0, 1, 1);
+VAR(int, r_tex_compress_cache_zlib, "zlib compress cached compressed textures", 0, 1, 1);
 VAR(int, r_aniso, "anisotropic filtering", 0, 16, 4);
 VAR(int, r_bilinear, "bilinear filtering", 0, 1, 1);
 VAR(int, r_trilinear, "trilinear filtering", 0, 1, 1);
@@ -391,7 +393,7 @@ template u::vector<unsigned char> dxtCompress<kDXT5>(const unsigned char *const 
 
 #endif //! DXT_COMPRESSOR
 
-static const unsigned char kTextureCacheVersion = 0x02;
+static const unsigned char kTextureCacheVersion = 0x04;
 
 struct textureCacheHeader {
     unsigned char version;
@@ -399,6 +401,7 @@ struct textureCacheHeader {
     size_t height;
     GLuint internal;
     textureFormat format;
+    uint8_t compressed;
 };
 
 static const char *cacheFormat(GLuint internal) {
@@ -432,7 +435,7 @@ static u::string sizeMetric(size_t size) {
 }
 
 static bool readCache(texture &tex, GLuint &internal) {
-    if (!r_texcomp)
+    if (!r_tex_compress)
         return false;
 
     // If the texture is not on disk then don't cache the compressed version
@@ -493,20 +496,33 @@ static bool readCache(texture &tex, GLuint &internal) {
     const unsigned char *data = &vec[0] + sizeof(head);
     const size_t length = vec.size() - sizeof(head);
 
+    // decompress
+    u::vector<unsigned char> decompress;
+    const unsigned char *fromData = nullptr;
+    size_t fromSize = 0;
+    if (head.compressed) {
+        u::zlib::decompress(decompress, data, length);
+        fromData = &decompress[0];
+        fromSize = decompress.size();
+    } else {
+        fromData = data;
+        fromSize = length;
+    }
+
     internal = head.internal;
 
     // Now swap!
     tex.unload();
-    tex.from(data, length, head.width, head.height, false, head.format);
+    tex.from(fromData, fromSize, head.width, head.height, false, head.format);
     u::print("[cache] => read %.50s... %s (%s)\n", cacheString,
-        cacheFormat(head.internal), sizeMetric(length));
+        cacheFormat(head.internal), sizeMetric(fromSize));
     return true;
 }
 
 static bool writeCacheData(textureFormat format,
                            size_t texSize,
                            const u::string &cacheString,
-                           const unsigned char *const compressedData,
+                           unsigned char *compressedData,
                            size_t compressedWidth,
                            size_t compressedHeight,
                            size_t compressedSize,
@@ -520,14 +536,7 @@ static bool writeCacheData(textureFormat format,
     head.height = u::endianSwap(compressedHeight);
     head.internal = u::endianSwap(internal);
     head.format = u::endianSwap(format);
-
-    // Prepare the data
-    u::vector<unsigned char> data;
-    data.resize(sizeof(head) + compressedSize);
-    memcpy(&data[0], &head, sizeof(head));
-
-    // Copy the compressed image
-    memcpy(&data[0] + sizeof(head), compressedData, compressedSize);
+    head.compressed = r_tex_compress_cache_zlib;
 
     // Apply DXT optimizations if we can
     const bool dxt = internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
@@ -536,9 +545,27 @@ static bool writeCacheData(textureFormat format,
     size_t dxtOptimCount = 0;
     if (r_dxt_optimize && dxt) {
         dxtOptimCount = (internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT)
-            ? dxtOptimize<kDXT1>(&data[0] + sizeof(head), compressedWidth, compressedHeight)
-            : dxtOptimize<kDXT5>(&data[0] + sizeof(head), compressedWidth, compressedHeight);
+            ? dxtOptimize<kDXT1>(compressedData, compressedWidth, compressedHeight)
+            : dxtOptimize<kDXT5>(compressedData, compressedWidth, compressedHeight);
     }
+
+    // zlib compress the texture data
+    u::vector<unsigned char> compressedTexture;
+    const unsigned char *toData = nullptr;
+    size_t toSize = 0;
+    if (r_tex_compress_cache_zlib) {
+        u::zlib::compress(compressedTexture, compressedData, compressedSize);
+        toData = &compressedTexture[0];
+        toSize = compressedTexture.size();
+    } else {
+        toData = compressedData;
+        toSize = compressedSize;
+    }
+
+    // prepare file data
+    u::vector<unsigned char> data(sizeof(head) + toSize);
+    memcpy(&data[0], &head, sizeof(head));
+    memcpy(&data[0] + sizeof(head), toData, toSize);
 
     u::print("[cache] => wrote %.50s... %s (compressed %s to %s with %s compressor)",
         cacheString,
@@ -565,7 +592,7 @@ static bool writeCacheData(textureFormat format,
 }
 
 static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
-    if (!r_texcompcache)
+    if (!r_tex_compress_cache)
         return false;
 
     // Don't cache already disk-compressed textures
@@ -694,7 +721,7 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
         tex.convert<kTexFormatLuminance>();
 
     // Texture compression?
-    if (r_texcomp && !(tex.flags() & kTexFlagNoCompress)) {
+    if (r_tex_compress && !(tex.flags() & kTexFlagNoCompress)) {
         const bool bptc = gl::has(gl::ARB_texture_compression_bptc);
         const bool s3tc = gl::has(gl::EXT_texture_compression_s3tc);
         const bool rgtc = gl::has(gl::EXT_texture_compression_rgtc);

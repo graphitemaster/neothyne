@@ -6,8 +6,10 @@
 namespace u {
 
 struct zlib {
-    bool decompress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in);
-    bool compress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in);
+    static bool decompress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in);
+    static bool decompress(u::vector<unsigned char> &out, const unsigned char *in, size_t length);
+    static bool compress(u::vector<unsigned char> &out, const u::vector<unsigned char> &in, int quality = 5);
+    static bool compress(u::vector<unsigned char> &out, const unsigned char *in, size_t length, int quality = 5);
 
 private:
     static size_t readBitFromStream(size_t &bitp, const unsigned char *bits);
@@ -32,7 +34,7 @@ private:
         {
         }
 
-        void deflate(u::vector<unsigned char> &out, const u::vector<unsigned char> &in, int quality = 5);
+        void deflate(u::vector<unsigned char> &out, const unsigned char *in, size_t length, int quality = 5);
 
     protected:
         int bitReverse(int code, int codeBits);
@@ -62,7 +64,7 @@ private:
         {
         }
 
-        void inflate(u::vector<unsigned char> &out, const u::vector<unsigned char> &in, size_t inpos = 0);
+        bool inflate(u::vector<unsigned char> &out, const unsigned char *in, size_t length, size_t inpos = 0);
 
         // get the tree of a deflated block with fixed tree
         void generateFixedTrees(huffmanTree& tree, huffmanTree& treeD);
