@@ -132,8 +132,7 @@ private:
     u::map<u::string, model*> m_models;
     u::map<u::string, billboard*> m_billboards;
 
-    // HACK: Testing only
-    particleSystem m_particles;
+    u::vector<r::particleSystem*> m_particleSystems;
 
     // HACK: Testing only
     model m_gun;

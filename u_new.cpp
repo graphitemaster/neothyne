@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <assert.h>
+
 #include "u_new.h"
 
 voidptr neoMalloc(size_t size) {
@@ -20,6 +22,11 @@ voidptr neoAlignedMalloc(size_t size, size_t alignment) {
     void **store = (void**)(((size_t)((void *)data) + offset) & ~(alignment - 1));
     store[-1] = data;
     return store;
+}
+
+extern "C" void __cxa_pure_virtual() {
+    assert(0 && "pure virtual function call");
+    abort();
 }
 
 void neoAlignedFree(voidptr ptr) {

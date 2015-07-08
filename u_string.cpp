@@ -274,7 +274,7 @@ void stringMemory::print() {
         char *put = data.get();
         for (const char *s = str; *s; s++) {
             unsigned char ch = *s;
-            if (ch > ' ' && ch <= '~' && ch != '\\' && ch != '"')
+            if (ch >= ' ' && ch <= '~' && ch != '\\' && ch != '"')
                 *put++ = ch;
             else {
                 *put++ = '\\';

@@ -6,18 +6,6 @@
 
 namespace r {
 
-///! particle
-particle::particle()
-    : currentSize(1.0f)
-    , startSize(1.0f)
-    , currentAlpha(1.0f)
-    , startAlpha(1.0f)
-    , lifeTime(1.0f)
-    , totalLifeTime(2.0f)
-    , respawn(false)
-{
-}
-
 ///! particleSystemMethod
 particleSystemMethod::particleSystemMethod()
     : m_VPLocation(0)
@@ -56,19 +44,14 @@ void particleSystemMethod::setColorTextureUnit(int unit) {
 }
 
 ///! particleSystem
-particleSystem::particleSystem()
-    : m_initFunction(nullptr)
-    , m_gravity(1.0f)
-{
+particleSystem::particleSystem() {
 }
 
-bool particleSystem::load(const u::string &file, initParticleFunction initFunction) {
-    if (initFunction) {
-        m_initFunction = initFunction;
-        if (m_texture.load(file))
-            return true;
-    }
-    return false;
+particleSystem::~particleSystem() {
+}
+
+bool particleSystem::load(const u::string &file) {
+    return m_texture.load(file);
 }
 
 bool particleSystem::upload() {
@@ -117,18 +100,18 @@ void particleSystem::render(const pipeline &pl) {
         if (it.lifeTime < 0.0f)
             continue;
 
-        const m::vec3 x = it.currentSize * 0.5f * side;
-        const m::vec3 y = it.currentSize * 0.5f * up;
-        const m::vec3 q1 =  x + y + it.currentOrigin;
-        const m::vec3 q2 = -x + y + it.currentOrigin;
-        const m::vec3 q3 = -x - y + it.currentOrigin;
-        const m::vec3 q4 =  x - y + it.currentOrigin;
+        const m::vec3 x = it.size * 0.5f * side;
+        const m::vec3 y = it.size * 0.5f * up;
+        const m::vec3 q1 =  x + y + it.origin;
+        const m::vec3 q2 = -x + y + it.origin;
+        const m::vec3 q3 = -x - y + it.origin;
+        const m::vec3 q4 =  x - y + it.origin;
 
         const size_t index = m_vertices.size();
-        m_vertices.push_back({q1, 0.0f, 0.0f, it.color.x, it.color.y, it.color.z, it.currentAlpha});
-        m_vertices.push_back({q2, 1.0f, 0.0f, it.color.x, it.color.y, it.color.z, it.currentAlpha});
-        m_vertices.push_back({q3, 1.0f, 1.0f, it.color.x, it.color.y, it.color.z, it.currentAlpha});
-        m_vertices.push_back({q4, 0.0f, 1.0f, it.color.x, it.color.y, it.color.z, it.currentAlpha});
+        m_vertices.push_back({q1, 0.0f, 0.0f, it.color.x, it.color.y, it.color.z, it.alpha});
+        m_vertices.push_back({q2, 1.0f, 0.0f, it.color.x, it.color.y, it.color.z, it.alpha});
+        m_vertices.push_back({q3, 1.0f, 1.0f, it.color.x, it.color.y, it.color.z, it.alpha});
+        m_vertices.push_back({q4, 0.0f, 1.0f, it.color.x, it.color.y, it.color.z, it.alpha});
 
         indices.push_back(index + 0);
         indices.push_back(index + 1);
@@ -167,20 +150,22 @@ void particleSystem::addParticle(particle &&p) {
 
 void particleSystem::update(const pipeline &p) {
     const float dt = p.delta() * 0.1f;
+    const float gravity = getGravity();
+
     for (auto &it : m_particles) {
         if (it.lifeTime < 0.0f) {
             if (it.respawn)
-                m_initFunction(it);
+                initParticle(it, p.position());
             else
                 continue;
         }
-        it.currentOrigin += it.velocity * dt - m::vec3(0.0f, dt*dt*0.5f*m_gravity, 0.0f);
-        it.velocity.y -= m_gravity*dt;
+        it.origin = it.origin + it.velocity*dt - m::vec3(0.0f, dt*dt*0.5f*gravity, 0.0f);
+        it.velocity.y -= gravity*dt;
         it.lifeTime -= dt;
         const float f = it.lifeTime / it.totalLifeTime;
-        const float scale = m::sin(f / m::kPi);
-        it.currentAlpha = it.startAlpha * scale;
-        it.currentSize = scale * it.startSize + 0.1f;
+        const float scale = m::sin(f * m::kPi);
+        it.alpha = it.startAlpha * scale;
+        it.size = scale * it.startSize + 0.1f;
     }
 }
 

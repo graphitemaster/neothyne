@@ -212,7 +212,8 @@ static void menuDeveloper() {
     auto &bilinear = varGet<int>("r_bilinear");
     auto &fog = varGet<int>("r_fog");
     auto &spec = varGet<int>("r_spec");
-    auto &texcompcache = varGet<int>("r_texcompcache");
+    auto &texcompcache = varGet<int>("r_tex_compress_cache");
+    auto &texcompcachezlib = varGet<int>("r_tex_compress_cache_zlib");
     auto &hoq = varGet<int>("r_hoq");
     auto &maxhoq = varGet<int>("r_maxhoq");
     auto &mipmaps = varGet<int>("r_mipmaps");
@@ -226,6 +227,8 @@ static void menuDeveloper() {
         gui::indent();
             if (gui::check("Texture compression cache", texcompcache))
                 texcompcache.toggle();
+            if (gui::check("Texture compression cache (on disk compression)", texcompcachezlib))
+                texcompcachezlib.toggle();
             if (gui::button("Clear texture cache")) {
                 const u::string cachePath = neoUserPath() + "cache";
                 for (const auto &it : u::dir(cachePath)) {
@@ -331,7 +334,7 @@ static void menuOptions() {
             auto &ssao = varGet<int>("r_ssao");
             auto &fxaa = varGet<int>("r_fxaa");
             auto &parallax = varGet<int>("r_parallax");
-            auto &texcomp = varGet<int>("r_texcomp");
+            auto &texcomp = varGet<int>("r_tex_compress");
             auto &texquality = varGet<float>("r_texquality");
             gui::indent();
                 gui::slider<int>("Anisotropic", aniso.get(), aniso.min(), aniso.max(), 1);

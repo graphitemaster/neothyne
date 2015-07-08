@@ -289,6 +289,8 @@ void world::unload(bool destroy) {
         delete it.second;
     for (auto &it : m_billboards)
         delete it.second;
+    for (auto *it : m_particleSystems)
+        delete it;
 
     if (destroy) {
         m_models.clear();
@@ -302,21 +304,41 @@ void world::unload(bool destroy) {
     m_uploaded = false;
 }
 
-// HACK: Testing only
-void testParticle(particle &p) {
-    p.startAlpha = 0.6f;
-    p.currentAlpha = 0.6f;
-    p.color = m::vec3(1.0f, 1.0f, 1.0f);
-    p.totalLifeTime = u::randf() * 0.2f;
+// a particle!
+struct dustSystem : particleSystem {
+    dustSystem(const m::vec3 &ownerPosition);
+protected:
+    void initParticle(particle &p, const m::vec3 &ownerPosition);
+    virtual float getGravity() { return 98.0f; }
+private:
+    m::vec3 m_direction;
+};
+
+dustSystem::dustSystem(const m::vec3 &ownerPosition) {
+    static constexpr size_t kParticles = 2048*2;
+    m_particles.reserve(kParticles);
+    for (size_t i = 0; i < kParticles; i++) {
+        particle p;
+        initParticle(p, ownerPosition);
+        addParticle(u::move(p));
+    }
+    m_direction = { 0.0f, 0.0f, -1.0f };
+    if (m_direction*m_direction > 0.1f)
+        m_direction = m_direction.normalized() * 12.0f;
+}
+
+void dustSystem::initParticle(particle &p, const m::vec3 &ownerPosition) {
+    p.startAlpha = 1.0f;
+    p.alpha = 1.0f;
+    p.color = { 1.0f, 1.0f, 1.0f };
+    p.totalLifeTime = 0.3f + u::randf() * 0.9f;
     p.lifeTime = p.totalLifeTime;
-    if (p.startOrigin == m::vec3::origin)
-        p.startOrigin = m::vec3(0, 120, 0);
-    else
-        p.startOrigin += m::vec3::rand(0.05f, 0.05f, 0.05f);
-    p.currentOrigin = p.startOrigin;
-    p.startSize = 128.0f;
-    p.currentSize = p.startSize;
-    p.velocity = m::vec3(0.0f, 95.0f, 0.0f);
+    p.origin = m::vec3::rand(0.05f, 0.0f, 0.05f) + ownerPosition;
+    p.origin.y = ownerPosition.y - 3.0f;;
+    p.size = 1.0f;
+    p.startSize = 1.0f;
+    p.velocity = (m_direction + m::vec3::rand(1.5f, 0.0f, 1.5f)).normalized() * 10.0f;
+    p.velocity.y = 0.1f;
     p.respawn = true;
 }
 
@@ -376,10 +398,6 @@ bool world::load(const kdMap &map) {
     }
 
     // HACK: Testing only
-    if (!m_particles.load("textures/particle", &testParticle))
-        neoFatal("failed to load particle");
-
-    // HACK: Testing only
     if (!m_gun.load(m_textures2D, "models/lg"))
         neoFatal("failed to load gun");
 
@@ -394,6 +412,10 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     m_identity.loadIdentity();
 
+    // particles for entities
+    for (auto *it : m_particleSystems)
+        it->load("textures/particle"); // TODO: texture cache for particles
+
     // upload skybox
     if (!m_skybox.upload())
         neoFatal("failed to upload skybox");
@@ -405,18 +427,12 @@ bool world::upload(const m::perspective &p, ::world *map) {
         neoFatal("failed to upload bbox");
 
     // HACK: Testing only
-    if (!m_particles.upload())
-        neoFatal("failed to upload particles");
-
-    for (size_t i = 0; i < 128; i++) {
-        particle p;
-        testParticle(p);
-        m_particles.addParticle(u::move(p));
-    }
-
-    // HACK: Testing only
     if (!m_gun.upload())
         neoFatal("failed to upload gun");
+
+    // upload particle systems
+    for (auto *it : m_particleSystems)
+        it->upload();
 
     // upload materials
     for (auto &it : m_textureBatches)
@@ -578,8 +594,6 @@ void world::occlusionPass(const pipeline &pl, ::world *map) {
     // Dispatch all the queries
     m_queries.render();
 }
-
-NVAR(float, r_frame, "", 0.0f, 10000.0f, 1.0f);
 
 void world::geometryPass(const pipeline &pl, ::world *map) {
     auto p = pl;
@@ -978,8 +992,10 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
 
     // Particles
     gl::Disable(GL_CULL_FACE);
-    m_particles.update(pl);
-    m_particles.render(pl);
+    for (auto *it : m_particleSystems) {
+        it->update(pl);
+        it->render(pl);
+    }
     gl::Enable(GL_CULL_FACE);
 
     // Don't need depth testing or blending anymore

@@ -15,19 +15,16 @@ namespace r {
 struct pipeline;
 
 struct particle {
-    particle();
-    m::vec3 startOrigin;
-    m::vec3 currentOrigin;
+    m::vec3 origin;
     m::vec3 velocity;
-    m::vec3 color;
-    float currentSize;
+    float size;
     float startSize;
-    float currentAlpha;
+    m::vec3 color;
+    float alpha;
     float startAlpha;
     float lifeTime;
     float totalLifeTime;
     bool respawn;
-
 };
 
 struct particleSystemMethod : method {
@@ -41,17 +38,22 @@ private:
 };
 
 struct particleSystem : geom {
-    typedef void (*initParticleFunction)(particle &p);
-
     particleSystem();
+    virtual ~particleSystem();
 
-    bool load(const u::string &file, initParticleFunction initFunction);
+    bool load(const u::string &file);
     bool upload();
 
     void render(const pipeline &p);
-    void update(const pipeline &p);
+    virtual void update(const pipeline &p);
 
     void addParticle(particle &&p);
+
+protected:
+    virtual void initParticle(particle &p, const m::vec3 &ownerPosition) = 0;
+    virtual float getGravity() { return 25.0f; };
+
+    u::vector<particle> m_particles;
 
 private:
     struct vertex {
@@ -60,10 +62,7 @@ private:
         float r, g, b, a;
     };
     u::vector<vertex> m_vertices;
-    u::vector<particle> m_particles;
-    initParticleFunction m_initFunction;
     particleSystemMethod m_method;
-    float m_gravity;
     texture2D m_texture;
 };
 
