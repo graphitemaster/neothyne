@@ -277,6 +277,8 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
     float dispScale = 0;
     float dispBias = 0;
 
+    int32_t colorized = -1;
+
     while (auto line = u::getline(fp)) {
         auto get = *line;
         auto split = u::split(get);
@@ -308,6 +310,8 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
             m_animFrames = u::atoi(split[4]);
             if (split.size() > 5) m_animFlipU = u::atoi(split[5]);
             if (split.size() > 6) m_animFlipV = u::atoi(split[6]);
+        } else if (key == "colorize" && split.size() == 2) {
+            colorized = strtol(split[1].c_str(), nullptr, 16);
         }
     }
 
@@ -322,6 +326,10 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
                 auto release = tex.release();
                 textures[ident] = release;
                 *store = release;
+                if (colorized != -1) {
+                    u::print("[material] => `%s' colorized with 0x%08X\n", ident, colorized);
+                    (*store)->colorize(colorized);
+                }
             } else {
                 *store = nullptr;
             }

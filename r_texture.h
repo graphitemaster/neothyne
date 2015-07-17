@@ -18,6 +18,7 @@ struct texture2D {
 
     texture2D(texture &tex, bool mipmaps = true, int filter = kFilterDefault);
 
+    void colorize(uint32_t color); // must be called before upload
     bool load(const u::string &file);
     bool upload();
     bool cache(GLuint internal);

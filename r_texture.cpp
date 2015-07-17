@@ -812,6 +812,10 @@ bool texture2D::useCache() {
     return true;
 }
 
+void texture2D::colorize(uint32_t color) {
+    m_texture.colorize(color);
+}
+
 void texture2D::applyFilter() {
     if (r_bilinear && (m_filter & kFilterBilinear)) {
         GLenum min = (r_mipmaps && m_mipmaps)

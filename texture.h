@@ -56,6 +56,8 @@ struct texture {
 
     bool save(const u::string &file, saveFormat save = kSaveBMP, float quality = 1.0f);
 
+    void colorize(uint32_t color);
+
     template <size_t S>
     static void halve(unsigned char *src, size_t sw, size_t sh, size_t stride,
         unsigned char *dst);

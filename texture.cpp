@@ -2029,6 +2029,46 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
     return true;
 }
 
+void texture::colorize(uint32_t color) {
+    const uint8_t alpha = color & 0xFF;
+    auto blend = [&alpha](uint32_t a, uint32_t b) {
+        const uint32_t rb1 = ((0x100 - alpha) * (a & 0xFF00FF)) >> 8;
+        const uint32_t rb2 = (alpha * (b & 0xFF00FF)) >> 8;
+        const uint32_t g1 = ((0x100 - alpha) * (a & 0x00FF00)) >> 8;
+        const uint32_t g2 = (alpha * (b & 0x00FF00)) >> 8;
+        return ((rb1 | rb2) & 0xFF00FF) + ((g1 | g2) & 0x00FF00);
+    };
+
+
+    assert(m_format == kTexFormatBGR || m_format == kTexFormatBGRA ||
+           m_format == kTexFormatRGB || m_format == kTexFormatRGBA);
+
+    for (size_t i = 0; i < m_data.size(); i += m_bpp) {
+        uint8_t *R = nullptr;
+        uint8_t *B = nullptr;
+        uint8_t *G = &m_data[i+1];
+        if (m_format == kTexFormatBGR || m_format == kTexFormatBGRA) {
+            R = &m_data[i + 2];
+            B = &m_data[i + 0];
+        } else {
+            R = &m_data[i + 0];
+            B = &m_data[i + 2];
+        }
+        // input color is RGBA, we need RGB int
+        const uint8_t R_ = color >> 24;
+        const uint8_t G_ = color >> 16;
+        const uint8_t B_ = color >> 8;
+        const uint32_t RGB = blend((*R << 16) | (*G << 8) | *B, (R_ << 16) | (G_ << 8) | B_);
+        *R = (RGB >> 16) & 0xFF;
+        *G = (RGB >> 8) & 0xFF;
+        *B = RGB & 0xFF;
+    }
+
+    // Hash the contents as well to generate a hash string
+    u::sha512 hash(&m_data[0], m_data.size());
+    m_hashString = hash.hex();
+}
+
 u::optional<u::string> texture::find(const u::string &infile) {
     static struct tag {
         const char *name;
