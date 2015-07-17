@@ -477,6 +477,7 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
     if (!fp)
         return false;
 
+    u::vector<u::string> animNames;
     u::vector<u::string> materialNames;
     u::vector<u::string> materialFiles;
     u::string name;
@@ -499,11 +500,13 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
             materialFiles.push_back(split[2]);
         } else if (split[0] == "half") {
             m_half = !!u::atoi(split[1]);
+        } else if (split[0] == "anim") {
+            animNames.push_back(split[1]);
         }
     }
 
     // Now use that to load the mesh
-    if (!m_model.load("models/" + name))
+    if (!m_model.load("models/" + name, animNames))
         return false;
 
     // Copy the model batches

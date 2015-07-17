@@ -253,7 +253,7 @@ bool obj::load(const u::string &file, model *store) {
 
 ///! IQM loader
 struct iqm {
-    bool load(const u::string &file, model *store);
+    bool load(const u::string &file, model *store, const u::vector<u::string> &anims);
 protected:
     struct iqmHeader {
         static constexpr const char *kMagic = "INTERQUAKEMODEL";
@@ -476,7 +476,8 @@ bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store) {
 
     const iqmPose *poses = (iqmPose*)&buf[hdr->ofsPoses];
 
-    store->m_frames.resize(hdr->numFrames * hdr->numPoses);
+    const size_t size = store->m_frames.size();
+    store->m_frames.resize(size + hdr->numFrames * hdr->numPoses);
     uint16_t *frameData = (uint16_t*)&buf[hdr->ofsFrames];
     for (uint32_t i = 0; i < hdr->numFrames; i++) {
         for (uint32_t j = 0; j < hdr->numPoses; j++) {
@@ -490,7 +491,7 @@ bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store) {
             const m::quat rotate(data[3], data[4], data[5], data[6]);
             const m::vec3 scale(data[7], data[8], data[9]);
             const m::mat3x4 m(rotate.normalize(), translate, scale);
-            store->m_frames[i*hdr->numPoses + j] =
+            store->m_frames[size + (i*hdr->numPoses + j)] =
                 p.parent >= 0
                     ? m_baseFrame[p.parent] * m * m_inverseBaseFrame[j]
                     : m * m_inverseBaseFrame[j];
@@ -500,7 +501,7 @@ bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store) {
     return true;
 }
 
-bool iqm::load(const u::string &file, model *store) {
+bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &anims) {
     auto read = u::read(neoGamePath() + file + ".iqm", "rb");
     if (!read)
         return false;
@@ -531,15 +532,35 @@ bool iqm::load(const u::string &file, model *store) {
         store->m_batches.push_back(b);
     }
 
+    // load optional animation files
+    for (auto &it : anims) {
+        const auto fileName = u::format("%s%c%s.iqm", neoGamePath(), u::kPathSep, it);
+        auto readAnim = u::read(fileName, "rb");
+        // this silently ignores animation files which are not valid or correct
+        // version IQM files or cannot be opened (permission, non existent, etc.)
+        if (!readAnim)
+            continue;
+        auto animData = *read;
+        iqmHeader *animHdr = (iqmHeader*)&animData[0];
+        if (memcmp(animHdr->magic, (const void *)iqmHeader::kMagic, sizeof(animHdr->magic)))
+            continue;
+        animHdr->endianSwap();
+        if (animHdr->version != iqmHeader::kVersion)
+            continue;
+        if (animHdr->numAnims > 0 && !loadAnims(animHdr, &animData[0], store))
+            continue;
+        u::print("[model] => loaded animation `%s' for `%s'\n", it, file);
+    }
+
     return true;
 }
 
 model::~model() = default;
 
-bool model::load(const u::string &file) {
+bool model::load(const u::string &file, const u::vector<u::string> &anims) {
     const auto iqm_ = u::format("%s%c%s.iqm", neoGamePath(), u::kPathSep, file);
     const auto obj_ = u::format("%s%c%s.obj", neoGamePath(), u::kPathSep, file);
-    if (u::exists(iqm_) && !iqm().load(file, this))
+    if (u::exists(iqm_) && !iqm().load(file, this, anims))
         return false;
     else if (u::exists(obj_) && !obj().load(file, this))
         return false;

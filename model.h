@@ -16,7 +16,7 @@ struct model {
         size_t material; // Material index for rendering (calculated in r_model.cpp)
     };
 
-    bool load(const u::string &file);
+    bool load(const u::string &file, const u::vector<u::string> &anims = {});
 
     const u::vector<mesh::basicVertex> &basicVertices() const;
     const u::vector<mesh::animVertex> &animVertices() const;
