@@ -11,9 +11,12 @@ template <typename K>
 struct set {
     set();
     set(const set &other);
+    set(set &&other);
+
     ~set();
 
-    set& operator=(const set& other);
+    set &operator=(const set &other);
+    set &operator=(set &&other);
 
     typedef hash_iterator<const hash_node<K, void>> const_iterator;
     typedef const_iterator iterator;
@@ -47,7 +50,7 @@ set<K>::set()
 }
 
 template <typename K>
-set<K>::set(const set &other)
+set<K>::set(const set<K> &other)
     : m_size(other.m_size)
 {
     const size_t nbuckets = size_t(other.m_buckets.last - other.m_buckets.first);
@@ -63,13 +66,30 @@ set<K>::set(const set &other)
 }
 
 template <typename K>
+set<K>::set(set<K> &&other)
+    : m_size(other.m_size)
+    , m_buckets(u::move(other.m_buckets))
+{
+    other.m_size = 0;
+}
+
+template <typename K>
 set<K>::~set() {
     clear();
 }
 
 template <typename K>
-set<K>& set<K>::operator=(const set<K> &other) {
+set<K> &set<K>::operator=(const set<K> &other) {
     set<K>(other).swap(*this);
+    return *this;
+}
+
+template <typename K>
+set<K> &set<K>::operator=(set<K> &&other) {
+    if (this == &other) assert(0);
+    m_size = other.m_size;
+    m_buckets = u::move(other.m_buckets);
+    other.m_size = 0;
     return *this;
 }
 

@@ -12,9 +12,12 @@ class map {
 public:
     map();
     map(const map &other);
+    map(map &&other);
+
     ~map();
 
-    map& operator=(const map &other);
+    map &operator=(const map &other);
+    map &operator=(map &&other);
 
     typedef pair<K, V> value_type;
 
@@ -36,7 +39,7 @@ public:
     pair<iterator, bool> insert(const pair<K, V> &p);
     void erase(const_iterator where);
 
-    V& operator[](const K &key);
+    V &operator[](const K &key);
 
     void swap(map &other);
 
@@ -54,7 +57,7 @@ map<K, V>::map()
 }
 
 template <typename K, typename V>
-map<K, V>::map(const map& other)
+map<K, V>::map(const map<K, V> &other)
     : m_size(other.m_size)
 {
     const size_t nbuckets = size_t(other.m_buckets.last - other.m_buckets.first);
@@ -70,6 +73,14 @@ map<K, V>::map(const map& other)
 }
 
 template <typename K, typename V>
+map<K, V>::map(map<K, V> &&other)
+    : m_size(other.m_size)
+    , m_buckets(u::move(other.m_buckets))
+{
+    other.m_size = 0;
+}
+
+template <typename K, typename V>
 map<K, V>::~map() {
     clear();
 }
@@ -79,6 +90,16 @@ map<K, V> &map<K, V>::operator=(const map<K, V> &other) {
     map<K, V>(other).swap(*this);
     return *this;
 }
+
+template <typename K, typename V>
+map<K, V> &map<K, V>::operator=(map<K, V> &&other) {
+    if (this == &other) assert(0);
+    m_size = other.m_size;
+    m_buckets = u::move(other.m_buckets);
+    other.m_size = 0;
+    return *this;
+}
+
 
 template <typename K, typename V>
 inline typename map<K, V>::iterator map<K, V>::begin() {
