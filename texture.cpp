@@ -2484,10 +2484,7 @@ void texture::resize(size_t width, size_t height) {
 }
 
 void texture::unload() {
-    m_data.resize(0);
-    m_width = 0;
-    m_height = 0;
-    m_pitch = 0;
+    m_data.destroy();
 }
 
 const u::string &texture::hashString() const {

@@ -863,7 +863,7 @@ void gui::drawText(float x, float y, const char *contents, int align, uint32_t c
     b.start = m_vertices.size();
     m_vertices.reserve(m_vertices.size() + 6 * size);
     for (const char *ch = contents; *ch; ch++) {
-        auto quad = getGlyphQuad(512, 512, *ch - 32, x, y);
+        auto quad = getGlyphQuad(m_font.width(), m_font.height(), *ch - 32, x, y);
         if (!quad)
             continue;
         const auto q = *quad;
