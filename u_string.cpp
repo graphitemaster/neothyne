@@ -332,13 +332,23 @@ string::string()
 {
 }
 
-string::string(const string& other)
+string::string(const string &other)
     : m_first(nullptr)
     , m_last(nullptr)
     , m_capacity(nullptr)
 {
     reserve(other.size());
     append(other.m_first, other.m_last);
+}
+
+string::string(string &&other)
+    : m_first(other.m_first)
+    , m_last(other.m_last)
+    , m_capacity(other.m_capacity)
+{
+    other.m_first = nullptr;
+    other.m_last = nullptr;
+    other.m_capacity = nullptr;
 }
 
 string::string(const char* sz)
@@ -364,12 +374,23 @@ string::~string() {
     STR_FREE(m_first);
 }
 
-string& string::operator=(const string& other) {
+string &string::operator=(const string &other) {
     string(other).swap(*this);
     return *this;
 }
 
-const char* string::c_str() const {
+string &string::operator=(string &&other) {
+    if (this == &other) assert(0);
+    m_first = other.m_first;
+    m_last = other.m_last;
+    m_capacity = other.m_capacity;
+    other.m_first = nullptr;
+    other.m_last = nullptr;
+    other.m_capacity = nullptr;
+    return *this;
+}
+
+const char *string::c_str() const {
     return m_first;
 }
 

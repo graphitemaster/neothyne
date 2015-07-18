@@ -77,13 +77,15 @@ struct vector {
 
     vector();
     vector(const vector &other);
+    vector(vector &&other);
     vector(size_t size);
     vector(size_t size, const T &value);
     vector(const T *first, const T *last);
     vector(initializer_list<T> data);
     ~vector();
 
-    vector& operator=(const vector &other);
+    vector &operator=(const vector &other);
+    vector &operator=(vector &&other);
 
     void assign(const T *first, const T *last);
 
@@ -129,12 +131,20 @@ private:
 
 template <typename T>
 inline vector<T>::vector() {
+    // Empty
 }
 
 template <typename T>
 inline vector<T>::vector(const vector &other) {
     m_buffer.reserve(other.size());
     m_buffer.insert(m_buffer.last, other.m_buffer.first, other.m_buffer.last);
+}
+
+template <typename T>
+inline vector<T>::vector(vector &&other)
+    : m_buffer(u::move(other.m_buffer))
+{
+    // Empty
 }
 
 template <typename T>
@@ -159,11 +169,18 @@ inline vector<T>::vector(initializer_list<T> data) {
 
 template <typename T>
 inline vector<T>::~vector() {
+    // Empty
 }
 
 template <typename T>
-inline vector<T> &vector<T>::operator=(const vector &other) {
+inline vector<T> &vector<T>::operator=(const vector<T> &other) {
     vector(other).swap(*this);
+    return *this;
+}
+
+template <typename T>
+inline vector<T> &vector<T>::operator=(vector<T> &&other) {
+    m_buffer = u::move(other.m_buffer);
     return *this;
 }
 

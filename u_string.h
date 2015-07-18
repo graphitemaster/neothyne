@@ -12,9 +12,10 @@ struct string {
 
     // constructors
     string();
-    string(const string& other);
-    string(const char* sz);
-    string(const char* sz, size_t len);
+    string(const string &other);
+    string(string &&other);
+    string(const char *sz);
+    string(const char *sz, size_t len);
     template <typename I>
     string(I first, I last);
     ~string();
@@ -25,7 +26,8 @@ struct string {
     const_iterator begin() const;
     const_iterator end() const;
 
-    string& operator=(const string& other);
+    string &operator=(const string &other);
+    string &operator=(string &&other);
 
     const char* c_str() const;
     size_t size() const;

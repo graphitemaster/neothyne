@@ -1,5 +1,6 @@
 #ifndef U_BUFFER_HDR
 #define U_BUFFER_HDR
+#include <assert.h>
 #include <stdlib.h>
 
 #include "u_new.h"
@@ -51,11 +52,14 @@ static inline void move_construct(T *a, T& b) {
 template <typename T>
 struct buffer {
     buffer();
+    buffer(buffer &&other);
     ~buffer();
 
     T *first;
     T *last;
     T *capacity;
+
+    buffer &operator=(buffer &&other);
 
     void destroy();
     void destroy_range(T *first, T *last);
@@ -102,6 +106,29 @@ template <typename T>
 inline buffer<T>::~buffer() {
     destroy_range(first, last);
     neoFree(first);
+}
+
+template <typename T>
+inline buffer<T>::buffer(buffer<T> &&other)
+    : first(other.first)
+    , last(other.last)
+    , capacity(other.capacity)
+{
+    other.first = nullptr;
+    other.last = nullptr;
+    other.capacity = nullptr;
+}
+
+template <typename T>
+inline buffer<T> &buffer<T>::operator=(buffer<T> &&other) {
+    if (this == &other) assert(0);
+    first = other.first;
+    last = other.last;
+    capacity = other.capacity;
+    other.first = nullptr;
+    other.last = nullptr;
+    other.capacity = nullptr;
+    return *this;
 }
 
 template <typename T>
