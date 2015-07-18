@@ -128,12 +128,12 @@ u::optional<u::string> varValue(const u::string &name) {
     auto &ref = (*gVariables())[name];
 
     switch (ref.type) {
-        case kVarFloat:
-            return u::format("%.2f", ((var<float>*)ref.self)->get());
-        case kVarInt:
-            return u::format("%d", ((var<int>*)ref.self)->get());
-        case kVarString:
-            return u::format("%s", ((var<u::string>*)ref.self)->get());
+    case kVarFloat:
+        return u::format("%.2f", ((var<float>*)ref.self)->get());
+    case kVarInt:
+        return u::format("%d", ((var<int>*)ref.self)->get());
+    case kVarString:
+        return u::format("%s", ((var<u::string>*)ref.self)->get());
     }
 
     return u::none;

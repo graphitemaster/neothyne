@@ -101,16 +101,16 @@ void kdNode::split(const kdTree *tree, const u::vector<int> &tris, m::axis axis,
     plane = findSplittingPlane(tree, tris, axis);
     for (size_t i = 0; i < triangleCount; i++) {
         switch (tree->testTriangle(tris[i], plane)) {
-            case kPolyPlaneCoplanar:
-            case kPolyPlaneSplit:
-                splitList.push_back(tris[i]);
-                break;
-            case kPolyPlaneFront:
-                frontList.push_back(tris[i]);
-                break;
-            case kPolyPlaneBack:
-                backList.push_back(tris[i]);
-                break;
+        case kPolyPlaneCoplanar:
+        case kPolyPlaneSplit:
+            splitList.push_back(tris[i]);
+            break;
+        case kPolyPlaneFront:
+            frontList.push_back(tris[i]);
+            break;
+        case kPolyPlaneBack:
+            backList.push_back(tris[i]);
+            break;
         }
     }
 }
@@ -251,14 +251,14 @@ polyPlane kdTree::testTriangle(size_t index, const m::plane &plane) const {
     };
     for (size_t i = 0; i < 3; i++) {
         switch (plane.classify(vertices[indexTo[i]], kEpsilon)) {
-            case m::kPointPlaneFront:
-                backBits = kPolyPlaneSplit;
-                break;
-            case m::kPointPlaneBack:
-                frontBits = kPolyPlaneSplit;
-                break;
-            default:
-                break;
+        case m::kPointPlaneFront:
+            backBits = kPolyPlaneSplit;
+            break;
+        case m::kPointPlaneBack:
+            frontBits = kPolyPlaneSplit;
+            break;
+        default:
+            break;
         }
     }
     return (polyPlane)(frontBits | backBits);

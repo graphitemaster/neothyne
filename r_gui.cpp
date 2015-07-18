@@ -29,9 +29,9 @@ static void printRectangle(const ::gui::rectangle &it) {
 static void printText(const ::gui::text &it) {
     auto align = [](int a) {
         switch (a) {
-            case ::gui::kAlignCenter: return "center";
-            case ::gui::kAlignLeft:   return "left";
-            case ::gui::kAlignRight:  return "right";
+        case ::gui::kAlignCenter: return "center";
+        case ::gui::kAlignLeft:   return "left";
+        case ::gui::kAlignRight:  return "right";
         }
         return "";
     };
@@ -66,33 +66,33 @@ static void printModel(const ::gui::model &it) {
 
 static void printCommand(const ::gui::command &it) {
     switch (it.type) {
-        case ::gui::kCommandLine:
-            u::print("line:      (color: #%X)\n", it.color);
-            printLine(it.asLine);
-            break;
-        case ::gui::kCommandRectangle:
-            u::print("rectangle: (color: #%X)\n", it.color);
-            printRectangle(it.asRectangle);
-            break;
-        case ::gui::kCommandScissor:
-            u::print("scissor:\n");
-            printScissor(it.asScissor);
-            break;
-        case ::gui::kCommandText:
-            u::print("text:      (color: #%X)\n", it.color);
-            printText(it.asText);
-            break;
-        case ::gui::kCommandTriangle:
-            u::print("triangle:  (flags: %d | color: #%X)\n", it.flags, it.color);
-            printTriangle(it.asTriangle);
-            break;
-        case ::gui::kCommandImage:
-            u::print("image:\n");
-            printImage(it.asImage);
-        case ::gui::kCommandModel:
-            u::print("model:\n");
-            printModel(it.asModel);
-            break;
+    case ::gui::kCommandLine:
+        u::print("line:      (color: #%X)\n", it.color);
+        printLine(it.asLine);
+        break;
+    case ::gui::kCommandRectangle:
+        u::print("rectangle: (color: #%X)\n", it.color);
+        printRectangle(it.asRectangle);
+        break;
+    case ::gui::kCommandScissor:
+        u::print("scissor:\n");
+        printScissor(it.asScissor);
+        break;
+    case ::gui::kCommandText:
+        u::print("text:      (color: #%X)\n", it.color);
+        printText(it.asText);
+        break;
+    case ::gui::kCommandTriangle:
+        u::print("triangle:  (flags: %d | color: #%X)\n", it.flags, it.color);
+        printTriangle(it.asTriangle);
+        break;
+    case ::gui::kCommandImage:
+        u::print("image:\n");
+        printImage(it.asImage);
+    case ::gui::kCommandModel:
+        u::print("model:\n");
+        printModel(it.asModel);
+        break;
     }
     u::print("\n");
 }
@@ -366,38 +366,45 @@ gui::atlas::node *gui::atlasPack(const u::string &file) {
             // Convert all texture data into RGBA8
             switch (tex.format()) {
             case kTexFormatLuminance:
-                for (size_t i = 0; i < 4; i++)
-                    *beg++ = data[0];
-                data++;
+                *beg++ = *data;
+                *beg++ = *data;
+                *beg++ = *data;
+                *beg++ = *data++;
                 break;
             case kTexFormatBGR:
-                for (size_t i = 0; i < 3; i++)
-                    *beg++ = data[2-i];
-                data += 3;
+                *beg++ = data[2];
+                *beg++ = data[1];
+                *beg++ = data[0];
                 *beg++ = 0xFF;
+                data += 3;
                 break;
             case kTexFormatBGRA:
-                for (size_t i = 0; i < 4; i++)
-                    *beg++ = data[3-i];
+                *beg++ = data[2];
+                *beg++ = data[1];
+                *beg++ = data[0];
+                *beg++ = data[3];
                 data += 4;
                 break;
             case kTexFormatRG:
-                for (size_t i = 0; i < 2; i++)
-                    *beg++ = *data++;
+                *beg++ = *data++;
+                *beg++ = *data++;
                 *beg++ = 0;
                 *beg++ = 0xFF;
                 break;
             case kTexFormatRGB:
-                for (size_t i = 0; i < 3; i++)
-                    *beg++ = *data++;
+                *beg++ = *data++;
+                *beg++ = *data++;
+                *beg++ = *data++;
                 *beg++ = 0xFF;
                 break;
             case kTexFormatRGBA:
-                for (size_t i = 0; i < 4; i++)
-                    *beg++ = *data++;
+                *beg++ = *data++;
+                *beg++ = *data++;
+                *beg++ = *data++;
+                *beg++ = *data++;
                 break;
             default:
-                assert(0);
+                assert(0 && "invalid texture format for UI atlas");
                 break;
             }
         }
@@ -514,77 +521,77 @@ void gui::render(const pipeline &pl) {
         printCommand(it);
 #endif
         switch (it.type) {
-            case ::gui::kCommandRectangle:
-                if (it.asRectangle.r == 0) {
-                    drawRectangle(it.asRectangle.x,
-                                  it.asRectangle.y,
-                                  it.asRectangle.w,
-                                  it.asRectangle.h,
-                                  1.0f,
-                                  it.color);
-                } else {
-                    drawRectangle(it.asRectangle.x,
-                                  it.asRectangle.y,
-                                  it.asRectangle.w,
-                                  it.asRectangle.h,
-                                  it.asRectangle.r,
-                                  1.0f,
-                                  it.color);
-                }
-                break;
-            case ::gui::kCommandLine:
-                drawLine(it.asLine.x[0], it.asLine.y[0],
-                         it.asLine.x[1], it.asLine.y[1],
-                         it.asLine.r,
-                         1.0f,
-                         it.color);
-                break;
-            case ::gui::kCommandTriangle:
-                if (it.flags == 1) {
-                    const float x = it.asTriangle.x;
-                    const float y = it.asTriangle.y;
-                    const float w = it.asTriangle.w;
-                    const float h = it.asTriangle.h;
-                    const float vertices[3 * 2] = {
-                        x,     y,
-                        x+w-1, y+h/2,
-                        x,     y+h-1
-                    };
-                    drawPolygon(vertices, 1.0f, it.color);
-                } else if (it.flags == 2) {
-                    const float x = it.asTriangle.x;
-                    const float y = it.asTriangle.y;
-                    const float w = it.asTriangle.w;
-                    const float h = it.asTriangle.h;
-                    const float vertices[3 * 2] = {
-                        x,     y+h-1,
-                        x+w/2, y,
-                        x+w-1, y+h-1
-                    };
-                    drawPolygon(vertices, 1.0f, it.color);
-                }
-                break;
-            case ::gui::kCommandText:
-                m_methods[kMethodFont].enable();
-                m_methods[kMethodFont].setPerspective(perspective);
-                drawText(it.asText.x, it.asText.y, it.asText.contents, it.asText.align, it.color);
-                break;
-            case ::gui::kCommandImage:
-                m_methods[kMethodImage].enable();
-                m_methods[kMethodImage].setPerspective(perspective);
-                drawImage(it.asImage.x,
-                          it.asImage.y,
-                          it.asImage.w,
-                          it.asImage.h,
-                          it.asImage.path);
-                break;
-            case ::gui::kCommandModel:
-                if (m_models.find(it.asModel.path) == m_models.end()) {
-                    auto mdl = u::unique_ptr<model>(new model);
-                    if (mdl->load(m_modelTextures, it.asModel.path) && mdl->upload())
-                        m_models[it.asModel.path] = mdl.release();
-                }
-                break;
+        case ::gui::kCommandRectangle:
+            if (it.asRectangle.r == 0) {
+                drawRectangle(it.asRectangle.x,
+                              it.asRectangle.y,
+                              it.asRectangle.w,
+                              it.asRectangle.h,
+                              1.0f,
+                              it.color);
+            } else {
+                drawRectangle(it.asRectangle.x,
+                              it.asRectangle.y,
+                              it.asRectangle.w,
+                              it.asRectangle.h,
+                              it.asRectangle.r,
+                              1.0f,
+                              it.color);
+            }
+            break;
+        case ::gui::kCommandLine:
+            drawLine(it.asLine.x[0], it.asLine.y[0],
+                     it.asLine.x[1], it.asLine.y[1],
+                     it.asLine.r,
+                     1.0f,
+                     it.color);
+            break;
+        case ::gui::kCommandTriangle:
+            if (it.flags == 1) {
+                const float x = it.asTriangle.x;
+                const float y = it.asTriangle.y;
+                const float w = it.asTriangle.w;
+                const float h = it.asTriangle.h;
+                const float vertices[3 * 2] = {
+                    x,     y,
+                    x+w-1, y+h/2,
+                    x,     y+h-1
+                };
+                drawPolygon(vertices, 1.0f, it.color);
+            } else if (it.flags == 2) {
+                const float x = it.asTriangle.x;
+                const float y = it.asTriangle.y;
+                const float w = it.asTriangle.w;
+                const float h = it.asTriangle.h;
+                const float vertices[3 * 2] = {
+                    x,     y+h-1,
+                    x+w/2, y,
+                    x+w-1, y+h-1
+                };
+                drawPolygon(vertices, 1.0f, it.color);
+            }
+            break;
+        case ::gui::kCommandText:
+            m_methods[kMethodFont].enable();
+            m_methods[kMethodFont].setPerspective(perspective);
+            drawText(it.asText.x, it.asText.y, it.asText.contents, it.asText.align, it.color);
+            break;
+        case ::gui::kCommandImage:
+            m_methods[kMethodImage].enable();
+            m_methods[kMethodImage].setPerspective(perspective);
+            drawImage(it.asImage.x,
+                      it.asImage.y,
+                      it.asImage.w,
+                      it.asImage.h,
+                      it.asImage.path);
+            break;
+        case ::gui::kCommandModel:
+            if (m_models.find(it.asModel.path) == m_models.end()) {
+                auto mdl = u::unique_ptr<model>(new model);
+                if (mdl->load(m_modelTextures, it.asModel.path) && mdl->upload())
+                    m_models[it.asModel.path] = mdl.release();
+            }
+            break;
         }
     }
 

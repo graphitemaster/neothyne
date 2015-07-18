@@ -155,32 +155,32 @@ bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxD
                 continue;
 
             switch (it.type) {
-                case entity::kMapModel:
-                    position = m_mapModels[it.index]->position;
-                    radius = 10.0f; // TODO: calculate sphere radius from bounding box
-                    break;
-                case entity::kPointLight:
-                    position = m_pointLights[it.index]->position;
-                    radius = m_pointLights[it.index]->radius;
-                    break;
-                case entity::kSpotLight:
-                    position = m_spotLights[it.index]->position;
-                    radius = m_spotLights[it.index]->radius;
-                    break;
-                case entity::kJumppad:
-                    position = m_jumppads[it.index]->position;
-                    radius = 8.0f;
-                    break;
-                case entity::kTeleport:
-                    position = m_teleports[it.index]->position;
-                    radius = 8.0f;
-                    break;
-                case entity::kPlayerStart:
-                    position = m_playerStarts[it.index]->position;
-                    radius = 8.0f;
-                    break;
-                case entity::kDirectionalLight:
-                    break;
+            case entity::kMapModel:
+                position = m_mapModels[it.index]->position;
+                radius = 10.0f; // TODO: calculate sphere radius from bounding box
+                break;
+            case entity::kPointLight:
+                position = m_pointLights[it.index]->position;
+                radius = m_pointLights[it.index]->radius;
+                break;
+            case entity::kSpotLight:
+                position = m_spotLights[it.index]->position;
+                radius = m_spotLights[it.index]->radius;
+                break;
+            case entity::kJumppad:
+                position = m_jumppads[it.index]->position;
+                radius = 8.0f;
+                break;
+            case entity::kTeleport:
+                position = m_teleports[it.index]->position;
+                radius = 8.0f;
+                break;
+            case entity::kPlayerStart:
+                position = m_playerStarts[it.index]->position;
+                radius = 8.0f;
+                break;
+            case entity::kDirectionalLight:
+                break;
             }
 
             // Entity too small or too far away
@@ -289,32 +289,32 @@ void world::erase(size_t where) {
     auto &it = m_entities[where];
     size_t index = it.index;
     switch (it.type) {
-        case entity::kMapModel:
-            delete m_mapModels[index];
-            m_mapModels.erase(m_mapModels.begin() + index);
-            break;
-        case entity::kPlayerStart:
-            delete m_playerStarts[index];
-            m_playerStarts.erase(m_playerStarts.begin() + index);
-            break;
-        case entity::kPointLight:
-            delete m_pointLights[index];
-            m_pointLights.erase(m_pointLights.begin() + index);
-            break;
-        case entity::kSpotLight:
-            delete m_spotLights[index];
-            m_spotLights.erase(m_spotLights.begin() + index);
-            break;
-        case entity::kTeleport:
-            delete m_teleports[index];
-            m_teleports.erase(m_teleports.begin() + index);
-            break;
-        case entity::kJumppad:
-            delete m_jumppads[index];
-            m_jumppads.erase(m_jumppads.begin() + index);
-            break;
-        default:
-            return;
+    case entity::kMapModel:
+        delete m_mapModels[index];
+        m_mapModels.erase(m_mapModels.begin() + index);
+        break;
+    case entity::kPlayerStart:
+        delete m_playerStarts[index];
+        m_playerStarts.erase(m_playerStarts.begin() + index);
+        break;
+    case entity::kPointLight:
+        delete m_pointLights[index];
+        m_pointLights.erase(m_pointLights.begin() + index);
+        break;
+    case entity::kSpotLight:
+        delete m_spotLights[index];
+        m_spotLights.erase(m_spotLights.begin() + index);
+        break;
+    case entity::kTeleport:
+        delete m_teleports[index];
+        m_teleports.erase(m_teleports.begin() + index);
+        break;
+    case entity::kJumppad:
+        delete m_jumppads[index];
+        m_jumppads.erase(m_jumppads.begin() + index);
+        break;
+    default:
+        return;
     }
     m_entities.erase(m_entities.begin() + where);
 

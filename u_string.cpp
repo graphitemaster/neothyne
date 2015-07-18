@@ -279,17 +279,17 @@ void stringMemory::print() {
             else {
                 *put++ = '\\';
                 switch (ch) {
-                    case '"':  *put++ = '"';  break;
-                    case '\\': *put++ = '\\'; break;
-                    case '\t': *put++ = 't';  break;
-                    case '\r': *put++ = 'r';  break;
-                    case '\n': *put++ = 'n';  break;
-                    default:
-                        *put++ = '\\';
-                        *put++ = 'x';
-                        *put++ = "0123456789ABCDEF"[ch >> 4];
-                        *put++ = "0123456789ABCDEF"[ch & 0xF];
-                        break;
+                case '"':  *put++ = '"';  break;
+                case '\\': *put++ = '\\'; break;
+                case '\t': *put++ = 't';  break;
+                case '\r': *put++ = 'r';  break;
+                case '\n': *put++ = 'n';  break;
+                default:
+                    *put++ = '\\';
+                    *put++ = 'x';
+                    *put++ = "0123456789ABCDEF"[ch >> 4];
+                    *put++ = "0123456789ABCDEF"[ch & 0xF];
+                    break;
                 }
             }
         }

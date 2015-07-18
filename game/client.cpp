@@ -212,30 +212,30 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
     bool crouchReleased = true;
     for (auto &it : commands) {
         switch (it) {
-            case kCommandForward:
-                newDirection += direction + (cl_edit ? m::vec3::origin : up);
-                needSlowDown = false;
-                break;
-            case kCommandBackward:
-                newDirection -= direction + (cl_edit ? m::vec3::origin : up);
-                needSlowDown = false;
-                break;
-            case kCommandLeft:
-                newDirection -= side;
-                needSlowDown = false;
-                break;
-            case kCommandRight:
-                newDirection += side;
-                needSlowDown = false;
-                break;
-            case kCommandJump:
-                jump = m::vec3(0.0f, 8.0f, 0.0f);
-                break;
-            case kCommandCrouch:
-                crouchReleased = false;
-                if (m_isOnGround)
-                    m_isCrouching = true;
-                break;
+        case kCommandForward:
+            newDirection += direction + (cl_edit ? m::vec3::origin : up);
+            needSlowDown = false;
+            break;
+        case kCommandBackward:
+            newDirection -= direction + (cl_edit ? m::vec3::origin : up);
+            needSlowDown = false;
+            break;
+        case kCommandLeft:
+            newDirection -= side;
+            needSlowDown = false;
+            break;
+        case kCommandRight:
+            newDirection += side;
+            needSlowDown = false;
+            break;
+        case kCommandJump:
+            jump = m::vec3(0.0f, 8.0f, 0.0f);
+            break;
+        case kCommandCrouch:
+            crouchReleased = false;
+            if (m_isOnGround)
+                m_isCrouching = true;
+            break;
         }
     }
 

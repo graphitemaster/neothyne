@@ -776,22 +776,22 @@ void engine::resize(size_t width, size_t height) {
 
 void engine::setVSyncOption(int option) {
     switch (option) {
-        case kSyncTear:
-            if (SDL_GL_SetSwapInterval(-1) == -1)
-                setVSyncOption(kSyncRefresh);
-            break;
-        case kSyncNone:
-            SDL_GL_SetSwapInterval(0);
-            break;
-        case kSyncEnabled:
-            SDL_GL_SetSwapInterval(1);
-            break;
-        case kSyncRefresh:
-            SDL_GL_SetSwapInterval(0);
-            m_frameTimer.unlock();
-            m_frameTimer.cap(m_refreshRate);
-            m_frameTimer.lock();
-            break;
+    case kSyncTear:
+        if (SDL_GL_SetSwapInterval(-1) == -1)
+            setVSyncOption(kSyncRefresh);
+        break;
+    case kSyncNone:
+        SDL_GL_SetSwapInterval(0);
+        break;
+    case kSyncEnabled:
+        SDL_GL_SetSwapInterval(1);
+        break;
+    case kSyncRefresh:
+        SDL_GL_SetSwapInterval(0);
+        m_frameTimer.unlock();
+        m_frameTimer.cap(m_refreshRate);
+        m_frameTimer.lock();
+        break;
     }
     m_frameTimer.reset();
 }

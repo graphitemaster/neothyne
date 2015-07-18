@@ -46,16 +46,16 @@ struct decoder {
 
     const char *error() const {
         switch (m_error) {
-            case kSuccess:
-                return "success";
-            case kInvalid:
-                return "invalid";
-            case kUnsupported:
-                return "unsupported";
-            case kMalformatted:
-                return "malformatted";
-            default:
-                break;
+        case kSuccess:
+            return "success";
+        case kInvalid:
+            return "invalid";
+        case kUnsupported:
+            return "unsupported";
+        case kMalformatted:
+            return "malformatted";
+        default:
+            break;
         }
         return "internal error";
     }
@@ -143,18 +143,18 @@ struct jpeg : decoder {
         decode(data, chromaFilter(tex_jpg_chroma.get()));
 
         switch (m_bpp) {
-            case 1:
-                m_format = kTexFormatLuminance;
-                break;
-            case 3:
-                m_format = kTexFormatRGB;
-                break;
-            case 4:
-                m_format = kTexFormatRGBA;
-                break;
-            default:
-                assert(0);
-                break;
+        case 1:
+            m_format = kTexFormatLuminance;
+            break;
+        case 3:
+            m_format = kTexFormatRGB;
+            break;
+        case 4:
+            m_format = kTexFormatRGBA;
+            break;
+        default:
+            assert(0);
+            break;
         }
 
         m_pitch = m_bpp * m_width;
@@ -309,18 +309,18 @@ private:
                     unsigned char marker = *m_position++;
                     m_size--;
                     switch (marker) {
-                        case 0:
-                            break;
-                        case 0xD9:
-                            m_size = 0;
-                            break;
-                        default:
-                            if ((marker & 0xF8) != 0xD0)
-                                m_error = kMalformatted;
-                            else {
-                                m_buf = u::sls(m_buf, 8) | marker;
-                                m_bufbits += 8;
-                            }
+                    case 0:
+                        break;
+                    case 0xD9:
+                        m_size = 0;
+                        break;
+                    default:
+                        if ((marker & 0xF8) != 0xD0)
+                            m_error = kMalformatted;
+                        else {
+                            m_buf = u::sls(m_buf, 8) | marker;
+                            m_bufbits += 8;
+                        }
                     }
                 } else
                     m_error = kMalformatted;
@@ -389,11 +389,11 @@ private:
         skip(6);
 
         switch (m_bpp) {
-            case 1:
-            case 3:
-                break;
-            default:
-                returnResult(kUnsupported);
+        case 1:
+        case 3:
+            break;
+        default:
+            returnResult(kUnsupported);
         }
 
         if (m_length < int(m_bpp * 3))
@@ -902,33 +902,32 @@ private:
 
             skip(2);
             switch (m_position[-1]) {
-                case 0xC0:
-                    decodeSOF();
-                    break;
-                case 0xC4:
-                    decodeDHT();
-                    break;
-                case 0xDB:
-                    decodeDQT();
-                    break;
-                case 0xDD:
-                    decodeDRI();
-                    break;
-                case 0xDA:
-                    decodeScanlines();
-                    break;
-                case 0xFE:
+            case 0xC0:
+                decodeSOF();
+                break;
+            case 0xC4:
+                decodeDHT();
+                break;
+            case 0xDB:
+                decodeDQT();
+                break;
+            case 0xDD:
+                decodeDRI();
+                break;
+            case 0xDA:
+                decodeScanlines();
+                break;
+            case 0xFE:
+                skipMarker();
+                break;
+            case 0xE1:
+                decodeExif();
+                break;
+            default:
+                if ((m_position[-1] & 0xF0) == 0xE0)
                     skipMarker();
-                    break;
-                case 0xE1:
-                    decodeExif();
-                    break;
-
-                default:
-                    if ((m_position[-1] & 0xF0) == 0xE0)
-                        skipMarker();
-                    else
-                        return kUnsupported;
+                else
+                    return kUnsupported;
             }
         }
 
@@ -995,18 +994,18 @@ struct png : decoder {
         decode(m_decoded, data);
 
         switch (m_bpp) {
-            case 1:
-                m_format = kTexFormatLuminance;
-                break;
-            case 3:
-                m_format = kTexFormatRGB;
-                break;
-            case 4:
-                m_format = kTexFormatRGBA;
-                break;
-            default:
-                assert(0);
-                break;
+        case 1:
+            m_format = kTexFormatLuminance;
+            break;
+        case 3:
+            m_format = kTexFormatRGB;
+            break;
+        case 4:
+            m_format = kTexFormatRGBA;
+            break;
+        default:
+            assert(0);
+            break;
         }
 
         m_pitch = m_bpp * m_width;
@@ -1230,51 +1229,51 @@ private:
         const unsigned char* precon, size_t bytewidth, size_t filterType, size_t length)
     {
         switch (filterType) {
-            case 0:
-                for (size_t i = 0; i < length; i++)
-                    recon[i] = scanline[i];
-                break;
-            case 1:
+        case 0:
+            for (size_t i = 0; i < length; i++)
+                recon[i] = scanline[i];
+            break;
+        case 1:
+            for (size_t i = 0; i < bytewidth; i++)
+                recon[i] = scanline[i];
+            for (size_t i = bytewidth; i < length; i++)
+                recon[i] = scanline[i] + recon[i - bytewidth];
+            break;
+        case 2:
+            if (precon)
+                for(size_t i = 0; i < length; i++)
+                    recon[i] = scanline[i] + precon[i];
+            else
+                for(size_t i = 0; i < length; i++) recon[i] = scanline[i];
+            break;
+        case 3:
+            if (precon) {
+                for (size_t i = 0; i < bytewidth; i++)
+                    recon[i] = scanline[i] + precon[i] / 2;
+                for (size_t i = bytewidth; i < length; i++)
+                    recon[i] = scanline[i] + ((recon[i - bytewidth] + precon[i]) / 2);
+            } else {
                 for (size_t i = 0; i < bytewidth; i++)
                     recon[i] = scanline[i];
                 for (size_t i = bytewidth; i < length; i++)
-                    recon[i] = scanline[i] + recon[i - bytewidth];
-                break;
-            case 2:
-                if (precon)
-                    for(size_t i = 0; i < length; i++)
-                        recon[i] = scanline[i] + precon[i];
-                else
-                    for(size_t i = 0; i < length; i++) recon[i] = scanline[i];
-                break;
-            case 3:
-                if (precon) {
-                    for (size_t i = 0; i < bytewidth; i++)
-                        recon[i] = scanline[i] + precon[i] / 2;
-                    for (size_t i = bytewidth; i < length; i++)
-                        recon[i] = scanline[i] + ((recon[i - bytewidth] + precon[i]) / 2);
-                } else {
-                    for (size_t i = 0; i < bytewidth; i++)
-                        recon[i] = scanline[i];
-                    for (size_t i = bytewidth; i < length; i++)
-                        recon[i] = scanline[i] + recon[i - bytewidth] / 2;
-                }
-                break;
-            case 4:
-                if (precon) {
-                    for (size_t i = 0; i < bytewidth; i++)
-                        recon[i] = scanline[i] + paethPredictor(0, precon[i], 0);
-                    for (size_t i = bytewidth; i < length; i++)
-                        recon[i] = scanline[i] + paethPredictor(recon[i - bytewidth], precon[i], precon[i - bytewidth]);
-                } else {
-                    for(size_t i = 0; i < bytewidth; i++)
-                        recon[i] = scanline[i];
-                    for(size_t i = bytewidth; i < length; i++)
-                        recon[i] = scanline[i] + paethPredictor(recon[i - bytewidth], 0, 0);
-                }
-                break;
-            default:
-                returnResult(kMalformatted);
+                    recon[i] = scanline[i] + recon[i - bytewidth] / 2;
+            }
+            break;
+        case 4:
+            if (precon) {
+                for (size_t i = 0; i < bytewidth; i++)
+                    recon[i] = scanline[i] + paethPredictor(0, precon[i], 0);
+                for (size_t i = bytewidth; i < length; i++)
+                    recon[i] = scanline[i] + paethPredictor(recon[i - bytewidth], precon[i], precon[i - bytewidth]);
+            } else {
+                for(size_t i = 0; i < bytewidth; i++)
+                    recon[i] = scanline[i];
+                for(size_t i = bytewidth; i < length; i++)
+                    recon[i] = scanline[i] + paethPredictor(recon[i - bytewidth], 0, 0);
+            }
+            break;
+        default:
+            returnResult(kMalformatted);
         }
     }
 
@@ -1433,18 +1432,18 @@ struct tga : decoder {
         decode(data);
 
         switch (m_bpp) {
-            case 1:
-                m_format = kTexFormatLuminance;
-                break;
-            case 3:
-                m_format = kTexFormatRGB;
-                break;
-            case 4:
-                m_format = kTexFormatRGBA;
-                break;
-            default:
-                assert(0);
-                break;
+        case 1:
+            m_format = kTexFormatLuminance;
+            break;
+        case 3:
+            m_format = kTexFormatRGB;
+            break;
+        case 4:
+            m_format = kTexFormatRGBA;
+            break;
+        default:
+            assert(0);
+            break;
         }
 
         m_pitch = m_bpp * m_width;
@@ -1483,20 +1482,20 @@ private:
         m_height = m_header.height[0] | (m_header.height[1] << 8);
 
         switch (m_header.imageType) {
-            case 1:
-                decodeColor();
-                break;
-            case 2:
-                decodeImage();
-                break;
-            case 9:
-                decodeColorRLE();
-                break;
-            case 10:
-                decodeImageRLE();
-                break;
-            default:
-                return kUnsupported;
+        case 1:
+            decodeColor();
+            break;
+        case 2:
+            decodeImage();
+            break;
+        case 9:
+            decodeColorRLE();
+            break;
+        case 10:
+            decodeImageRLE();
+            break;
+        default:
+            return kUnsupported;
         }
 
         return m_error ? m_error : kSuccess;
@@ -1712,17 +1711,17 @@ private:
         read(&m_data[0], m_data.size());
 
         switch (surface.format.fourcc) {
-            case kDXT1: m_format = kTexFormatDXT1; break;
-            case kDXT3: m_format = kTexFormatDXT3; break;
-            case kDXT5: m_format = kTexFormatDXT5; break;
-            case kATI1: m_format = kTexFormatBC4U; break;
-            case kATI2: m_format = kTexFormatBC5U; break;
-            case kBC4U: m_format = kTexFormatBC4U; break;
-            case kBC4S: m_format = kTexFormatBC4S; break;
-            case kBC5U: m_format = kTexFormatBC5U; break;
-            case kBC5S: m_format = kTexFormatBC5S; break;
-            default:
-                returnResult(kUnsupported);
+        case kDXT1: m_format = kTexFormatDXT1; break;
+        case kDXT3: m_format = kTexFormatDXT3; break;
+        case kDXT5: m_format = kTexFormatDXT5; break;
+        case kATI1: m_format = kTexFormatBC4U; break;
+        case kATI2: m_format = kTexFormatBC5U; break;
+        case kBC4U: m_format = kTexFormatBC4U; break;
+        case kBC4S: m_format = kTexFormatBC4S; break;
+        case kBC5U: m_format = kTexFormatBC5U; break;
+        case kBC5S: m_format = kTexFormatBC5S; break;
+        default:
+            returnResult(kUnsupported);
         }
 
         m_width = surface.width;
@@ -1863,19 +1862,20 @@ void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t stride, uns
 }
 
 void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *dst, size_t dw, size_t dh) {
-    if (sw == dw * 2 && sh == dh * 2)
+    if (sw == dw * 2 && sh == dh * 2) {
         switch (bpp) {
-            case 3: return halve<3>(src, sw, sh, pitch, dst);
-            case 4: return halve<4>(src, sw, sh, pitch, dst);
+        case 3: return halve<3>(src, sw, sh, pitch, dst);
+        case 4: return halve<4>(src, sw, sh, pitch, dst);
         }
-    else if(sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1) || dw&(dw-1) || dh&(dh-1))
+    } else if (sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1) || dw&(dw-1) || dh&(dh-1)) {
         switch (bpp) {
-            case 3: return scale<3>(src, sw, sh, pitch, dst, dw, dh);
-            case 4: return scale<4>(src, sw, sh, pitch, dst, dw, dh);
+        case 3: return scale<3>(src, sw, sh, pitch, dst, dw, dh);
+        case 4: return scale<4>(src, sw, sh, pitch, dst, dw, dh);
         }
+    }
     switch(bpp) {
-        case 3: return shift<3>(src, sw, sh, pitch, dst, dw, dh);
-        case 4: return shift<4>(src, sw, sh, pitch, dst, dw, dh);
+    case 3: return shift<3>(src, sw, sh, pitch, dst, dw, dh);
+    case 4: return shift<4>(src, sw, sh, pitch, dst, dw, dh);
     }
 }
 
@@ -2142,23 +2142,23 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
     m_data.resize(length);
     memcpy(&m_data[0], data, length);
     switch (format) {
-        case kTexFormatRGB:
-        case kTexFormatBGR:
-            m_bpp = 3;
-            break;
-        case kTexFormatRGBA:
-        case kTexFormatBGRA:
-            m_bpp = 4;
-            break;
-        case kTexFormatRG:
-            m_bpp = 2;
-            break;
-        case kTexFormatLuminance:
-            m_bpp = 1;
-            break;
-        default:
-            assert(0);
-            break;
+    case kTexFormatRGB:
+    case kTexFormatBGR:
+        m_bpp = 3;
+        break;
+    case kTexFormatRGBA:
+    case kTexFormatBGRA:
+        m_bpp = 4;
+        break;
+    case kTexFormatRG:
+        m_bpp = 2;
+        break;
+    case kTexFormatLuminance:
+        m_bpp = 1;
+        break;
+    default:
+        assert(0);
+        break;
     }
     m_pitch = m_width * m_bpp;
 }
@@ -2349,13 +2349,13 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
 
                 for (size_t i = m_bpp; i < m_width*m_bpp; ++i) {
                     switch (type) {
-                        case 0: lineBuffer[i] = z[i]; break;
-                        case 1: lineBuffer[i] = z[i] - z[i-m_bpp]; break;
-                        case 2: lineBuffer[i] = z[i] - z[i-m_pitch]; break;
-                        case 3: lineBuffer[i] = z[i] - ((z[i-m_bpp] + z[i-m_pitch])>>1); break;
-                        case 4: lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], z[i-m_pitch], z[i-m_pitch-m_bpp]); break;
-                        case 5: lineBuffer[i] = z[i] - (z[i-m_bpp]>>1); break;
-                        case 6: lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], 0, 0); break;
+                    case 0: lineBuffer[i] = z[i]; break;
+                    case 1: lineBuffer[i] = z[i] - z[i-m_bpp]; break;
+                    case 2: lineBuffer[i] = z[i] - z[i-m_pitch]; break;
+                    case 3: lineBuffer[i] = z[i] - ((z[i-m_bpp] + z[i-m_pitch])>>1); break;
+                    case 4: lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], z[i-m_pitch], z[i-m_pitch-m_bpp]); break;
+                    case 5: lineBuffer[i] = z[i] - (z[i-m_bpp]>>1); break;
+                    case 6: lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], 0, 0); break;
                     }
                 }
 

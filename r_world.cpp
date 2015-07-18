@@ -1006,20 +1006,20 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
     const size_t x = neoWidth() / 2;
     const size_t y = neoHeight() - 20;
     switch (r_debug) {
-        case kDebugDepth:
-            gui::drawText(x, y, gui::kAlignCenter, "Depth", gui::RGBA(255, 0, 0));
-            break;
-        case kDebugNormal:
-            gui::drawText(x, y, gui::kAlignCenter, "Normals", gui::RGBA(255, 0, 0));
-            break;
-        case kDebugPosition:
-            gui::drawText(x, y, gui::kAlignCenter, "Position", gui::RGBA(255, 0, 0));
-            break;
-        case kDebugSSAO:
-            gui::drawText(x, y, gui::kAlignCenter, "Ambient Occlusion", gui::RGBA(255, 0, 0));
-            break;
-        default:
-            break;
+    case kDebugDepth:
+        gui::drawText(x, y, gui::kAlignCenter, "Depth", gui::RGBA(255, 0, 0));
+        break;
+    case kDebugNormal:
+        gui::drawText(x, y, gui::kAlignCenter, "Normals", gui::RGBA(255, 0, 0));
+        break;
+    case kDebugPosition:
+        gui::drawText(x, y, gui::kAlignCenter, "Position", gui::RGBA(255, 0, 0));
+        break;
+    case kDebugSSAO:
+        gui::drawText(x, y, gui::kAlignCenter, "Ambient Occlusion", gui::RGBA(255, 0, 0));
+        break;
+    default:
+        break;
     }
 }
 

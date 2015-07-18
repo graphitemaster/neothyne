@@ -406,18 +406,18 @@ struct textureCacheHeader {
 
 static const char *cacheFormat(GLuint internal) {
     switch (internal) {
-        case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
-            return "RGBA_BPTC_UNORM";
-        case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
-            return "RGB_BPTC_SIGNED_FLOAT";
-        case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-            return "RGBA_S3TC_DXT5";
-        case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-            return "RGBA_S3TC_DXT1";
-        case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
-            return "RED_GREEN_RGTC2";
-        case GL_COMPRESSED_RED_RGTC1_EXT:
-            return "RED_RGTC1";
+    case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
+        return "RGBA_BPTC_UNORM";
+    case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
+        return "RGB_BPTC_SIGNED_FLOAT";
+    case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+        return "RGBA_S3TC_DXT5";
+    case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+        return "RGBA_S3TC_DXT1";
+    case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
+        return "RED_GREEN_RGTC2";
+    case GL_COMPRESSED_RED_RGTC1_EXT:
+        return "RED_RGTC1";
     }
     return "";
 }
@@ -474,23 +474,23 @@ static bool readCache(texture &tex, GLuint &internal) {
 
     // Make sure we even support the format before using it
     switch (head.internal) {
-        case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
-        case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
-            if (!gl::has(gl::ARB_texture_compression_bptc))
-                return false;
-            break;
+    case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
+    case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
+        if (!gl::has(gl::ARB_texture_compression_bptc))
+            return false;
+        break;
 
-        case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-        case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-            if (!gl::has(gl::EXT_texture_compression_s3tc))
-                return false;
-            break;
+    case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+    case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+        if (!gl::has(gl::EXT_texture_compression_s3tc))
+            return false;
+        break;
 
-        case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
-        case GL_COMPRESSED_RED_RGTC1_EXT:
-            if (!gl::has(gl::EXT_texture_compression_rgtc))
-                return false;
-            break;
+    case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
+    case GL_COMPRESSED_RED_RGTC1_EXT:
+        if (!gl::has(gl::EXT_texture_compression_rgtc))
+            return false;
+        break;
     }
 
     const unsigned char *data = &vec[0] + sizeof(head);
@@ -601,15 +601,15 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
 
     // Only cache compressed textures
     switch (internal) {
-        case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-        case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-        case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
-        case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
-        case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
-        case GL_COMPRESSED_RED_RGTC1_EXT:
-            break;
-        default:
-            return false;
+    case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+    case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+    case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
+    case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
+    case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
+    case GL_COMPRESSED_RED_RGTC1_EXT:
+        break;
+    default:
+        return false;
     }
 
     // Some drivers just don't do online compression
@@ -688,29 +688,29 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     // The texture is compressed?
     if (tex.flags() & kTexFlagCompressed) {
         switch (tex.format()) {
-            case kTexFormatDXT1:
-                checkSupport(gl::EXT_texture_compression_s3tc);
-                return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
-            case kTexFormatDXT3:
-                checkSupport(gl::EXT_texture_compression_s3tc);
-                return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT);
-            case kTexFormatDXT5:
-                checkSupport(gl::EXT_texture_compression_s3tc);
-                return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
-            case kTexFormatBC4U:
-                checkSupport(gl::EXT_texture_compression_rgtc);
-                return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
-            case kTexFormatBC4S:
-                checkSupport(gl::EXT_texture_compression_rgtc);
-                return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_SIGNED_RED_RGTC1_EXT);
-            case kTexFormatBC5U:
-                checkSupport(gl::EXT_texture_compression_rgtc);
-                return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
-            case kTexFormatBC5S:
-                checkSupport(gl::EXT_texture_compression_rgtc);
-                return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT);
-            default:
-                break;
+        case kTexFormatDXT1:
+            checkSupport(gl::EXT_texture_compression_s3tc);
+            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
+        case kTexFormatDXT3:
+            checkSupport(gl::EXT_texture_compression_s3tc);
+            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT);
+        case kTexFormatDXT5:
+            checkSupport(gl::EXT_texture_compression_s3tc);
+            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
+        case kTexFormatBC4U:
+            checkSupport(gl::EXT_texture_compression_rgtc);
+            return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
+        case kTexFormatBC4S:
+            checkSupport(gl::EXT_texture_compression_rgtc);
+            return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_SIGNED_RED_RGTC1_EXT);
+        case kTexFormatBC5U:
+            checkSupport(gl::EXT_texture_compression_rgtc);
+            return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
+        case kTexFormatBC5S:
+            checkSupport(gl::EXT_texture_compression_rgtc);
+            return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT);
+        default:
+            break;
         }
         assert(0);
     }
@@ -729,34 +729,34 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
         // While falling through to the correct internal format for the compression
         if (bptc || s3tc || rgtc) {
             switch (tex.format()) {
-                case kTexFormatBGRA:
-                    tex.convert<kTexFormatRGBA>();
-                case kTexFormatRGBA:
-                    if (bptc || s3tc) {
-                        return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, bptc
-                            ? GL_COMPRESSED_RGBA_BPTC_UNORM_ARB
-                            : GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
-                    }
-                    break;
-                case kTexFormatBGR:
-                    tex.convert<kTexFormatRGB>();
-                case kTexFormatRGB:
-                    if (bptc || s3tc) {
-                        return queryFormat(GL_RGB, R_TEX_DATA_RGB, bptc
-                            ? GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB
-                            : GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
-                    }
-                    break;
-                case kTexFormatRG:
-                    if (rgtc)
-                        return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
-                    break;
-                case kTexFormatLuminance:
-                    if (rgtc)
-                        return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
-                    break;
-                default:
-                    break;
+            case kTexFormatBGRA:
+                tex.convert<kTexFormatRGBA>();
+            case kTexFormatRGBA:
+                if (bptc || s3tc) {
+                    return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, bptc
+                        ? GL_COMPRESSED_RGBA_BPTC_UNORM_ARB
+                        : GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
+                }
+                break;
+            case kTexFormatBGR:
+                tex.convert<kTexFormatRGB>();
+            case kTexFormatRGB:
+                if (bptc || s3tc) {
+                    return queryFormat(GL_RGB, R_TEX_DATA_RGB, bptc
+                        ? GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB
+                        : GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
+                }
+                break;
+            case kTexFormatRG:
+                if (rgtc)
+                    return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
+                break;
+            case kTexFormatLuminance:
+                if (rgtc)
+                    return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
+                break;
+            default:
+                break;
             }
         }
     }
@@ -764,21 +764,21 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     // If we made it here then no compression is possible so use a raw internal
     // format.
     switch (tex.format()) {
-        case kTexFormatRGBA:
-            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA,      GL_RGBA);
-        case kTexFormatRGB:
-            return queryFormat(GL_RGB,  R_TEX_DATA_RGB,       GL_RGBA);
-        case kTexFormatBGRA:
-            return queryFormat(GL_BGRA, R_TEX_DATA_BGRA,      GL_RGBA);
-        case kTexFormatBGR:
-            return queryFormat(GL_BGR,  R_TEX_DATA_BGR,       GL_RGBA);
-        case kTexFormatRG:
-            return queryFormat(GL_RG,   R_TEX_DATA_RG,        GL_RG8);
-        case kTexFormatLuminance:
-            return queryFormat(GL_RED,  R_TEX_DATA_LUMINANCE, GL_RED);
-        default:
-            assert(0);
-            break;
+    case kTexFormatRGBA:
+        return queryFormat(GL_RGBA, R_TEX_DATA_RGBA,      GL_RGBA);
+    case kTexFormatRGB:
+        return queryFormat(GL_RGB,  R_TEX_DATA_RGB,       GL_RGBA);
+    case kTexFormatBGRA:
+        return queryFormat(GL_BGRA, R_TEX_DATA_BGRA,      GL_RGBA);
+    case kTexFormatBGR:
+        return queryFormat(GL_BGR,  R_TEX_DATA_BGR,       GL_RGBA);
+    case kTexFormatRG:
+        return queryFormat(GL_RG,   R_TEX_DATA_RG,        GL_RG8);
+    case kTexFormatLuminance:
+        return queryFormat(GL_RED,  R_TEX_DATA_LUMINANCE, GL_RED);
+    default:
+        assert(0);
+        break;
     }
     return u::none;
 }
@@ -865,19 +865,19 @@ bool texture2D::upload() {
         size_t blockSize = 0;
 
         switch (m_texture.format()) {
-            case kTexFormatDXT1:
-            case kTexFormatBC4U:
-            case kTexFormatBC4S:
-                blockSize = 8;
-                break;
-            case kTexFormatDXT3:
-            case kTexFormatDXT5:
-            case kTexFormatBC5U:
-            case kTexFormatBC5S:
-                blockSize = 16;
-                break;
-            default:
-                return false;
+        case kTexFormatDXT1:
+        case kTexFormatBC4U:
+        case kTexFormatBC4S:
+            blockSize = 8;
+            break;
+        case kTexFormatDXT3:
+        case kTexFormatDXT5:
+        case kTexFormatBC5U:
+        case kTexFormatBC5S:
+            blockSize = 16;
+            break;
+        default:
+            return false;
         }
 
         auto query = getBestFormat(m_texture);
