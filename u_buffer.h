@@ -109,11 +109,10 @@ inline buffer<T>::~buffer() {
 }
 
 template <typename T>
-inline buffer<T>::buffer(buffer<T> &&other)
-    : first(other.first)
-    , last(other.last)
-    , capacity(other.capacity)
-{
+inline buffer<T>::buffer(buffer<T> &&other) {
+    first = other.first;
+    last = other.last;
+    capacity = other.capacity;
     other.first = nullptr;
     other.last = nullptr;
     other.capacity = nullptr;
@@ -121,7 +120,8 @@ inline buffer<T>::buffer(buffer<T> &&other)
 
 template <typename T>
 inline buffer<T> &buffer<T>::operator=(buffer<T> &&other) {
-    if (this == &other) assert(0);
+    assert(this != &other);
+    destroy();
     first = other.first;
     last = other.last;
     capacity = other.capacity;

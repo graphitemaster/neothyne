@@ -80,9 +80,6 @@ inline void autoComplete::search(autoComplete *n, const char *s, u::vector<u::st
     }
 }
 
-static u::deferred_data<autoComplete> gAutoComplete;
-static u::deferred_data<u::map<u::string, varReference>> gVariables;
-
 struct varReference {
     varReference()
         : desc(nullptr)
@@ -102,6 +99,9 @@ struct varReference {
     void *self;
     varType type;
 };
+
+static u::deferred_data<autoComplete> gAutoComplete;
+static u::deferred_data<u::map<u::string, varReference>> gVariables;
 
 // public API
 void varRegister(const char *name, const char *desc, void *self, varType type) {
