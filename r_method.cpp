@@ -10,8 +10,7 @@
 namespace r {
 
 method::shader::shader()
-    : source("#version 130\n")
-    , object(0)
+    : object(0)
 {
 }
 
@@ -31,6 +30,8 @@ method::~method() {
 
 bool method::init() {
     m_program = gl::CreateProgram();
+    for (auto &it : m_shaders)
+        it.source = u::move(u::format("#version %d\n", gl::glslVersion()));
     return !!m_program;
 }
 

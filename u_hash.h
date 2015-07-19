@@ -305,7 +305,7 @@ namespace detail {
 
     template <typename N, typename K>
     inline hash_node<N> *hash_find(const hash_base<N> &h, const K &key) {
-        const size_t hh = hash(key) % (h.buckets.last - h.buckets.first - 2);
+        const size_t hh = hash(key) & (h.buckets.last - h.buckets.first - 2);
         for (hash_node<N> *c = h.buckets.first[hh], *end = h.buckets.first[hh + 1]; c != end; c = c->next)
             if (c->first.first == key)
                 return c;
@@ -321,7 +321,7 @@ namespace detail {
         hash_node<N> *p = *och.first;
         while (p) {
             hash_node<N> *pp = p->next;
-            size_t hh = hash(p->first.first) % (n - 2);
+            size_t hh = hash(p->first.first) & (n - 2);
             p->prev = p->next = nullptr;
             hash_insert(nch.first, p, hh);
             p = pp;
@@ -333,7 +333,7 @@ namespace detail {
     template <typename N>
     inline void hash_erase(hash_base<N> &h, hash_node<N> *node) {
         const size_t nbuckets = h.buckets.last - h.buckets.first;
-        size_t hh = hash(node->first.first) % (nbuckets - 2);
+        size_t hh = hash(node->first.first) & (nbuckets - 2);
 
         hash_node<N> *next = node->next;
         for (; h.buckets.first[hh] == node; --hh) {

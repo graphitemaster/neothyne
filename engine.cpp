@@ -1056,8 +1056,8 @@ static int entryPoint(int argc, char **argv) {
         dxtCompressor.set(1);
     }
 
-    u::print("OS: %s\nVendor: %s\nRenderer: %s\nDriver: %s\nShading: %s\nExtensions:\n",
-        gOperatingSystem, vendor, renderer, version, shader);
+    u::print("OS: %s\nVendor: %s\nRenderer: %s\nDriver: %s\nShading: %s (using %s)\nExtensions:\n",
+        gOperatingSystem, vendor, renderer, version, shader, gl::glslVersionString());
 
     for (auto &it : gl::extensions())
         u::print(" %s\n", gl::extensionString(it));

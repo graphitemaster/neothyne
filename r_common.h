@@ -33,6 +33,8 @@ enum : size_t {
 
 void init();
 const char *extensionString(size_t what);
+int glslVersion();
+const char *glslVersionString();
 const u::set<size_t> &extensions();
 bool has(size_t ext);
 

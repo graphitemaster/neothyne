@@ -95,6 +95,8 @@ def genHeader(functionList, extensionList, headerFile):
 
         void init();
         const char *extensionString(size_t what);
+        int glslVersion();
+        const char *glslVersionString();
         const u::set<size_t> &extensions();
         bool has(size_t ext);
 
@@ -313,6 +315,22 @@ def genSource(functionList, extensionList, sourceFile):
         source.write(textwrap.dedent("""\
         };
 
+        static int gGLSLVersion = -1;
+
+        int glslVersion() {
+            return gGLSLVersion;
+        }
+
+        const char *glslVersionString() {
+            switch (gGLSLVersion) {
+            case 130: return "3.0";
+            case 140: return "3.1";
+            case 150: return "3.2";
+            case 330: return "3.0";
+            }
+            assert(0);
+        }
+
         const char *extensionString(size_t what) {
             return kExtensions[what];
         }
@@ -351,6 +369,27 @@ def genSource(functionList, extensionList, sourceFile):
             } else {
                 aniso.setMax(0);
             }
+
+            static constexpr int kGLSLVersions[] = {
+                130, 140, 150, 330
+            };
+
+            for (auto &it : kGLSLVersions) {
+                const u::string source = u::format("#version %d\\nvoid main() { }\\n", it);
+                const char *sources[1] = { source.c_str() };
+                GLuint s = glCreateShader_(GL_VERTEX_SHADER);
+                glShaderSource_(s, 1, sources, nullptr);
+                glCompileShader_(s);
+                GLint compiled = 0;
+                glGetShaderiv_(s, GL_COMPILE_STATUS, &compiled);
+                if (compiled) {
+                    gGLSLVersion = it;
+                    break;
+                }
+            }
+
+            if (gGLSLVersion == -1)
+                neoFatal("Failed to initialize OpenGL\\n");
 
         #ifdef DEBUG_GL
             if (has(gl::ARB_debug_output)) {
