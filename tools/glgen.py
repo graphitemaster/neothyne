@@ -326,7 +326,7 @@ def genSource(functionList, extensionList, sourceFile):
             case 130: return "3.0";
             case 140: return "3.1";
             case 150: return "3.2";
-            case 330: return "3.0";
+            case 330: return "3.3";
             }
             assert(0);
         }
