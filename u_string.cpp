@@ -541,7 +541,7 @@ void string::reset() {
 }
 
 size_t hash(const string &str) {
-    return detail::sdbm(str.c_str(), str.size());
+    return detail::fnv1a(str.c_str(), str.size());
 }
 
 }

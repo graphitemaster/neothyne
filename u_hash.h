@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 
 #include "u_new.h"
 #include "u_buffer.h"
@@ -10,17 +11,26 @@
 namespace u {
 
 namespace detail {
-    static inline size_t sdbm(const void *data, size_t length) {
-        size_t hash = 0;
-        unsigned char *as = (unsigned char *)data;
-        for (unsigned char *it = as, *end = as + length; it != end; ++it)
-            hash = *it + (hash << 6) + (hash << 16) - hash;
-        return hash;
-    }
+    template <bool E>
+    struct fnvConst;
+
+    template <>
+    struct fnvConst<false> {
+        // 64-bit
+        static constexpr size_t kPrime = 1099511628211u;
+        static constexpr size_t kOffsetBasis = 14695981039346656037u;
+    };
+
+    template <>
+    struct fnvConst<true> {
+        // 32-bit
+        static constexpr size_t kPrime = 16777619u;
+        static constexpr size_t kOffsetBasis = 2166136261u;
+    };
 
     static inline size_t fnv1a(const void *data, size_t length) {
-        static constexpr size_t kPrime = sizeof(int) == 4 ? 16777619u : 1099511628211u;
-        static constexpr size_t kOffsetBasis = sizeof(int) == 8 ? 2166136261u : 14695981039346656037u;
+        static constexpr size_t kPrime = fnvConst<ULONG_MAX == 0xffffffff>::kPrime;
+        static constexpr size_t kOffsetBasis = fnvConst<ULONG_MAX == 0xffffffff>::kOffsetBasis;
         size_t hash = kOffsetBasis;
         unsigned char *as = (unsigned char *)data;
         for (unsigned char *it = as, *end = as + length; it != end; ++it) {
