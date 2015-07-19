@@ -3,7 +3,6 @@
 
 #include "u_hash.h"
 #include "u_pair.h"
-#include "u_buffer.h"
 
 namespace u {
 
@@ -21,8 +20,8 @@ public:
 
     typedef pair<K, V> value_type;
 
-    typedef hash_iterator<const hash_node<K, V>> const_iterator;
-    typedef hash_iterator<hash_node<K, V>> iterator;
+    typedef hash_iterator<const hash_elem<K, V>> const_iterator;
+    typedef hash_iterator<hash_elem<K, V>> iterator;
 
     iterator begin();
     iterator end();
@@ -44,45 +43,30 @@ public:
     void swap(map &other);
 
 private:
-    typedef hash_node<K, V> *pointer;
-    size_t m_size;
-    buffer<pointer> m_buckets;
+    detail::hash_base<hash_elem<K, V>> m_base;
 };
 
 template <typename K, typename V>
 map<K, V>::map()
-    : m_size(0)
+    : m_base(9)
 {
-    m_buckets.resize(9, 0);
 }
 
 template <typename K, typename V>
 map<K, V>::map(const map<K, V> &other)
-    : m_size(other.m_size)
+    : m_base(other.m_base)
 {
-    const size_t nbuckets = size_t(other.m_buckets.last - other.m_buckets.first);
-    m_buckets.resize(nbuckets, 0);
-
-    for (pointer it = *other.m_buckets.first; it; it = it->next) {
-        unsigned char *data = neoMalloc(sizeof(hash_node<K, V>));
-        hash_node<K, V>* newnode = new(data) hash_node<K, V>(it->first, it->second);
-        newnode->next = 0;
-        newnode->prev = 0;
-        hash_node_insert(newnode, hash(it->first), m_buckets.first, nbuckets - 1);
-    }
 }
 
 template <typename K, typename V>
 map<K, V>::map(map<K, V> &&other)
-    : m_size(other.m_size)
-    , m_buckets(u::move(other.m_buckets))
+    : m_base(u::move(other.m_base))
 {
-    other.m_size = 0;
 }
 
 template <typename K, typename V>
 map<K, V>::~map() {
-    clear();
+    detail::hash_free(m_base);
 }
 
 template <typename K, typename V>
@@ -93,10 +77,11 @@ map<K, V> &map<K, V>::operator=(const map<K, V> &other) {
 
 template <typename K, typename V>
 map<K, V> &map<K, V>::operator=(map<K, V> &&other) {
+    using base = detail::hash_base<hash_elem<K, V>>;
     if (this == &other) assert(0);
-    m_size = other.m_size;
-    m_buckets = u::move(other.m_buckets);
-    other.m_size = 0;
+    detail::hash_free(m_base);
+    m_base.~base();
+    new (&m_base) base(u::move(other));
     return *this;
 }
 
@@ -104,66 +89,59 @@ map<K, V> &map<K, V>::operator=(map<K, V> &&other) {
 template <typename K, typename V>
 inline typename map<K, V>::iterator map<K, V>::begin() {
     iterator it;
-    it.node = *m_buckets.first;
+    it.node = *m_base.buckets.first;
     return it;
 }
 
 template <typename K, typename V>
 inline typename map<K, V>::iterator map<K, V>::end() {
     iterator it;
-    it.node = 0;
+    it.node = nullptr;
     return it;
 }
 
 template <typename K, typename V>
 inline typename map<K, V>::const_iterator map<K, V>::begin() const {
     const_iterator cit;
-    cit.node = *m_buckets.first;
+    cit.node = *m_base.buckets.first;
     return cit;
 }
 
 template <typename K, typename V>
 inline typename map<K, V>::const_iterator map<K, V>::end() const {
     const_iterator cit;
-    cit.node = 0;
+    cit.node = nullptr;
     return cit;
 }
 
 template <typename K, typename V>
 inline bool map<K, V>::empty() const {
-    return m_size == 0;
+    return m_base.size == 0;
 }
 
 template <typename K, typename V>
 inline size_t map<K, V>::size() const {
-    return m_size;
+    return m_base.size;
 }
 
 template <typename K, typename V>
 inline void map<K, V>::clear() {
-    pointer it = *m_buckets.first;
-    while (it) {
-        const pointer next = it->next;
-        it->~hash_node<K, V>();
-        neoFree(it);
-        it = next;
-    }
-    m_buckets.last = m_buckets.first;
-    m_buckets.resize(9, 0);
-    m_size = 0;
+    using base = detail::hash_base<hash_elem<K, V>>;
+    m_base.~base();
+    new (&m_base) base(9);
 }
 
 template <typename K, typename V>
 inline typename map<K, V>::iterator map<K, V>::find(const K &key) {
     iterator result;
-    result.node = hash_find(key, m_buckets.first, size_t(m_buckets.last - m_buckets.first));
+    result.node = detail::hash_find(m_base, key);
     return result;
 }
 
 template <typename K, typename V>
 inline typename map<K, V>::const_iterator map<K, V>::find(const K &key) const {
-    iterator result;
-    result.node = hash_find(key, m_buckets.first, size_t(m_buckets.last - m_buckets.first));
+    const_iterator result;
+    result.node = detail::hash_find(m_base, key);
     return result;
 }
 
@@ -173,44 +151,27 @@ inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(const pair<K, 
     if (result.first().node != 0)
         return result;
 
-    unsigned char *data = neoMalloc(sizeof(hash_node<K, V>));
-    hash_node<K, V> *newnode = new(data) hash_node<K, V>(p.first(), p.second());
-    newnode->next = 0;
-    newnode->prev = 0;
+    size_t nbuckets = (m_base.buckets.last - m_base.buckets.first);
 
-    const size_t nbuckets = size_t(m_buckets.last - m_buckets.first);
-    hash_node_insert(newnode, hash(p.first()), m_buckets.first, nbuckets - 1);
-
-    ++m_size;
-    if (m_size + 1 > 4 * nbuckets) {
-        pointer root = *m_buckets.first;
-
-        const size_t newnbuckets = (size_t(m_buckets.last - m_buckets.first) - 1) * 8;
-        m_buckets.last = m_buckets.first;
-        m_buckets.resize(newnbuckets + 1, 0);
-        hash_node<K, V> **buckets = m_buckets.first;
-
-        while (root) {
-            const pointer next = root->next;
-            root->next = 0;
-            root->prev = 0;
-            hash_node_insert(root, hash(root->first), buckets, newnbuckets);
-            root = next;
-        }
+    if ((m_base.size + 1) / nbuckets > 0.75f) {
+        detail::hash_rehash(m_base, 8 * nbuckets);
+        nbuckets = (m_base.buckets.last - m_base.buckets.first);
     }
 
-    result.first().node = newnode;
+    size_t hh = hash(p.first()) & (nbuckets - 2);
+    typename map<K, V>::iterator &it = result.first();
+    it.node = detail::hash_insert_new(m_base, hh);
+
+    it.node->first.~hash_elem<K, V>();
+    new (&it.node->first) hash_elem<K, V>(p.first(), p.second());
+
     result.second() = true;
     return result;
 }
 
 template <typename K, typename V>
 void map<K, V>::erase(const_iterator where) {
-    hash_node_erase(where.node, hash(where->first), m_buckets.first,
-        size_t(m_buckets.last - m_buckets.first) - 1);
-    where->~hash_node<K, V>();
-    neoFree((void *)where.node);
-    --m_size;
+    detail::hash_erase(m_base, where.node);
 }
 
 template <typename K, typename V>
@@ -220,10 +181,7 @@ V &map<K, V>::operator[](const K &key) {
 
 template <typename K, typename V>
 void map<K, V>::swap(map &other) {
-    size_t tsize = other.m_size;
-    other.m_size = m_size;
-    m_size = tsize;
-    m_buckets.swap(other.m_buckets);
+    detail::hash_swap(m_base, other.m_base);
 }
 
 }
