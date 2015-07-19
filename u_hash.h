@@ -9,7 +9,6 @@
 
 namespace u {
 
-// Simple hash function via SDBM
 namespace detail {
     static inline size_t sdbm(const void *data, size_t length) {
         size_t hash = 0;
@@ -18,12 +17,24 @@ namespace detail {
             hash = *it + (hash << 6) + (hash << 16) - hash;
         return hash;
     }
+
+    static inline size_t fnv1a(const void *data, size_t length) {
+        static constexpr size_t kPrime = sizeof(int) == 4 ? 16777619u : 1099511628211u;
+        static constexpr size_t kOffsetBasis = sizeof(int) == 8 ? 2166136261u : 14695981039346656037u;
+        size_t hash = kOffsetBasis;
+        unsigned char *as = (unsigned char *)data;
+        for (unsigned char *it = as, *end = as + length; it != end; ++it) {
+            hash ^= *it;
+            hash *= kPrime;
+        }
+        return hash;
+    }
 }
 
 template <typename T>
 inline size_t hash(const T &value) {
     const size_t rep = size_t(value);
-    return detail::sdbm((const void *)&rep, sizeof(rep));
+    return detail::fnv1a((const void *)&rep, sizeof(rep));
 }
 
 template <typename K, typename V>
