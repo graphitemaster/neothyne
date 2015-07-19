@@ -18,7 +18,7 @@ struct set {
     set &operator=(const set &other);
     set &operator=(set &&other);
 
-    typedef hash_iterator<const hash_node<K, void>> const_iterator;
+    typedef hash_iterator<const hash_elem<K, void>> const_iterator;
     typedef const_iterator iterator;
 
     iterator begin() const;
@@ -36,46 +36,30 @@ struct set {
     void swap(set &other);
 
 private:
-    typedef hash_node<K, void> *pointer;
-
-    size_t m_size;
-    buffer<pointer> m_buckets;
+    detail::hash_base<hash_elem<K, void>> m_base;
 };
 
 template <typename K>
 set<K>::set()
-    : m_size(0)
+    : m_base(9)
 {
-    m_buckets.resize(9, 0);
 }
 
 template <typename K>
 set<K>::set(const set<K> &other)
-    : m_size(other.m_size)
+    : m_base(other.m_base)
 {
-    const size_t nbuckets = size_t(other.m_buckets.last - other.m_buckets.first);
-    m_buckets.resize(nbuckets, 0);
-
-    for (pointer *it = *other.m_buckets.first; it; it = it->next) {
-        unsigned char *data = neoMalloc(sizeof(hash_node<K, void>));
-        hash_node<K, void> *newnode = new(data) hash_node<K, void>(*it);
-        newnode->next = nullptr;
-        newnode->prev = nullptr;
-        hash_node_insert(newnode, hash(it->first), m_buckets.first, nbuckets - 1);
-    }
 }
 
 template <typename K>
 set<K>::set(set<K> &&other)
-    : m_size(other.m_size)
-    , m_buckets(u::move(other.m_buckets))
+    : m_base(u::move(other.m_base))
 {
-    other.m_size = 0;
 }
 
 template <typename K>
 set<K>::~set() {
-    clear();
+    detail::hash_free(m_base);
 }
 
 template <typename K>
@@ -86,55 +70,49 @@ set<K> &set<K>::operator=(const set<K> &other) {
 
 template <typename K>
 set<K> &set<K>::operator=(set<K> &&other) {
+    using base = detail::hash_base<hash_elem<K, void>>;
     if (this == &other) assert(0);
-    m_size = other.m_size;
-    m_buckets = u::move(other.m_buckets);
-    other.m_size = 0;
+    detail::hash_free(m_base);
+    m_base.~base();
+    new (&m_base) base(u::move(other));
     return *this;
 }
 
 template <typename K>
 inline typename set<K>::iterator set<K>::begin() const {
-    iterator cit;
-    cit.node = *m_buckets.first;
-    return cit;
+    iterator it;
+    it.node = *m_base.buckets.first;
+    return it;
 }
 
 template <typename K>
 inline typename set<K>::iterator set<K>::end() const {
-    iterator cit;
-    cit.node = 0;
-    return cit;
+    iterator it;
+    it.node = nullptr;
+    return it;
 }
 
 template <typename K>
 inline bool set<K>::empty() const {
-    return m_size == 0;
+    return m_base.size == 0;
 }
 
 template <typename K>
 inline size_t set<K>::size() const {
-    return m_size;
+    return m_base.size;
 }
 
 template <typename K>
 inline void set<K>::clear() {
-    pointer it = *m_buckets.first;
-    while (it) {
-        const pointer next = it->next;
-        it->~hash_node<K, void>();
-        neoFree(it);
-        it = next;
-    }
-    m_buckets.last = m_buckets.first;
-    m_buckets.resize(9, 0);
-    m_size = 0;
+    using base = detail::hash_base<hash_elem<K, void>>;
+    m_base.~base();
+    new (&m_base) base(9);
 }
 
 template <typename K>
 inline typename set<K>::iterator set<K>::find(const K &key) const {
     iterator result;
-    result.node = hash_find(key, m_buckets.first, size_t(m_buckets.last - m_buckets.first));
+    result.node = detail::hash_find(m_base, key);
     return result;
 }
 
@@ -144,60 +122,40 @@ inline pair<typename set<K>::iterator, bool> set<K>::insert(const K &key) {
     if (result.first().node != 0)
         return result;
 
-    unsigned char *data = neoMalloc(sizeof(hash_node<K, void>));
-    hash_node<K, void>* newnode = new(data) hash_node<K, void>(key);
-    newnode->next = newnode->prev = 0;
+    size_t nbuckets = (m_base.buckets.last - m_base.buckets.first);
 
-    const size_t nbuckets = size_t(m_buckets.last - m_buckets.first);
-    hash_node_insert(newnode, hash(key), m_buckets.first, nbuckets - 1);
-
-    ++m_size;
-    if (m_size + 1 > 4 * nbuckets) {
-        pointer root = *m_buckets.first;
-
-        const size_t newnbuckets = (size_t(m_buckets.last - m_buckets.first) - 1) * 8;
-        m_buckets.last = m_buckets.first;
-        m_buckets.resize(newnbuckets + 1, 0);
-        hash_node<K, void>* *buckets = m_buckets.first;
-
-        while (root) {
-            const pointer next = root->next;
-            root->next = root->prev = 0;
-            hash_node_insert(root, hash(root->first), buckets, newnbuckets);
-            root = next;
-        }
+    if ((m_base.size + 1) / nbuckets > 0.75f) {
+        detail::hash_rehash(m_base, 8 * nbuckets);
+        nbuckets = (m_base.buckets.last - m_base.buckets.first);
     }
 
-    result.first().node = newnode;
+    size_t hh = hash(key) & (nbuckets - 2);
+    typename set<K>::iterator &it = result.first();
+    it.node = detail::hash_insert_new(m_base, hh);
+
+    it.node->first.~hash_elem<K, void>();
+    new ((void *)&it.node->first) hash_elem<K, void>(key);
+
     result.second() = true;
     return result;
 }
 
 template <typename K>
 inline void set<K>::erase(iterator where) {
-    hash_node_erase(where.node, hash(where.node->first),
-        m_buckets.first, size_t(m_buckets.last - m_buckets.first) - 1);
-
-    where.node->~hash_node<K, void>();
-    neoFree(where.node);
-    --m_size;
+    detail::hash_erase(m_base, where.node);
 }
 
 template <typename K>
 inline size_t set<K>::erase(const K &key) {
-    const iterator it = find(key);
-    if (it.node == 0)
-        return 0;
+    const_iterator it = find(key);
+    if (!it.node) return 0;
     erase(it);
     return 1;
 }
 
 template <typename K>
 void set<K>::swap(set &other) {
-    size_t tsize = other.m_size;
-    other.m_size = m_size;
-    m_size = tsize;
-    m_buckets.swap(other.m_buckets);
+    detail::hash_swap(m_base, other.m_base);
 }
 
 }
