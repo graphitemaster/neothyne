@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <string.h>
 #include <assert.h>
-#include <limits.h>
 
 #include "u_new.h"
 #include "u_buffer.h"
@@ -11,26 +10,27 @@
 namespace u {
 
 namespace detail {
-    template <bool E>
+    template <size_t E>
     struct fnvConst;
 
     template <>
-    struct fnvConst<false> {
+    struct fnvConst<8> {
         // 64-bit
         static constexpr size_t kPrime = 1099511628211u;
         static constexpr size_t kOffsetBasis = 14695981039346656037u;
     };
 
     template <>
-    struct fnvConst<true> {
+    struct fnvConst<4> {
         // 32-bit
         static constexpr size_t kPrime = 16777619u;
         static constexpr size_t kOffsetBasis = 2166136261u;
     };
 
     static inline size_t fnv1a(const void *data, size_t length) {
-        static constexpr size_t kPrime = fnvConst<ULONG_MAX == 0xffffffff>::kPrime;
-        static constexpr size_t kOffsetBasis = fnvConst<ULONG_MAX == 0xffffffff>::kOffsetBasis;
+        using constants = fnvConst<sizeof(size_t)>;
+        static constexpr size_t kPrime = constants::kPrime;
+        static constexpr size_t kOffsetBasis = constants::kOffsetBasis;
         size_t hash = kOffsetBasis;
         unsigned char *as = (unsigned char *)data;
         for (unsigned char *it = as, *end = as + length; it != end; ++it) {
