@@ -142,7 +142,7 @@ namespace detail {
         // is to say that E is not a multiple of `kCacheLineSize' so we'll construct
         // an array of bytes that will be inherited for `hash_chunk' so that it
         // becomes a multiple of `kCacheLineSize'
-        unsigned char padding[((E + kCacheLineSize - 1) / kCacheLineSize) * kCacheLineSize];
+        unsigned char padding[kCacheLineSize - (E % kCacheLineSize)];
     };
 
     template <size_t E>
