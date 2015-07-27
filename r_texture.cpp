@@ -816,25 +816,71 @@ void texture2D::colorize(uint32_t color) {
     m_texture.colorize(color);
 }
 
-void texture2D::applyFilter() {
-    if (r_bilinear && (m_filter & kFilterBilinear)) {
-        GLenum min = (r_mipmaps && m_mipmaps)
-            ? ((r_trilinear && (m_filter & kFilterTrilinear))
-                ? GL_LINEAR_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR)
-                : GL_LINEAR;
-        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min);
-    } else {
-        GLenum min = (r_mipmaps && m_mipmaps)
-            ? ((r_trilinear && (m_filter & kFilterTrilinear))
-                ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST_MIPMAP_LINEAR)
-                : GL_NEAREST;
-        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min);
-    }
+// Following is a table of texture filters encoded using the following scheme:
+//  bit 0: has bilinear?
+//  bit 1: has mipmaps?
+//  bit 2: has trilinear?
+//  bit 3: mag of choice (unset = nearest, set = linear)
+//
+//  bit 4-7: (4 bit integer)
+//    enum {
+//      nearest,                linear,
+//      nearest_mipmap_nearest, linear_mipmap_nearest
+//      nearest_mipmap_linear,  linear_mipmap_linear
+//    }
+//
+// Bilinear | Mipmaps | Trilinear | Mag     | Min                    |
+// -------------------------------------------------------------------
+// Off      | Off     | Off       | NEAREST | NEAREST                |
+// On       | Off     | Off       | LINEAR  | LINEAR                 |
+// Off      | Off     | On        | NEAREST | NEAREST                |
+// On       | Off     | On        | LINEAR  | LINEAR                 |
+// Off      | On      | Off       | NEAREST | NEAREST_MIPMAP_NEAREST |
+// On       | On      | Off       | LINEAR  | LINEAR_MIPMAP_NEAREST  |
+// Off      | On      | On        | NEAREST | NEAREST_MIPMAP_LINEAR  |
+// On       | On      | On        | LINEAR  | LINEAR_MIPMAP_LINEAR   |
+static constexpr unsigned char kFilters[] = {
+    0x00, 0x19, 0x04, 0x1D, 0x22, 0x3B, 0x46, 0x5F
+};
 
-    // Anisotropic filtering
-    if (r_aniso && (m_filter & kFilterAniso))
+static inline void getTexParams(bool bilinear, bool mipmaps, bool trilinear, GLenum &min, GLenum &mag) {
+    for (const auto &it : kFilters) {
+        const unsigned char lo = it & 0x0F;
+        const unsigned char hi = (it & 0xF0) >> 4;
+
+        if (bilinear && !(lo & (1 << 0)))
+            continue;
+        if (mipmaps && !(lo & (1 << 1)))
+            continue;
+        if (trilinear && !(lo & (1 << 2)))
+            continue;
+
+        mag = (lo & (1 << 3)) ? GL_LINEAR : GL_NEAREST;
+
+        switch (hi) {
+        case 0: min = GL_NEAREST; break;
+        case 1: min = GL_LINEAR; break;
+        case 2: min = GL_NEAREST_MIPMAP_NEAREST; break;
+        case 3: min = GL_LINEAR_MIPMAP_NEAREST; break;
+        case 4: min = GL_NEAREST_MIPMAP_LINEAR; break;
+        case 5: min = GL_LINEAR_MIPMAP_LINEAR; break;
+        }
+
+        break;
+    }
+}
+
+void texture2D::applyFilter() {
+    const bool aniso = r_aniso && (m_filter & kFilterAniso);
+    const bool bilinear = r_bilinear && (m_filter & kFilterBilinear);
+    const bool trilinear = r_trilinear && (m_filter & kFilterTrilinear);
+
+    GLenum min;
+    GLenum mag;
+    getTexParams(bilinear, m_mipmaps, trilinear, min, mag);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag);
+    if (aniso)
         gl::TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, float(r_aniso));
 }
 
@@ -1006,11 +1052,8 @@ void texture3D::applyFilter() {
     gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
     // Anisotropic filtering
-    if (r_aniso && gl::has(gl::EXT_texture_filter_anisotropic)) {
-        GLfloat largest;
-        gl::GetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
-        gl::TexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT, largest);
-    }
+    if (r_aniso)
+        gl::TexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT, float(r_aniso));
 }
 
 bool texture3D::load(const u::string &ft, const u::string &bk, const u::string &up,
