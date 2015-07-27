@@ -816,58 +816,18 @@ void texture2D::colorize(uint32_t color) {
     m_texture.colorize(color);
 }
 
-// Following is a table of texture filters encoded using the following scheme:
-//  bit 0: has bilinear?
-//  bit 1: has mipmaps?
-//  bit 2: has trilinear?
-//  bit 3: mag of choice (unset = nearest, set = linear)
-//
-//  bit 4-7: (4 bit integer)
-//    enum {
-//      nearest,                linear,
-//      nearest_mipmap_nearest, linear_mipmap_nearest
-//      nearest_mipmap_linear,  linear_mipmap_linear
-//    }
-//
-// Bilinear | Mipmaps | Trilinear | Mag     | Min                    |
-// -------------------------------------------------------------------
-// Off      | Off     | Off       | NEAREST | NEAREST                |
-// On       | Off     | Off       | LINEAR  | LINEAR                 |
-// Off      | Off     | On        | NEAREST | NEAREST                |
-// On       | Off     | On        | LINEAR  | LINEAR                 |
-// Off      | On      | Off       | NEAREST | NEAREST_MIPMAP_NEAREST |
-// On       | On      | Off       | LINEAR  | LINEAR_MIPMAP_NEAREST  |
-// Off      | On      | On        | NEAREST | NEAREST_MIPMAP_LINEAR  |
-// On       | On      | On        | LINEAR  | LINEAR_MIPMAP_LINEAR   |
-static constexpr unsigned char kFilters[] = {
-    0x00, 0x19, 0x04, 0x1D, 0x22, 0x3B, 0x46, 0x5F
-};
-
 static inline void getTexParams(bool bilinear, bool mipmaps, bool trilinear, GLenum &min, GLenum &mag) {
-    for (const auto &it : kFilters) {
-        const unsigned char lo = it & 0x0F;
-        const unsigned char hi = (it & 0xF0) >> 4;
+    const unsigned char index = bilinear | (mipmaps << 1) | (trilinear << 2);
 
-        if (bilinear && !(lo & (1 << 0)))
-            continue;
-        if (mipmaps && !(lo & (1 << 1)))
-            continue;
-        if (trilinear && !(lo & (1 << 2)))
-            continue;
+    mag = (index & 1) ? GL_LINEAR : GL_NEAREST;
 
-        mag = (lo & (1 << 3)) ? GL_LINEAR : GL_NEAREST;
+    static const GLenum kMinLookup[] = {
+        GL_NEAREST, GL_LINEAR, GL_NEAREST_MIPMAP_NEAREST, GL_LINEAR_MIPMAP_NEAREST,
+        GL_NEAREST, GL_LINEAR, GL_NEAREST_MIPMAP_LINEAR, GL_LINEAR_MIPMAP_LINEAR
+    };
 
-        switch (hi) {
-        case 0: min = GL_NEAREST; break;
-        case 1: min = GL_LINEAR; break;
-        case 2: min = GL_NEAREST_MIPMAP_NEAREST; break;
-        case 3: min = GL_LINEAR_MIPMAP_NEAREST; break;
-        case 4: min = GL_NEAREST_MIPMAP_LINEAR; break;
-        case 5: min = GL_LINEAR_MIPMAP_LINEAR; break;
-        }
-
-        break;
-    }
+    assert(index < sizeof(kMinLookup)/sizeof(*kMinLookup));
+    min = kMinLookup[index];
 }
 
 void texture2D::applyFilter() {
