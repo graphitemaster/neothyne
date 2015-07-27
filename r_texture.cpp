@@ -875,8 +875,8 @@ void texture2D::applyFilter() {
     const bool bilinear = r_bilinear && (m_filter & kFilterBilinear);
     const bool trilinear = r_trilinear && (m_filter & kFilterTrilinear);
 
-    GLenum min;
-    GLenum mag;
+    GLenum min = GL_NEAREST;
+    GLenum mag = GL_NEAREST;
     getTexParams(bilinear, m_mipmaps, trilinear, min, mag);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag);
