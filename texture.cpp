@@ -2039,7 +2039,6 @@ void texture::colorize(uint32_t color) {
         return ((rb1 | rb2) & 0xFF00FF) + ((g1 | g2) & 0x00FF00);
     };
 
-
     assert(m_format == kTexFormatBGR || m_format == kTexFormatBGRA ||
            m_format == kTexFormatRGB || m_format == kTexFormatRGBA);
 

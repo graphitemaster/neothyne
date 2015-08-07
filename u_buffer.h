@@ -121,7 +121,8 @@ inline buffer<T>::buffer(buffer<T> &&other) {
 template <typename T>
 inline buffer<T> &buffer<T>::operator=(buffer<T> &&other) {
     assert(this != &other);
-    destroy();
+    destroy_range(first, last);
+    neoFree(first);
     first = other.first;
     last = other.last;
     capacity = other.capacity;

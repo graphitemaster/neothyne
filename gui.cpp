@@ -3,7 +3,7 @@
 #include "cvar.h"
 
 #include "u_misc.h"
-#include "u_map.h"
+#include "u_lru.h"
 #include "u_set.h"
 
 #include "m_const.h"
@@ -12,20 +12,13 @@ VAR(int, ui_scroll_speed, "mouse scroll speed", 1, 10, 5);
 
 namespace gui {
 
-static struct stringPool {
+static struct stringPool : u::lru<u::string> {
     const char *operator()(const char *what);
-    void reset();
-private:
-    u::vector<u::string> m_strings;
 } gStringPool;
 
 inline const char *stringPool::operator()(const char *what) {
-    m_strings.push_back(what);
-    return m_strings.back().c_str();
-}
-
-inline void stringPool::reset() {
-    m_strings.clear();
+    const auto f = find(what);
+    return f ? f->c_str() : insert(what).c_str();
 }
 
 void queue::addScissor(int x, int y, int w, int h) {
@@ -328,12 +321,13 @@ inline void state::update(mouseState &mouse) {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// The Singleton
-static state S; // [S]tate
+static state gState;
 
-#define Q (S.m_queue)  // [Q]ueue
-#define W (S.m_widget) // [W]idget
-#define A (S.m_area)   // [A]rea
-#define B (S.m_scroll) // Scroll [B]ar
+#define G (gState)
+#define Q (G.m_queue)  // [Q]ueue
+#define W (G.m_widget) // [W]idget
+#define A (G.m_area)   // [A]rea
+#define S (G.m_scroll) // [S]croll
 
 // Constants
 static constexpr int kButtonHeight = 17;
@@ -350,7 +344,7 @@ static constexpr int kAreaHeader = 25;
 bool areaBegin(const char *contents, int x, int y, int w, int h, int &value, bool style) {
     A++;
     W.id = 0;
-    B.id = (A << 16) | W.id;
+    S.id = (A << 16) | W.id;
 
     const size_t header = (!contents || !*contents) ? 0 : kAreaHeader;
 
@@ -358,19 +352,19 @@ bool areaBegin(const char *contents, int x, int y, int w, int h, int &value, boo
     W.y = y+h-header + value;
     W.w = w - kScrollAreaPadding*4;
 
-    B.top = y-header+h;
-    B.bottom = y+kScrollAreaPadding/2;
-    B.right = x+w-kScrollAreaPadding*3;
-    B.value = &value;
-    B.areaTop = W.y;
-    B.focusTop = y-header;
-    B.focusBottom = y-header+h;
-    B.inside = S.inRectangle(x, y, w, h, false);
+    S.top = y-header+h;
+    S.bottom = y+kScrollAreaPadding/2;
+    S.right = x+w-kScrollAreaPadding*3;
+    S.value = &value;
+    S.areaTop = W.y;
+    S.focusTop = y-header;
+    S.focusBottom = y-header+h;
+    S.inside = G.inRectangle(x, y, w, h, false);
 
     int totalHeight = int(neoHeight());
     int totalWidth = int(neoWidth());
 
-    S.m_insideCurrentScroll = B.inside;
+    G.m_insideCurrentScroll = S.inside;
     if (style) {
         // Didn't test the side menus... Could very well be broken, knowing myself. :>  --acerspyro
         if (x == 0 && y == totalHeight-h && w == totalWidth) {
@@ -404,18 +398,18 @@ bool areaBegin(const char *contents, int x, int y, int w, int h, int &value, boo
     Q.addScissor(x+kScrollAreaPadding, y+kScrollAreaPadding, w-kScrollAreaPadding*4,
         h-header-kScrollAreaPadding);
 
-    return B.inside;
+    return S.inside;
 }
 
 void areaFinish(int inc, bool autoScroll) {
     Q.addScissor(-1, -1, -1, -1);
 
-    const int x = B.right + kScrollAreaPadding/2;
-    const int y = B.bottom;
+    const int x = S.right + kScrollAreaPadding/2;
+    const int y = S.bottom;
     const int w = kScrollAreaPadding*2;
-    const int h = B.top - B.bottom;
+    const int h = S.top - S.bottom;
 
-    const int stop = B.areaTop;
+    const int stop = S.areaTop;
     const int sbot = W.y;
     const int scmp = stop - sbot;
     const int sh = m::clamp(scmp, 1, scmp);
@@ -424,25 +418,25 @@ void areaFinish(int inc, bool autoScroll) {
 
     if (barHeight < 1.0f) {
         if (autoScroll) {
-            *B.value = m::clamp(*B.value + inc, 0, sh - h);
+            *S.value = m::clamp(*S.value + inc, 0, sh - h);
         } else {
             const float barY = m::clamp(float(y - sbot) / float(sh), 0.0f, 1.0f);
-            const auto id = B.id;
+            const auto id = S.id;
             const int hx = x;
             const int hy = y + int(barY * h);
             const int hw = w;
             const int hh = int(barHeight * h);
             const int range = h - (hh - 1);
-            S.buttonLogic(id, S.inRectangle(hx, hy, hw, hh));
-            if (S.isActive(id)) {
+            G.buttonLogic(id, G.inRectangle(hx, hy, hw, hh));
+            if (G.isActive(id)) {
                 float u = float(hy - y) / float(range);
-                if (S.m_wentActive) {
-                    S.m_drag[1] = S.m_mouse.y;
-                    S.m_dragOrigin = u;
+                if (G.m_wentActive) {
+                    G.m_drag[1] = G.m_mouse.y;
+                    G.m_dragOrigin = u;
                 }
-                if (S.m_drag[1] != S.m_mouse.y) {
-                    u = m::clamp(S.m_dragOrigin + (S.m_mouse.y - S.m_drag[1]) / float(range), 0.0f, 1.0f);
-                    *B.value = int((1 - u) * (sh - h));
+                if (G.m_drag[1] != G.m_mouse.y) {
+                    u = m::clamp(G.m_dragOrigin + (G.m_mouse.y - G.m_drag[1]) / float(range), 0.0f, 1.0f);
+                    *S.value = int((1 - u) * (sh - h));
                 }
             }
             // Background
@@ -450,7 +444,7 @@ void areaFinish(int inc, bool autoScroll) {
             Q.addImage(x, y+6, w, h-11, "textures/ui/scrollbar_vm");
             Q.addImage(x, y, w, 6, "textures/ui/scrollbar_vb");
             // Bar
-            if (S.isActive(id)) {
+            if (G.isActive(id)) {
                 Q.addImage(hx, hy+hh-5, hw, 6, "textures/ui/scrollbarknob_v1t");
                 Q.addImage(hx, hy+6, hw, hh-11, "textures/ui/scrollbarknob_vm");
                 Q.addImage(hx, hy, hw, 6, "textures/ui/scrollbarknob_v1b");
@@ -459,14 +453,14 @@ void areaFinish(int inc, bool autoScroll) {
                 Q.addImage(hx, hy+6, hw, hh-11, "textures/ui/scrollbarknob_vm");
                 Q.addImage(hx, hy, hw, 6, "textures/ui/scrollbarknob_v0b");
                 //Q.addRectangle(hx, hy, hw, hh, float(w)/2-1,
-                //    S.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
+                //    G.isHot(id) ? RGBA(255, 0, 225, 96) : RGBA(255, 255, 255, 64));
             }
             // Scrolling
-            if (B.inside)
-                *B.value = m::clamp(*B.value + inc*S.m_mouse.wheel, 0, sh - h);
+            if (S.inside)
+                *S.value = m::clamp(*S.value + inc*G.m_mouse.wheel, 0, sh - h);
         }
     }
-    S.m_insideCurrentScroll = false;
+    G.m_insideCurrentScroll = false;
 }
 
 bool button(const char *contents, bool enabled) {
@@ -479,11 +473,11 @@ bool button(const char *contents, bool enabled) {
 
     W.y -= kButtonHeight + kDefaultSpacing;
 
-    const bool over = enabled && S.inRectangle(x, y, w, h);
-    const bool result = S.buttonLogic(id, over);
+    const bool over = enabled && G.inRectangle(x, y, w, h);
+    const bool result = G.buttonLogic(id, over);
 
     if (enabled) {
-        if (S.isHot(id)) {
+        if (G.isHot(id)) {
             Q.addImage(x, y, 6, kButtonHeight, "textures/ui/button_1l");
             Q.addImage(x+6, y, w-11, kButtonHeight, "textures/ui/button_1m");
             Q.addImage(x+w-6, y, 6, kButtonHeight, "textures/ui/button_1r");
@@ -493,7 +487,7 @@ bool button(const char *contents, bool enabled) {
             Q.addImage(x+w-6, y, 6, kButtonHeight, "textures/ui/button_0r");
         }
         Q.addText(x+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
-            contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
+            contents, G.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
     } else {
         Q.addText(x+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, RGBA(128, 128, 128, 200));
@@ -517,10 +511,10 @@ int selector(const char *title, int selected, const u::initializer_list<const ch
 
     W.y -= kButtonHeight + kDefaultSpacing;
 
-    const bool overPrev = S.inRectangle(prevX, y, w, h);
-    const bool overNext = S.inRectangle(nextX, y, w, h);
-    const bool resultPrev = S.buttonLogic(prev, overPrev);
-    const bool resultNext = S.buttonLogic(next, overNext);
+    const bool overPrev = G.inRectangle(prevX, y, w, h);
+    const bool overNext = G.inRectangle(nextX, y, w, h);
+    const bool resultPrev = G.buttonLogic(prev, overPrev);
+    const bool resultNext = G.buttonLogic(next, overNext);
 
     const int last = int(elements.size()) - 1;
 
@@ -528,8 +522,8 @@ int selector(const char *title, int selected, const u::initializer_list<const ch
 
     if (enabled) {
         Q.addImage(textX-w+20, y, textW+20, kButtonHeight, "textures/ui/selector_m");
-        Q.addImage(prevX, y, 30, h, S.isHot(prev) ? "textures/ui/arrow_p1" : "textures/ui/arrow_p0");
-        Q.addImage(nextX, y, 30, h, S.isHot(next) ? "textures/ui/arrow_n1" : "textures/ui/arrow_n0");
+        Q.addImage(prevX, y, 30, h, G.isHot(prev) ? "textures/ui/arrow_p1" : "textures/ui/arrow_p0");
+        Q.addImage(nextX, y, 30, h, G.isHot(next) ? "textures/ui/arrow_n1" : "textures/ui/arrow_n0");
         if (resultPrev && --selected < 0)
             selected = last;
         if (resultNext && ++selected > last)
@@ -560,11 +554,11 @@ bool item(const char *contents, bool enabled) {
 
     W.y -= kButtonHeight + kDefaultSpacing;
 
-    const bool over = enabled && S.inRectangle(x, y, w, h);
-    const bool result = S.buttonLogic(id, over);
+    const bool over = enabled && G.inRectangle(x, y, w, h);
+    const bool result = G.buttonLogic(id, over);
 
-    if (S.isHot(id))
-        Q.addRectangle(x, y, w, h, 2.0f, RGBA(255,196,0,S.isActive(id)?196:96));
+    if (G.isHot(id))
+        Q.addRectangle(x, y, w, h, 2.0f, RGBA(255,196,0,G.isActive(id)?196:96));
     if (enabled) {
         Q.addText(x+kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, RGBA(255,255,255,200));
@@ -586,8 +580,8 @@ bool check(const char *contents, bool checked, bool enabled) {
 
     W.y -= kButtonHeight + kDefaultSpacing;
 
-    const bool over = enabled && S.inRectangle(x, y, w, h);
-    const bool result = S.buttonLogic(id, over);
+    const bool over = enabled && G.inRectangle(x, y, w, h);
+    const bool result = G.buttonLogic(id, over);
 
     const int cx = x+kButtonHeight/2-kCheckBoxSize/2;
     const int cy = y+kButtonHeight/2-kCheckBoxSize/2;
@@ -603,7 +597,7 @@ bool check(const char *contents, bool checked, bool enabled) {
     }
     if (enabled) {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
-            contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
+            contents, G.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
     } else {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, RGBA(128, 128, 128, 200));
@@ -625,15 +619,15 @@ bool collapse(const char *contents, const char *subtext, bool checked, bool enab
     const int cx = x+kButtonHeight/2-kCollapseSize/2;
     const int cy = y+kButtonHeight/2-kCollapseSize/2;
 
-    const bool over = enabled && S.inRectangle(x, y, w, h);
-    const bool result = S.buttonLogic(id, over);
+    const bool over = enabled && G.inRectangle(x, y, w, h);
+    const bool result = G.buttonLogic(id, over);
 
     Q.addTriangle(cx, cy, kCollapseSize, kCollapseSize, checked ? 2 : 1,
-        RGBA(255, 255, 255, S.isActive(id) ? 255 : 200));
+        RGBA(255, 255, 255, G.isActive(id) ? 255 : 200));
 
     if (enabled) {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
-            contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
+            contents, G.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
     } else {
         Q.addText(x+kButtonHeight, y+kButtonHeight/2-kTextHeight/2, kAlignLeft,
             contents, RGBA(128, 128, 128, 200));
@@ -688,17 +682,17 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
 
     int m = int(u * range);
 
-    const bool over = enabled && S.inRectangle(x+m, y, kSliderMarkerWidth, kSliderHeight);
-    const bool result = S.buttonLogic(id, over);
+    const bool over = enabled && G.inRectangle(x+m, y, kSliderMarkerWidth, kSliderHeight);
+    const bool result = G.buttonLogic(id, over);
     bool changed = false;
 
-    if (S.isActive(id)) {
-        if (S.m_wentActive) {
-            S.m_drag[0] = S.m_mouse.x;
-            S.m_dragOrigin = u;
+    if (G.isActive(id)) {
+        if (G.m_wentActive) {
+            G.m_drag[0] = G.m_mouse.x;
+            G.m_dragOrigin = u;
         }
-        if (S.m_drag[0] != S.m_mouse.x) { // Mouse and drag don't share same coordinate on the X axis
-            const float u = m::clamp(S.m_dragOrigin + float(S.m_mouse.x - S.m_drag[0]) / float(range), 0.0f, 1.0f);
+        if (G.m_drag[0] != G.m_mouse.x) { // Mouse and drag don't share same coordinate on the X axis
+            const float u = m::clamp(G.m_dragOrigin + float(G.m_mouse.x - G.m_drag[0]) / float(range), 0.0f, 1.0f);
             value = min + u * (max - min);
             value = m::floor(value / float(inc) + 0.5f) * float(inc); // Snap to increments
             m = int(u * range);
@@ -712,9 +706,9 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
 
     if (enabled) {
         Q.addText(x+kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignLeft,
-            contents, S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
+            contents, G.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
         Q.addText(x+w-kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignRight,
-            msg.c_str(), S.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
+            msg.c_str(), G.isHot(id) ? RGBA(255, 0, 225, 255) : RGBA(255, 255, 255, 200));
     } else {
         Q.addText(x+kSliderHeight/2, y+kSliderHeight/2-kTextHeight/2, kAlignLeft,
             contents, RGBA(128, 128, 128, 200));
@@ -722,7 +716,7 @@ bool slider(const char *contents, T &value, T min, T max, T inc, bool enabled) {
             msg.c_str(), RGBA(128, 128, 128, 200));
     }
 
-    if (S.isActive(id)) {
+    if (G.isActive(id)) {
         Q.addImage(float(x+m), y, 6, kSliderHeight, "textures/ui/scrollbarknob_h1l");
         if (kSliderMarkerWidth > 12)
             Q.addImage(float(x+m)+7, y, y+4, kSliderHeight, "textures/ui/scrollbarknob_hm");
@@ -799,27 +793,25 @@ const queue &commands() {
 }
 
 void begin(mouseState &mouse) {
-    gStringPool.reset();
-
-    S.update(mouse);
+    G.update(mouse);
 
     // This hot becomes the nextHot
-    S.m_hot = S.m_nextHot;
-    S.m_nextHot = 0;
+    G.m_hot = G.m_nextHot;
+    G.m_nextHot = 0;
 
     // Nothing went active, is active or hot
-    S.m_wentActive = false;
-    S.m_isActive = false;
-    S.m_isHot = false;
+    G.m_wentActive = false;
+    G.m_isActive = false;
+    G.m_isHot = false;
 
-    S.m_widget.reset();
-    S.m_queue.reset();
+    G.m_widget.reset();
+    G.m_queue.reset();
 
-    S.m_area = 1;
+    G.m_area = 1;
 }
 
 void finish() {
-    S.clearInput();
+    G.clearInput();
 }
 
 }

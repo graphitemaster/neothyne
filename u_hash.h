@@ -336,7 +336,7 @@ namespace detail {
     template <typename N>
     inline void hash_rehash(hash_base<N> &h, size_t n) {
         buffer<hash_node<N> *> &och = h.buckets;
-        buffer<hash_node<N> *>  nch;
+        buffer<hash_node<N> *> nch;
         nch.resize(n, nullptr);
 
         hash_node<N> *p = *och.first;
@@ -372,6 +372,9 @@ namespace detail {
         node->next = h.unused;
         node->prev = nullptr;
         h.unused = node;
+
+        node->first.~N();
+        new (&node->first) N();
     }
 }
 
