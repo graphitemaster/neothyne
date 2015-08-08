@@ -8,6 +8,7 @@ struct voidptr {
     voidptr(void *ptr);
     template <typename T>
     operator T *();
+    operator bool();
 private:
     void *m_ptr;
 };
@@ -22,12 +23,14 @@ inline voidptr::operator T*() {
     return (T*)m_ptr;
 }
 
+inline voidptr::operator bool() {
+    return m_ptr;
+}
+
 // Raw memory allocation mechanism.
 voidptr neoMalloc(size_t size);
 voidptr neoRealloc(voidptr ptr, size_t size);
 void neoFree(voidptr ptr);
-voidptr neoAlignedMalloc(size_t size, size_t alignment);
-void neoAlignedFree(voidptr ptr);
 
 inline void *operator new(size_t, void *ptr) {
     return ptr;

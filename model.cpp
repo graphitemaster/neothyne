@@ -630,7 +630,7 @@ void model::makeHalf() {
     static constexpr size_t kFloats = sizeof(mesh::basicVertex)/sizeof(float);
     if (animated()) {
         const auto &vertices = m_animVertices;
-        mesh::basicVertex *basics = neoAlignedMalloc(vertices.size() * sizeof(mesh::basicVertex), 16);
+        u::vector<mesh::basicVertex> basics(vertices.size());
         for (size_t i = 0; i < vertices.size(); i++)
             memcpy(&basics[i], &vertices[i], sizeof(mesh::basicVertex));
         const auto halfData = m::convertToHalf((const float *)&basics[0], kFloats*vertices.size());
@@ -642,16 +642,14 @@ void model::makeHalf() {
         }
         m_animHalfVertices = u::move(converted);
         m_animVertices.destroy();
-        neoAlignedFree(basics);
     } else {
         const auto &vertices = m_basicVertices;
-        mesh::basicVertex *basics = neoAlignedMalloc(sizeof(mesh::basicVertex)*vertices.size(), 16);
+        u::vector<mesh::basicVertex> basics(vertices.size());
         memcpy(&basics[0], &vertices[0], sizeof(mesh::basicVertex)*vertices.size());
         const auto convert = m::convertToHalf((const float *)&basics[0], kFloats*vertices.size());
         m_basicHalfVertices.resize(vertices.size());
         memcpy(&m_basicHalfVertices[0], &convert[0], sizeof(mesh::basicHalfVertex)*vertices.size());
         m_basicVertices.destroy();
-        neoAlignedFree(basics);
     }
 }
 

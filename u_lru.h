@@ -87,7 +87,7 @@ inline lru<K>::~lru() {
         current = current->next;
         temp->~node();
     }
-    free(m_nodeData); // will also free m_nodeBits
+    neoFree(m_nodeData); // will also free m_nodeBits
     m_size = 0;
 }
 

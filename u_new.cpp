@@ -3,38 +3,47 @@
 
 #include "u_new.h"
 
-voidptr neoMalloc(size_t size) {
+static constexpr size_t kMemoryAlignment = 16u;
+
+static voidptr neoCoreMalloc(size_t size) {
     void *ptr = malloc(size);
-    if (!ptr) abort();
-    return ptr;
+    if (ptr)
+        return ptr;
+    abort();
 }
 
-voidptr neoRealloc(voidptr ptr, size_t size) {
-    if (!size) abort();
-    void *resize = realloc(ptr, size);
-    if (!resize) abort();
-    return resize;
+static voidptr neoCoreRealloc(voidptr ptr, size_t size) {
+    if (size) {
+        void *resize = realloc(ptr, size);
+        if (resize)
+            return resize;
+    }
+    abort();
 }
 
-voidptr neoAlignedMalloc(size_t size, size_t alignment) {
-    size_t offset = alignment - 1 + sizeof(void*);
-    voidptr data = neoMalloc(size + offset);
-    void **store = (void**)(((size_t)((void *)data) + offset) & ~(alignment - 1));
+static void neoCoreFree(voidptr what) {
+    free(what);
+}
+
+voidptr neoMalloc(size_t size) {
+    const size_t offset = kMemoryAlignment - 1 + sizeof(void*);
+    voidptr data = neoCoreMalloc(size + offset);
+    void **store = (void **)(((size_t)((void *)data) + offset) & ~(kMemoryAlignment - 1));
     store[-1] = data;
     return store;
 }
 
-extern "C" void __cxa_pure_virtual() {
-    assert(0 && "pure virtual function call");
-    abort();
-}
-
-void neoAlignedFree(voidptr ptr) {
-    neoFree(((void**)ptr)[-1]);
+voidptr neoRealloc(voidptr what, size_t size) {
+    const size_t offset = kMemoryAlignment - 1 + sizeof(void*);
+    voidptr data = neoCoreRealloc(what ? ((void **)what)[-1] : nullptr, size + offset);
+    void **store = (void **)(((size_t)((void *)data) + offset) & ~(kMemoryAlignment - 1));
+    store[-1] = data;
+    return store;
 }
 
 void neoFree(voidptr what) {
-    free(what);
+    if (what)
+        neoCoreFree(((void **)what)[-1]);
 }
 
 void *operator new(size_t size) noexcept {
@@ -52,3 +61,9 @@ void operator delete(void *ptr) noexcept {
 void operator delete[](void *ptr) noexcept {
     neoFree(ptr);
 }
+
+extern "C" void __cxa_pure_virtual() {
+    assert(0 && "pure virtual function call");
+    abort();
+}
+

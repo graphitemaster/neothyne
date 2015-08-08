@@ -192,7 +192,7 @@ static __m128 convertToFloatSSE2(__m128i h) {
 }
 #endif
 
-u::vector<half> convertToHalf(const float *in, size_t length) {
+u::vector<half> convertToHalf(const float *const in, size_t length) {
     u::vector<half> result(length);
 
     assert(((uintptr_t)(const void *)in) % 16 == 0);
@@ -218,7 +218,7 @@ u::vector<half> convertToHalf(const float *in, size_t length) {
     return result;
 }
 
-u::vector<float> convertToFloat(const half *in, size_t length) {
+u::vector<float> convertToFloat(const half *const in, size_t length) {
     u::vector<float> result(length);
 
 #ifdef __SSE2__

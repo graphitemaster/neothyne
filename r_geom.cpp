@@ -124,11 +124,8 @@ bool sphere::upload() {
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    float *aligned = nullptr;
     if (gl::has(gl::ARB_half_float_vertex)) {
-        aligned = neoAlignedMalloc(sizeof(m::vec3) * numVertices, 16);
-        memcpy(aligned, &vertices[0], sizeof(m::vec3) * numVertices);
-        const auto convert = m::convertToHalf(aligned, numVertices * 3);
+        const auto convert = m::convertToHalf((const float *const)&vertices[0], numVertices * 3);
         gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     } else {
@@ -136,9 +133,6 @@ bool sphere::upload() {
         gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(m::vec3), ATTRIB_OFFSET(0)); // position
     }
     gl::EnableVertexAttribArray(0);
-
-    if (aligned)
-        neoAlignedFree(aligned);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof(GLushort), &indices[0], GL_STATIC_DRAW);
