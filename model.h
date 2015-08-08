@@ -18,8 +18,15 @@ struct model {
 
     bool load(const u::string &file, const u::vector<u::string> &anims = {});
 
+    bool isHalf() const;
+
     const u::vector<mesh::basicVertex> &basicVertices() const;
     const u::vector<mesh::animVertex> &animVertices() const;
+
+    // when isHalf() these are valid
+    const u::vector<mesh::basicHalfVertex> &basicHalfVertices() const;
+    const u::vector<mesh::animHalfVertex> &animHalfVertices() const;
+
     const u::vector<unsigned int> &indices() const;
     const u::vector<batch> &batches() const;
     const u::vector<u::string> &meshNames() const;
@@ -32,9 +39,14 @@ struct model {
     const float *bones() const;
     const u::string &name() const;
 
+    void makeHalf();
+    void makeSingle();
+
 private:
     friend struct obj;
     friend struct iqm;
+
+    bool m_isHalf;
 
     m::bbox m_bounds;
     u::vector<batch> m_batches;
@@ -56,15 +68,23 @@ private:
     u::vector<m::mat3x4> m_outFrame; // animated frames
     u::vector<int32_t> m_parents; // parent joint indices
 
-
     u::vector<mesh::animVertex> m_animVertices; // generated data for animated models
     u::vector<mesh::basicVertex> m_basicVertices; // generated data for unanimated models
+
+    // when m_isHalf these are valid
+    u::vector<mesh::animHalfVertex> m_animHalfVertices; // generated data for animated models
+    u::vector<mesh::basicHalfVertex> m_basicHalfVertices; // generated data for unanimated models
 };
 
 inline model::model()
-    : m_numFrames(0)
+    : m_isHalf(false)
+    , m_numFrames(0)
     , m_numJoints(0)
 {
+}
+
+inline bool model::isHalf() const {
+    return m_isHalf;
 }
 
 inline const u::vector<mesh::basicVertex> &model::basicVertices() const {
@@ -73,6 +93,14 @@ inline const u::vector<mesh::basicVertex> &model::basicVertices() const {
 
 inline const u::vector<mesh::animVertex> &model::animVertices() const {
     return m_animVertices;
+}
+
+inline const u::vector<mesh::basicHalfVertex> &model::basicHalfVertices() const {
+    return m_basicHalfVertices;
+}
+
+inline const u::vector<mesh::animHalfVertex> &model::animHalfVertices() const {
+    return m_animHalfVertices;
 }
 
 inline const u::vector<unsigned int> &model::indices() const {

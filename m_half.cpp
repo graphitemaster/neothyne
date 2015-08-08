@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <string.h>
 
 #ifdef __SSE2__
 #include <emmintrin.h>
@@ -88,6 +89,32 @@ half convertToHalf(float in) {
         ((shape.asInt & 0x007FFFFF) >> gHalf.shiftTable[(shape.asInt >> 23) & 0x1FF]);
 }
 
+float convertToFloat(half in) {
+    static constexpr size_t kMagic = 113 << 23;
+    static constexpr size_t kShiftedExp = 0x7C00 << 13; // exponent mask after shift
+
+    floatShape out;
+    out.asInt = (in & 0x7FFF) << 13; // exponent/mantissa bits
+    const size_t exp = kShiftedExp & out.asInt; // exponent
+    out.asInt += (127 - 15) << 23; // adjust exponent
+
+    if (exp == kShiftedExp) {
+        // extra adjustment of exponent for Inf/Nan?
+        out.asInt += (128 - 16) << 23;
+    } else if (exp == 0) {
+        // extra adjustment of exponent for Zero/Denormal?
+        out.asInt += 1 << 23;
+        // renormalize
+        floatShape magic;
+        magic.asInt = kMagic;
+        out.asFloat -= magic.asFloat;
+    }
+
+    // sign bit
+    out.asInt |= (in & 0x8000) << 16;
+    return out.asFloat;
+}
+
 #ifdef __SSE2__
 union vectorShape {
     __m128i asVector;
@@ -132,6 +159,37 @@ static __m128i convertToHalfSSE2(__m128 f) {
 
     return value;
 }
+
+static __m128 convertToFloatSSE2(__m128i h) {
+    // ~19 SSE2 ops
+    alignas(16) static const uint32_t kMaskNoSign[4] = { 0x7fff, 0x7fff, 0x7fff, 0x7fff };
+    alignas(16) static const uint32_t kSmallestNormal[4] = { 0x0400, 0x0400, 0x0400, 0x0400 };
+    alignas(16) static const uint32_t kInfinity[4] = { 0x7c00, 0x7c00, 0x7c00, 0x7c00 };
+    alignas(16) static const uint32_t kExpAdjustNormal[4] = { (127 - 15) << 23, (127 - 15) << 23, (127 - 15) << 23, (127 - 15) << 23, };
+    alignas(16) static const uint32_t kMagicDenormal[4] = { 113 << 23, 113 << 23, 113 << 23, 113 << 23 };
+
+    const __m128i noSign         = *(const __m128i *)&kMaskNoSign;
+    const __m128i exponentAdjust = *(const __m128i *)&kExpAdjustNormal;
+    const __m128i smallest       = *(const __m128i *)&kSmallestNormal;
+    const __m128i infinity       = *(const __m128i *)&kInfinity;
+    const __m128i expAnd         = _mm_and_si128(noSign, h);
+    const __m128i justSign       = _mm_xor_si128(h, expAnd);
+    const __m128i notInfNan      = _mm_cmpgt_epi32(infinity, expAnd);
+    const __m128i isDenormal     = _mm_cmpgt_epi32(smallest, expAnd);
+    const __m128i shifted        = _mm_slli_epi32(expAnd, 13);
+    const __m128i adjustInfNan   = _mm_andnot_si128(notInfNan, exponentAdjust);
+    const __m128i adjusted       = _mm_add_epi32(exponentAdjust, shifted);
+    const __m128i denormal1      = _mm_add_epi32(shifted, *(const __m128i *)&kMagicDenormal);
+    const __m128i adjusted2      = _mm_add_epi32(adjusted, adjustInfNan);
+    const __m128  denormal2      = _mm_sub_ps(_mm_castsi128_ps(denormal1), *(const __m128 *)&kMagicDenormal);
+    const __m128  adjusted3      = _mm_and_ps(denormal2, _mm_castsi128_ps(isDenormal));
+    const __m128  adjusted4      = _mm_andnot_ps(_mm_castsi128_ps(isDenormal), _mm_castsi128_ps(adjusted2));
+    const __m128  adjusted5      = _mm_or_ps(adjusted3, adjusted4);
+    const __m128i sign           = _mm_slli_epi32(justSign, 16);
+    const __m128  value          = _mm_or_ps(adjusted5, _mm_castsi128_ps(sign));
+
+    return value;
+}
 #endif
 
 u::vector<half> convertToHalf(const float *in, size_t length) {
@@ -151,13 +209,32 @@ u::vector<half> convertToHalf(const float *in, size_t length) {
         result[where++] = extractScalar<2>(convert);
         result[where++] = extractScalar<3>(convert);
     }
-    for (int i = 0; i < remainder; i++) {
+    for (int i = 0; i < remainder; i++, where++)
         result[where+i] = convertToHalf(in[where+i]);
-        where++;
-    }
 #else
     for (size_t i = 0; i < length; i++)
         result[i] = convertToHalf(in[i]);
+#endif
+    return result;
+}
+
+u::vector<float> convertToFloat(const half *in, size_t length) {
+    u::vector<float> result(length);
+
+#ifdef __SSE2__
+    const int blocks = int(length) / 4;
+    const int remainder = int(length) % 4;
+    int where = 0;
+    for (int i = 0; i < blocks; i++) {
+        alignas(16) const __m128i value = _mm_set_epi32(in[where+0], in[where+1], in[where+2], in[where+3]);
+        const __m128 convert = convertToFloatSSE2(value);
+        memcpy(&result[where], &convert, sizeof(convert));
+    }
+    for (int i = 0; i < remainder; i++, where++)
+        result[where+i] = convertToFloat(in[where+i]);
+#else
+    for (size_t i = 0; i < length; i++)
+        result[i] = convertToFloat(in[i]);
 #endif
     return result;
 }
