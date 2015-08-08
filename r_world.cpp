@@ -121,12 +121,8 @@ bool bboxMethod::init() {
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/bbox.fs"))
         return false;
-
-    if (!finalize({ { 0, "position" } },
-                  { { 0, "diffuseOut" } }))
-    {
+    if (!finalize({ "position" }, { "diffuseOut" }))
         return false;
-    }
 
     m_WVPLocation = getUniformLocation("gWVP");
     m_colorLocation = getUniformLocation("gColor");
@@ -157,7 +153,7 @@ bool compositeMethod::init(const u::vector<const char *> &defines) {
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/final.fs"))
         return false;
-    if (!finalize({ { 0, "position" } }))
+    if (!finalize({ "position" }))
         return false;
 
     m_WVPLocation = getUniformLocation("gWVP");

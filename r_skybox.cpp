@@ -21,7 +21,7 @@ bool skyboxMethod::init(const u::vector<const char *> &defines) {
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/skybox.fs"))
         return false;
-    if (!finalize({ { 0, "position" } }))
+    if (!finalize({ "position" }))
         return false;
 
     m_WVPLocation = getUniformLocation("gWVP");

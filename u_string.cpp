@@ -522,16 +522,10 @@ void string::erase(size_t beg, size_t end) {
     m_last[0] = '\0';
 }
 
-void string::swap(string& other) {
-    char *tfirst = m_first;
-    char *tlast = m_last;
-    char *tcapacity = m_capacity;
-    m_first = other.m_first;
-    m_last = other.m_last;
-    m_capacity = other.m_capacity;
-    other.m_first = tfirst;
-    other.m_last = tlast;
-    other.m_capacity = tcapacity;
+void string::swap(string &other) {
+    u::swap(m_first, other.m_first);
+    u::swap(m_last, other.m_last);
+    u::swap(m_capacity, other.m_capacity);
 }
 
 void string::reset() {

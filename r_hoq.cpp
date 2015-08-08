@@ -16,12 +16,8 @@ bool occlusionMethod::init() {
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/hoq.fs"))
         return false;
-
-    if (!finalize({ { 0, "position" } },
-                  { { 0, "fragColor" } }))
-    {
+    if (!finalize({ "position" }, { "fragColor" }))
         return false;
-    }
 
     m_WVPLocation = getUniformLocation("gWVP");
 

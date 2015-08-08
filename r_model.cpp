@@ -26,14 +26,8 @@ bool geomMethod::init(const u::vector<const char *> &defines) {
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/geom.fs"))
         return false;
 
-    if (!finalize({ { 0, "position"   },
-                    { 1, "normal"     },
-                    { 2, "texCoord"   },
-                    { 3, "tangent"    },
-                    { 4, "weights"    },
-                    { 5, "bones"      } }
-                , { { 0, "diffuseOut" },
-                    { 1, "normalOut"  } }))
+    if (!finalize({ "position", "normal", "texCoord", "tangent", "weights", "bones" },
+                  { "diffuseOut", "normalOut" }))
     {
         return false;
     }

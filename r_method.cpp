@@ -164,18 +164,18 @@ GLint method::getUniformLocation(const u::string &name) {
     return gl::GetUniformLocation(m_program, name.c_str());
 }
 
-bool method::finalize(const u::initializer_list<attribute> &attributes,
-                      const u::initializer_list<attribute> &fragData)
+bool method::finalize(const u::initializer_list<const char *> &attributes,
+                      const u::initializer_list<const char *> &fragData)
 {
     GLint success = 0;
     GLint infoLogLength = 0;
     u::string infoLog;
 
-    for (auto &it : attributes)
-        gl::BindAttribLocation(m_program, it.index, it.name);
+    for (size_t i = 0; i < attributes.size(); i++)
+        gl::BindAttribLocation(m_program, i, attributes[i]);
 
-    for (auto &it : fragData)
-        gl::BindFragDataLocation(m_program, it.index, it.name);
+    for (size_t i = 0; i < fragData.size(); i++)
+        gl::BindFragDataLocation(m_program, i, fragData[i]);
 
     gl::LinkProgram(m_program);
     gl::GetProgramiv(m_program, GL_LINK_STATUS, &success);
@@ -217,7 +217,7 @@ bool defaultMethod::init() {
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/default.fs"))
         return false;
-    if (!finalize({ { 0, "position" } }))
+    if (!finalize({ "position" }))
         return false;
 
     m_WVPLocation = getUniformLocation("gWVP");

@@ -15,11 +15,6 @@ struct perspective;
 
 namespace r {
 
-struct attribute {
-    GLuint index;
-    const char *name;
-};
-
 struct method {
     method();
     ~method();
@@ -35,8 +30,8 @@ struct method {
 protected:
     bool addShader(GLenum shaderType, const char *shaderText);
 
-    bool finalize(const u::initializer_list<attribute> &attributes = {},
-                  const u::initializer_list<attribute> &fragData = {});
+    bool finalize(const u::initializer_list<const char *> &attributes = {},
+                  const u::initializer_list<const char *> &fragData = {});
 
     u::optional<u::string> preprocess(const u::string &file);
 

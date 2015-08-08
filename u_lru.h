@@ -18,14 +18,10 @@ struct lru {
 
     size_t size() const;
 
-    void evict(size_t max);
-    void evict();
-
-    const K *find(const K &key) const;
     K *find(const K &key);
 
 protected:
-    static constexpr size_t kWordBits = 8 * sizeof(uint64_t);
+    static constexpr size_t kWordBits = CHAR_BIT * sizeof(uint64_t);
 
     struct node {
         K data;
@@ -89,7 +85,6 @@ inline lru<K>::~lru() {
     for (node *current = m_head; current; ) {
         node *temp = current;
         current = current->next;
-        nodeClear(temp->bit);
         temp->~node();
     }
     free(m_nodeData); // will also free m_nodeBits
@@ -151,7 +146,8 @@ inline void lru<K>::remove_back() {
         m_tail = nullptr;
     }
     m_map.erase(m_map.find(temp->data));
-    delete temp;
+    nodeClear(temp->bit);
+    temp->~node();
     m_size--;
 }
 
@@ -188,7 +184,9 @@ inline typename lru<K>::node *lru<K>::nodeNext(const K &data) {
         nodeMark(i);
         return new (&m_nodeData[i]) node(i, data);
     }
-    return nullptr;
+    // Ran out of nodes: evict the least recently used one
+    remove_back();
+    return nodeNext(data);
 }
 
 template <typename K>
@@ -199,9 +197,6 @@ inline const K &lru<K>::insert(const K &data) {
         move_front(n);
         return n->data;
     } else {
-        if (m_size >= m_max)
-            remove_back();
-
         node *next = nodeNext(data);
         insert_front(next);
         m_map.insert(u::make_pair(data, next));
@@ -229,22 +224,13 @@ inline size_t lru<K>::size() const {
 }
 
 template <typename K>
-inline const K *lru<K>::find(const K &key) const {
-    const node *const n = search(key);
-    return n ? &n->data : nullptr;
-}
-
-template <typename K>
 inline K *lru<K>::find(const K &key) {
     node *const n = search(key);
-    return n ? &n->data : nullptr;
-}
-
-template <typename K>
-inline void lru<K>::evict(size_t max) {
-    if (max < m_size)
-        while (m_size != max)
-            remove_back();
+    if (n) {
+        move_front(n);
+        return &n->data;
+    }
+    return nullptr;
 }
 
 }

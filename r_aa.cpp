@@ -19,7 +19,7 @@ bool aaMethod::init(const u::initializer_list<const char *> &defines) {
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/fxaa.fs"))
         return false;
-    if (!finalize({ { 0, "position" } }))
+    if (!finalize({ "position" }))
         return false;
 
     m_WVPLocation = getUniformLocation("gWVP");

@@ -18,11 +18,8 @@ bool billboardMethod::init() {
         return false;
     if (!addShader(GL_FRAGMENT_SHADER, "shaders/billboard.fs"))
         return false;
-    if (!finalize({ { 0, "position" },
-                    { 1, "texCoord" } }))
-    {
+    if (!finalize({ "position", "texCoord" }))
         return false;
-    }
 
     m_VPLocation = getUniformLocation("gVP");
     m_colorMapLocation = getUniformLocation("gColorMap");
