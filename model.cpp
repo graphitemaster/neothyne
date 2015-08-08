@@ -633,7 +633,7 @@ void model::makeHalf() {
         u::vector<mesh::basicVertex> basics(vertices.size());
         for (size_t i = 0; i < vertices.size(); i++)
             memcpy(&basics[i], &vertices[i], sizeof(mesh::basicVertex));
-        const auto halfData = m::convertToHalf((const float *)&basics[0], kFloats*vertices.size());
+        const auto halfData = m::convertToHalf((const float *const)&basics[0], kFloats*vertices.size());
         u::vector<mesh::animHalfVertex> converted(vertices.size());
         for (size_t i = 0; i < vertices.size(); i++) {
             memcpy(&converted[i], &halfData[kFloats*i], kFloats*sizeof(m::half));
@@ -646,7 +646,7 @@ void model::makeHalf() {
         const auto &vertices = m_basicVertices;
         u::vector<mesh::basicVertex> basics(vertices.size());
         memcpy(&basics[0], &vertices[0], sizeof(mesh::basicVertex)*vertices.size());
-        const auto convert = m::convertToHalf((const float *)&basics[0], kFloats*vertices.size());
+        const auto convert = m::convertToHalf((const float *const)&basics[0], kFloats*vertices.size());
         m_basicHalfVertices.resize(vertices.size());
         memcpy(&m_basicHalfVertices[0], &convert[0], sizeof(mesh::basicHalfVertex)*vertices.size());
         m_basicVertices.destroy();
@@ -660,7 +660,7 @@ void model::makeSingle() {
         u::vector<mesh::basicHalfVertex> basics(vertices.size());
         for (size_t i = 0; i < vertices.size(); i++)
             memcpy(&basics[i], &vertices[i], sizeof(mesh::basicHalfVertex));
-        const auto singleData = m::convertToFloat((const m::half *)&basics[0], kHalfs*vertices.size());
+        const auto singleData = m::convertToFloat((const m::half *const)&basics[0], kHalfs*vertices.size());
         u::vector<mesh::animVertex> converted(vertices.size());
         for (size_t i = 0; i < vertices.size(); i++) {
             memcpy(&converted[i], &singleData[kHalfs*i], kHalfs*sizeof(float));
@@ -672,7 +672,7 @@ void model::makeSingle() {
     } else {
         const auto &vertices = m_basicHalfVertices;
         static constexpr size_t kHalfs = sizeof(mesh::basicHalfVertex)/sizeof(m::half);
-        const auto convert = m::convertToFloat((const m::half *)&vertices[0], kHalfs*vertices.size());
+        const auto convert = m::convertToFloat((const m::half *const)&vertices[0], kHalfs*vertices.size());
         m_basicVertices.resize(vertices.size());
         memcpy(&m_basicVertices[0], &convert[0], sizeof(mesh::basicVertex)*vertices.size());
         m_basicHalfVertices.destroy();
