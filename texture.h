@@ -50,6 +50,10 @@ struct texture {
     texture(const unsigned char *const data, size_t length, size_t width,
         size_t height, bool normal, textureFormat format);
 
+    texture(texture &&other);
+
+    texture &operator=(texture &&other);
+
     bool load(const u::string &file, float quality = 1.0f);
     bool from(const unsigned char *const data, size_t length, size_t width,
         size_t height, bool normal, textureFormat format);

@@ -2162,6 +2162,32 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
     m_pitch = m_width * m_bpp;
 }
 
+texture::texture(texture &&other)
+    : m_hashString(u::move(other.m_hashString))
+    , m_data(u::move(other.m_data))
+    , m_width(other.m_width)
+    , m_height(other.m_height)
+    , m_bpp(other.m_bpp)
+    , m_pitch(other.m_pitch)
+    , m_mips(other.m_mips)
+    , m_flags(other.m_flags)
+    , m_format(other.m_format)
+{
+}
+
+texture &texture::operator=(texture &&other) {
+    m_hashString = u::move(other.m_hashString);
+    m_data = u::move(other.m_data);
+    m_width = other.m_width;
+    m_height = other.m_height;
+    m_bpp = other.m_bpp;
+    m_pitch = other.m_pitch;
+    m_mips = other.m_mips;
+    m_flags = other.m_flags;
+    m_format = other.m_format;
+    return *this;
+}
+
 void texture::writeTGA(u::vector<unsigned char> &outData) {
     tga::header hdr;
     memset(&hdr, 0, sizeof(hdr));
