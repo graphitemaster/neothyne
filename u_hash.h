@@ -249,20 +249,23 @@ namespace detail {
         c->next = it;
         if (it) {
             c->prev = it->prev;
+            auto &prev = c->prev;
+            if (prev)
+                prev->next = c;
             it->prev = c;
-            if (c->prev)
-                c->prev->next = c;
         } else {
             size_t nb = hh;
             while (nb && !buckets[nb])
                 --nb;
             hash_node<N> *prev = buckets[nb];
-            while (prev && prev->next)
-                prev = prev->next;
-
-            c->prev = prev;
-            if (prev)
+            if (prev) {
+                while (prev->next)
+                    prev = prev->next;
+                c->prev = prev;
                 prev->next = c;
+            } else {
+                c->prev = nullptr;
+            }
         }
         for (; it == buckets[hh]; --hh) {
             buckets[hh] = c;
