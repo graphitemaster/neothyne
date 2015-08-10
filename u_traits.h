@@ -1,5 +1,6 @@
 #ifndef U_TRAITS_HDR
 #define U_TRAITS_HDR
+#include <stddef.h>
 
 #ifdef __has_feature
 #   define HAS_FEATURE(X) __has_feature(X)
@@ -8,12 +9,6 @@
 #endif
 
 namespace u {
-
-namespace detail {
-    /// To avoid including stddef.h we evaluate the type of sizeof
-    /// which the standard says is size_t
-    typedef decltype(sizeof(0)) size_type;
-}
 
 /// nullptr_t
 typedef decltype(nullptr) nullptr_t;
@@ -100,7 +95,7 @@ template <typename T>
 struct remove_extent<T[]> {
     typedef T type;
 };
-template <typename T, detail::size_type E>
+template <typename T, size_t E>
 struct remove_extent<T[E]> {
     typedef T type;
 };
@@ -114,7 +109,7 @@ template <typename T>
 struct remove_all_extents<T[]> {
     typedef typename remove_all_extents<T>::type type;
 };
-template <typename T, detail::size_type N>
+template <typename T, size_t N>
 struct remove_all_extents<T[N]> {
     typedef typename remove_all_extents<T>::type type;
 };
@@ -196,7 +191,7 @@ template <typename T>
 struct is_array : false_type {};
 template <typename T>
 struct is_array<T[]> : true_type {};
-template <typename T, detail::size_type N>
+template <typename T, size_t N>
 struct is_array<T[N]> : true_type {};
 
 /// is_pointer
@@ -508,13 +503,13 @@ namespace detail {
             types<unsigned long long, nat>>>>> unsigned_types;
 
     // Given a type list recursively instantiate until we find the given type
-    template <typename L, size_type S, bool = S <= sizeof(typename L::head)>
+    template <typename L, size_t S, bool = S <= sizeof(typename L::head)>
     struct find_first_type;
-    template <typename H, typename T, size_type S>
+    template <typename H, typename T, size_t S>
     struct find_first_type<types<H, T>, S, true> {
         typedef H type;
     };
-    template <typename H, typename T, size_type S>
+    template <typename H, typename T, size_t S>
     struct find_first_type<types<H, T>, S, false> {
         typedef typename find_first_type<T, S>::type type;
     };
@@ -682,6 +677,32 @@ public:
                                                       typename add_pointer<U>::type,
                                                       typename remove_cv<U>::type>::type>::type type;
 };
+
+/// add_rvalue_reference
+template <typename T>
+struct add_rvalue_reference {
+    typedef T &&type;
+};
+template <>
+struct add_rvalue_reference<void> {
+    typedef void type;
+};
+template <>
+struct add_rvalue_reference<const void> {
+    typedef const void type;
+};
+template <>
+struct add_rvalue_reference<volatile void> {
+    typedef volatile void type;
+};
+template <>
+struct add_rvalue_reference<const volatile void> {
+    typedef const volatile void type;
+};
+
+/// declval
+template <typename T>
+typename add_rvalue_reference<T>::type declval();
 
 }
 

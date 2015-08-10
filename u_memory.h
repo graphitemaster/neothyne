@@ -1,10 +1,18 @@
 #ifndef U_MEMORY_HDR
 #define U_MEMORY_HDR
+#include <stddef.h>
+
 #include "u_traits.h"
 
 namespace u {
 
 typedef decltype(nullptr) nullptr_t;
+
+/// addressof
+template <typename T>
+inline T *addressof(T &x) {
+    return (T*)&reinterpret_cast<const volatile char &>(x);
+}
 
 /// A basic pair for unique_ptr (we don't use u::pair here)
 template <typename T1, typename T2>
