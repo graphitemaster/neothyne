@@ -204,7 +204,7 @@ inline V &map<K, V>::operator[](const K &key) {
 
 template <typename K, typename V>
 inline V &map<K, V>::operator[](K &&key) {
-    return insert(u::move(make_pair(u::forward<K>(key), V()))).first->second;
+    return insert(u::move(make_pair(u::forward<K>(key), u::forward<V>(V())))).first->second;
 }
 
 template <typename K, typename V>
