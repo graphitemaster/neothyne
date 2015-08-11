@@ -47,6 +47,9 @@ public:
     void swap(map &other);
 
 private:
+    const_iterator lookup(const K &key, size_t h) const;
+    iterator lookup(const K &key, size_t h);
+
     detail::hash_base<hash_elem<K, V>> m_base;
 };
 
@@ -136,17 +139,27 @@ inline void map<K, V>::clear() {
 }
 
 template <typename K, typename V>
-inline typename map<K, V>::iterator map<K, V>::find(const K &key) {
+inline typename map<K, V>::iterator map<K, V>::lookup(const K &key, size_t h) {
     iterator result;
-    result.node = detail::hash_find(m_base, key);
+    result.node = detail::hash_find(m_base, key, h);
     return result;
 }
 
 template <typename K, typename V>
-inline typename map<K, V>::const_iterator map<K, V>::find(const K &key) const {
+inline typename map<K, V>::const_iterator map<K, V>::lookup(const K &key, size_t h) const {
     const_iterator result;
-    result.node = detail::hash_find(m_base, key);
+    result.node = detail::hash_find(m_base, key, h);
     return result;
+}
+
+template <typename K, typename V>
+inline typename map<K, V>::iterator map<K, V>::find(const K &key) {
+    return lookup(key, hash(key));
+}
+
+template <typename K, typename V>
+inline typename map<K, V>::const_iterator map<K, V>::find(const K &key) const {
+    return lookup(key, hash(key));
 }
 
 template <typename K, typename V>
@@ -156,7 +169,8 @@ inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(const pair<K, 
 
 template <typename K, typename V>
 inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(pair<K, V> &&p) {
-    auto result = make_pair(find(p.first), false);
+    const size_t h = hash(p.first);
+    auto result = make_pair(lookup(p.first, h), false);
     if (result.first.node != 0)
         return result;
 
@@ -167,7 +181,7 @@ inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(pair<K, V> &&p
         nbuckets = (m_base.buckets.last - m_base.buckets.first);
     }
 
-    const size_t hh = hash(p.first) & (nbuckets - 2);
+    const size_t hh = h & (nbuckets - 2);
     typename map<K, V>::iterator &it = result.first;
     it.node = detail::hash_insert_new(m_base, hh);
 

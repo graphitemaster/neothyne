@@ -328,8 +328,8 @@ namespace detail {
     }
 
     template <typename N, typename K>
-    inline hash_node<N> *hash_find(const hash_base<N> &h, const K &key) {
-        const size_t hh = hash(key) & (h.buckets.last - h.buckets.first - 2);
+    inline hash_node<N> *hash_find(const hash_base<N> &h, const K &key, size_t value) {
+        const size_t hh = value & (h.buckets.last - h.buckets.first - 2);
         for (hash_node<N> *c = h.buckets.first[hh], *end = h.buckets.first[hh + 1]; c != end; c = c->next)
             if (c->first.first == key)
                 return c;

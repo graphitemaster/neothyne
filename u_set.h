@@ -39,6 +39,9 @@ struct set {
     void swap(set &other);
 
 private:
+    const_iterator lookup(const K &key, size_t h) const;
+    iterator lookup(const K &key, size_t h);
+
     detail::hash_base<hash_elem<K, void>> m_base;
 };
 
@@ -113,17 +116,27 @@ inline void set<K>::clear() {
 }
 
 template <typename K>
-typename set<K>::const_iterator set<K>::find(const K &key) const {
+typename set<K>::const_iterator set<K>::lookup(const K &key, size_t h) const {
     iterator result;
-    result.node = detail::hash_find(m_base, key);
+    result.node = detail::hash_find(m_base, key, h);
     return result;
 }
 
 template <typename K>
-typename set<K>::iterator set<K>::find(const K &key) {
+typename set<K>::iterator set<K>::lookup(const K &key, size_t h) {
     iterator result;
-    result.node = detail::hash_find(m_base, key);
+    result.node = detail::hash_find(m_base, key, h);
     return result;
+}
+
+template <typename K>
+typename set<K>::const_iterator set<K>::find(const K &key) const {
+    return lookup(key, hash(key));
+}
+
+template <typename K>
+typename set<K>::iterator set<K>::find(const K &key) {
+    return lookup(key, hash(key));
 }
 
 template <typename K>
@@ -133,7 +146,8 @@ inline pair<typename set<K>::iterator, bool> set<K>::insert(const K &key) {
 
 template <typename K>
 inline pair<typename set<K>::iterator, bool> set<K>::insert(K &&key) {
-    auto result = make_pair(find(key), false);
+    const size_t h = hash(key);
+    auto result = make_pair(lookup(key, h), false);
     if (result.first.node != 0)
         return result;
 
@@ -144,7 +158,7 @@ inline pair<typename set<K>::iterator, bool> set<K>::insert(K &&key) {
         nbuckets = (m_base.buckets.last - m_base.buckets.first);
     }
 
-    const size_t hh = hash(key) & (nbuckets - 2);
+    const size_t hh = h & (nbuckets - 2);
     typename set<K>::iterator &it = result.first;
     it.node = detail::hash_insert_new(m_base, hh);
 
