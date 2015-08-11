@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #include "u_new.h"
-#include "u_traits.h"
+#include "u_algorithm.h"
 
 namespace u {
 
@@ -199,15 +199,9 @@ inline void buffer<T>::insert(T *where, const I *ifirst, const I *ilast) {
 
 template <typename T>
 inline void buffer<T>::swap(buffer<T> &other) {
-    T *tfirst = first;
-    T *tlast = last;
-    T *tcapacity = capacity;
-    first = other.first;
-    last = other.last;
-    capacity = other.capacity;
-    other.first = tfirst;
-    other.last = tlast;
-    other.capacity = tcapacity;
+    u::swap(first, other.first);
+    u::swap(last, other.last);
+    u::swap(capacity, other.capacity);
 }
 
 template <typename T>

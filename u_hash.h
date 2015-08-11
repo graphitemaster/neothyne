@@ -315,15 +315,9 @@ namespace detail {
     template <typename N>
     inline void hash_swap(hash_base<N> &a, hash_base<N> &b) {
         a.buckets.swap(b.buckets);
-        const size_t size = a.size;
-        hash_chunk<N> *chunks = a.chunks;
-        hash_node<N> *unused = a.unused;
-        a.size = b.size;
-        a.chunks = b.chunks;
-        a.unused = b.unused;
-        b.size = size;
-        b.chunks = chunks;
-        b.unused = unused;
+        u::swap(a.size, b.size);
+        u::swap(a.chunks, b.chunks);
+        u::swap(a.unused, b.unused);
     }
 
     template <typename N>
