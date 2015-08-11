@@ -380,7 +380,7 @@ string &string::operator=(const string &other) {
 }
 
 string &string::operator=(string &&other) {
-    if (this == &other) assert(0);
+    assert(this != &other);
     m_first = other.m_first;
     m_last = other.m_last;
     m_capacity = other.m_capacity;

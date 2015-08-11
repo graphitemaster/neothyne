@@ -85,7 +85,7 @@ map<K, V> &map<K, V>::operator=(const map<K, V> &other) {
 template <typename K, typename V>
 map<K, V> &map<K, V>::operator=(map<K, V> &&other) {
     using base = detail::hash_base<hash_elem<K, V>>;
-    if (this == &other) assert(0);
+    assert(this != &other);
     detail::hash_free(m_base);
     m_base.~base();
     new (&m_base) base(u::move(other));
