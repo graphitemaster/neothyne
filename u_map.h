@@ -172,7 +172,7 @@ inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(pair<K, V> &&p
     const size_t h = hash(p.first);
     auto result = make_pair(lookup(p.first, h), false);
     if (result.first.node != 0)
-        return result;
+        return u::move(result);
 
     size_t nbuckets = (m_base.buckets.last - m_base.buckets.first);
 

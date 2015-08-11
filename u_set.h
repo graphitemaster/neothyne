@@ -149,7 +149,7 @@ inline pair<typename set<K>::iterator, bool> set<K>::insert(K &&key) {
     const size_t h = hash(key);
     auto result = make_pair(lookup(key, h), false);
     if (result.first.node != 0)
-        return result;
+        return u::move(result);
 
     size_t nbuckets = (m_base.buckets.last - m_base.buckets.first);
 
