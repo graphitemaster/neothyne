@@ -28,8 +28,11 @@ struct set {
     bool empty() const;
     size_t size() const;
 
-    iterator find(const K &key) const;
+    const_iterator find(const K &key) const;
+    iterator find(const K &key);
+
     pair<iterator, bool> insert(const K &key);
+    pair<iterator, bool> insert(K &&key);
     void erase(iterator where);
     size_t erase(const K &key);
 
@@ -110,7 +113,14 @@ inline void set<K>::clear() {
 }
 
 template <typename K>
-inline typename set<K>::iterator set<K>::find(const K &key) const {
+typename set<K>::const_iterator set<K>::find(const K &key) const {
+    iterator result;
+    result.node = detail::hash_find(m_base, key);
+    return result;
+}
+
+template <typename K>
+typename set<K>::iterator set<K>::find(const K &key) {
     iterator result;
     result.node = detail::hash_find(m_base, key);
     return result;
@@ -118,8 +128,13 @@ inline typename set<K>::iterator set<K>::find(const K &key) const {
 
 template <typename K>
 inline pair<typename set<K>::iterator, bool> set<K>::insert(const K &key) {
+    return insert(u::move(K(key)));
+}
+
+template <typename K>
+inline pair<typename set<K>::iterator, bool> set<K>::insert(K &&key) {
     auto result = make_pair(find(key), false);
-    if (result.first().node != 0)
+    if (result.first.node != 0)
         return result;
 
     size_t nbuckets = (m_base.buckets.last - m_base.buckets.first);
@@ -129,15 +144,15 @@ inline pair<typename set<K>::iterator, bool> set<K>::insert(const K &key) {
         nbuckets = (m_base.buckets.last - m_base.buckets.first);
     }
 
-    size_t hh = hash(key) & (nbuckets - 2);
-    typename set<K>::iterator &it = result.first();
+    const size_t hh = hash(key) & (nbuckets - 2);
+    typename set<K>::iterator &it = result.first;
     it.node = detail::hash_insert_new(m_base, hh);
 
     it.node->first.~hash_elem<K, void>();
-    new ((void *)&it.node->first) hash_elem<K, void>(key);
+    new ((void *)&it.node->first) hash_elem<K, void>(u::move(key));
 
-    result.second() = true;
-    return result;
+    result.second = true;
+    return u::move(result);
 }
 
 template <typename K>

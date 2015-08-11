@@ -20,7 +20,7 @@ CXXFLAGS = \
 ifneq (, $(findstring -g, $(CXXFLAGS)))
 	STRIP = true
 else
-	STRIP = strip
+	STRIP = true #strip
 endif
 
 ENGINE_CXXFLAGS = \

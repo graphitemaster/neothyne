@@ -356,8 +356,8 @@ struct inData {
     }
 
     void operator=(const u::pair<uint32_t, unsigned char *> &data) {
-        isHalf = data.first() == iqm::kHalf;
-        asOpaque = data.second();
+        isHalf = data.first == iqm::kHalf;
+        asOpaque = data.second;
     }
 
     void endianSwap(size_t count) {

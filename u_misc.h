@@ -116,13 +116,6 @@ inline void print(const char *fmt, const Ts&... ts) {
     fflush(stdout);
 }
 
-template <typename T>
-inline typename enable_if<is_integral<T>::value && is_signed<T>::value,
-                          typename make_signed<T>::type>::type
-sls(T x, T n) {
-    return (typename make_signed<T>::type)((typename make_unsigned<T>::type)x << n);
-}
-
 void *moveMemory(void *dest, const void *src, size_t n);
 
 // Random number generation facilities

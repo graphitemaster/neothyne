@@ -305,7 +305,7 @@ static void menuOptions() {
                 int findResolution = -1;
                 for (auto &it : kResolutionPairs) {
                     for (auto &jt : it) {
-                        if (jt.first() == width.get() && jt.second() == height.get()) {
+                        if (jt.first == width.get() && jt.second == height.get()) {
                             findRatio = &it - kResolutionPairs.begin();
                             findResolution = &jt - it.begin();
                             break;
@@ -322,8 +322,8 @@ static void menuOptions() {
                 D(resolution) = gui::selector(nullptr, D(resolution), kResolutionStrings[D(ratio)]);
 
                 auto resolution = kResolutionPairs[D(ratio)][D(resolution)];
-                width.set(resolution.first());
-                height.set(resolution.second());
+                width.set(resolution.first);
+                height.set(resolution.second);
             gui::dedent();
 
         }

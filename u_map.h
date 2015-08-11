@@ -35,10 +35,14 @@ public:
 
     const_iterator find(const K &key) const;
     iterator find(const K &key);
+
     pair<iterator, bool> insert(const pair<K, V> &p);
+    pair<iterator, bool> insert(pair<K, V> &&p);
+
     void erase(const_iterator where);
 
     V &operator[](const K &key);
+    V &operator[](K &&key);
 
     void swap(map &other);
 
@@ -147,8 +151,13 @@ inline typename map<K, V>::const_iterator map<K, V>::find(const K &key) const {
 
 template <typename K, typename V>
 inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(const pair<K, V> &p) {
-    auto result = make_pair(find(p.first()), false);
-    if (result.first().node != 0)
+    return insert(u::move(pair<K, V>(p)));
+}
+
+template <typename K, typename V>
+inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(pair<K, V> &&p) {
+    auto result = make_pair(find(p.first), false);
+    if (result.first.node != 0)
         return result;
 
     size_t nbuckets = (m_base.buckets.last - m_base.buckets.first);
@@ -158,29 +167,34 @@ inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(const pair<K, 
         nbuckets = (m_base.buckets.last - m_base.buckets.first);
     }
 
-    size_t hh = hash(p.first()) & (nbuckets - 2);
-    typename map<K, V>::iterator &it = result.first();
+    const size_t hh = hash(p.first) & (nbuckets - 2);
+    typename map<K, V>::iterator &it = result.first;
     it.node = detail::hash_insert_new(m_base, hh);
 
     it.node->first.~hash_elem<K, V>();
-    new (&it.node->first) hash_elem<K, V>(p.first(), p.second());
+    new (&it.node->first) hash_elem<K, V>(u::move(p.first), u::move(p.second));
 
-    result.second() = true;
-    return result;
+    result.second = true;
+    return u::move(result);
 }
 
 template <typename K, typename V>
-void map<K, V>::erase(const_iterator where) {
+inline void map<K, V>::erase(const_iterator where) {
     detail::hash_erase(m_base, where.node);
 }
 
 template <typename K, typename V>
-V &map<K, V>::operator[](const K &key) {
-    return insert(make_pair(key, V())).first()->second;
+inline V &map<K, V>::operator[](const K &key) {
+    return insert(u::move(make_pair(key, V()))).first->second;
 }
 
 template <typename K, typename V>
-void map<K, V>::swap(map &other) {
+inline V &map<K, V>::operator[](K &&key) {
+    return insert(u::move(make_pair(u::forward<K>(key), V()))).first->second;
+}
+
+template <typename K, typename V>
+inline void map<K, V>::swap(map &other) {
     detail::hash_swap(m_base, other.m_base);
 }
 
