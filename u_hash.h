@@ -51,6 +51,7 @@ template <typename K, typename V>
 struct hash_elem {
     hash_elem();
     hash_elem(const K &key, const V &value);
+    hash_elem(K &&key, V &&value);
 
     const K first;
     V second;
@@ -75,10 +76,18 @@ hash_elem<K, V>::hash_elem(const K &key, const V &value)
 {
 }
 
+template <typename K, typename V>
+hash_elem<K, V>::hash_elem(K &&key, V &&value)
+    : first(u::forward<K>(key))
+    , second(u::forward<V>(value))
+{
+}
+
 template <typename K>
 struct hash_elem<K, void> {
     hash_elem();
     hash_elem(const K& key);
+    hash_elem(K &&key);
 
     const K first;
 };
@@ -92,6 +101,12 @@ hash_elem<K, void>::hash_elem()
 template <typename K>
 hash_elem<K, void>::hash_elem(const K& key)
     : first(key)
+{
+}
+
+template <typename K>
+hash_elem<K, void>::hash_elem(K &&key)
+    : first(u::forward<K>(key))
 {
 }
 
