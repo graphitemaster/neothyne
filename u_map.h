@@ -199,12 +199,12 @@ inline void map<K, V>::erase(const_iterator where) {
 
 template <typename K, typename V>
 inline V &map<K, V>::operator[](const K &key) {
-    return insert(u::move(make_pair(key, V()))).first->second;
+    return insert(u::move(make_pair(key, u::move(V())))).first->second;
 }
 
 template <typename K, typename V>
 inline V &map<K, V>::operator[](K &&key) {
-    return insert(u::move(make_pair(u::forward<K>(key), u::forward<V>(V())))).first->second;
+    return insert(u::move(make_pair(u::forward<K>(key), u::move(V())))).first->second;
 }
 
 template <typename K, typename V>
