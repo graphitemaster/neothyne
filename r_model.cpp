@@ -573,7 +573,10 @@ bool model::upload() {
     if (!useHalf && m_model.isHalf())
         m_model.makeSingle();
 
+    const char *precision = nullptr;
+    const char *state = nullptr;
     if (m_model.animated()) {
+        state = "animated";
         if (useHalf) {
             const auto &vertices = m_model.animHalfVertices();
             mesh::animHalfVertex *vert = nullptr;
@@ -584,7 +587,8 @@ bool model::upload() {
             gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT,    GL_FALSE, sizeof(mesh::animHalfVertex), &vert->tangent); // tangent
             gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animHalfVertex), &vert->blendWeight); // blend weight
             gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animHalfVertex), &vert->blendIndex); // blend index
-            u::print("[model] => `%s' using half-precision float\n", m_model.name());
+            //u::print("[model] => `%s' using half-precision float\n", m_model.name());
+            precision = "half";
         } else {
             const auto &vertices = m_model.animVertices();
             mesh::animVertex *vert = nullptr;
@@ -595,6 +599,7 @@ bool model::upload() {
             gl::VertexAttribPointer(3, 4, GL_FLOAT,         GL_FALSE, sizeof(mesh::animVertex), &vert->tangent); // tangent
             gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animVertex), &vert->blendWeight); // blend weight
             gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animVertex), &vert->blendIndex); // blend index
+            precision = "single";
         }
         gl::EnableVertexAttribArray(0);
         gl::EnableVertexAttribArray(1);
@@ -603,6 +608,7 @@ bool model::upload() {
         gl::EnableVertexAttribArray(4);
         gl::EnableVertexAttribArray(5);
     } else {
+        state = "static";
         if (useHalf) {
             const auto &vertices = m_model.basicHalfVertices();
             mesh::basicHalfVertex *vert = nullptr;
@@ -611,7 +617,7 @@ bool model::upload() {
             gl::VertexAttribPointer(1, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), &vert->normal);
             gl::VertexAttribPointer(2, 2, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), &vert->coordinate);
             gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), &vert->tangent);
-            u::print("[model] => `%s' using half-precision float\n", m_model.name());
+            precision = "half";
         } else {
             const auto &vertices = m_model.basicVertices();
             mesh::basicVertex *vert = nullptr;
@@ -620,6 +626,7 @@ bool model::upload() {
             gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), &vert->normal);
             gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), &vert->coordinate);
             gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), &vert->tangent);
+            precision = "single";
         }
         gl::EnableVertexAttribArray(0);
         gl::EnableVertexAttribArray(1);
@@ -634,6 +641,9 @@ bool model::upload() {
     for (auto &mat : m_materials)
         if (!mat.upload())
             return false;
+
+    u::print("[model] => loaded %s model `%s' using %s-precision float\n",
+        state, m_model.name(), precision);
 
     return true;
 }

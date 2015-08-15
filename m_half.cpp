@@ -85,8 +85,16 @@ halfData::halfData() {
 half convertToHalf(float in) {
     floatShape shape;
     shape.asFloat = in;
-    return gHalf.baseTable[(shape.asInt >> 23) & 0x1FF] +
-        ((shape.asInt & 0x007FFFFF) >> gHalf.shiftTable[(shape.asInt >> 23) & 0x1FF]);
+    return
+        gHalf.baseTable[
+        (shape.asInt >> 23) & 0x1FF
+        ] +
+        (
+            (shape.asInt & 0x007FFFFF) >>
+            gHalf.shiftTable[
+                (shape.asInt >> 23) & 0x1FF
+            ]
+        );
 }
 
 float convertToFloat(half in) {
@@ -209,7 +217,7 @@ u::vector<half> convertToHalf(const float *const in, size_t length) {
         result[where++] = extractScalar<2>(convert);
         result[where++] = extractScalar<3>(convert);
     }
-    for (int i = 0; i < remainder; i++, where++)
+    for (int i = 0; i < remainder; i++)
         result[where+i] = convertToHalf(in[where+i]);
 #else
     for (size_t i = 0; i < length; i++)
@@ -230,7 +238,7 @@ u::vector<float> convertToFloat(const half *const in, size_t length) {
         const __m128 convert = convertToFloatSSE2(value);
         memcpy(&result[where], &convert, sizeof(convert));
     }
-    for (int i = 0; i < remainder; i++, where++)
+    for (int i = 0; i < remainder; i++)
         result[where+i] = convertToFloat(in[where+i]);
 #else
     for (size_t i = 0; i < length; i++)

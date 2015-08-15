@@ -514,7 +514,7 @@ static bool readCache(texture &tex, GLuint &internal) {
     // Now swap!
     tex.unload();
     tex.from(fromData, fromSize, head.width, head.height, false, head.format);
-    u::print("[cache] => read %.50s... %s (%s)\n", cacheString,
+    u::print("[cache] => loaded %.50s... %s (%s)\n", cacheString,
         cacheFormat(head.internal), sizeMetric(fromSize));
     return true;
 }

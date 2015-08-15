@@ -70,14 +70,13 @@ inline lru<K>::lru(size_t max)
     , m_tail(nullptr)
     , m_size(0)
     , m_max(max)
-    , m_nodeData(nullptr)
-    , m_nodeBits(nullptr)
 {
     size_t kNodeMemory = sizeof *m_nodeData * max;
     size_t kBitsMemory = sizeof *m_nodeBits * (max / (sizeof *m_nodeBits * CHAR_BIT) + 1);
     unsigned char *memory = neoMalloc(kNodeMemory + kBitsMemory);
     m_nodeData = (node *)memory;
     m_nodeBits = (uint64_t*)(memory + kNodeMemory);
+    memset(m_nodeBits, 0, kBitsMemory);
 }
 
 template <typename K>
