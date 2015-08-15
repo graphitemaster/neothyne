@@ -162,17 +162,17 @@ inline size_t lru<K>::nodeOffset(size_t bit) {
 
 template <typename K>
 inline void lru<K>::nodeMark(size_t bit) {
-    m_nodeBits[nodeIndex(bit)] |= 1 << nodeOffset(bit);
+    m_nodeBits[nodeIndex(bit)] |= 1ull << nodeOffset(bit);
 }
 
 template <typename K>
 inline void lru<K>::nodeClear(size_t bit) {
-    m_nodeBits[nodeIndex(bit)] &= ~(1 << nodeOffset(bit));
+    m_nodeBits[nodeIndex(bit)] &= ~(1ull << nodeOffset(bit));
 }
 
 template <typename K>
 inline bool lru<K>::nodeTest(size_t bit) {
-    return m_nodeBits[nodeIndex(bit)] & (1 << nodeOffset(bit));
+    return m_nodeBits[nodeIndex(bit)] & (1ull << nodeOffset(bit));
 }
 
 template <typename K>

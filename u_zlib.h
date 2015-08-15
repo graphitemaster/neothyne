@@ -38,7 +38,7 @@ private:
 
     protected:
         int bitReverse(int code, int codeBits);
-        size_t countMatches(const unsigned char *a, const unsigned char *b, int limit);
+        static int countMatches(const unsigned char *a, const unsigned char *b, int limit);
         unsigned int hash(const unsigned char *data);
 
         void flush();

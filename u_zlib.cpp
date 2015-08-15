@@ -393,9 +393,10 @@ int zlib::deflator::bitReverse(int code, int codeBits) {
     return result;
 }
 
-size_t zlib::deflator::countMatches(const unsigned char *a, const unsigned char *b, int limit) {
+int zlib::deflator::countMatches(const unsigned char *a, const unsigned char *b, int limit) {
     int i;
-    for (i = 0; i < limit && i < 258; ++i)
+    const int m = u::min(limit, 258);
+    for (i = 0; i < m; ++i)
         if (a[i] != b[i])
             break;
     return i;

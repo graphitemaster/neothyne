@@ -16,7 +16,7 @@ namespace detail {
 }
 
 template <typename T>
-T endianSwap(T value) {
+inline T endianSwap(T value) {
     union {
         int i;
         char data[sizeof(int)];
@@ -34,7 +34,7 @@ T endianSwap(T value) {
 }
 
 template <typename T>
-void endianSwap(T *data, size_t length) {
+inline void endianSwap(T *data, size_t length) {
     for (T *end = &data[length]; data < end; data++)
         *data = endianSwap(*data);
 }
