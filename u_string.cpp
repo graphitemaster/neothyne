@@ -63,7 +63,7 @@ inline void stringMemory::region::setSize(uint32_t size) {
 }
 
 inline void stringMemory::region::setFree(bool free) {
-    m_store = free ? size() : -size();
+    m_store = free ? size() : -int32_t(size());
 }
 
 inline uint32_t stringMemory::region::size() const {
