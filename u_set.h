@@ -153,7 +153,7 @@ inline pair<typename set<K>::iterator, bool> set<K>::insert(K &&key) {
 
     size_t nbuckets = (m_base.buckets.last - m_base.buckets.first);
 
-    if ((m_base.size + 1) / nbuckets > 0.75f) {
+    if ((m_base.size + 1.0f) / nbuckets > 0.75f) {
         detail::hash_rehash(m_base, 8 * nbuckets);
         nbuckets = (m_base.buckets.last - m_base.buckets.first);
     }

@@ -484,7 +484,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
                 if (inCoordinate)  memcpy(v.coordinate, &inCoordinate.asHalf[i*2], sizeof(v.coordinate));
                 if (inTangent)     memcpy(v.tangent, &inTangent.asHalf[i*4], sizeof(v.tangent));
                 if (inNormal) {
-                    for (size_t j = 0; j < 3; i++)
+                    for (size_t j = 0; j < 3; j++)
                         inNormal.asHalf[i*3+j] ^= 0x8000;
                     memcpy(v.normal, &inNormal.asHalf[i*3], sizeof(v.normal));
                 }
@@ -515,7 +515,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
                 if (inCoordinate) memcpy(v.coordinate, &inCoordinate.asHalf[i*2], sizeof(v.coordinate));
                 if (inTangent)    memcpy(v.tangent, &inTangent.asHalf[i*4], sizeof(v.tangent));
                 if (inNormal) {
-                    for (size_t j = 0; j < 3; i++)
+                    for (size_t j = 0; j < 3; j++)
                         inNormal.asHalf[i*3+j] ^= 0x8000;
                     memcpy(v.normal, &inNormal.asHalf[i*3], sizeof(v.normal));
                 }

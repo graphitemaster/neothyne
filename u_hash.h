@@ -125,8 +125,8 @@ namespace detail {
     // `kUpperBound' is chosen and additional padding is added to a `hash_chunk'
     // to make it a multiple of `kCacheLineSize'.
     static constexpr size_t kCacheLineSize = 64;
-    static constexpr size_t kLowerBound = 32;
-    static constexpr size_t kUpperBound = 128;
+    static constexpr size_t kLowerBound = 16;
+    static constexpr size_t kUpperBound = 64;
 
     template <typename N, size_t E>
     struct hash_node_align {
@@ -400,16 +400,25 @@ struct hash_iterator {
 template <typename N>
 struct hash_iterator<const N> {
 
-    hash_iterator() {}
-    hash_iterator(hash_iterator<N> other)
-        : node(other.node)
-    {
-    }
+    hash_iterator();
+    hash_iterator(hash_iterator<N> other);
     const N *operator->() const;
     const N &operator*() const;
 
     detail::hash_node<N> *node;
 };
+
+template <typename N>
+hash_iterator<const N>::hash_iterator()
+    : node(nullptr)
+{
+}
+
+template <typename N>
+hash_iterator<const N>::hash_iterator(hash_iterator<N> other)
+    : node(other.node)
+{
+}
 
 template <typename K>
 struct hash_iterator<const hash_elem<K, void>> {

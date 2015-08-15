@@ -1882,8 +1882,8 @@ void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t
 }
 
 void texture::reorient(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t stride, unsigned char *dst, bool flipx, bool flipy, bool swapxy) {
-    size_t stridex = swapxy ? bpp * sh : bpp;
-    size_t stridey = swapxy ? bpp : bpp * sw;
+    int stridex = swapxy ? bpp * sh : bpp;
+    int stridey = swapxy ? bpp : bpp * sw;
     if (flipx)
         dst += (sw - 1) * stridex, stridex = -stridex;
     if (flipy)

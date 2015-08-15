@@ -193,7 +193,8 @@ static const char *kGeomPermutationNames[] = {
 
 ///! Singleton representing all the possible geometry methods (used by model and world.)
 geomMethods::geomMethods()
-    : m_initialized(false)
+    : m_geomMethods(nullptr)
+    , m_initialized(false)
 {
 }
 
@@ -241,6 +242,7 @@ material::material()
     , m_animFrameHeight(0)
     , m_animFramerate(0)
     , m_animFrames(0)
+    , m_animFrame(0)
     , m_animFramesPerRow(0)
     , m_animWidth(0.0f)
     , m_animHeight(0.0f)

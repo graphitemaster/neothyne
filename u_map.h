@@ -176,7 +176,7 @@ inline pair<typename map<K, V>::iterator, bool> map<K, V>::insert(pair<K, V> &&p
 
     size_t nbuckets = (m_base.buckets.last - m_base.buckets.first);
 
-    if ((m_base.size + 1) / nbuckets > 0.75f) {
+    if ((m_base.size + 1.0f) / nbuckets > 0.75f) {
         detail::hash_rehash(m_base, 8 * nbuckets);
         nbuckets = (m_base.buckets.last - m_base.buckets.first);
     }
