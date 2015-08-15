@@ -16,8 +16,8 @@ namespace detail {
     template <>
     struct fnvConst<8> {
         // 64-bit
-        static constexpr size_t kPrime = 1099511628211u;
-        static constexpr size_t kOffsetBasis = 14695981039346656037u;
+        static constexpr size_t kPrime = size_t(1099511628211ull);
+        static constexpr size_t kOffsetBasis = size_t(14695981039346656037ull);
     };
 
     template <>
