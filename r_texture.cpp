@@ -583,11 +583,7 @@ static bool writeCacheData(textureFormat format,
         const float blockCount = (compressedWidth / 4.0f) * (compressedHeight / 4.0f);
         const float blockDifference = blockCount - dxtOptimCount;
         const float blockPercent = (blockDifference / blockCount) * 100.0f;
-        u::print(" (optimized endpoints in %.2f%% of blocks)",
-            sizeMetric(texSize),
-            sizeMetric(compressedSize),
-            blockPercent
-        );
+        u::print(" (optimized endpoints in %.2f%% of blocks)", blockPercent);
     }
     u::print("\n");
 

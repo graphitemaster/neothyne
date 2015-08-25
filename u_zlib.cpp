@@ -508,10 +508,12 @@ void zlib::deflator::deflate(u::vector<unsigned char> &out, const unsigned char 
             h = hash(&in[0]+i+1) & (kHashSize - 1);
             hashList = hashTable[h];
             for (size_t j = 0; j < hashList.size(); ++j) {
-                const size_t dist = countMatches(hashList[j], &in[0]+i+1, dataLength-i-1);
-                if (dist > best) {
-                    bestLocation = nullptr;
-                    break;
+                if (hashList[j] - &in[0] > i-32767) {
+                    const size_t dist = countMatches(hashList[j], &in[0]+i+1, dataLength-i-1);
+                    if (dist > best) {
+                        bestLocation = nullptr;
+                        break;
+                    }
                 }
             }
         }
