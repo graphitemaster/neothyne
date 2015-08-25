@@ -15,8 +15,7 @@ CXXFLAGS = \
 	-I. \
 	-DDEBUG_GL \
 	-DDXT_COMPRESSOR \
-	-O3 \
-	-m32
+	-O3
 
 ifneq (, $(findstring -g, $(CXXFLAGS)))
 	STRIP = true
@@ -30,8 +29,7 @@ ENGINE_CXXFLAGS = \
 
 ENGINE_LDFLAGS = \
 	-lm \
-	`sdl2-config --libs` \
-	-m32
+	`sdl2-config --libs`
 
 all: $(GAME_BIN)
 
