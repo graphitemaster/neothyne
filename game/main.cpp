@@ -183,6 +183,11 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     m.position = { 85, 112, 35 };
     gWorld.insert(m);
 
+    m.name = "models/ball";
+    m.position = { 100, 95, 50 };
+
+    gWorld.insert(m);
+
     if (!gWorld.load("garden.kdgz"))
         neoFatal("failed to load world");
 #endif

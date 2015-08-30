@@ -32,8 +32,6 @@ static void neoCoreFree(voidptr what) {
 // provided allocator
 template <bool>
 struct alignedAllocator {
-    using base = alignedAllocator;
-
     static voidptr neoMalloc(size_t size) {
         return neoCoreMalloc(size);
     }

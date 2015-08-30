@@ -117,11 +117,11 @@ bool obj::load(const u::string &file, model *store) {
     // Unique vertices are stored in a map keyed by face.
     u::map<face, size_t> uniques;
 
-    // The indices (which get rewired to unsigned ints)
-    u::vector<size_t> indices;
+    // Current group and indices for group
+    u::string group;
+    u::map<u::string, u::vector<size_t>> groups;
 
     size_t count = 0;
-    size_t group = 0;
     while (auto get = u::getline(fp)) {
         auto &line = *get;
         // Skip whitespace
@@ -148,8 +148,12 @@ bool obj::load(const u::string &file, model *store) {
             // vt float float
             coordinates.push_back({x, 1.0f - y});
         } else if (line[0] == 'g') {
-            group++;
-        } else if (line[0] == 'f' && group == 0) { // Only process the first group faces
+            // Read a group name
+            const char *what;
+            for (what = &line[0] + 1; *what && strchr(" \t", *what); what++)
+                ;
+            group = what;
+        } else if (line[0] == 'f') {
             u::vector<size_t> v;
             u::vector<size_t> n;
             u::vector<size_t> t;
@@ -177,7 +181,8 @@ bool obj::load(const u::string &file, model *store) {
 
             // Triangulate the mesh
             for (size_t i = 1; i < v.size() - 1; ++i) {
-                auto index = indices.size();
+                auto &indices = groups[group];
+                const size_t index = indices.size();
                 indices.resize(index + 3);
                 auto triangulate = [&v, &n, &t, &uniques, &count](size_t index, size_t &out) {
                     face triangle;
@@ -189,9 +194,9 @@ bool obj::load(const u::string &file, model *store) {
                         uniques[triangle] = count++;
                     out = uniques[triangle];
                 };
-                triangulate(0,     indices[index + 0]);
+                triangulate(0,     indices[index + 2]);
                 triangulate(i + 0, indices[index + 1]);
-                triangulate(i + 1, indices[index + 2]);
+                triangulate(i + 1, indices[index + 0]);
             }
         }
     }
@@ -210,20 +215,23 @@ bool obj::load(const u::string &file, model *store) {
             coordinates_[second] = coordinates[first.coordinate];
     }
 
-    // Optimize the indices (on a per group basis)
-    vertexCacheOptimizer vco;
-    vco.optimize(indices);
-
-    // Change winding order
-    for (size_t i = 0; i < indices.size(); i += 3)
-        u::swap(indices[i], indices[i + 2]);
+    // Optimize indices
+    u::vector<size_t> indices_;
+    for (auto &g : groups) {
+        // Optimize the indices
+        vertexCacheOptimizer vco;
+        vco.optimize(g.second);
+        indices_.reserve(indices_.size() + g.second.size());
+        for (const auto &i : g.second)
+            indices_.push_back(i);
+    }
 
     // Calculate tangents
     u::vector<m::vec3> tangents_(count);
     u::vector<float> bitangents_(count);
-    createTangents(positions_, coordinates_, normals_, indices, tangents_, bitangents_);
+    createTangents(positions_, coordinates_, normals_, indices_, tangents_, bitangents_);
 
-    // Interleave for GPU
+    // Interleave vertex data for GPU
     store->m_basicVertices.resize(count);
     for (size_t i = 0; i < count; i++) {
         auto &vert = store->m_basicVertices[i];
@@ -237,17 +245,19 @@ bool obj::load(const u::string &file, model *store) {
         vert.tangent[3] = bitangents_[i];
     }
 
-    // size_t -> unsigned int
-    store->m_indices.reserve(count);
-    for (auto &it : indices)
-        store->m_indices.push_back(it);
-
-    // TODO: multiple mesh support
-    model::batch b;
-    b.offset = (void *)0;
-    b.count = store->m_indices.size();
-
-    store->m_batches.push_back(b);
+    // Generate batches
+    for (auto &g : groups) {
+        model::batch b;
+        b.offset = (void *)(store->m_indices.size() * sizeof(uint32_t));
+        b.count = g.second.size();
+        // Rewire size_t -> GLuint
+        store->m_indices.reserve(store->m_indices.size() + b.count);
+        for (const auto &i : g.second)
+            store->m_indices.push_back(i);
+        // Emit mesh names in same order as materials
+        store->m_meshNames.push_back(g.first);
+        store->m_batches.push_back(b);
+    }
 
     return true;
 }

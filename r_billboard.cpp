@@ -82,7 +82,6 @@ void billboard::render(const pipeline &pl, float size) {
     u::vector<GLuint> indices;
     indices.reserve(m_positions.size() * 6);
 
-
     for (auto &it : m_positions) {
         const m::vec3 x = size * 0.5f * side;
         const m::vec3 y = size * 0.5f * up;

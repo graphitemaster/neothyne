@@ -499,9 +499,14 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
             rotate.x = u::atof(split[1]);
             if (split.size() > 2) rotate.y = u::atof(split[2]);
             if (split.size() > 3) rotate.z = u::atof(split[3]);
-        } else if (split[0] == "material" && split.size() > 2) {
-            materialNames.push_back(split[1]);
-            materialFiles.push_back(split[2]);
+        } else if (split[0] == "material") {
+            if (split.size() > 2) {
+                materialNames.push_back(split[1]);
+                materialFiles.push_back(split[2]);
+            } else {
+                u::print("[model] => invalid use of `material' key\n");
+                return false;
+            }
         } else if (split[0] == "half") {
             m_half = !!u::atoi(split[1]);
         } else if (split[0] == "anim") {
@@ -589,7 +594,6 @@ bool model::upload() {
             gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT,    GL_FALSE, sizeof(mesh::animHalfVertex), &vert->tangent); // tangent
             gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animHalfVertex), &vert->blendWeight); // blend weight
             gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animHalfVertex), &vert->blendIndex); // blend index
-            //u::print("[model] => `%s' using half-precision float\n", m_model.name());
             precision = "half";
         } else {
             const auto &vertices = m_model.animVertices();
@@ -644,8 +648,9 @@ bool model::upload() {
         if (!mat.upload())
             return false;
 
-    u::print("[model] => loaded %s model `%s' using %s-precision float\n",
-        state, m_model.name(), precision);
+    const size_t materials = m_model.meshNames().size();
+    u::print("[model] => loaded %s model `%s' (containing %zu %s) using %s-precision float\n",
+        state, m_model.name(), materials, materials > 1 ? "materials" : "material", precision);
 
     return true;
 }

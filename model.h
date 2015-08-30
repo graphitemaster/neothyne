@@ -52,10 +52,9 @@ private:
     u::vector<batch> m_batches;
     u::vector<unsigned int> m_indices;
 
-    // When loading OBJs the only mesh name this is populated with for now is
-    // "default", as the OBJ loader only supports one mesh.
-    // When loading IQMs however, this is populated with the names of the meshes
-    // of the IQM is composed of. The IQM file must have mesh names, otherwise
+    // When loading OBJs this is populated with the names of the groups in
+    // the OBJ file. When loading IQMs, this is populated with the names of the
+    // meshes the IQM is composed of. The IQM file must have mesh names, otherwise
     // this gets populated with a bunch of "default" strings.
     u::vector<u::string> m_meshNames;
 

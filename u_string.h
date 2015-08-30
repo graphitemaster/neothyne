@@ -76,12 +76,15 @@ inline string::string(I first, I last)
 }
 
 inline bool operator==(const string &lhs, const string &rhs) {
+    if (&lhs == &rhs)
+        return true;
     if (lhs.size() != rhs.size())
         return false;
     return !strcmp(lhs.c_str(), rhs.c_str());
 }
 
 inline bool operator!=(const string &lhs, const string &rhs) {
+    if (&lhs == &rhs) return false;
     return strcmp(lhs.c_str(), rhs.c_str()) != 0;
 }
 
