@@ -209,6 +209,7 @@ template <typename T>
 inline void buffer<T>::shrink_to_fit() {
     if (last == first) {
         neoFree(first);
+        capacity = first;
     } else if (capacity != last) {
         const size_t size = size_t(last - first);
         T *resize = neoMalloc(sizeof(T) * size);
