@@ -217,7 +217,7 @@ bool readConfig(const u::string &userPath) {
     if (!file)
         return false;
     while (auto getline = u::getline(file)) {
-        u::string& line = *getline;
+        const u::string &line = *getline;
         u::vector<u::string> kv = u::split(line);
         if (kv.size() != 2)
             continue;

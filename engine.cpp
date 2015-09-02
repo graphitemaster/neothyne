@@ -520,7 +520,7 @@ bool engine::initData(int &argc, char **argv) {
     // Get a path for the game, can come from command line as well
     const char *directory = nullptr;
     for (int i = 1; i < argc - 1; i++) {
-        if (!strcmp(argv[i], "-gamedir") && argv[i + 1]) {
+        if (argv[i] && argv[i + 1] && !strcmp(argv[i], "-gamedir")) {
             directory = argv[i + 1];
             argc -= 2;
             // Found a game directory, remove it and the directory from argv
