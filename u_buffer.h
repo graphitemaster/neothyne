@@ -72,6 +72,7 @@ struct buffer {
     template <typename I>
     void insert(T *where, const I *ifirst, const I *ilast);
     void swap(buffer &other);
+    void shrink_to_fit();
 
     T *erase(T *ifirst, T*ilast);
 
@@ -202,6 +203,20 @@ inline void buffer<T>::swap(buffer<T> &other) {
     u::swap(first, other.first);
     u::swap(last, other.last);
     u::swap(capacity, other.capacity);
+}
+
+template <typename T>
+inline void buffer<T>::shrink_to_fit() {
+    if (last == first) {
+        neoFree(first);
+    } else if (capacity != last) {
+        const size_t size = size_t(last - first);
+        T *resize = neoMalloc(sizeof(T) * size);
+        move_urange(resize, first, last);
+        first = resize;
+        last = resize + size;
+        capacity = last;
+    }
 }
 
 template <typename T>

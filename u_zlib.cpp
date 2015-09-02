@@ -499,6 +499,7 @@ void zlib::deflator::deflate(u::vector<unsigned char> &out, const unsigned char 
             unsigned char **src = (&hashTable[h][0])+quality;
             u::moveMemory(dst, src, sizeof(hashTable[h][0])*quality);
             hashTable[h].resize(quality);
+            hashTable[h].shrink_to_fit();
         }
 
         hashList.push_back((unsigned char *)&in[0]+i);

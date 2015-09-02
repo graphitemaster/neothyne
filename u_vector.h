@@ -92,6 +92,7 @@ struct vector {
     const T *data() const;
     T *data();
     size_t size() const;
+    size_t capacity() const;
     bool empty() const;
 
     T &operator[](size_t idx);
@@ -112,6 +113,7 @@ struct vector {
     void destroy();
 
     void insert(iterator where, const T &value);
+    void shrink_to_fit();
 
     template <typename I>
     void insert(iterator where, const I *first, const I *last);
@@ -202,7 +204,12 @@ inline T* vector<T>::data() {
 
 template <typename T>
 inline size_t vector<T>::size() const {
-    return (size_t)(m_buffer.last - m_buffer.first);
+    return size_t(m_buffer.last - m_buffer.first);
+}
+
+template <typename T>
+inline size_t vector<T>::capacity() const {
+    return size_t(m_buffer.capacity - m_buffer.first);
 }
 
 template <typename T>
@@ -303,6 +310,11 @@ inline typename vector<T>::iterator vector<T>::erase(iterator position) {
 template <typename T>
 inline void vector<T>::insert(iterator where, const T &value) {
     m_buffer.insert(where, &value, &value + 1);
+}
+
+template <typename T>
+inline void vector<T>::shrink_to_fit() {
+    m_buffer.shrink_to_fit();
 }
 
 template <typename T>
