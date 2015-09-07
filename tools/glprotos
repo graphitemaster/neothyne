@@ -84,3 +84,5 @@ void: GetProgramInfoLog(GLuint: program, GLsizei: maxLength, GLsizei*: length, G
 void: BindAttribLocation(GLuint: program, GLuint: index, const GLchar*: name);
 void: BindFragDataLocation(GLuint: program, GLuint: colorNumber, const GLchar*: name);
 void: TexSubImage2D(GLenum: target, GLint: level, GLint: xoffset, GLint: yoffset, GLsizei: width, GLsizei: height, GLenum: format, GLenum: type, const GLvoid*: data);
+void: DrawBuffer(GLenum: mode);
+void: ReadBuffer(GLenum: mode);

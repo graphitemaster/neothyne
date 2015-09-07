@@ -31,6 +31,7 @@ bool lightMethod::init(const char *vs, const char *fs, const u::vector<const cha
     m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
     m_occlusionTextureUnitLocation = getUniformLocation("gOcclusionMap");
     m_depthTextureUnitLocation = getUniformLocation("gDepthMap");
+    m_shadowMapTextureUnitLocation = getUniformLocation("gShadowMap");
 
     // specular lighting
     m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
@@ -60,6 +61,10 @@ void lightMethod::setNormalTextureUnit(int unit) {
 
 void lightMethod::setDepthTextureUnit(int unit) {
     gl::Uniform1i(m_depthTextureUnitLocation, unit);
+}
+
+void lightMethod::setShadowMapTextureUnit(int unit) {
+    gl::Uniform1i(m_shadowMapTextureUnitLocation, unit);
 }
 
 void lightMethod::setOcclusionTextureUnit(int unit) {
@@ -94,7 +99,7 @@ bool directionalLightMethod::init(const u::vector<const char *> &defines) {
 }
 
 void directionalLightMethod::setLight(const directionalLight &light) {
-    m::vec3 direction = light.direction.normalized();
+    const m::vec3 direction = light.direction.normalized();
     gl::Uniform3fv(m_directionalLightLocation.color, 1, &light.color.x);
     gl::Uniform1f(m_directionalLightLocation.ambient, light.ambient);
     gl::Uniform3fv(m_directionalLightLocation.direction, 1, &direction.x);
@@ -143,21 +148,13 @@ bool spotLightMethod::init(const u::vector<const char *> &defines) {
     m_spotLightLocation.direction = getUniformLocation("gSpotLight.direction");
     m_spotLightLocation.cutOff = getUniformLocation("gSpotLight.cutOff");
 
+    m_lightWVPLocation = getUniformLocation("gLightWVP");
+
     return true;
 }
 
 void spotLightMethod::setLight(const spotLight &light) {
-    const float x = m::toRadian(light.direction.x);
-    const float y = m::toRadian(light.direction.y);
-
-    float sx;
-    float cx;
-    float sy;
-    float cy;
-    m::sincos(x, sx, cx);
-    m::sincos(y, sy, cy);
-
-    m::vec3 direction = m::vec3(sx, -(sy * cx), -(cy * cx)).normalized();
+    const m::vec3 direction = light.direction.normalized();
 
     gl::Uniform3fv(m_spotLightLocation.color, 1, &light.color.x);
     gl::Uniform1f(m_spotLightLocation.ambient, light.ambient);
@@ -166,6 +163,10 @@ void spotLightMethod::setLight(const spotLight &light) {
     gl::Uniform1f(m_spotLightLocation.radius, light.radius);
     gl::Uniform3fv(m_spotLightLocation.direction, 1, &direction.x);
     gl::Uniform1f(m_spotLightLocation.cutOff, m::cos(m::toRadian(light.cutOff)));
+}
+
+void spotLightMethod::setLightWVP(const m::mat4 &wvp) {
+    gl::UniformMatrix4fv(m_lightWVPLocation, 1, GL_FALSE, wvp.ptr());
 }
 
 }

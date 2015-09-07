@@ -468,6 +468,12 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_aaMethod.setColorTextureUnit(0);
     m_aaMethod.setWVP(m_identity);
 
+    if (!m_shadowMapDebugMethod.init())
+        neoFatal("failed to initialize shadow map debug method");
+    m_shadowMapDebugMethod.enable();
+    m_shadowMapDebugMethod.setShadowMapTextureUnit(0);
+    m_shadowMapDebugMethod.setWVP(m_identity);
+
     if (!m_geomMethods->init())
         neoFatal("failed to initialize geometry rendering method");
 
@@ -495,12 +501,20 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_pointLightMethod.setDepthTextureUnit(lightMethod::kDepth);
 
     // spot light method
-    if (!m_spotLightMethod.init())
-        neoFatal("failed to initialize spot-light rendering method");
-    m_spotLightMethod.enable();
-    m_spotLightMethod.setColorTextureUnit(lightMethod::kColor);
-    m_spotLightMethod.setNormalTextureUnit(lightMethod::kNormal);
-    m_spotLightMethod.setDepthTextureUnit(lightMethod::kDepth);
+    if (!m_spotLightMethods[0].init())
+        neoFatal("failed to initialize spotlight rendering method");
+    m_spotLightMethods[0].enable();
+    m_spotLightMethods[0].setColorTextureUnit(lightMethod::kColor);
+    m_spotLightMethods[0].setNormalTextureUnit(lightMethod::kNormal);
+    m_spotLightMethods[0].setDepthTextureUnit(lightMethod::kDepth);
+
+    if (!m_spotLightMethods[1].init({"USE_SHADOWMAP"}))
+        neoFatal("failed to initialize spotlight rendering method");
+    m_spotLightMethods[1].enable();
+    m_spotLightMethods[1].setColorTextureUnit(lightMethod::kColor);
+    m_spotLightMethods[1].setNormalTextureUnit(lightMethod::kNormal);
+    m_spotLightMethods[1].setDepthTextureUnit(lightMethod::kDepth);
+    m_spotLightMethods[1].setShadowMapTextureUnit(lightMethod::kShadowMap);
 
     // bbox method
     if (!m_bboxMethod.init())
@@ -540,6 +554,14 @@ bool world::upload(const m::perspective &p, ::world *map) {
         neoFatal("failed to initialize anti-aliasing render buffer");
     if (!m_colorGrader.init(p, map->getColorGrader().data()))
         neoFatal("failed to initialize color grading render buffer");
+
+    if (!m_testShadow.init(p))
+        neoFatal("failed to initialize shadow map");
+    // TEST:
+    if (!m_shadowMapMethod.init())
+        neoFatal("failed to initialize shadow map method");
+    m_shadowMapMethod.enable();
+    m_shadowMapMethod.setWVP(m_identity);
 
     // setup occlusion stuff
     if (!m_queries.init())
@@ -760,11 +782,6 @@ void world::pointLightPass(const pipeline &pl, const ::world *const map) {
 
 void world::spotLightPass(const pipeline &pl, const ::world *const map) {
     pipeline p = pl;
-    auto &method = m_spotLightMethod;
-    method.enable();
-    method.setPerspective(pl.perspective());
-    method.setEyeWorldPos(pl.position());
-    method.setInverse((p.projection() * p.view()).inverse());
 
     for (auto &it : map->m_spotLights) {
         float scale = it->radius * kLightRadiusTweak;
@@ -773,6 +790,34 @@ void world::spotLightPass(const pipeline &pl, const ::world *const map) {
         m_frustum.setup(it->position, p.rotation(), p.perspective());
         if (!m_frustum.testSphere(p.position(), scale))
             continue;
+
+        auto &method = it->castShadows ? m_spotLightMethods[1] : m_spotLightMethods[0];
+        method.enable();
+        method.setPerspective(pl.perspective());
+        method.setEyeWorldPos(pl.position());
+        method.setInverse((p.projection() * p.view()).inverse());
+
+        if (it->castShadows) {
+            // Bind shadow map
+            gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
+            gl::BindTexture(GL_TEXTURE_2D, m_testShadow.texture());
+
+            m::vec3 position = it->position;
+            m::vec3 target = it->direction;
+            m::vec3 up = m::vec3::yAxis;
+
+            m::mat4 cameraTranslateT;
+            m::mat4 cameraRotateT;
+            m::mat4 perspectiveProjectionT;
+
+            cameraTranslateT.setTranslateTrans(-position.x, -position.y, -position.z);
+            cameraRotateT.setCameraTrans(target, up);
+            perspectiveProjectionT.setPerspectiveTrans(pl.perspective());
+
+            m::mat4 WVPTransform = perspectiveProjectionT * cameraRotateT * cameraTranslateT;
+
+            method.setLightWVP(WVPTransform);
+        }
 
         p.setWorld(it->position);
         p.setScale({scale, scale, scale});
@@ -1088,12 +1133,67 @@ void world::compositePass(const pipeline &pl, ::world *map) {
     }
 }
 
+// just a hack to visualize the spot-lights depth buffer
+NVAR(int, r_check, "", 0, 1, 0);
+
+void world::shadowPass(const pipeline &pl, ::world *map) {
+    // Only operate on one spot light for now
+    if (map->m_spotLights.empty())
+        return;
+
+    auto &sl = map->m_spotLights[0];
+
+    m_testShadow.bindWriting(); // Write to shadow map
+    gl::Clear(GL_DEPTH_BUFFER_BIT);
+
+    m::vec3 position = sl->position;
+    m::vec3 target = sl->direction;
+    m::vec3 up = m::vec3::yAxis;
+
+    m::mat4 cameraTranslateT;
+    m::mat4 cameraRotateT;
+    m::mat4 perspectiveProjectionT;
+
+    cameraTranslateT.setTranslateTrans(-position.x, -position.y, -position.z);
+    cameraRotateT.setCameraTrans(target, up);
+    perspectiveProjectionT.setPerspectiveTrans(pl.perspective());
+
+    m::mat4 WVPTransform = perspectiveProjectionT * cameraRotateT * cameraTranslateT;
+
+    m_shadowMapMethod.enable();
+    m_shadowMapMethod.setWVP(WVPTransform);
+
+    // Draw it into the shadow map
+    gl::CullFace(GL_FRONT); // Don't render front faces when rendering into a shadow map
+    gl::BindVertexArray(vao);
+    gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
+    gl::CullFace(GL_BACK);
+}
+
 void world::render(const pipeline &pl, ::world *map) {
     occlusionPass(pl, map);
-    geometryPass(pl, map);
-    lightingPass(pl, map);
-    forwardPass(pl, map);
-    compositePass(pl, map);
+    shadowPass(pl, map);
+    if (r_check) {
+        // write to window buffer
+        gl::Disable(GL_DEPTH_TEST);
+        gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        gl::Clear(GL_COLOR_BUFFER_BIT);
+
+        // render window buffer
+        m_shadowMapDebugMethod.enable();
+        m_shadowMapDebugMethod.setPerspective(pl.perspective());
+
+        gl::ActiveTexture(GL_TEXTURE0);
+        gl::BindTexture(GL_TEXTURE_2D, m_testShadow.texture());
+
+        m_quad.render();
+        gl::Enable(GL_DEPTH_TEST);
+    } else {
+        geometryPass(pl, map);
+        lightingPass(pl, map);
+        forwardPass(pl, map);
+        compositePass(pl, map);
+    }
 }
 
 }

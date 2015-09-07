@@ -23,6 +23,7 @@ struct lightMethod : method {
         kColor  = gBuffer::kColor,
         kNormal = gBuffer::kNormal,
         kDepth  = gBuffer::kDepth,
+        kShadowMap,
         kOcclusion
     };
 
@@ -31,6 +32,7 @@ struct lightMethod : method {
     void setColorTextureUnit(int unit);
     void setNormalTextureUnit(int unit);
     void setDepthTextureUnit(int unit);
+    void setShadowMapTextureUnit(int unit);
     void setOcclusionTextureUnit(int unit);
     void setEyeWorldPos(const m::vec3 &position);
     void setPerspective(const m::perspective &p);
@@ -42,6 +44,7 @@ private:
     GLint m_colorTextureUnitLocation;
     GLint m_normalTextureUnitLocation;
     GLint m_depthTextureUnitLocation;
+    GLint m_shadowMapTextureUnitLocation;
     GLint m_occlusionTextureUnitLocation;
 
     GLint m_eyeWorldPositionLocation;
@@ -91,6 +94,7 @@ struct spotLightMethod : lightMethod {
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setLight(const spotLight &light);
+    void setLightWVP(const m::mat4 &wvp);
 
 private:
     struct {
@@ -102,6 +106,8 @@ private:
         GLint direction;
         GLint cutOff;
     } m_spotLightLocation;
+
+    GLint m_lightWVPLocation;
 };
 
 }

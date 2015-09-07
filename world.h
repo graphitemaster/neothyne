@@ -12,11 +12,13 @@ struct baseLight {
         float intensity;
     };
     bool highlight;
+    bool castShadows;
 };
 
 inline baseLight::baseLight()
     : ambient(1.0f)
     , highlight(false)
+    , castShadows(true)
 {
 }
 

@@ -21,6 +21,7 @@ RENDERER_SOURCES = \
 	r_pipeline.cpp \
 	r_geom.cpp \
 	r_grader.cpp \
+	r_shadow.cpp \
 	r_skybox.cpp \
 	r_ssao.cpp \
 	r_texture.cpp \

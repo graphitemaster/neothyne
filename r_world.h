@@ -12,6 +12,7 @@
 #include "r_model.h"
 #include "r_light.h"
 #include "r_hoq.h"
+#include "r_shadow.h"
 
 #include "u_map.h"
 
@@ -105,6 +106,7 @@ struct world : geom {
 
 private:
     void occlusionPass(const pipeline &pl, ::world *map);
+    void shadowPass(const pipeline &pl, ::world *map);
     void geometryPass(const pipeline &pl, ::world *map);
     void lightingPass(const pipeline &pl, ::world *map);
     void forwardPass(const pipeline &pl, ::world *map);
@@ -118,7 +120,7 @@ private:
     u::vector<directionalLightMethod> m_directionalLightMethods;
     compositeMethod m_compositeMethod;
     pointLightMethod m_pointLightMethod;
-    spotLightMethod m_spotLightMethod;
+    spotLightMethod m_spotLightMethods[2]; // no shadow, shadow
     ssaoMethod m_ssaoMethod;
     bboxMethod m_bboxMethod;
     aaMethod m_aaMethod;
@@ -152,6 +154,11 @@ private:
     m::mat4 m_identity;
     m::frustum m_frustum;
     occlusionQueries m_queries;
+
+    // HACK: Testing only
+    shadowMap m_testShadow;
+    shadowMapMethod m_shadowMapMethod;
+    shadowMapDebugMethod m_shadowMapDebugMethod;
 
     bool m_uploaded;
 };

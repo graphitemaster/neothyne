@@ -114,6 +114,8 @@ typedef void (APIENTRYP MYPFNGLGETPROGRAMINFOLOGPROC)(GLuint, GLsizei, GLsizei*,
 typedef void (APIENTRYP MYPFNGLBINDATTRIBLOCATIONPROC)(GLuint, GLuint, const GLchar*);
 typedef void (APIENTRYP MYPFNGLBINDFRAGDATALOCATIONPROC)(GLuint, GLuint, const GLchar*);
 typedef void (APIENTRYP MYPFNGLTEXSUBIMAGE2DPROC)(GLenum, GLint, GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, const GLvoid*);
+typedef void (APIENTRYP MYPFNGLDRAWBUFFERPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLREADBUFFERPROC)(GLenum);
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -201,6 +203,8 @@ static MYPFNGLGETPROGRAMINFOLOGPROC         glGetProgramInfoLog_        = nullpt
 static MYPFNGLBINDATTRIBLOCATIONPROC        glBindAttribLocation_       = nullptr;
 static MYPFNGLBINDFRAGDATALOCATIONPROC      glBindFragDataLocation_     = nullptr;
 static MYPFNGLTEXSUBIMAGE2DPROC             glTexSubImage2D_            = nullptr;
+static MYPFNGLDRAWBUFFERPROC                glDrawBuffer_               = nullptr;
+static MYPFNGLREADBUFFERPROC                glReadBuffer_               = nullptr;
 
 #ifdef DEBUG_GL
 ///! ARB_debug_output
@@ -547,6 +551,8 @@ void init() {
     glBindAttribLocation_       = (MYPFNGLBINDATTRIBLOCATIONPROC)neoGetProcAddress("glBindAttribLocation");
     glBindFragDataLocation_     = (MYPFNGLBINDFRAGDATALOCATIONPROC)neoGetProcAddress("glBindFragDataLocation");
     glTexSubImage2D_            = (MYPFNGLTEXSUBIMAGE2DPROC)neoGetProcAddress("glTexSubImage2D");
+    glDrawBuffer_               = (MYPFNGLDRAWBUFFERPROC)neoGetProcAddress("glDrawBuffer");
+    glReadBuffer_               = (MYPFNGLREADBUFFERPROC)neoGetProcAddress("glReadBuffer");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -1032,6 +1038,16 @@ void BindFragDataLocation(GLuint program, GLuint colorNumber, const GLchar* name
 void TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* data GL_INFOP) {
     glTexSubImage2D_(target, level, xoffset, yoffset, width, height, format, type, data);
     GL_CHECK("27778822*0", target, level, xoffset, yoffset, width, height, format, type, data);
+}
+
+void DrawBuffer(GLenum mode GL_INFOP) {
+    glDrawBuffer_(mode);
+    GL_CHECK("2", mode);
+}
+
+void ReadBuffer(GLenum mode GL_INFOP) {
+    glReadBuffer_(mode);
+    GL_CHECK("2", mode);
 }
 
 }
