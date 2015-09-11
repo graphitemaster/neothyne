@@ -35,14 +35,12 @@ struct directionalLight {
 #ifdef USE_SHADOWMAP
 const float kShadowEpsilon = 0.00001f;
 
+uniform mat4 gLightWVP;
+
 float calcShadowFactor() {
-    vec3 projectCoordinates = lightSpacePosition0.xyz / lightSpacePosition0.w;
-    vec2 textureCoordinates;
-    textureCoordinates.x = 0.5f * projectCoordinates.x + 0.5f;
-    textureCoordinates.y = 0.5f * projectCoordinates.y + 0.5f;
-    float z = 0.5f * projectCoordinates.z + 0.5f;
-    float depth = texture(gShadowMap, textureCoordinates).x;
-    return (depth < (z + kShadowEpsilon)) ? 0.5f : 1.0f;
+    vec3 shadowCoord = 0.5f * calcShadowPosition(gLightWVP, calcTexCoord()) + 0.5f;
+    float depth = texture(gShadowMap, shadowCoord.xy).x;
+    return (depth < (shadowCoord.z + kShadowEpsilon)) ? 0.5f : 1.0f;
 }
 #endif
 
@@ -54,7 +52,7 @@ vec4 calcLight(baseLight light,
                float shadowFactor)
 {
     vec4 ambientColor = vec4(light.color, 1.0f) * light.ambient;
-    float diffuseFactor = dot(normal, -lightDirection);
+    float diffuseFactor = shadowFactor * dot(normal, -lightDirection);
 
     vec4 diffuseColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
     vec4 specularColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -71,7 +69,7 @@ vec4 calcLight(baseLight light,
             specularColor = vec4(light.color, 1.0f) * spec.x * specularFactor;
     }
 
-    return ambientColor + shadowFactor * (diffuseColor + specularColor);
+    return ambientColor + diffuseColor + specularColor;
 }
 
 vec4 calcDirectionalLight(directionalLight light,

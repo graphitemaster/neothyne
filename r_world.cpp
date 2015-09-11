@@ -835,6 +835,7 @@ void world::spotLightPass(const pipeline &pl, const ::world *const map) {
             gl::DepthFunc(GL_GEQUAL);
             gl::CullFace(GL_FRONT);
         }
+        //gl::Hint(GL_TEXTURE_COMPRESSION_HINT, GL_DONT_CARE);
         m_sphere.render();
     }
 
