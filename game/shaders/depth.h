@@ -29,7 +29,7 @@ vec3 calcShadowPosition(mat4 lightWVP, vec2 texCoord) {
     vec2 fragCoord = calcDepthCoord(texCoord);
     float depth = neoTexture2D(gDepthMap, texCoord).r * 2.0f - 1.0f;
     vec4 position = vec4(fragCoord * 2.0f - 1.0f, depth, 1.0f);
-    position = gInverse * (lightWVP * position);
+    position = (lightWVP * gInverse) * position;
     return position.xyz / position.w;
 }
 #endif
