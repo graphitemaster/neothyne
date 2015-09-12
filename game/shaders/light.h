@@ -31,15 +31,15 @@ struct directionalLight {
 };
 
 #ifdef USE_SHADOWMAP
-const float kShadowEpsilon = 0.00001f;
+const float kShadowBias = 0.00001f;
 
 uniform mat4 gLightWVP;
 
 float calcShadowFactor(vec3 worldPosition) {
     vec4 position = gLightWVP * vec4(worldPosition, 1.0f);
     vec3 shadowCoord = 0.5f * (position.xyz / position.w) + 0.5f;
-    float depth = texture(gShadowMap, shadowCoord.xy).x;
-    return (depth < (shadowCoord.z + kShadowEpsilon)) ? 0.0f : 1.0f;
+    float depth = texture(gShadowMap, shadowCoord.xy).r;
+    return (depth < (shadowCoord.z + kShadowBias)) ? 0.0f : 1.0f;
 }
 #endif
 
@@ -50,26 +50,19 @@ vec4 calcLight(baseLight light,
                vec2 spec,
                float shadowFactor)
 {
-    vec4 ambientColor = vec4(light.color, 1.0f) * light.ambient;
-    float diffuseFactor = shadowFactor * dot(normal, -lightDirection);
+    float attenuation = light.ambient;
 
-    vec4 diffuseColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-    vec4 specularColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-
+    float diffuseFactor = dot(normal, -lightDirection);
     if (diffuseFactor > 0.0f) {
-        diffuseColor = vec4(light.color, 1.0f) * light.diffuse * diffuseFactor;
-
+        attenuation += light.diffuse * diffuseFactor * shadowFactor;
         vec3 vertexToEye = normalize(gEyeWorldPosition - worldPosition);
-
         vec3 lightReflect = reflect(lightDirection, normal);
-        float specularFactor = shadowFactor * dot(vertexToEye, lightReflect);
+        float specularFactor = dot(vertexToEye, lightReflect);
         if (specularFactor > 0.0f)
-            specularFactor = pow(specularFactor, spec.y);
-        if (specularFactor > 0.0f)
-            specularColor = vec4(light.color, 1.0f) * spec.x * specularFactor;
+            attenuation += spec.x * pow(specularFactor, spec.y) * shadowFactor;
     }
 
-    return ambientColor + diffuseColor + specularColor;
+    return vec4(light.color, 1.0f) * attenuation;
 }
 
 vec4 calcDirectionalLight(directionalLight light,
