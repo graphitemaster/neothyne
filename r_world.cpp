@@ -549,7 +549,8 @@ bool world::upload(const m::perspective &p, ::world *map) {
     if (!m_colorGrader.init(p, map->getColorGrader().data()))
         neoFatal("failed to initialize color grading render buffer");
 
-    // TEST:
+    if (!m_spotLightShadowMap.init(p))
+        neoFatal("failed to initialize shadow map");
     if (!m_shadowMapMethod.init())
         neoFatal("failed to initialize shadow map method");
     m_shadowMapMethod.enable();
@@ -790,19 +791,16 @@ void world::spotLightPass(const pipeline &pl) {
     for (auto &sl : m_culledSpotLights) {
         float scale = sl->radius * kLightRadiusTweak;
 
-        auto &method = sl->castShadows ? m_spotLightMethods[1] : m_spotLightMethods[0];
-
-        method.enable();
-        method.setPerspective(pl.perspective());
-        method.setEyeWorldPos(pl.position());
-        method.setInverse((p.projection() * p.view()).inverse());
+        spotLightMethod &method = m_spotLightMethods[0];
 
         // Only bother if these are casting shadows
         if (sl->castShadows) {
-            // Shadow maps are in same order as culled lights
-            auto &sm = m_spotLightShadowMaps[&sl - m_culledSpotLights.begin()];
+            spotLightShadowPass(sl);
+
+            method = m_spotLightMethods[1];
+
             gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
-            gl::BindTexture(GL_TEXTURE_2D, sm.texture());
+            gl::BindTexture(GL_TEXTURE_2D, m_spotLightShadowMap.texture());
 
             // Calculate lighting matrix
             m::mat4 translate, rotate, project;
@@ -810,8 +808,15 @@ void world::spotLightPass(const pipeline &pl) {
             rotate.setCameraTrans(sl->direction, m::vec3::yAxis);
             project.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
 
+            method.enable();
             method.setLightWVP(project * rotate * translate);
+        } else {
+            method.enable();
         }
+
+        method.setPerspective(pl.perspective());
+        method.setEyeWorldPos(pl.position());
+        method.setInverse((p.projection() * p.view()).inverse());
 
         p.setWorld(sl->position);
         p.setScale({scale, scale, scale});
@@ -1124,48 +1129,30 @@ void world::compositePass(const pipeline &pl, ::world *map) {
     }
 }
 
-void world::shadowPass(const pipeline &pl) {
-    // Resize for more shadow maps as appropriate
-    const size_t oldSize = m_spotLightShadowMaps.size();
-    const size_t newSize = m_culledSpotLights.size();
-    if (newSize > oldSize) {
-        m_spotLightShadowMaps.resize(newSize);
-        for (size_t i = oldSize; i < newSize; i++)
-            if (!m_spotLightShadowMaps[i].init(pl.perspective())) // TODO: better size
-                neoFatal("failed to initialize shadow map");
-    } else if (newSize < oldSize) {
-        // Reclaim any memory for shadow maps no longer in use.
-        m_spotLightShadowMaps.shrink_to_fit();
-    }
+void world::spotLightShadowPass(const spotLight *const sl) {
+    // Bind and clear the shadow map
+    m_spotLightShadowMap.bindWriting();
+    gl::Clear(GL_DEPTH_BUFFER_BIT);
 
-    for (auto &sl : m_culledSpotLights) {
-        // The shadow maps are in the same order as culled lights
-        auto &sm = m_spotLightShadowMaps[&sl - m_culledSpotLights.begin()];
-        // Bind and clear the shadow map
-        sm.bindWriting();
-        gl::Clear(GL_DEPTH_BUFFER_BIT);
+    // Calculate lighting matrix
+    m::mat4 translate, rotate, project;
+    translate.setTranslateTrans(-sl->position.x, -sl->position.y, -sl->position.z);
+    rotate.setCameraTrans(sl->direction, m::vec3::yAxis);
+    project.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
 
-        // Calculate lighting matrix
-        m::mat4 translate, rotate, project;
-        translate.setTranslateTrans(-sl->position.x, -sl->position.y, -sl->position.z);
-        rotate.setCameraTrans(sl->direction, m::vec3::yAxis);
-        project.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
+    m_shadowMapMethod.enable();
+    m_shadowMapMethod.setWVP(project * rotate * translate);
 
-        m_shadowMapMethod.enable();
-        m_shadowMapMethod.setWVP(project * rotate * translate);
+    // Draw the scene from the lights perspective into the shadow map
+    gl::BindVertexArray(vao);
+    gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
 
-        // Draw the scene from the lights perspective into the shadow map
-        gl::BindVertexArray(vao);
-        gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
-    }
-
-    // TODO: point lights
+    m_final.bindWriting();
 }
 
 void world::render(const pipeline &pl, ::world *map) {
     cullPass(pl, map);
     occlusionPass(pl, map);
-    shadowPass(pl);
     geometryPass(pl, map);
     lightingPass(pl, map);
     forwardPass(pl, map);

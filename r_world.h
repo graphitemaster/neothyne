@@ -107,7 +107,6 @@ struct world : geom {
 private:
     void cullPass(const pipeline &pl, ::world *map);
     void occlusionPass(const pipeline &pl, ::world *map);
-    void shadowPass(const pipeline &pl);
     void geometryPass(const pipeline &pl, ::world *map);
     void lightingPass(const pipeline &pl, ::world *map);
     void forwardPass(const pipeline &pl, ::world *map);
@@ -115,6 +114,7 @@ private:
 
     void pointLightPass(const pipeline &pl);
     void spotLightPass(const pipeline &pl);
+    void spotLightShadowPass(const spotLight *const sl);
 
     // world shading methods and permutations
     geomMethods *m_geomMethods;
@@ -159,9 +159,7 @@ private:
     u::vector<spotLight*> m_culledSpotLights;
     u::vector<pointLight*> m_culledPointLights;
 
-    // same order as m_culledSpotLights
-    u::vector<shadowMap> m_spotLightShadowMaps;
-
+    shadowMap m_spotLightShadowMap;
     shadowMapMethod m_shadowMapMethod;
 
     bool m_uploaded;
