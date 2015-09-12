@@ -166,7 +166,7 @@ void spotLightMethod::setLight(const spotLight &light) {
 }
 
 void spotLightMethod::setLightWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_lightWVPLocation, 1, GL_FALSE, wvp.ptr());
+    gl::UniformMatrix4fv(m_lightWVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
 }

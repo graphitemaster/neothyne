@@ -24,16 +24,6 @@ vec3 calcPosition(vec2 texCoord) {
     return pos.xyz / pos.w;
 }
 
-#ifdef USE_SHADOWMAP
-vec3 calcShadowPosition(mat4 lightWVP, vec2 texCoord) {
-    vec2 fragCoord = calcDepthCoord(texCoord);
-    float depth = neoTexture2D(gDepthMap, texCoord).r * 2.0f - 1.0f;
-    vec4 position = vec4(fragCoord * 2.0f - 1.0f, depth, 1.0f);
-    position = (lightWVP * gInverse) * position;
-    return position.xyz / position.w;
-}
-#endif
-
 float evalLinearDepth(vec2 texCoord, float depth) {
     return (2.0f * gScreenFrustum.x)
         / (gScreenFrustum.y + gScreenFrustum.x -

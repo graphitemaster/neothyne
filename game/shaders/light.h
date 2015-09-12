@@ -5,8 +5,6 @@ uniform vec3 gEyeWorldPosition;
 
 #ifdef USE_SHADOWMAP
 uniform sampler2D gShadowMap;
-
-in vec4 lightSpacePosition0;
 #endif
 
 struct baseLight {
@@ -37,10 +35,11 @@ const float kShadowEpsilon = 0.00001f;
 
 uniform mat4 gLightWVP;
 
-float calcShadowFactor() {
-    vec3 shadowCoord = 0.5f * calcShadowPosition(gLightWVP, calcTexCoord()) + 0.5f;
+float calcShadowFactor(vec3 worldPosition) {
+    vec4 position = (gLightWVP * gInverse) * vec4(worldPosition, 1.0f);
+    vec3 shadowCoord = 0.5f * (position.xyz / position.w) + 0.5f;
     float depth = texture(gShadowMap, shadowCoord.xy).x;
-    return (depth < (shadowCoord.z + kShadowEpsilon)) ? 0.5f : 1.0f;
+    return (depth < (shadowCoord.z + kShadowEpsilon)) ? 0.0f : 1.0f;
 }
 #endif
 
@@ -63,8 +62,9 @@ vec4 calcLight(baseLight light,
         vec3 vertexToEye = normalize(gEyeWorldPosition - worldPosition);
 
         vec3 lightReflect = reflect(lightDirection, normal);
-        float specularFactor = dot(vertexToEye, lightReflect);
-        specularFactor = pow(specularFactor, spec.y);
+        float specularFactor = shadowFactor * dot(vertexToEye, lightReflect);
+        if (specularFactor > 0.0f)
+            specularFactor = pow(specularFactor, spec.y);
         if (specularFactor > 0.0f)
             specularColor = vec4(light.color, 1.0f) * spec.x * specularFactor;
     }
@@ -89,7 +89,7 @@ vec4 calcPointLight(pointLight light,
     float distance = length(lightDirection);
     lightDirection = normalize(lightDirection);
 #ifdef USE_SHADOWMAP
-    float shadowFactor = calcShadowFactor();
+    float shadowFactor = calcShadowFactor(worldPosition);
 #else
     const float shadowFactor = 1.0f;
 #endif
