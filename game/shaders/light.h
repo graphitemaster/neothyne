@@ -36,7 +36,7 @@ const float kShadowEpsilon = 0.00001f;
 uniform mat4 gLightWVP;
 
 float calcShadowFactor(vec3 worldPosition) {
-    vec4 position = (gLightWVP * gInverse) * vec4(worldPosition, 1.0f);
+    vec4 position = gLightWVP * vec4(worldPosition, 1.0f);
     vec3 shadowCoord = 0.5f * (position.xyz / position.w) + 0.5f;
     float depth = texture(gShadowMap, shadowCoord.xy).x;
     return (depth < (shadowCoord.z + kShadowEpsilon)) ? 0.0f : 1.0f;
