@@ -37,6 +37,7 @@ struct mat4 {
     void setCameraTrans(const vec3 &target, const vec3 &up);
     void setCameraTrans(const vec3 &position, const quat &q);
     void setPerspectiveTrans(const perspective &p);
+    void setSpotLightPerspectiveTrans(float coneAngle, float range);
     void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
 
     float *ptr();

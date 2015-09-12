@@ -812,7 +812,7 @@ void world::spotLightPass(const pipeline &pl, const ::world *const map) {
 
             cameraTranslateT.setTranslateTrans(-position.x, -position.y, -position.z);
             cameraRotateT.setCameraTrans(target, up);
-            perspectiveProjectionT.setPerspectiveTrans(pl.perspective());
+            perspectiveProjectionT.setSpotLightPerspectiveTrans(it->cutOff, it->radius);
 
             m::mat4 WVPTransform = perspectiveProjectionT * cameraRotateT * cameraTranslateT;
 
@@ -835,7 +835,6 @@ void world::spotLightPass(const pipeline &pl, const ::world *const map) {
             gl::DepthFunc(GL_GEQUAL);
             gl::CullFace(GL_FRONT);
         }
-        //gl::Hint(GL_TEXTURE_COMPRESSION_HINT, GL_DONT_CARE);
         m_sphere.render();
     }
 
@@ -1157,7 +1156,7 @@ void world::shadowPass(const pipeline &pl, ::world *map) {
 
     cameraTranslateT.setTranslateTrans(-position.x, -position.y, -position.z);
     cameraRotateT.setCameraTrans(target, up);
-    perspectiveProjectionT.setPerspectiveTrans(pl.perspective());
+    perspectiveProjectionT.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
 
     m::mat4 WVPTransform = perspectiveProjectionT * cameraRotateT * cameraTranslateT;
 
