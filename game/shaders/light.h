@@ -57,19 +57,28 @@ vec4 calcLight(baseLight light,
                vec3 lightDirection,
                vec3 worldPosition,
                vec3 normal,
-               vec2 spec,
-               float shadowFactor)
+               vec2 spec)
 {
     float attenuation = light.ambient;
 
     float diffuseFactor = dot(normal, -lightDirection);
     if (diffuseFactor > 0.0f) {
+#ifdef USE_SHADOWMAP
+        float shadowFactor = calcShadowFactor(worldPosition);
         attenuation += light.diffuse * diffuseFactor * shadowFactor;
+#else
+        attenuation += light.diffuse * diffuseFactor;
+#endif
         vec3 vertexToEye = normalize(gEyeWorldPosition - worldPosition);
         vec3 lightReflect = reflect(lightDirection, normal);
         float specularFactor = dot(vertexToEye, lightReflect);
-        if (specularFactor > 0.0f)
+        if (specularFactor > 0.0f) {
+#ifdef USE_SHADOWMAP
             attenuation += spec.x * pow(specularFactor, spec.y) * shadowFactor;
+#else
+            attenuation += spec.x * pow(specularFactor, spec.y);
+#endif
+        }
     }
 
     return vec4(light.color, 1.0f) * attenuation;
@@ -80,7 +89,7 @@ vec4 calcDirectionalLight(directionalLight light,
                           vec3 normal,
                           vec2 spec)
 {
-    return calcLight(light.base, light.direction, worldPosition, normal, spec, 1.0f);
+    return calcLight(light.base, light.direction, worldPosition, normal, spec);
 }
 
 vec4 calcPointLight(pointLight light,
@@ -91,11 +100,6 @@ vec4 calcPointLight(pointLight light,
     vec3 lightDirection = worldPosition - light.position;
     float distance = length(lightDirection);
     lightDirection = normalize(lightDirection);
-#ifdef USE_SHADOWMAP
-    float shadowFactor = calcShadowFactor(worldPosition);
-#else
-    const float shadowFactor = 1.0f;
-#endif
 
     vec4 color = vec4(0.0f);
     if (distance < light.radius) {
@@ -103,8 +107,7 @@ vec4 calcPointLight(pointLight light,
                           lightDirection,
                           worldPosition,
                           normal,
-                          spec,
-                          shadowFactor);
+                          spec);
     }
 
     float attenuation = 1.0f - clamp(distance / light.radius, 0.0f, 1.0f);
