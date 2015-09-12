@@ -190,7 +190,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
 
     // spot light
     spotLight sl;
-    sl.position = { 97.0f, 96.0f, -214.0f };
+    sl.position = { 97.0f, 98.0f, -214.0f };
     sl.direction = { 105.0f, 3.0f, 360.0f };
     sl.color = { 1.0f, 0.0f, 0.0f };
     sl.ambient = 0.15f;

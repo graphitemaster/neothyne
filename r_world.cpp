@@ -468,12 +468,6 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_aaMethod.setColorTextureUnit(0);
     m_aaMethod.setWVP(m_identity);
 
-    if (!m_shadowMapDebugMethod.init())
-        neoFatal("failed to initialize shadow map debug method");
-    m_shadowMapDebugMethod.enable();
-    m_shadowMapDebugMethod.setShadowMapTextureUnit(0);
-    m_shadowMapDebugMethod.setWVP(m_identity);
-
     if (!m_geomMethods->init())
         neoFatal("failed to initialize geometry rendering method");
 
@@ -555,8 +549,6 @@ bool world::upload(const m::perspective &p, ::world *map) {
     if (!m_colorGrader.init(p, map->getColorGrader().data()))
         neoFatal("failed to initialize color grading render buffer");
 
-    if (!m_testShadow.init(p))
-        neoFatal("failed to initialize shadow map");
     // TEST:
     if (!m_shadowMapMethod.init())
         neoFatal("failed to initialize shadow map method");
@@ -569,6 +561,25 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     u::print("[world] => uploaded\n");
     return m_uploaded = true;
+}
+
+static constexpr float kLightRadiusTweak = 1.11f;
+
+void world::cullPass(const pipeline &pl, ::world *map) {
+    m_culledSpotLights.clear();
+    for (auto &it : map->m_spotLights) {
+        const float scale = it->radius * kLightRadiusTweak;
+        m_frustum.setup(it->position, pl.rotation(), pl.perspective());
+        if (m_frustum.testSphere(pl.position(), scale))
+            m_culledSpotLights.push_back(it);
+    }
+    m_culledPointLights.clear();
+    for (auto &it : map->m_pointLights) {
+        const float scale = it->radius * kLightRadiusTweak;
+        m_frustum.setup(it->position, pl.rotation(), pl.perspective());
+        if (m_frustum.testSphere(pl.position(), scale))
+            m_culledPointLights.push_back(it);
+    }
 }
 
 void world::occlusionPass(const pipeline &pl, ::world *map) {
@@ -742,9 +753,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
     }
 }
 
-static constexpr float kLightRadiusTweak = 1.11f;
-
-void world::pointLightPass(const pipeline &pl, const ::world *const map) {
+void world::pointLightPass(const pipeline &pl) {
     pipeline p = pl;
     auto &method = m_pointLightMethod;
     method.enable();
@@ -752,13 +761,8 @@ void world::pointLightPass(const pipeline &pl, const ::world *const map) {
     method.setEyeWorldPos(pl.position());
     method.setInverse((p.projection() * p.view()).inverse());
 
-    for (auto &it : map->m_pointLights) {
+    for (auto &it : m_culledPointLights) {
         float scale = it->radius * kLightRadiusTweak;
-
-        // Frustum cull lights
-        m_frustum.setup(it->position, p.rotation(), p.perspective());
-        if (!m_frustum.testSphere(p.position(), scale))
-            continue;
 
         p.setWorld(it->position);
         p.setScale({scale, scale, scale});
@@ -780,53 +784,43 @@ void world::pointLightPass(const pipeline &pl, const ::world *const map) {
     }
 }
 
-void world::spotLightPass(const pipeline &pl, const ::world *const map) {
+void world::spotLightPass(const pipeline &pl) {
     pipeline p = pl;
 
-    for (auto &it : map->m_spotLights) {
-        float scale = it->radius * kLightRadiusTweak;
+    for (auto &sl : m_culledSpotLights) {
+        float scale = sl->radius * kLightRadiusTweak;
 
-        // Frustum cull lights
-        m_frustum.setup(it->position, p.rotation(), p.perspective());
-        if (!m_frustum.testSphere(p.position(), scale))
-            continue;
+        auto &method = sl->castShadows ? m_spotLightMethods[1] : m_spotLightMethods[0];
 
-        auto &method = it->castShadows ? m_spotLightMethods[1] : m_spotLightMethods[0];
         method.enable();
         method.setPerspective(pl.perspective());
         method.setEyeWorldPos(pl.position());
         method.setInverse((p.projection() * p.view()).inverse());
 
-        if (it->castShadows) {
-            // Bind shadow map
+        // Only bother if these are casting shadows
+        if (sl->castShadows) {
+            // Shadow maps are in same order as culled lights
+            auto &sm = m_spotLightShadowMaps[&sl - m_culledSpotLights.begin()];
             gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
-            gl::BindTexture(GL_TEXTURE_2D, m_testShadow.texture());
+            gl::BindTexture(GL_TEXTURE_2D, sm.texture());
 
-            m::vec3 position = it->position;
-            m::vec3 target = it->direction;
-            m::vec3 up = m::vec3::yAxis;
+            // Calculate lighting matrix
+            m::mat4 translate, rotate, project;
+            translate.setTranslateTrans(-sl->position.x, -sl->position.y, -sl->position.z);
+            rotate.setCameraTrans(sl->direction, m::vec3::yAxis);
+            project.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
 
-            m::mat4 cameraTranslateT;
-            m::mat4 cameraRotateT;
-            m::mat4 perspectiveProjectionT;
-
-            cameraTranslateT.setTranslateTrans(-position.x, -position.y, -position.z);
-            cameraRotateT.setCameraTrans(target, up);
-            perspectiveProjectionT.setSpotLightPerspectiveTrans(it->cutOff, it->radius);
-
-            m::mat4 WVPTransform = perspectiveProjectionT * cameraRotateT * cameraTranslateT;
-
-            method.setLightWVP(WVPTransform);
+            method.setLightWVP(project * rotate * translate);
         }
 
-        p.setWorld(it->position);
+        p.setWorld(sl->position);
         p.setScale({scale, scale, scale});
 
         const m::mat4 wvp = p.projection() * p.view() * p.world();
-        method.setLight(*it);
+        method.setLight(*sl);
         method.setWVP(wvp);
 
-        const m::vec3 dist = it->position - p.position();
+        const m::vec3 dist = sl->position - p.position();
         scale += p.perspective().nearp + 1.0f;
         if (dist*dist >= scale*scale) {
             gl::DepthFunc(GL_LESS);
@@ -874,8 +868,8 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
         gl::DepthMask(GL_FALSE);
         gl::DepthFunc(GL_LESS);
 
-        pointLightPass(pl, map);
-        spotLightPass(pl, map);
+        pointLightPass(pl);
+        spotLightPass(pl);
 
         gl::Disable(GL_DEPTH_TEST);
     }
@@ -913,9 +907,6 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
 }
 
 void world::forwardPass(const pipeline &pl, ::world *map) {
-    //m_final.update(p
-    //m_final.bindWriting();
-
     gl::Enable(GL_DEPTH_TEST);
 
     // Skybox:
@@ -1133,67 +1124,52 @@ void world::compositePass(const pipeline &pl, ::world *map) {
     }
 }
 
-// just a hack to visualize the spot-lights depth buffer
-NVAR(int, r_check, "", 0, 1, 0);
+void world::shadowPass(const pipeline &pl) {
+    // Resize for more shadow maps as appropriate
+    const size_t oldSize = m_spotLightShadowMaps.size();
+    const size_t newSize = m_culledSpotLights.size();
+    if (newSize > oldSize) {
+        m_spotLightShadowMaps.resize(newSize);
+        for (size_t i = oldSize; i < newSize; i++)
+            if (!m_spotLightShadowMaps[i].init(pl.perspective())) // TODO: better size
+                neoFatal("failed to initialize shadow map");
+    } else if (newSize < oldSize) {
+        // Reclaim any memory for shadow maps no longer in use.
+        m_spotLightShadowMaps.shrink_to_fit();
+    }
 
-void world::shadowPass(const pipeline &pl, ::world *map) {
-    // Only operate on one spot light for now
-    if (map->m_spotLights.empty())
-        return;
+    for (auto &sl : m_culledSpotLights) {
+        // The shadow maps are in the same order as culled lights
+        auto &sm = m_spotLightShadowMaps[&sl - m_culledSpotLights.begin()];
+        // Bind and clear the shadow map
+        sm.bindWriting();
+        gl::Clear(GL_DEPTH_BUFFER_BIT);
 
-    auto &sl = map->m_spotLights[0];
+        // Calculate lighting matrix
+        m::mat4 translate, rotate, project;
+        translate.setTranslateTrans(-sl->position.x, -sl->position.y, -sl->position.z);
+        rotate.setCameraTrans(sl->direction, m::vec3::yAxis);
+        project.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
 
-    m_testShadow.bindWriting(); // Write to shadow map
-    gl::Clear(GL_DEPTH_BUFFER_BIT);
+        m_shadowMapMethod.enable();
+        m_shadowMapMethod.setWVP(project * rotate * translate);
 
-    m::vec3 position = sl->position;
-    m::vec3 target = sl->direction;
-    m::vec3 up = m::vec3::yAxis;
+        // Draw the scene from the lights perspective into the shadow map
+        gl::BindVertexArray(vao);
+        gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
+    }
 
-    m::mat4 cameraTranslateT;
-    m::mat4 cameraRotateT;
-    m::mat4 perspectiveProjectionT;
-
-    cameraTranslateT.setTranslateTrans(-position.x, -position.y, -position.z);
-    cameraRotateT.setCameraTrans(target, up);
-    perspectiveProjectionT.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
-
-    m::mat4 WVPTransform = perspectiveProjectionT * cameraRotateT * cameraTranslateT;
-
-    m_shadowMapMethod.enable();
-    m_shadowMapMethod.setWVP(WVPTransform);
-
-    // Draw it into the shadow map
-    gl::CullFace(GL_FRONT); // Don't render front faces when rendering into a shadow map
-    gl::BindVertexArray(vao);
-    gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
-    gl::CullFace(GL_BACK);
+    // TODO: point lights
 }
 
 void world::render(const pipeline &pl, ::world *map) {
+    cullPass(pl, map);
     occlusionPass(pl, map);
-    shadowPass(pl, map);
-    if (r_check) {
-        // write to window buffer
-        gl::Disable(GL_DEPTH_TEST);
-        gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        gl::Clear(GL_COLOR_BUFFER_BIT);
-
-        // render window buffer
-        m_shadowMapDebugMethod.enable();
-        m_shadowMapDebugMethod.setPerspective(pl.perspective());
-
-        gl::ActiveTexture(GL_TEXTURE0);
-        gl::BindTexture(GL_TEXTURE_2D, m_testShadow.texture());
-
-        m_quad.render();
-        gl::Enable(GL_DEPTH_TEST);
-    } else {
-        geometryPass(pl, map);
-        lightingPass(pl, map);
-        forwardPass(pl, map);
-        compositePass(pl, map);
-    }
+    shadowPass(pl);
+    geometryPass(pl, map);
+    lightingPass(pl, map);
+    forwardPass(pl, map);
+    compositePass(pl, map);
 }
 
 }

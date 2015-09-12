@@ -105,15 +105,16 @@ struct world : geom {
     void render(const pipeline &pl, ::world *map);
 
 private:
+    void cullPass(const pipeline &pl, ::world *map);
     void occlusionPass(const pipeline &pl, ::world *map);
-    void shadowPass(const pipeline &pl, ::world *map);
+    void shadowPass(const pipeline &pl);
     void geometryPass(const pipeline &pl, ::world *map);
     void lightingPass(const pipeline &pl, ::world *map);
     void forwardPass(const pipeline &pl, ::world *map);
     void compositePass(const pipeline &pl, ::world *map);
 
-    void pointLightPass(const pipeline &pl, const ::world *const map);
-    void spotLightPass(const pipeline &pl, const ::world *const map);
+    void pointLightPass(const pipeline &pl);
+    void spotLightPass(const pipeline &pl);
 
     // world shading methods and permutations
     geomMethods *m_geomMethods;
@@ -155,10 +156,13 @@ private:
     m::frustum m_frustum;
     occlusionQueries m_queries;
 
-    // HACK: Testing only
-    shadowMap m_testShadow;
+    u::vector<spotLight*> m_culledSpotLights;
+    u::vector<pointLight*> m_culledPointLights;
+
+    // same order as m_culledSpotLights
+    u::vector<shadowMap> m_spotLightShadowMaps;
+
     shadowMapMethod m_shadowMapMethod;
-    shadowMapDebugMethod m_shadowMapDebugMethod;
 
     bool m_uploaded;
 };

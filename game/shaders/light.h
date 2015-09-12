@@ -31,25 +31,25 @@ struct directionalLight {
 };
 
 #ifdef USE_SHADOWMAP
-const float kShadowBias = 0.00001f;
+const float kShadowBias = -0.00005f;
 
 uniform mat4 gLightWVP;
 
 float calcShadowFactor(vec3 worldPosition) {
     vec4 position = gLightWVP * vec4(worldPosition, 1.0f);
     vec3 shadowCoord = 0.5f * (position.xyz / position.w) + 0.5f;
+    shadowCoord.z += kShadowBias;
 
-    vec2 offset = 1.0f / gScreenSize;
-    float factor = 0.0f;
-    for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-            vec2 offsets = vec2(x, y) * offset;
-            vec3 uvc = vec3(shadowCoord.xy + offsets, shadowCoord.z + kShadowBias);
-            factor += texture(gShadowMap, uvc);
-        }
-    }
-
-    return factor;
+    vec2 scale = 1.0f / textureSize(gShadowMap, 0);
+    shadowCoord.xy *= textureSize(gShadowMap, 0);
+    vec2 offset = fract(shadowCoord.xy - 0.5f);
+    shadowCoord.xy -= offset*0.5f;
+    vec4 size = vec4(offset + 1.0f, 2.0f - offset);
+    return (1.0f / 9.0f) * dot(size.zxzx*size.wwyy,
+        vec4(texture(gShadowMap, vec3(scale * (shadowCoord.xy + vec2(-0.5f, -0.5f)), shadowCoord.z)),
+             texture(gShadowMap, vec3(scale * (shadowCoord.xy + vec2(1.0f, -0.5f)), shadowCoord.z)),
+             texture(gShadowMap, vec3(scale * (shadowCoord.xy + vec2(-0.5f, 1.0f)), shadowCoord.z)),
+             texture(gShadowMap, vec3(scale * (shadowCoord.xy + vec2(1.0f, 1.0f)), shadowCoord.z))));
 }
 #endif
 

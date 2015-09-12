@@ -121,7 +121,7 @@ void mat4::setPerspectiveTrans(const m::perspective &p) {
 void mat4::setSpotLightPerspectiveTrans(float coneAngle, float range) {
     const float halfFOV = 1.0f / m::tan(m::toRadian(coneAngle) * 0.5f);
     const float nearClip = 0.3f;
-    const float farClip = range;
+    const float farClip = range*5.0f; // HACK?!@
     const float zRange = nearClip - farClip;
     a = { halfFOV, 0.0f, 0.0f, 0.0f };
     b = { 0.0f, halfFOV, 0.0f, 0.0f };
