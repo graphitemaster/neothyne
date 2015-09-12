@@ -4,7 +4,7 @@
 uniform vec3 gEyeWorldPosition;
 
 #ifdef USE_SHADOWMAP
-uniform sampler2D gShadowMap;
+uniform sampler2DShadow gShadowMap;
 #endif
 
 struct baseLight {
@@ -38,8 +38,18 @@ uniform mat4 gLightWVP;
 float calcShadowFactor(vec3 worldPosition) {
     vec4 position = gLightWVP * vec4(worldPosition, 1.0f);
     vec3 shadowCoord = 0.5f * (position.xyz / position.w) + 0.5f;
-    float depth = texture(gShadowMap, shadowCoord.xy).r;
-    return (depth < (shadowCoord.z + kShadowBias)) ? 0.0f : 1.0f;
+
+    vec2 offset = 1.0f / gScreenSize;
+    float factor = 0.0f;
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            vec2 offsets = vec2(x, y) * offset;
+            vec3 uvc = vec3(shadowCoord.xy + offsets, shadowCoord.z + kShadowBias);
+            factor += texture(gShadowMap, uvc);
+        }
+    }
+
+    return factor;
 }
 #endif
 

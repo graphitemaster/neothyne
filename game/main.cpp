@@ -167,9 +167,9 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
 
     // World only has one directional light
     directionalLight &dlight = gWorld.getDirectionalLight();
-    dlight.color = { 0.7, 0.7, 0.7 };
-    dlight.ambient = 0.75f;
-    dlight.diffuse = 0.75f;
+    dlight.color = { 0.2, 0.2, 0.2 };
+    dlight.ambient = 0.15f;
+    dlight.diffuse = 0.50f;
     dlight.direction = { -1.0f, 0.0f, 0.0f };
 
     // and some map models
@@ -193,7 +193,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     sl.position = { 97.0f, 96.0f, -214.0f };
     sl.direction = { 105.0f, 3.0f, 360.0f };
     sl.color = { 1.0f, 0.0f, 0.0f };
-    sl.ambient = 0.5f;
+    sl.ambient = 0.15f;
     sl.diffuse = 1.0f;
     sl.radius = 400;
     sl.cutOff = 45.0f;
