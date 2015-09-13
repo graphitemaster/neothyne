@@ -49,7 +49,9 @@ const m::mat4 &pipeline::world() {
 }
 
 const m::mat4 &pipeline::view() {
-    return m_matrices[kView] = m::mat4::lookat(target(), up()) * m::mat4::translate(-m_position);
+    m::vec3 target, up;
+    m_rotation.getOrient(&target, &up, nullptr);
+    return m_matrices[kView] = m::mat4::lookat(target, up) * m::mat4::translate(-m_position);
 }
 
 const m::mat4 &pipeline::projection() {
@@ -58,18 +60,6 @@ const m::mat4 &pipeline::projection() {
 
 const m::perspective &pipeline::perspective() const {
     return m_perspective;
-}
-
-const m::vec3 pipeline::target() const {
-    m::vec3 target;
-    m_rotation.getOrient(&target, nullptr, nullptr);
-    return target;
-}
-
-const m::vec3 pipeline::up() const {
-    m::vec3 up;
-    m_rotation.getOrient(nullptr, &up, nullptr);
-    return up;
 }
 
 const m::vec3 &pipeline::position() const {

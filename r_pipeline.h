@@ -25,8 +25,6 @@ struct pipeline {
     // camera accessors.
     const m::vec3 &position() const;
     const m::quat &rotation() const;
-    const m::vec3 target() const;
-    const m::vec3 up() const;
 
     const m::perspective &perspective() const;
 
