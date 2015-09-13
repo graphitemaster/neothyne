@@ -31,14 +31,11 @@ struct directionalLight {
 };
 
 #ifdef USE_SHADOWMAP
-const float kShadowBias = -0.00005f;
-
 uniform mat4 gLightWVP;
 
 float calcShadowFactor(vec3 worldPosition) {
     vec4 position = gLightWVP * vec4(worldPosition, 1.0f);
-    vec3 shadowCoord = 0.5f * (position.xyz / position.w) + 0.5f;
-    shadowCoord.z += kShadowBias;
+    vec3 shadowCoord = position.xyz / position.w;
 
     vec2 scale = 1.0f / textureSize(gShadowMap, 0);
     shadowCoord.xy *= textureSize(gShadowMap, 0);

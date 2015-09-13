@@ -803,13 +803,16 @@ void world::spotLightPass(const pipeline &pl) {
             gl::BindTexture(GL_TEXTURE_2D, m_spotLightShadowMap.texture());
 
             // Calculate lighting matrix
-            m::mat4 translate, rotate, project;
+            const float kShadowBias = -0.00005f;
+            m::mat4 translate, rotate, project, projectScale, projectTranslate;
             translate.setTranslateTrans(-sl->position.x, -sl->position.y, -sl->position.z);
             rotate.setCameraTrans(sl->direction, m::vec3::yAxis);
             project.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
+            projectScale.setScaleTrans(0.5f, 0.5f, 0.5f);
+            projectTranslate.setTranslateTrans(0.5f, 0.5f, 0.5f + kShadowBias);
 
             method.enable();
-            method.setLightWVP(project * rotate * translate);
+            method.setLightWVP(projectTranslate * projectScale * project * rotate * translate);
         } else {
             method.enable();
         }
