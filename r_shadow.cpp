@@ -4,8 +4,7 @@ namespace r {
 
 ///!shadowMap
 shadowMap::shadowMap()
-    : m_width(0)
-    , m_height(0)
+    : m_size(0)
     , m_fbo(0)
     , m_shadowMap(0)
 {
@@ -18,15 +17,14 @@ shadowMap::~shadowMap() {
         gl::DeleteTextures(1, &m_shadowMap);
 }
 
-bool shadowMap::init(const m::perspective &p) {
-    m_width = p.width;
-    m_height = p.height;
+bool shadowMap::init(size_t size) {
+    m_size = size;
 
     gl::GenFramebuffers(1, &m_fbo);
 
     gl::GenTextures(1, &m_shadowMap);
     gl::BindTexture(GL_TEXTURE_2D, m_shadowMap);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_width, m_height, 0,
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_size, m_size, 0,
         GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -46,17 +44,13 @@ bool shadowMap::init(const m::perspective &p) {
     return status == GL_FRAMEBUFFER_COMPLETE;
 }
 
-void shadowMap::update(const m::perspective &p) {
-    const size_t width = p.width;
-    const size_t height = p.height;
-
-    if (m_width == width && m_height == height)
+void shadowMap::update(size_t size) {
+    if (m_size == size)
         return;
 
-    m_width = width;
-    m_height = height;
+    m_size = size;
     gl::BindTexture(GL_TEXTURE_2D, m_shadowMap);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_width, m_height, 0,
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_size, m_size, 0,
         GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 }
 

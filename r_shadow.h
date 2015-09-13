@@ -10,15 +10,14 @@ struct shadowMap {
     shadowMap();
     ~shadowMap();
 
-    bool init(const m::perspective &p);
-    void update(const m::perspective &p);
+    bool init(size_t size);
+    void update(size_t size);
     void bindWriting();
 
     GLuint texture() const;
 
 private:
-    size_t m_width;
-    size_t m_height;
+    size_t m_size;
     GLuint m_fbo;
     GLuint m_shadowMap;
 };

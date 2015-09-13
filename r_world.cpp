@@ -27,6 +27,7 @@ VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 VAR(int, r_spec, "specularity mapping", 0, 1, 1);
 VAR(int, r_hoq, "hardware occlusion queries", 0, 1, 1);
 VAR(int, r_fog, "fog", 0, 1, 1);
+VAR(int, r_smsize, "shadow map size", 128, 4096, 1024);
 NVAR(int, r_debug, "debug visualizations", 0, 4, 0);
 
 namespace r {
@@ -549,7 +550,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
     if (!m_colorGrader.init(p, map->getColorGrader().data()))
         neoFatal("failed to initialize color grading render buffer");
 
-    if (!m_spotLightShadowMap.init(p))
+    if (!m_spotLightShadowMap.init(r_smsize))
         neoFatal("failed to initialize shadow map");
     if (!m_shadowMapMethod.init())
         neoFatal("failed to initialize shadow map method");
@@ -808,6 +809,8 @@ void world::spotLightPass(const pipeline &pl) {
             translate.setTranslateTrans(-sl->position.x, -sl->position.y, -sl->position.z);
             rotate.setCameraTrans(sl->direction, m::vec3::yAxis);
             project.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
+
+            // Calculate shadow map scale
             projectScale.setScaleTrans(0.5f, 0.5f, 0.5f);
             projectTranslate.setTranslateTrans(0.5f, 0.5f, 0.5f + kShadowBias);
 
@@ -1145,6 +1148,7 @@ void world::spotLightShadowPass(const spotLight *const sl) {
         gl::DepthFunc(GL_LEQUAL);
 
     // Bind and clear the shadow map
+    m_spotLightShadowMap.update(r_smsize);
     m_spotLightShadowMap.bindWriting();
     gl::Clear(GL_DEPTH_BUFFER_BIT);
 
@@ -1158,8 +1162,10 @@ void world::spotLightShadowPass(const spotLight *const sl) {
     m_shadowMapMethod.setWVP(project * rotate * translate);
 
     // Draw the scene from the lights perspective into the shadow map
+    gl::Viewport(0, 0, r_smsize, r_smsize);
     gl::BindVertexArray(vao);
     gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
+    gl::Viewport(0, 0, neoWidth(), neoHeight());
 
     m_final.bindWriting();
 
