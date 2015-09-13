@@ -1130,6 +1130,17 @@ void world::compositePass(const pipeline &pl, ::world *map) {
 }
 
 void world::spotLightShadowPass(const spotLight *const sl) {
+    GLint depthMask;
+    GLint depthFunc;
+
+    gl::GetIntegerv(GL_DEPTH_WRITEMASK, &depthMask);
+    gl::GetIntegerv(GL_DEPTH_FUNC, &depthFunc);
+
+    if (depthMask != GL_TRUE)
+        gl::DepthMask(GL_TRUE);
+    if (depthFunc != GL_LEQUAL)
+        gl::DepthFunc(GL_LEQUAL);
+
     // Bind and clear the shadow map
     m_spotLightShadowMap.bindWriting();
     gl::Clear(GL_DEPTH_BUFFER_BIT);
@@ -1148,6 +1159,9 @@ void world::spotLightShadowPass(const spotLight *const sl) {
     gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
 
     m_final.bindWriting();
+
+    gl::DepthMask(depthMask);
+    gl::DepthFunc(depthFunc);
 }
 
 void world::render(const pipeline &pl, ::world *map) {
