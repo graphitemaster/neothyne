@@ -27,17 +27,21 @@ inline perspective::perspective()
 ///! mat4x4
 struct mat4 {
     vec4 a, b, c, d;
+    constexpr mat4() = default;
+    constexpr mat4(const vec4 &a, const vec4 &b, const vec4 &c, const vec4 &d);
 
-    void loadIdentity();
+    static mat4 identity();
     mat4 inverse();
     mat4 operator*(const mat4 &t) const;
-    void setScaleTrans(float scaleX, float scaleY, float scaleZ);
-    void setRotateTrans(float rotateX, float rotateY, float rotateZ);
-    void setTranslateTrans(float x, float y, float z);
-    void setCameraTrans(const vec3 &target, const vec3 &up);
-    void setCameraTrans(const vec3 &position, const quat &q);
-    void setPerspectiveTrans(const perspective &p);
-    void setSpotLightPerspectiveTrans(float coneAngle, float range);
+
+    static mat4 project(float angle, float range);
+    static mat4 project(const perspective &p);
+    static mat4 scale(const vec3 &s);
+    static mat4 rotate(const vec3 &r);
+    static mat4 translate(const vec3 &t);
+    static mat4 lookat(const vec3 &target, const vec3 &up);
+    static mat4 lookat(const vec3 &position, const quat &q);
+
     void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
 
     float *ptr();

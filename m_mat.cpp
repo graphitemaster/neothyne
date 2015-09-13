@@ -5,128 +5,132 @@
 namespace m {
 
 ///! mat4x4
-void mat4::loadIdentity() {
-    a = { 1.0f, 0.0f, 0.0f, 0.0f };
-    b = { 0.0f, 1.0f, 0.0f, 0.0f };
-    c = { 0.0f, 0.0f, 1.0f, 0.0f };
-    d = { 0.0f, 0.0f, 0.0f, 1.0f };
+mat4 mat4::identity() {
+    return { { 1.0f, 0.0f, 0.0f, 0.0f },
+             { 0.0f, 1.0f, 0.0f, 0.0f },
+             { 0.0f, 0.0f, 1.0f, 0.0f },
+             { 0.0f, 0.0f, 0.0f, 1.0f } };
+}
+
+constexpr mat4::mat4(const vec4 &a, const vec4 &b, const vec4 &c, const vec4 &d)
+    : a(a)
+    , b(b)
+    , c(c)
+    , d(d)
+{
 }
 
 mat4 mat4::operator*(const mat4 &t) const {
-    mat4 r;
-    r.a = { a.x * t.a.x + a.y * t.b.x + a.z * t.c.x + a.w * t.d.x,
-            a.x * t.a.y + a.y * t.b.y + a.z * t.c.y + a.w * t.d.y,
-            a.x * t.a.z + a.y * t.b.z + a.z * t.c.z + a.w * t.d.z,
-            a.x * t.a.w + a.y * t.b.w + a.z * t.c.w + a.w * t.d.w };
-    r.b = { b.x * t.a.x + b.y * t.b.x + b.z * t.c.x + b.w * t.d.x,
-            b.x * t.a.y + b.y * t.b.y + b.z * t.c.y + b.w * t.d.y,
-            b.x * t.a.z + b.y * t.b.z + b.z * t.c.z + b.w * t.d.z,
-            b.x * t.a.w + b.y * t.b.w + b.z * t.c.w + b.w * t.d.w };
-    r.c = { c.x * t.a.x + c.y * t.b.x + c.z * t.c.x + c.w * t.d.x,
-            c.x * t.a.y + c.y * t.b.y + c.z * t.c.y + c.w * t.d.y,
-            c.x * t.a.z + c.y * t.b.z + c.z * t.c.z + c.w * t.d.z,
-            c.x * t.a.w + c.y * t.b.w + c.z * t.c.w + c.w * t.d.w };
-    r.d = { d.x * t.a.x + d.y * t.b.x + d.z * t.c.x + d.w * t.d.x,
-            d.x * t.a.y + d.y * t.b.y + d.z * t.c.y + d.w * t.d.y,
-            d.x * t.a.z + d.y * t.b.z + d.z * t.c.z + d.w * t.d.z,
-            d.x * t.a.w + d.y * t.b.w + d.z * t.c.w + d.w * t.d.w };
-    return r;
+    return { { a.x * t.a.x + a.y * t.b.x + a.z * t.c.x + a.w * t.d.x,
+               a.x * t.a.y + a.y * t.b.y + a.z * t.c.y + a.w * t.d.y,
+               a.x * t.a.z + a.y * t.b.z + a.z * t.c.z + a.w * t.d.z,
+               a.x * t.a.w + a.y * t.b.w + a.z * t.c.w + a.w * t.d.w },
+             { b.x * t.a.x + b.y * t.b.x + b.z * t.c.x + b.w * t.d.x,
+               b.x * t.a.y + b.y * t.b.y + b.z * t.c.y + b.w * t.d.y,
+               b.x * t.a.z + b.y * t.b.z + b.z * t.c.z + b.w * t.d.z,
+               b.x * t.a.w + b.y * t.b.w + b.z * t.c.w + b.w * t.d.w },
+             { c.x * t.a.x + c.y * t.b.x + c.z * t.c.x + c.w * t.d.x,
+               c.x * t.a.y + c.y * t.b.y + c.z * t.c.y + c.w * t.d.y,
+               c.x * t.a.z + c.y * t.b.z + c.z * t.c.z + c.w * t.d.z,
+               c.x * t.a.w + c.y * t.b.w + c.z * t.c.w + c.w * t.d.w },
+             { d.x * t.a.x + d.y * t.b.x + d.z * t.c.x + d.w * t.d.x,
+               d.x * t.a.y + d.y * t.b.y + d.z * t.c.y + d.w * t.d.y,
+               d.x * t.a.z + d.y * t.b.z + d.z * t.c.z + d.w * t.d.z,
+               d.x * t.a.w + d.y * t.b.w + d.z * t.c.w + d.w * t.d.w } };
 }
 
-void mat4::setScaleTrans(float sx, float sy, float sz) {
-    a = { sx,   0.0f, 0.0f, 0.0f };
-    b = { 0.0f, sy,   0.0f, 0.0f };
-    c = { 0.0f, 0.0f, sz,   0.0f };
-    d = { 0.0f, 0.0f, 0.0f, 1.0f };
+mat4 mat4::scale(const vec3 &s) {
+    return { { s.x,  0.0f, 0.0f, 0.0f },
+             { 0.0f, s.y,  0.0f, 0.0f },
+             { 0.0f, 0.0f, s.z,  0.0f },
+             { 0.0f, 0.0f, 0.0f, 1.0f } };
 }
 
-void mat4::setRotateTrans(float rotateX, float rotateY, float rotateZ) {
-    const float x = toRadian(rotateX);
-    const float y = toRadian(rotateY);
-    const float z = toRadian(rotateZ);
+mat4 mat4::rotate(const vec3 &r) {
+    const float x = toRadian(r.x);
+    const float y = toRadian(r.y);
+    const float z = toRadian(r.z);
 
-    float xsin;
-    float xcos;
-    float ysin;
-    float ycos;
-    float zsin;
-    float zcos;
+    float xsin, xcos;
+    float ysin, ycos;
+    float zsin, zcos;
     m::sincos(x, xsin, xcos);
     m::sincos(y, ysin, ycos);
     m::sincos(z, zsin, zcos);
 
-    mat4 rx, ry, rz;
-    rx.a = { 1.0f, 0.0f, 0.0f, 0.0f };
-    rx.b = { 0.0f, xcos, -xsin, 0.0f };
-    rx.c = { 0.0f, xsin, xcos, 0.0f };
-    rx.d = { 0.0f, 0.0f, 0.0f, 1.0f };
-    ry.a = { ycos, 0.0f, -ysin, 0.0f };
-    ry.b = { 0.0f, 1.0f, 0.0f, 0.0f };
-    ry.c = { ysin, 0.0f, ycos, 0.0f };
-    ry.d = { 0.0f, 0.0f, 0.0f, 1.0f };
-    rz.a = { zcos, -zsin, 0.0f, 0.0f };
-    rz.b = { zsin, zcos, 0.0f, 0.0f };
-    rz.c = { 0.0f, 0.0f, 1.0f, 0.0f };
-    rz.d = { 0.0f, 0.0f, 0.0f, 1.0f };
+    const mat4 rx = { { 1.0f, 0.0f, 0.0f, 0.0f },
+                      { 0.0f, xcos, -xsin, 0.0f },
+                      { 0.0f, xsin, xcos, 0.0f },
+                      { 0.0f, 0.0f, 0.0f, 1.0f } },
+               ry = { { ycos, 0.0f, -ysin, 0.0f },
+                      { 0.0f, 1.0f, 0.0f, 0.0f },
+                      { ysin, 0.0f, ycos, 0.0f },
+                      { 0.0f, 0.0f, 0.0f, 1.0f } },
+               rz = { { zcos, -zsin, 0.0f, 0.0f },
+                      { zsin, zcos, 0.0f, 0.0f },
+                      { 0.0f, 0.0f, 1.0f, 0.0f },
+                      { 0.0f, 0.0f, 0.0f, 1.0f } };
 
-    *this = rz * ry * rx;
+    return rz * ry * rx;
 }
 
-void mat4::setTranslateTrans(float x, float y, float z) {
-    a = { 1.0f, 0.0f, 0.0f, x };
-    b = { 0.0f, 1.0f, 0.0f, y };
-    c = { 0.0f, 0.0f, 1.0f, z };
-    d = { 0.0f, 0.0f, 0.0f, 1.0f };
+mat4 mat4::translate(const vec3 &t) {
+    return { { 1.0f, 0.0f, 0.0f, t.x },
+             { 0.0f, 1.0f, 0.0f, t.y },
+             { 0.0f, 0.0f, 1.0f, t.z },
+             { 0.0f, 0.0f, 0.0f, 1.0f } };
 }
 
-void mat4::setCameraTrans(const vec3 &target, const vec3 &up) {
-    vec3 N = target.normalized();
-    vec3 U = up.normalized().cross(N);
-    vec3 V = N.cross(U);
-    a = { U.x,  U.y,  U.z,  0.0f };
-    b = { V.x,  V.y,  V.z,  0.0f };
-    c = { N.x,  N.y,  N.z,  0.0f };
-    d = { 0.0f, 0.0f, 0.0f, 1.0f };
+mat4 mat4::lookat(const vec3 &target, const vec3 &up) {
+    const vec3 n = target.normalized(),
+               u = up.normalized().cross(n),
+               v = n.cross(u);
+    return { { u.x,  u.y,  u.z,  0.0f },
+             { v.x,  v.y,  v.z,  0.0f },
+             { n.x,  n.y,  n.z,  0.0f },
+             { 0.0f, 0.0f, 0.0f, 1.0f } };
 }
 
-void mat4::setCameraTrans(const vec3 &p, const quat &q) {
-    a = { 1.0f - 2.0f * (q.y * q.y + q.z*q.z),
-          2.0f * (q.x * q.y - q.w * q.z),
-          2.0f * (q.x * q.z + q.w * q.y),
-          0.0f };
-    b = { 2.0f * (q.x * q.y + q.w * q.z),
-          1.0f - 2.0f * (q.x * q.x + q.z * q.z),
-          2.0f * (q.y * q.z - q.w * q.x),
-          0.0f };
-    c = { 2.0f * (q.x * q.z - q.w * q.y),
-          2.0f * (q.y * q.z + q.w * q.x),
-          1.0f - 2.0f * (q.x * q.x + q.y * q.y),
-          0.0f };
-    d = { -(p.x * a.x + p.y * b.x + p.z * c.x),
-          -(p.x * a.y + p.y * b.y + p.z * c.y),
-          -(p.x * a.z + p.y * b.z + p.z * c.z),
-          1.0f };
+mat4 mat4::lookat(const vec3 &p, const quat &q) {
+    mat4 m;
+    m.a = { 1.0f - 2.0f * (q.y * q.y + q.z*q.z),
+            2.0f * (q.x * q.y - q.w * q.z),
+            2.0f * (q.x * q.z + q.w * q.y),
+            0.0f };
+    m.b = { 2.0f * (q.x * q.y + q.w * q.z),
+            1.0f - 2.0f * (q.x * q.x + q.z * q.z),
+            2.0f * (q.y * q.z - q.w * q.x),
+            0.0f };
+    m.c = { 2.0f * (q.x * q.z - q.w * q.y),
+            2.0f * (q.y * q.z + q.w * q.x),
+            1.0f - 2.0f * (q.x * q.x + q.y * q.y),
+            0.0f };
+    m.d = { -(p.x * m.a.x + p.y * m.b.x + p.z * m.c.x),
+            -(p.x * m.a.y + p.y * m.b.y + p.z * m.c.y),
+            -(p.x * m.a.z + p.y * m.b.z + p.z * m.c.z),
+            1.0f };
+    return m;
 }
 
-void mat4::setPerspectiveTrans(const m::perspective &p) {
+mat4 mat4::project(const m::perspective &p) {
     const float ar = p.width / p.height;
     const float range = p.nearp - p.farp;
     const float halfFov = m::tan(m::toRadian(p.fov / 2.0f));
-    a = { 1.0f / (halfFov * ar), 0.0f, 0.0f, 0.0f };
-    b = { 0.0f, 1.0f / halfFov, 0.0f, 0.0f };
-    c = { 0.0f, 0.0f, (-p.nearp - p.farp) / range, 2.0f * p.farp * p.nearp / range };
-    d = { 0.0f, 0.0f, 1.0f, 0.0f };
+    return { { 1.0f / (halfFov * ar), 0.0f, 0.0f, 0.0f },
+             { 0.0f, 1.0f / halfFov, 0.0f, 0.0f },
+             { 0.0f, 0.0f, (-p.nearp - p.farp) / range, 2.0f * p.farp * p.nearp / range },
+             { 0.0f, 0.0f, 1.0f, 0.0f } };
 }
 
-void mat4::setSpotLightPerspectiveTrans(float coneAngle, float range) {
-    const float halfFOV = 1.0f / m::tan(m::toRadian(coneAngle) * 0.5f);
-    const float nearClip = 0.3f;
-    const float farClip = range*5.0f; // HACK?!@
+mat4 mat4::project(float angle, float range) {
+    const float halfFOV = 1.0f / m::tan(m::toRadian(angle) * 0.5f);
+    const float nearClip = 0.1f;
+    const float farClip = range;
     const float zRange = nearClip - farClip;
-    a = { halfFOV, 0.0f, 0.0f, 0.0f };
-    b = { 0.0f, halfFOV, 0.0f, 0.0f };
-    c = { 0.0f, 0.0f, -(nearClip + farClip) / zRange, 2.0f * nearClip * farClip / zRange };
-    d = { 0.0f, 0.0f, 1.0f, 0.0f};
+    return { { halfFOV, 0.0f, 0.0f, 0.0f },
+             { 0.0f, halfFOV, 0.0f, 0.0f },
+             { 0.0f, 0.0f, -(nearClip + farClip) / zRange, 2.0f * nearClip * farClip / zRange },
+             { 0.0f, 0.0f, 1.0f, 0.0f} };
 }
 
 void mat4::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
@@ -222,7 +226,7 @@ void mat3x4::invert(const mat3x4 &o) {
     inv.a /= (inv.a * inv.a);
     inv.b /= (inv.b * inv.b);
     inv.c /= (inv.c * inv.c);
-    vec3 trans(o.a.w, o.b.w, o.c.w);
+    const vec3 trans(o.a.w, o.b.w, o.c.w);
     a = vec4(inv.a, -inv.a*trans);
     b = vec4(inv.b, -inv.b*trans);
     c = vec4(inv.c, -inv.c*trans);

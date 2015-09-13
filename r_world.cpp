@@ -407,7 +407,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
     if (m_uploaded)
         return true;
 
-    m_identity.loadIdentity();
+    m_identity = m::mat4::identity();
 
     // particles for entities
     for (auto *it : m_particleSystems)
@@ -803,19 +803,13 @@ void world::spotLightPass(const pipeline &pl) {
             gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
             gl::BindTexture(GL_TEXTURE_2D, m_spotLightShadowMap.texture());
 
-            // Calculate lighting matrix
             const float kShadowBias = -0.00005f;
-            m::mat4 translate, rotate, project, projectScale, projectTranslate;
-            translate.setTranslateTrans(-sl->position.x, -sl->position.y, -sl->position.z);
-            rotate.setCameraTrans(sl->direction, m::vec3::yAxis);
-            project.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
-
-            // Calculate shadow map scale
-            projectScale.setScaleTrans(0.5f, 0.5f, 0.5f);
-            projectTranslate.setTranslateTrans(0.5f, 0.5f, 0.5f + kShadowBias);
-
             method.enable();
-            method.setLightWVP(projectTranslate * projectScale * project * rotate * translate);
+            method.setLightWVP(m::mat4::translate({0.5f, 0.5f, 0.5f + kShadowBias}) *
+                               m::mat4::scale({0.5f, 0.5f, 0.5f}) *
+                               m::mat4::project(sl->cutOff, sl->radius) *
+                               m::mat4::lookat(sl->direction, m::vec3::yAxis) *
+                               m::mat4::translate(-sl->position));
         } else {
             method.enable();
         }
@@ -1152,14 +1146,10 @@ void world::spotLightShadowPass(const spotLight *const sl) {
     m_spotLightShadowMap.bindWriting();
     gl::Clear(GL_DEPTH_BUFFER_BIT);
 
-    // Calculate lighting matrix
-    m::mat4 translate, rotate, project;
-    translate.setTranslateTrans(-sl->position.x, -sl->position.y, -sl->position.z);
-    rotate.setCameraTrans(sl->direction, m::vec3::yAxis);
-    project.setSpotLightPerspectiveTrans(sl->cutOff, sl->radius);
-
     m_shadowMapMethod.enable();
-    m_shadowMapMethod.setWVP(project * rotate * translate);
+    m_shadowMapMethod.setWVP(m::mat4::project(sl->cutOff, sl->radius) *
+                             m::mat4::lookat(sl->direction, m::vec3::yAxis) *
+                             m::mat4::translate(-sl->position));
 
     // Draw the scene from the lights perspective into the shadow map
     gl::Viewport(0, 0, r_smsize, r_smsize);

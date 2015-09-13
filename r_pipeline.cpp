@@ -9,7 +9,7 @@ pipeline::pipeline()
     , m_time(0.0f)
     , m_delta(0.0f)
 {
-    m_rotate.setRotateTrans(0.0f, 0.0f, 0.0f);
+    m_rotate = m::mat4::rotate(m::vec3::origin);
 }
 
 void pipeline::setScale(const m::vec3 &scale) {
@@ -45,25 +45,15 @@ void pipeline::setDelta(float delta) {
 }
 
 const m::mat4 &pipeline::world() {
-    m::mat4 scale;
-    m::mat4 translate;
-    scale.setScaleTrans(m_scale.x, m_scale.y, m_scale.z);
-    translate.setTranslateTrans(m_world.x, m_world.y, m_world.z);
-    return m_matrices[kWorld] = translate * m_rotate * scale;
+    return m_matrices[kWorld] = m::mat4::translate(m_world) * m_rotate * m::mat4::scale(m_scale);
 }
 
 const m::mat4 &pipeline::view() {
-    m::mat4 translate;
-    m::mat4 rotate;
-    translate.setTranslateTrans(-m_position.x, -m_position.y, -m_position.z);
-    rotate.setCameraTrans(target(), up());
-    return m_matrices[kView] = rotate * translate;
+    return m_matrices[kView] = m::mat4::lookat(target(), up()) * m::mat4::translate(-m_position);
 }
 
 const m::mat4 &pipeline::projection() {
-    m::mat4 perspective;
-    perspective.setPerspectiveTrans(m_perspective);
-    return m_matrices[kProjection] = perspective;
+    return m_matrices[kProjection] = m::mat4::project(m_perspective);
 }
 
 const m::perspective &pipeline::perspective() const {
