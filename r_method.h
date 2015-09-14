@@ -30,17 +30,17 @@ struct uniform {
         kMat4
     };
 
-    uniform() {}
+    uniform();
     uniform(type t);
 
-    void set(int value);                                     // kInt
-    void set(int x, int y);                                  // kInt2
-    void set(float value);                                   // kFloat
-    void set(const m::vec2 &value);                          // kVec2
-    void set(const m::vec3 &value);                          // kVec3
-    void set(const m::vec4 &value);                          // kVec4
-    void set(size_t count, const float *mats);               // kMat3x4Array
-    void set(const m::mat4 &value, bool transposed = true);  // kMat4
+    void set(int value);                        // kInt
+    void set(int x, int y);                     // kInt2
+    void set(float value);                      // kFloat
+    void set(const m::vec2 &value);             // kVec2
+    void set(const m::vec3 &value);             // kVec3
+    void set(const m::vec4 &value);             // kVec4
+    void set(size_t count, const float *mats);  // kMat3x4Array
+    void set(const m::mat4 &value);             // kMat4
 
     void post();
 
@@ -55,14 +55,10 @@ private:
         m::vec2 asVec2;
         m::vec3 asVec3;
         m::vec4 asVec4;
+        m::mat4 asMat4;
 
         struct {
-            bool transposed;
-            m::mat4 data;
-        } asMat4;
-
-        struct {
-            const float *data;
+            float *data;
             size_t count;
         } asMat3x4Array;
     };
@@ -70,9 +66,10 @@ private:
 };
 
 inline uniform::uniform(type t)
-    : m_type(t)
-    , m_handle(-1)
+    : uniform()
 {
+    m_type = t;
+    m_handle = -1;
 }
 
 struct method {

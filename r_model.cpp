@@ -93,7 +93,6 @@ void geomMethod::setSpecPower(float power) {
 
 void geomMethod::setBoneMats(size_t numJoints, const float *mats) {
     m_boneMats->set(numJoints, mats);
-    //gl::UniformMatrix3x4fv(m_boneMatsLocation, numJoints, GL_FALSE, mats);
 }
 
 void geomMethod::setAnimation(int x, int y, float flipu, float flipv, float w, float h) {
@@ -224,6 +223,15 @@ bool geomMethods::init() {
     }
 
     return m_initialized = true;
+}
+
+bool geomMethods::reload() {
+    for (auto &it : *m_geomMethods) {
+        if (it.reload())
+            continue;
+        return false;
+    }
+    return true;
 }
 
 geomMethods geomMethods::m_instance;

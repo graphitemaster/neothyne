@@ -1247,6 +1247,7 @@ NVAR(int, r_reload, "reload shaders", 0, 1, 0);
 
 void world::render(const pipeline &pl, ::world *map) {
     if (r_reload) {
+        m_geomMethods->reload();
         for (auto &it : m_directionalLightMethods)
             it.reload();
         m_compositeMethod.reload();

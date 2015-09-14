@@ -74,6 +74,7 @@ struct geomMethods {
 
     bool init();
     void release();
+    bool reload();
     geomMethod &operator[](size_t index);
     const geomMethod &operator[](size_t index) const;
 

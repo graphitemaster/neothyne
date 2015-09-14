@@ -8,6 +8,13 @@
 namespace r {
 
 ///! uniform
+static constexpr size_t kMat3x4Space = 80;
+static m::mat3x4 gUniformMat3x4Scratch[kMat3x4Space];
+
+uniform::uniform() {
+    memset(this, 0, sizeof *this);
+}
+
 void uniform::set(int value) {
     assert(m_type == kInt);
     asInt = value;
@@ -45,19 +52,18 @@ void uniform::set(const m::vec4 &value) {
     post();
 }
 
-void uniform::set(const m::mat4 &value, bool transposed) {
+void uniform::set(const m::mat4 &value) {
     assert(m_type == kMat4);
-    asMat4.data = value;
-    asMat4.transposed = transposed;
+    asMat4 = value;
     post();
 }
 
 void uniform::set(size_t count, const float *mats) {
     assert(m_type == kMat3x4Array);
-    //delete[] asMat3x4Array.data;
-    //asMat3x4Array.data = new float[3*4*count];
-    //memcpy(asMat3x4Array.data, mats, 3*4*count*sizeof(float));
-    asMat3x4Array.data = mats;
+    assert(count <= kMat3x4Space);
+
+    memcpy(gUniformMat3x4Scratch, mats, sizeof(m::mat3x4) * count);
+    asMat3x4Array.data = (float *)&gUniformMat3x4Scratch[0];
     asMat3x4Array.count = count;
     post();
 }
@@ -92,7 +98,7 @@ void uniform::post() {
         gl::UniformMatrix3x4fv(m_handle, asMat3x4Array.count, GL_FALSE, asMat3x4Array.data);
         break;
     case kMat4:
-        gl::UniformMatrix4fv(m_handle, 1, asMat4.transposed ? GL_TRUE : GL_FALSE, asMat4.data.ptr());
+        gl::UniformMatrix4fv(m_handle, 1, GL_TRUE, asMat4.ptr());
         break;
     }
 }
@@ -323,7 +329,7 @@ void defaultMethod::setColorTextureUnit(int unit) {
 }
 
 void defaultMethod::setWVP(const m::mat4 &wvp) {
-    m_WVP->set(wvp, true);
+    m_WVP->set(wvp);
 }
 
 void defaultMethod::setPerspective(const m::perspective &p) {
