@@ -79,6 +79,7 @@ struct pointLightMethod : lightMethod {
     bool init(const u::vector<const char *> &defines = u::vector<const char *>());
 
     void setLight(const pointLight &light);
+    void setLightWVP(const m::mat4 &wvp);
 
 private:
     struct {
@@ -88,6 +89,8 @@ private:
         GLint position;
         GLint radius;
     } m_pointLightLocation;
+
+    GLint m_lightWVPLocation;
 };
 
 struct spotLightMethod : lightMethod {

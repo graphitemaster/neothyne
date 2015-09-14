@@ -18,6 +18,7 @@ struct kdMap {
     void unload();
 
     void traceSphere(kdSphereTrace *trace) const;
+    bool inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius) const;
     bool isSphereStuck(const m::vec3 &position, float radius) const;
 
     bool isLoaded() const;
@@ -51,6 +52,7 @@ private:
 
     void traceSphere(kdSphereTrace *trace, int32_t node) const;
     bool isSphereStuck(const m::vec3 &position, float radius, int32_t node) const;
+    bool inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius, int32_t node) const;
 };
 
 #endif

@@ -33,10 +33,7 @@ struct directionalLight {
 #ifdef USE_SHADOWMAP
 uniform mat4 gLightWVP;
 
-float calcShadowFactor(vec3 worldPosition) {
-    vec4 position = gLightWVP * vec4(worldPosition, 1.0f);
-    vec3 shadowCoord = position.xyz / position.w;
-
+float calcShadowFactor(vec3 shadowCoord) {
     vec2 scale = 1.0f / textureSize(gShadowMap, 0);
     shadowCoord.xy *= textureSize(gShadowMap, 0);
     vec2 offset = fract(shadowCoord.xy - 0.5f);
@@ -50,35 +47,24 @@ float calcShadowFactor(vec3 worldPosition) {
 }
 #endif
 
-vec4 calcLight(baseLight light,
-               vec3 lightDirection,
-               vec3 worldPosition,
-               vec3 normal,
-               vec2 spec)
+float calcLightFactor(float facing,
+                      vec3 lightDirection,
+                      vec3 worldPosition,
+                      vec3 normal,
+                      float diffuse,
+                      vec2 spec)
 {
-    float attenuation = light.ambient;
+    float attenuation = diffuse * facing;
 
-    float diffuseFactor = dot(normal, -lightDirection);
-    if (diffuseFactor > 0.0f) {
-#ifdef USE_SHADOWMAP
-        float shadowFactor = calcShadowFactor(worldPosition);
-        attenuation += light.diffuse * diffuseFactor * shadowFactor;
-#else
-        attenuation += light.diffuse * diffuseFactor;
-#endif
-        vec3 vertexToEye = normalize(gEyeWorldPosition - worldPosition);
-        vec3 lightReflect = reflect(lightDirection, normal);
-        float specularFactor = dot(vertexToEye, lightReflect);
-        if (specularFactor > 0.0f) {
-#ifdef USE_SHADOWMAP
-            attenuation += spec.x * pow(specularFactor, spec.y) * shadowFactor;
-#else
-            attenuation += spec.x * pow(specularFactor, spec.y);
-#endif
-        }
+    vec3 vertexToEye = gEyeWorldPosition - worldPosition;
+    vec3 lightReflect = lightDirection + 2.0f * facing * normal;
+    float specularFactor = dot(vertexToEye, lightReflect);
+    if (specularFactor > 0.0f) {
+        specularFactor *= inversesqrt(dot(vertexToEye, vertexToEye));
+        attenuation += spec.x * pow(specularFactor, spec.y);
     }
 
-    return vec4(light.color, 1.0f) * attenuation;
+    return attenuation;
 }
 
 vec4 calcDirectionalLight(directionalLight light,
@@ -86,7 +72,17 @@ vec4 calcDirectionalLight(directionalLight light,
                           vec3 normal,
                           vec2 spec)
 {
-    return calcLight(light.base, light.direction, worldPosition, normal, spec);
+    float attenuation = light.base.ambient;
+    float facing = dot(normal, -light.direction);
+    if (facing > 0.0f) {
+      attenuation += calcLightFactor(facing,
+                                     light.direction,
+                                     worldPosition,
+                                     normal,
+                                     light.base.diffuse,
+                                     spec);
+    }
+    return vec4(light.base.color, 1.0f) * attenuation;
 }
 
 vec4 calcPointLight(pointLight light,
@@ -94,21 +90,38 @@ vec4 calcPointLight(pointLight light,
                     vec3 normal,
                     vec2 spec)
 {
-    vec3 lightDirection = worldPosition - light.position;
-    float distance = length(lightDirection);
-    lightDirection = normalize(lightDirection);
-
     vec4 color = vec4(0.0f);
-    if (distance < light.radius) {
-        color = calcLight(light.base,
-                          lightDirection,
-                          worldPosition,
-                          normal,
-                          spec);
+
+    vec3 lightDirection = worldPosition - light.position;
+    float distanceSq = dot(lightDirection, lightDirection);
+    if (distanceSq < light.radius * light.radius) {
+        float attenuation = 0.0f;
+        float facing = -dot(normal, lightDirection);
+        if (facing > 0.0f) {
+            float invDistance = inversesqrt(distanceSq);
+            float attenuation = 1.0f - clamp(distanceSq * invDistance / light.radius, 0.0f, 1.0f);
+#ifdef USE_SHADOWMAP
+            vec3 absDir = abs(lightDirection);
+            vec4 project =
+                max(absDir.x, absDir.y) > absDir.z ?
+                    (absDir.x > absDir.y ?
+                        vec4(lightDirection.zyx, 0.0f) :
+                        vec4(lightDirection.xzy, 1.0f / 3.0f)) :
+                    vec4(lightDirection, 2.0f / 3.0f);
+            vec4 shadowCoord = gLightWVP * vec4(project.xy, abs(project.z), 1.0f);
+            attenuation *= calcShadowFactor(shadowCoord.xyz / shadowCoord.w + vec3(project.w, 0.5f * step(0.0f, project.z), 0.0f));
+#endif
+            attenuation *= calcLightFactor(facing * invDistance,
+                                           lightDirection * invDistance,
+                                           worldPosition,
+                                           normal,
+                                           light.base.diffuse,
+                                           spec);
+            color = vec4(light.base.color, 1.0f) * attenuation;
+        }
     }
 
-    float attenuation = 1.0f - clamp(distance / light.radius, 0.0f, 1.0f);
-    return color * attenuation;
+    return color;
 }
 
 vec4 calcSpotLight(spotLight light,
@@ -116,17 +129,34 @@ vec4 calcSpotLight(spotLight light,
                    vec3 normal,
                    vec2 spec)
 {
-    vec3 lightToPixel = normalize(worldPosition - light.base.position);
-    float spotFactor = dot(lightToPixel, light.direction);
+    vec4 color = vec4(0.0f);
 
-    if (spotFactor > light.cutOff) {
-        vec4 color = calcPointLight(light.base,
-                                    worldPosition,
-                                    normal,
-                                    spec);
-        return color * (1.0f - (1.0f - spotFactor) * 1.0f / (1.0f - light.cutOff));
+    vec3 lightDirection = worldPosition - light.base.position;
+    float distanceSq = dot(lightDirection, lightDirection);
+    if (distanceSq < light.base.radius * light.base.radius) {
+        float facing = -dot(normal, lightDirection);
+        if (facing > 0.0f) {
+            float invDistance = inversesqrt(distanceSq);
+            float spotFactor = dot(lightDirection, light.direction) * invDistance;
+            if (spotFactor > light.cutOff) {
+                float attenuation = 1.0f - clamp(distanceSq * invDistance / light.base.radius, 0.0f, 1.0f);
+                attenuation *= 1.0f - (1.0f - spotFactor) / (1.0f - light.cutOff);
+#ifdef USE_SHADOWMAP
+                vec4 shadowCoord = gLightWVP * vec4(worldPosition, 1.0f);
+                attenuation *= calcShadowFactor(shadowCoord.xyz / shadowCoord.w);
+#endif
+                attenuation *= calcLightFactor(facing * invDistance,
+                                               lightDirection * invDistance,
+                                               worldPosition,
+                                               normal,
+                                               light.base.base.diffuse,
+                                               spec);
+                color = vec4(light.base.base.color, 1.0f) * attenuation;
+            }
+        }
     }
-    return vec4(0.0f);
+
+    return color;
 }
 
 #endif

@@ -124,6 +124,8 @@ bool pointLightMethod::init(const u::vector<const char *> &defines) {
     m_pointLightLocation.position = getUniformLocation("gPointLight.position");
     m_pointLightLocation.radius = getUniformLocation("gPointLight.radius");
 
+    m_lightWVPLocation = getUniformLocation("gLightWVP");
+
     return true;
 }
 
@@ -133,6 +135,10 @@ void pointLightMethod::setLight(const pointLight &light) {
     gl::Uniform1f(m_pointLightLocation.diffuse, light.diffuse);
     gl::Uniform3fv(m_pointLightLocation.position, 1, &light.position.x);
     gl::Uniform1f(m_pointLightLocation.radius, light.radius);
+}
+
+void pointLightMethod::setLightWVP(const m::mat4 &wvp) {
+    gl::UniformMatrix4fv(m_lightWVPLocation, 1, GL_TRUE, wvp.ptr());
 }
 
 ///! Spot Light Rendering Method

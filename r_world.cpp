@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 
 #include "engine.h"
 #include "world.h"
@@ -27,7 +28,8 @@ VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 VAR(int, r_spec, "specularity mapping", 0, 1, 1);
 VAR(int, r_hoq, "hardware occlusion queries", 0, 1, 1);
 VAR(int, r_fog, "fog", 0, 1, 1);
-VAR(int, r_smsize, "shadow map size", 128, 4096, 1024);
+VAR(int, r_smsize, "shadow map size", 128, 4096, 256);
+VAR(float, r_smbias, "shadow map bias", -1.0f, 1.0f, -0.01);
 NVAR(int, r_debug, "debug visualizations", 0, 4, 0);
 
 namespace r {
@@ -488,12 +490,20 @@ bool world::upload(const m::perspective &p, ::world *map) {
     }
 
     // point light method
-    if (!m_pointLightMethod.init())
+    if (!m_pointLightMethods[0].init())
         neoFatal("failed to initialize point-light rendering method");
-    m_pointLightMethod.enable();
-    m_pointLightMethod.setColorTextureUnit(lightMethod::kColor);
-    m_pointLightMethod.setNormalTextureUnit(lightMethod::kNormal);
-    m_pointLightMethod.setDepthTextureUnit(lightMethod::kDepth);
+    m_pointLightMethods[0].enable();
+    m_pointLightMethods[0].setColorTextureUnit(lightMethod::kColor);
+    m_pointLightMethods[0].setNormalTextureUnit(lightMethod::kNormal);
+    m_pointLightMethods[0].setDepthTextureUnit(lightMethod::kDepth);
+
+    if (!m_pointLightMethods[1].init({"USE_SHADOWMAP"}))
+        neoFatal("failed to initialize point-light rendering method");
+    m_pointLightMethods[1].enable();
+    m_pointLightMethods[1].setColorTextureUnit(lightMethod::kColor);
+    m_pointLightMethods[1].setNormalTextureUnit(lightMethod::kNormal);
+    m_pointLightMethods[1].setDepthTextureUnit(lightMethod::kDepth);
+    m_pointLightMethods[1].setShadowMapTextureUnit(lightMethod::kShadowMap);
 
     // spot light method
     if (!m_spotLightMethods[0].init())
@@ -550,7 +560,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
     if (!m_colorGrader.init(p, map->getColorGrader().data()))
         neoFatal("failed to initialize color grading render buffer");
 
-    if (!m_spotLightShadowMap.init(r_smsize))
+    if (!m_shadowMap.init(r_smsize))
         neoFatal("failed to initialize shadow map");
     if (!m_shadowMapMethod.init())
         neoFatal("failed to initialize shadow map method");
@@ -757,21 +767,46 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
 
 void world::pointLightPass(const pipeline &pl) {
     pipeline p = pl;
-    auto &method = m_pointLightMethod;
-    method.enable();
-    method.setPerspective(pl.perspective());
-    method.setEyeWorldPos(pl.position());
-    method.setInverse((p.projection() * p.view()).inverse());
+
+    gl::DepthMask(GL_FALSE);
 
     for (auto &it : m_culledPointLights) {
         float scale = it->radius * kLightRadiusTweak;
+
+        pointLightMethod *method = &m_pointLightMethods[0];
+
+        // Only bother if these are casting shadows
+        if (it->castShadows) {
+            pointLightShadowPass(it);
+
+            gl::DepthMask(GL_FALSE);
+
+            method = &m_pointLightMethods[1];
+
+            gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
+            gl::BindTexture(GL_TEXTURE_2D, m_shadowMap.texture());
+
+            float widthScale = 0.5f * m_shadowMap.widthScale();
+            float heightScale = 0.5f * m_shadowMap.heightScale();
+            method->enable();
+            method->setLightWVP(m::mat4::translate({widthScale, heightScale, 0.5f + r_smbias}) *
+                                m::mat4::scale({widthScale, heightScale, 0.5f}) *
+                                m::mat4::project(90.0f, 1.0f / it->radius, sqrtf(3.0f)) *
+                                m::mat4::scale(1.0f / it->radius));
+        } else {
+            method->enable();
+        }
+
+        method->setPerspective(pl.perspective());
+        method->setEyeWorldPos(pl.position());
+        method->setInverse((p.projection() * p.view()).inverse());
 
         p.setWorld(it->position);
         p.setScale({scale, scale, scale});
 
         const m::mat4 wvp = p.projection() * p.view() * p.world();
-        method.setLight(*it);
-        method.setWVP(wvp);
+        method->setLight(*it);
+        method->setWVP(wvp);
 
         const m::vec3 dist = it->position - p.position();
         scale += p.perspective().nearp + 1.0f;
@@ -784,46 +819,56 @@ void world::pointLightPass(const pipeline &pl) {
         }
         m_sphere.render();
     }
+
+    gl::DepthMask(GL_TRUE);
+    gl::DepthFunc(GL_LESS);
+    gl::CullFace(GL_BACK);
 }
 
 void world::spotLightPass(const pipeline &pl) {
     pipeline p = pl;
 
+    gl::DepthMask(GL_FALSE);
+
     for (auto &sl : m_culledSpotLights) {
         float scale = sl->radius * kLightRadiusTweak;
 
-        spotLightMethod &method = m_spotLightMethods[0];
+        spotLightMethod *method = &m_spotLightMethods[0];
 
         // Only bother if these are casting shadows
         if (sl->castShadows) {
             spotLightShadowPass(sl);
 
-            method = m_spotLightMethods[1];
+            gl::DepthMask(GL_FALSE);
+
+            method = &m_spotLightMethods[1];
 
             gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
-            gl::BindTexture(GL_TEXTURE_2D, m_spotLightShadowMap.texture());
+            gl::BindTexture(GL_TEXTURE_2D, m_shadowMap.texture());
 
-            const float kShadowBias = -0.00005f;
-            method.enable();
-            method.setLightWVP(m::mat4::translate({0.5f, 0.5f, 0.5f + kShadowBias}) *
-                               m::mat4::scale({0.5f, 0.5f, 0.5f}) *
-                               m::mat4::project(sl->cutOff, sl->radius) *
-                               m::mat4::lookat(sl->direction, m::vec3::yAxis) *
-                               m::mat4::translate(-sl->position));
+            float widthScale = 0.5f * m_shadowMap.widthScale();
+            float heightScale = 0.5f * m_shadowMap.heightScale();
+            method->enable();
+            method->setLightWVP(m::mat4::translate({widthScale, heightScale, 0.5f + r_smbias}) *
+                                m::mat4::scale({widthScale, heightScale, 0.5f}) *
+                                m::mat4::project(sl->cutOff, 1.0f / sl->radius, sqrtf(3.0f)) *
+                                m::mat4::lookat(sl->direction, m::vec3::yAxis) *
+                                m::mat4::scale(1.0f / sl->radius) *
+                                m::mat4::translate(-sl->position));
         } else {
-            method.enable();
+            method->enable();
         }
 
-        method.setPerspective(pl.perspective());
-        method.setEyeWorldPos(pl.position());
-        method.setInverse((p.projection() * p.view()).inverse());
+        method->setPerspective(pl.perspective());
+        method->setEyeWorldPos(pl.position());
+        method->setInverse((p.projection() * p.view()).inverse());
 
         p.setWorld(sl->position);
         p.setScale({scale, scale, scale});
 
         const m::mat4 wvp = p.projection() * p.view() * p.world();
-        method.setLight(*sl);
-        method.setWVP(wvp);
+        method->setLight(*sl);
+        method->setWVP(wvp);
 
         const m::vec3 dist = sl->position - p.position();
         scale += p.perspective().nearp + 1.0f;
@@ -870,8 +915,6 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
 
     if (!r_debug) {
         gl::Enable(GL_DEPTH_TEST);
-        gl::DepthMask(GL_FALSE);
-        gl::DepthFunc(GL_LESS);
 
         pointLightPass(pl);
         spotLightPass(pl);
@@ -1129,26 +1172,63 @@ void world::compositePass(const pipeline &pl, ::world *map) {
     }
 }
 
+void world::pointLightShadowPass(const pointLight *const pl) {
+    gl::DepthMask(GL_TRUE);
+    gl::DepthFunc(GL_LEQUAL);
+
+    m_shadowMap.update(r_smsize);
+    m_shadowMap.bindWriting();
+    gl::Clear(GL_DEPTH_BUFFER_BIT);
+
+    gl::Enable(GL_SCISSOR_TEST);
+
+    m_shadowMapMethod.enable();
+
+    for (int side = 0; side < 6; ++side) {
+        m::mat4 sideView = m::mat4::identity();
+        if (side < 2)
+            u::swap(sideView.a, sideView.c);
+        else if(side < 4)
+            u::swap(sideView.b, sideView.c);
+        if (! (side % 2))
+            sideView.c = -sideView.c;
+        m_shadowMapMethod.setWVP(m::mat4::project(90.0f, 1.0f / pl->radius, sqrtf(3.0f)) *
+                                 sideView *
+                                 m::mat4::scale(1.0f /  pl->radius) *
+                                 m::mat4::translate(-pl->position));
+
+        size_t x = r_smsize * (side / 2), y = r_smsize * (side % 2);
+        gl::Viewport(x, y, r_smsize, r_smsize);
+        gl::Scissor(x, y, r_smsize, r_smsize);
+        gl::CullFace((side % 2) ^ (side >= 4) ? GL_FRONT : GL_BACK);
+
+        gl::BindVertexArray(vao);
+        gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
+    }
+
+    gl::Viewport(0, 0, neoWidth(), neoHeight());
+
+    gl::Disable(GL_SCISSOR_TEST);
+
+    m_final.bindWriting();
+}
+
 void world::spotLightShadowPass(const spotLight *const sl) {
-    GLint depthMask;
-    GLint depthFunc;
+    gl::DepthMask(GL_TRUE);
+    gl::DepthFunc(GL_LEQUAL);
+    gl::CullFace(GL_BACK);
 
-    gl::GetIntegerv(GL_DEPTH_WRITEMASK, &depthMask);
-    gl::GetIntegerv(GL_DEPTH_FUNC, &depthFunc);
+    gl::Enable(GL_SCISSOR_TEST);
+    gl::Scissor(0, 0, r_smsize, r_smsize);
 
-    if (depthMask != GL_TRUE)
-        gl::DepthMask(GL_TRUE);
-    if (depthFunc != GL_LEQUAL)
-        gl::DepthFunc(GL_LEQUAL);
-
-    // Bind and clear the shadow map
-    m_spotLightShadowMap.update(r_smsize);
-    m_spotLightShadowMap.bindWriting();
+    m_shadowMap.update(r_smsize);
+    m_shadowMap.bindWriting();
     gl::Clear(GL_DEPTH_BUFFER_BIT);
 
     m_shadowMapMethod.enable();
-    m_shadowMapMethod.setWVP(m::mat4::project(sl->cutOff, sl->radius) *
+    m_shadowMapMethod.setWVP(m::mat4::project(sl->cutOff, 1.0f / sl->radius, sqrtf(3.0f)) *
                              m::mat4::lookat(sl->direction, m::vec3::yAxis) *
+                             m::mat4::scale(1.0f / sl->radius) *
                              m::mat4::translate(-sl->position));
 
     // Draw the scene from the lights perspective into the shadow map
@@ -1157,10 +1237,9 @@ void world::spotLightShadowPass(const spotLight *const sl) {
     gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
     gl::Viewport(0, 0, neoWidth(), neoHeight());
 
-    m_final.bindWriting();
+    gl::Disable(GL_SCISSOR_TEST);
 
-    gl::DepthMask(depthMask);
-    gl::DepthFunc(depthFunc);
+    m_final.bindWriting();
 }
 
 void world::render(const pipeline &pl, ::world *map) {

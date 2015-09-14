@@ -113,6 +113,7 @@ private:
     void compositePass(const pipeline &pl, ::world *map);
 
     void pointLightPass(const pipeline &pl);
+    void pointLightShadowPass(const pointLight *const pl);
     void spotLightPass(const pipeline &pl);
     void spotLightShadowPass(const spotLight *const sl);
 
@@ -120,7 +121,7 @@ private:
     geomMethods *m_geomMethods;
     u::vector<directionalLightMethod> m_directionalLightMethods;
     compositeMethod m_compositeMethod;
-    pointLightMethod m_pointLightMethod;
+    pointLightMethod m_pointLightMethods[2]; // no shadow, shadow
     spotLightMethod m_spotLightMethods[2]; // no shadow, shadow
     ssaoMethod m_ssaoMethod;
     bboxMethod m_bboxMethod;
@@ -159,7 +160,7 @@ private:
     u::vector<spotLight*> m_culledSpotLights;
     u::vector<pointLight*> m_culledPointLights;
 
-    shadowMap m_spotLightShadowMap;
+    shadowMap m_shadowMap;
     shadowMapMethod m_shadowMapMethod;
 
     bool m_uploaded;

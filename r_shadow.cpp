@@ -5,6 +5,8 @@ namespace r {
 ///!shadowMap
 shadowMap::shadowMap()
     : m_size(0)
+    , m_width(0)
+    , m_height(0)
     , m_fbo(0)
     , m_shadowMap(0)
 {
@@ -17,14 +19,20 @@ shadowMap::~shadowMap() {
         gl::DeleteTextures(1, &m_shadowMap);
 }
 
-bool shadowMap::init(size_t size) {
+void shadowMap::setSize(size_t size) {
     m_size = size;
+    m_width = size*3;
+    m_height = size*2;
+}
+
+bool shadowMap::init(size_t size) {
+    setSize(size);
 
     gl::GenFramebuffers(1, &m_fbo);
 
     gl::GenTextures(1, &m_shadowMap);
     gl::BindTexture(GL_TEXTURE_2D, m_shadowMap);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_size, m_size, 0,
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_width, m_height, 0,
         GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -48,9 +56,10 @@ void shadowMap::update(size_t size) {
     if (m_size == size)
         return;
 
-    m_size = size;
+    setSize(size);
+
     gl::BindTexture(GL_TEXTURE_2D, m_shadowMap);
-    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_size, m_size, 0,
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_width, m_height, 0,
         GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 }
 
@@ -60,6 +69,14 @@ void shadowMap::bindWriting() {
 
 GLuint shadowMap::texture() const {
     return m_shadowMap;
+}
+
+float shadowMap::widthScale() const {
+    return float(m_size) / float(m_width);
+}
+
+float shadowMap::heightScale() const {
+    return float(m_size) / float(m_height);
 }
 
 ///! shadowMapMethod

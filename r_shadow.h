@@ -16,8 +16,15 @@ struct shadowMap {
 
     GLuint texture() const;
 
+    float widthScale() const;
+    float heightScale() const;
+
 private:
+    void setSize(size_t size);
+
     size_t m_size;
+    size_t m_width;
+    size_t m_height;
     GLuint m_fbo;
     GLuint m_shadowMap;
 };

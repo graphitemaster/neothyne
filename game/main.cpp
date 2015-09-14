@@ -128,38 +128,17 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
 #if 1
     // Setup some lights
     const m::vec3 places[] = {
-        m::vec3(153.04, 105.02, 197.67),
-        m::vec3(-64.14, 105.02, 328.36),
-        m::vec3(-279.83, 105.02, 204.61),
-        m::vec3(-458.72, 101.02, 189.58),
-        m::vec3(-664.53, 75.02, -1.75),
-        m::vec3(-580.69, 68.02, -184.89),
-        m::vec3(-104.43, 84.02, -292.99),
-        m::vec3(-23.59, 84.02, -292.40),
-        m::vec3(333.00, 101.02, 194.46),
-        m::vec3(167.13, 101.02, 0.32),
-        m::vec3(-63.36, 37.20, 2.30),
-        m::vec3(459.97, 68.02, -181.60),
-        m::vec3(536.75, 75.01, 2.80),
-        m::vec3(-4.61, 117.02, -91.74),
-        m::vec3(-2.33, 117.02, 86.34),
-        m::vec3(-122.92, 117.02, 84.58),
-        m::vec3(-123.44, 117.02, -86.57),
-        m::vec3(-300.24, 101.02, -0.15),
-        m::vec3(-448.34, 101.02, -156.27),
-        m::vec3(-452.94, 101.02, 23.58),
-        m::vec3(-206.59, 101.02, -209.52),
-        m::vec3(62.59, 101.02, -207.53)
+        m::vec3(153.04, 105.02, 197.67)
     };
 
     pointLight light;
     light.diffuse = 1.0f;
-    light.ambient = 1.0f;
+    light.ambient = 0.10f;
     light.radius = 30.0f;
     for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
         light.color = { u::randf(), u::randf(), u::randf() };
         light.position = places[i];
-        light.position.y -= 10.0f;
+        //light.position.y -= 5.0f;
         gWorld.insert(light);
     }
     light.position = { 0, 110, 0 };
@@ -168,7 +147,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     // World only has one directional light
     directionalLight &dlight = gWorld.getDirectionalLight();
     dlight.color = { 0.2, 0.2, 0.2 };
-    dlight.ambient = 0.15f;
+    dlight.ambient = 0.10f;
     dlight.diffuse = 0.50f;
     dlight.direction = { -1.0f, 0.0f, 0.0f };
 

@@ -78,8 +78,10 @@ void move() {
     if (gWorld.trace(q, &h, kMaxTraceDistance, false) && h.fraction > 0.01f) {
         direction *= (kMaxTraceDistance * h.fraction);
         m::vec3 *position = getEntityPosition();
-        if (position)
+        if (position) {
             *position = q.start + direction;
+            position->y += 5.0f; // HACK
+        }
     }
 }
 

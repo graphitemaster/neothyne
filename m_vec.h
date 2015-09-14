@@ -310,6 +310,7 @@ struct vec4 {
 
     vec4 &operator*=(float k);
     vec4 &operator+=(const vec4 &o);
+    vec4 operator-() const;
 
     float abs() const;
 
@@ -378,6 +379,10 @@ inline vec4 &vec4::operator+=(const vec4 &o) {
     z += o.z;
     w += o.w;
     return *this;
+}
+
+inline vec4 vec4::operator -() const {
+    return vec4(-x, -y, -z, -w);
 }
 
 inline float operator*(const vec4 &l, const vec4 &r) {

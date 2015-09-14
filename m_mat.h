@@ -34,7 +34,7 @@ struct mat4 {
     mat4 inverse();
     mat4 operator*(const mat4 &t) const;
 
-    static mat4 project(float angle, float range);
+    static mat4 project(float angle, float nearClip, float farClip);
     static mat4 project(const perspective &p);
     static mat4 scale(const vec3 &s);
     static mat4 rotate(const vec3 &r);
