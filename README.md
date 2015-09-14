@@ -22,9 +22,9 @@ embodies the following:
 * Deferred renderer (which can do)
   * Directional lighting (with ambient and diffuse terms)
   * Specular lighting (with power and intensity terms)
-  * Point lighting
-  * Spot lighting
-  * Sky meshes (skybox, skydome, etc, any mesh will suffice).
+  * Point lighting (with omnidirectional shadow mapping)
+  * Spot lighting (with shadow mapping)
+  * Skybox
   * Normal mapping (dot3 bump mapping)
   * Displacement mapping (steep parallax and relief mapping)
   * Fog (linear, exp and exp2)
@@ -70,7 +70,6 @@ embodies the following:
 
 ## Goals
 
-* Shadow mapping
 * Networking (client/server model)
 * Build the game
 * Scripting
