@@ -1243,7 +1243,23 @@ void world::spotLightShadowPass(const spotLight *const sl) {
     m_final.bindWriting();
 }
 
+NVAR(int, r_reload, "reload shaders", 0, 1, 0);
+
 void world::render(const pipeline &pl, ::world *map) {
+    if (r_reload) {
+        for (auto &it : m_directionalLightMethods)
+            it.reload();
+        m_compositeMethod.reload();
+        for (auto &it : m_pointLightMethods)
+            it.reload();
+        for (auto &it : m_spotLightMethods)
+            it.reload();
+        m_ssaoMethod.reload();
+        m_bboxMethod.reload();
+        m_aaMethod.reload();
+        m_defaultMethod.reload();
+        r_reload.set(0);
+    }
     cullPass(pl, map);
     occlusionPass(pl, map);
     geometryPass(pl, map);

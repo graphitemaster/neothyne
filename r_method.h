@@ -80,8 +80,10 @@ struct method {
     ~method();
 
     void enable();
+    void destroy();
 
     bool init();
+    bool reload();
 
     void define(const char *string);
     void define(const char *string, size_t value);
@@ -95,23 +97,16 @@ protected:
     bool finalize(const u::initializer_list<const char *> &attributes = {},
                   const u::initializer_list<const char *> &fragData = {});
 
-    u::optional<u::string> preprocess(const u::string &file);
+    u::optional<u::string> preprocess(const u::string &file, bool initial = true);
 
     void post();
 
 private:
+    u::string m_prelude;
+    u::map<GLenum, u::pair<const char*, GLuint>> m_shaders;
     u::map<u::string, uniform> m_uniforms;
-
-    struct shader {
-        shader();
-        enum {
-            kVertex,
-            kFragment
-        };
-        u::string source;
-        GLuint object;
-    };
-    shader m_shaders[2]; // shader::kVertex, shader::kFragment
+    u::initializer_list<const char *> m_attributes;
+    u::initializer_list<const char *> m_fragData;
     GLuint m_program;
 };
 

@@ -97,12 +97,6 @@ void uniform::post() {
     }
 }
 
-///! method::shader
-method::shader::shader()
-    : object(0)
-{
-}
-
 ///! method
 method::method()
     : m_program(0)
@@ -110,44 +104,59 @@ method::method()
 }
 
 method::~method() {
-    for (auto &it : m_shaders) {
-        if (it.object)
-            gl::DeleteShader(it.object);
-    }
+    destroy();
+}
+
+void method::destroy() {
+    for (auto &it : m_shaders)
+        if (it.second.second)
+            gl::DeleteShader(it.second.second);
     if (m_program)
         gl::DeleteProgram(m_program);
 }
 
 bool method::init() {
     m_program = gl::CreateProgram();
-    for (auto &it : m_shaders)
-        it.source = u::move(u::format("#version %d\n", gl::glslVersion()));
+    m_prelude = u::move(u::format("#version %d\n", gl::glslVersion()));
     return !!m_program;
 }
 
-void method::define(const char *macro) {
-    auto prelude = u::format("#define %s\n", macro);
+bool method::reload() {
+    gl::UseProgram(0);
+    destroy();
+    if (!(m_program = gl::CreateProgram()))
+        return false;
     for (auto &it : m_shaders)
-        it.source += prelude;
+        if (!addShader(it.first, it.second.first))
+            return false;
+    if (!finalize(m_attributes, m_fragData))
+        return false;
+    post();
+    enable();
+    for (auto &it : m_uniforms)
+        it.second.post();
+    return true;
+}
+
+void method::define(const char *macro) {
+    m_prelude += u::format("#define %s\n", macro);
 }
 
 void method::define(const char *macro, size_t value) {
-    auto prelude = u::format("#define %s %zu\n", macro, value);
-    for (auto &it : m_shaders)
-        it.source += prelude;
+    m_prelude += u::format("#define %s %zu\n", macro, value);
 }
 
 void method::define(const char *macro, float value) {
-    auto prelude = u::format("#define %s %f\n", macro, value);
-    for (auto &it : m_shaders)
-        it.source += prelude;
+    m_prelude += u::format("#define %s %f\n", macro, value);
 }
 
-u::optional<u::string> method::preprocess(const u::string &file) {
+u::optional<u::string> method::preprocess(const u::string &file, bool initial) {
     auto fp = u::fopen(neoGamePath() + file, "r");
     if (!fp)
         return u::none;
     u::string result;
+    if (initial)
+        result = m_prelude;
     size_t lineno = 1;
     while (auto read = u::getline(fp)) {
         auto line = *read;
@@ -160,7 +169,7 @@ u::optional<u::string> method::preprocess(const u::string &file) {
                 auto back = thing.pop_back(); // '"' or '>'
                 if ((front == '<' && back != '>') && (front != back))
                     return u::format("#error invalid use of include directive on line %zu\n", lineno);
-                u::optional<u::string> include = preprocess(thing);
+                u::optional<u::string> include = preprocess(thing, false);
                 if (!include)
                     return u::format("#error failed to include %s\n", thing);
                 result += u::format("#line %zu\n%s\n", lineno++, *include);
@@ -196,32 +205,18 @@ u::optional<u::string> method::preprocess(const u::string &file) {
 }
 
 bool method::addShader(GLenum type, const char *shaderFile) {
-    int index = -1;
-    switch (type) {
-    case GL_VERTEX_SHADER:
-        index = shader::kVertex;
-        break;
-    case GL_FRAGMENT_SHADER:
-        index = shader::kFragment;
-        break;
-    }
-    assert(index != -1);
-
     auto pp = preprocess(shaderFile);
     if (!pp)
         neoFatal("failed preprocessing `%s'", shaderFile);
 
     GLuint object = gl::CreateShader(type);
-    if (!object)
+    if (object == 0)
         return false;
 
-    auto &entry = m_shaders[index];
-    entry.source += *pp;
-    entry.object = object;
+    m_shaders[type] = u::make_pair(shaderFile, object);
 
-    const auto &data = entry.source;
-    const GLchar *source = &data[0];
-    const GLint size = data.size();
+    const GLchar *source = &(*pp)[0];
+    const GLint size = (*pp).size();
 
     gl::ShaderSource(object, 1, &source, &size);
     gl::CompileShader(object);
@@ -234,7 +229,7 @@ bool method::addShader(GLenum type, const char *shaderFile) {
         gl::GetShaderiv(object, GL_INFO_LOG_LENGTH, &length);
         log.resize(length);
         gl::GetShaderInfoLog(object, length, nullptr, &log[0]);
-        u::print("shader compilation error `%s':\n%s\n", shaderFile, log);
+        u::print("shader compilation error `%s':\n%s\n%s", shaderFile, log, source);
         return false;
     }
 
@@ -282,12 +277,13 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
     }
 
     // Don't need these anymore
-    for (auto &it : m_shaders) {
-        if (it.object) {
-            gl::DeleteShader(it.object);
-            it.object = 0;
-        }
-    }
+    for (auto &it : m_shaders)
+        if (it.second.second)
+            gl::DeleteShader(it.second.second);
+
+    // Make a copy of these for reloads
+    m_attributes = attributes;
+    m_fragData = fragData;
 
     return true;
 }
