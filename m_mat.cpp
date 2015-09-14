@@ -12,14 +12,6 @@ mat4 mat4::identity() {
              { 0.0f, 0.0f, 0.0f, 1.0f } };
 }
 
-constexpr mat4::mat4(const vec4 &a, const vec4 &b, const vec4 &c, const vec4 &d)
-    : a(a)
-    , b(b)
-    , c(c)
-    , d(d)
-{
-}
-
 mat4 mat4::operator*(const mat4 &t) const {
     return { { a.x * t.a.x + a.y * t.b.x + a.z * t.c.x + a.w * t.d.x,
                a.x * t.a.y + a.y * t.b.y + a.z * t.c.y + a.w * t.d.y,

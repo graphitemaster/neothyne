@@ -54,6 +54,15 @@ private:
                         float c1, float c2, float c3);
 };
 
+inline constexpr mat4::mat4(const vec4 &a, const vec4 &b, const vec4 &c, const vec4 &d)
+    : a(a)
+    , b(b)
+    , c(c)
+    , d(d)
+{
+}
+
+
 inline float *mat4::ptr() {
     return &a.x;
 }

@@ -1185,24 +1185,41 @@ void world::pointLightShadowPass(const pointLight *const pl) {
 
     m_shadowMapMethod.enable();
 
+    // v = identity
+    // for i=0 to 6:
+    //  if i < 2: swap(v.a, v.b)
+    //  if i < 4: swap(v.b, v.c)
+    //  if even(i): v.c = -v.c
+    //  c = (odd(i) ^ i >= 4) ? GL_FRONT : GL_BACK
+    static struct {
+        m::mat4 view;
+        GLenum cullFace;
+    } kSideViews[] = {
+        { { {  0.0f,  0.0f,  1.0f,  0.0f }, {  0.0f,  1.0f,  0.0f,  0.0f },
+            { -1.0f, -0.0f, -0.0f, -0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_BACK },
+        { { {  0.0f,  0.0f,  1.0f,  0.0f }, {  0.0f,  1.0f,  0.0f,  0.0f },
+            {  1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_FRONT },
+        { { {  1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  0.0f,  1.0f,  0.0f },
+            { -0.0f, -1.0f, -0.0f, -0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_BACK },
+        { { {  1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  0.0f,  1.0f,  0.0f },
+            {  0.0f,  1.0f,  0.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_FRONT },
+        { { {  1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  1.0f,  0.0f,  0.0f },
+            { -0.0f, -0.0f, -1.0f, -0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_FRONT },
+        { { {  1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  1.0f,  0.0f,  0.0f },
+            {  0.0f,  0.0f,  1.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_BACK }
+    };
+
     for (int side = 0; side < 6; ++side) {
-        m::mat4 sideView = m::mat4::identity();
-        if (side < 2)
-            u::swap(sideView.a, sideView.c);
-        else if(side < 4)
-            u::swap(sideView.b, sideView.c);
-        if (! (side % 2))
-            sideView.c = -sideView.c;
+        const auto &view = kSideViews[side];
         m_shadowMapMethod.setWVP(m::mat4::project(90.0f, 1.0f / pl->radius, sqrtf(3.0f)) *
-                                 sideView *
+                                 view.view *
                                  m::mat4::scale(1.0f /  pl->radius) *
                                  m::mat4::translate(-pl->position));
 
         size_t x = r_smsize * (side / 2), y = r_smsize * (side % 2);
         gl::Viewport(x, y, r_smsize, r_smsize);
         gl::Scissor(x, y, r_smsize, r_smsize);
-        gl::CullFace((side % 2) ^ (side >= 4) ? GL_FRONT : GL_BACK);
-
+        gl::CullFace(view.cullFace);
         gl::BindVertexArray(vao);
         gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
     }
