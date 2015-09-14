@@ -98,24 +98,44 @@ struct world : geom {
     world();
     ~world();
 
-    bool load(const kdMap &map);
+    bool load(kdMap *map);
     bool upload(const m::perspective &p, ::world *map);
 
     void unload(bool destroy = true);
     void render(const pipeline &pl, ::world *map);
 
 private:
-    void cullPass(const pipeline &pl, ::world *map);
+    void cullPass(const pipeline &pl);
     void occlusionPass(const pipeline &pl, ::world *map);
     void geometryPass(const pipeline &pl, ::world *map);
     void lightingPass(const pipeline &pl, ::world *map);
     void forwardPass(const pipeline &pl, ::world *map);
     void compositePass(const pipeline &pl, ::world *map);
 
+    struct spotLightChunk {
+        size_t hash;
+        size_t count;
+        spotLight *light;
+        GLuint ebo;
+        bool visible;
+        bool init();
+        bool buildMesh(kdMap *map);
+    };
+
+    struct pointLightChunk {
+        size_t hash;
+        size_t count;
+        pointLight *light;
+        GLuint ebo;
+        bool visible;
+        bool init();
+        bool buildMesh(kdMap *map);
+    };
+
     void pointLightPass(const pipeline &pl);
-    void pointLightShadowPass(const pointLight *const pl);
+    void pointLightShadowPass(const pointLightChunk *const pl);
     void spotLightPass(const pipeline &pl);
-    void spotLightShadowPass(const spotLight *const sl);
+    void spotLightShadowPass(const spotLightChunk *const sl);
 
     // world shading methods and permutations
     geomMethods *m_geomMethods;
@@ -142,8 +162,9 @@ private:
     model m_gun;
 
     // The world itself
+    kdMap *m_kdWorld;
     u::vector<uint32_t> m_indices;
-    u::vector<kdBinVertex> m_vertices;
+
     u::vector<renderTextureBatch> m_textureBatches;
     u::map<u::string, texture2D*> m_textures2D;
 
@@ -157,8 +178,8 @@ private:
     m::frustum m_frustum;
     occlusionQueries m_queries;
 
-    u::vector<spotLight*> m_culledSpotLights;
-    u::vector<pointLight*> m_culledPointLights;
+    u::vector<spotLightChunk> m_culledSpotLights;
+    u::vector<pointLightChunk> m_culledPointLights;
 
     shadowMap m_shadowMap;
     shadowMapMethod m_shadowMapMethod;

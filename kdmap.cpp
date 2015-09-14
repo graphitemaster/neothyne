@@ -361,36 +361,16 @@ bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position
     if (node < 0) {
         size_t leafIndex = -node - 1;
         const size_t triangleCount = leafs[leafIndex].triangles.size();
-        bool reached = false;
         for (size_t i = 0; i < triangleCount; i++) {
             size_t triangleIndex = leafs[leafIndex].triangles[i];
-            if (sphereTriangleIntersectStatic(triangleIndex, position, radius)) {
-                reached = true;
+            if (sphereTriangleIntersectStatic(triangleIndex, position, radius))
                 triangleIndices.push_back(triangleIndex);
-            }
         }
-        return reached;
+    } else {
+        inSphere(triangleIndices, position, radius, nodes[node].children[0]);
+        inSphere(triangleIndices, position, radius, nodes[node].children[1]);
     }
-
-    m::pointPlane location;
-    m::plane plane = planes[nodes[node].plane];
-
-    // check if everything is in front of the plane
-    plane.d -= radius;
-    location = plane.classify(position, kdTree::kEpsilon);
-    if (location == m::kPointPlaneFront)
-        return inSphere(triangleIndices, position, radius, nodes[node].children[0]);
-
-    // check if everything is behind the plane
-    plane.d = planes[nodes[node].plane].d + radius;
-    location = plane.classify(position, kdTree::kEpsilon);
-    if (location == m::kPointPlaneBack)
-        return inSphere(triangleIndices, position, radius, nodes[node].children[1]);
-
-    // both
-    if (inSphere(triangleIndices, position, radius, nodes[node].children[0]))
-        return true;
-    return inSphere(triangleIndices, position, radius, nodes[node].children[1]);
+    return true;
 }
 
 bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius) const {

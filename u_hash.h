@@ -47,6 +47,10 @@ inline size_t hash(const T &value) {
     return detail::fnv1a((const void *)&rep, sizeof(rep));
 }
 
+inline size_t hash(const unsigned char *data, size_t size) {
+    return detail::fnv1a((const void *)data, size);
+}
+
 template <typename K, typename V>
 struct hash_elem {
     hash_elem();

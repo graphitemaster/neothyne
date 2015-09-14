@@ -271,9 +271,59 @@ GLuint composite::texture() const {
     return m_texture;
 }
 
+bool world::spotLightChunk::init() {
+    gl::GenBuffers(1, &ebo);
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, 0, nullptr, GL_STATIC_DRAW);
+    return true;
+}
+
+bool world::spotLightChunk::buildMesh(kdMap *map) {
+    u::vector<size_t> triangleIndices;
+    u::vector<GLuint> indices;
+    map->inSphere(triangleIndices, light->position, light->radius);
+    indices.reserve(triangleIndices.size() * 3);
+    for (const auto &it : triangleIndices) {
+        const auto &triangle = map->triangles[it];
+        for (const auto &it : triangle.v)
+            indices.push_back(it);
+    }
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(),
+        &indices[0], GL_STATIC_DRAW);
+    count = indices.size();
+    return true;
+}
+
+bool world::pointLightChunk::init() {
+    gl::GenBuffers(1, &ebo);
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, 0, nullptr, GL_STATIC_DRAW);
+    return true;
+}
+
+bool world::pointLightChunk::buildMesh(kdMap *map) {
+    u::vector<size_t> triangleIndices;
+    u::vector<GLuint> indices;
+    map->inSphere(triangleIndices, light->position, light->radius);
+    indices.reserve(triangleIndices.size() * 3);
+    u::vector<m::vec3> positions;
+    for (const auto &it : triangleIndices) {
+        const auto &triangle = map->triangles[it];
+        for (const auto &it : triangle.v)
+            indices.push_back(it);
+    }
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(),
+        &indices[0], GL_STATIC_DRAW);
+    count = indices.size();
+    return true;
+}
+
 ///! renderer
 world::world()
     : m_geomMethods(&geomMethods::instance())
+    , m_kdWorld(nullptr)
     , m_uploaded(false)
 {
 }
@@ -296,7 +346,6 @@ void world::unload(bool destroy) {
         m_models.clear();
         m_billboards.clear();
         m_indices.destroy();
-        m_vertices.destroy();
         m_textureBatches.destroy();
         m_textures2D.clear();
     }
@@ -342,24 +391,26 @@ void dustSystem::initParticle(particle &p, const m::vec3 &ownerPosition) {
     p.respawn = true;
 }
 
-bool world::load(const kdMap &map) {
+bool world::load(kdMap *map) {
     // load skybox
     if (!m_skybox.load("textures/sky01"))
         return false;
 
     // make rendering batches for triangles which share the same texture
-    for (size_t i = 0; i < map.textures.size(); i++) {
+    for (size_t i = 0; i < map->textures.size(); i++) {
         renderTextureBatch batch;
         batch.start = m_indices.size();
         batch.index = i;
-        for (size_t j = 0; j < map.triangles.size(); j++) {
-            if (map.triangles[j].texture == i)
+        for (size_t j = 0; j < map->triangles.size(); j++) {
+            if (map->triangles[j].texture == i)
                 for (size_t k = 0; k < 3; k++)
-                    m_indices.push_back(map.triangles[j].v[k]);
+                    m_indices.push_back(map->triangles[j].v[k]);
         }
         batch.count = m_indices.size() - batch.start;
         m_textureBatches.push_back(batch);
     }
+
+    m_kdWorld = map;
 
 // TODO: Offline step in kdtree.cpp instead
 #if 0
@@ -392,7 +443,7 @@ bool world::load(const kdMap &map) {
 
     // load materials
     for (auto &it : m_textureBatches) {
-        if (!it.mat.load(m_textures2D, map.textures[it.index].name, "textures/"))
+        if (!it.mat.load(m_textures2D, map->textures[it.index].name, "textures/"))
             neoFatal("failed to load material\n");
         it.mat.calculatePermutation();
     }
@@ -401,7 +452,6 @@ bool world::load(const kdMap &map) {
     if (!m_gun.load(m_textures2D, "models/lg"))
         neoFatal("failed to load gun");
 
-    m_vertices = u::move(map.vertices);
     u::print("[world] => loaded\n");
     return true;
 }
@@ -441,9 +491,10 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     geom::upload();
 
+    const auto &vertices = m_kdWorld->vertices;
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(kdBinVertex), &m_vertices[0], GL_STATIC_DRAW);
+    gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(kdBinVertex), &vertices[0], GL_STATIC_DRAW);
     gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(0));  // vertex
     gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(3));  // normals
     gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(6));  // texCoord
@@ -572,26 +623,44 @@ bool world::upload(const m::perspective &p, ::world *map) {
     if (!m_queries.init())
         neoFatal("failed to initialize occlusion queries");
 
+    // Copy light entities into our rendering representation.
+    for (auto &it : map->m_pointLights)
+        m_culledPointLights.push_back( { 0, 0, it, 0, false } );
+    for (auto &it : map->m_spotLights)
+        m_culledSpotLights.push_back( { 0, 0, it, 0, false } );
+    for (auto &it : m_culledPointLights)
+        it.init();
+    for (auto &it : m_culledSpotLights)
+        it.init();
+
     u::print("[world] => uploaded\n");
     return m_uploaded = true;
 }
 
 static constexpr float kLightRadiusTweak = 1.11f;
 
-void world::cullPass(const pipeline &pl, ::world *map) {
-    m_culledSpotLights.clear();
-    for (auto &it : map->m_spotLights) {
-        const float scale = it->radius * kLightRadiusTweak;
-        m_frustum.setup(it->position, pl.rotation(), pl.perspective());
-        if (m_frustum.testSphere(pl.position(), scale))
-            m_culledSpotLights.push_back(it);
+void world::cullPass(const pipeline &pl) {
+    for (auto &it : m_culledSpotLights) {
+        const auto &light = it.light;
+        const float scale = light->radius * kLightRadiusTweak;
+        m_frustum.setup(light->position, pl.rotation(), pl.perspective());
+        it.visible = m_frustum.testSphere(pl.position(), scale);
+        const auto hash = light->hash();
+        if (it.visible && it.hash != hash) {
+            it.buildMesh(m_kdWorld);
+            it.hash = hash;
+        }
     }
-    m_culledPointLights.clear();
-    for (auto &it : map->m_pointLights) {
-        const float scale = it->radius * kLightRadiusTweak;
-        m_frustum.setup(it->position, pl.rotation(), pl.perspective());
-        if (m_frustum.testSphere(pl.position(), scale))
-            m_culledPointLights.push_back(it);
+    for (auto &it : m_culledPointLights) {
+        const auto &light = it.light;
+        const float scale = light->radius * kLightRadiusTweak;
+        m_frustum.setup(light->position, pl.rotation(), pl.perspective());
+        it.visible = m_frustum.testSphere(pl.position(), scale);
+        const auto hash = light->hash();
+        if (it.visible &&it.hash != hash) {
+            it.buildMesh(m_kdWorld);
+            it.hash = hash;
+        }
     }
 }
 
@@ -771,14 +840,17 @@ void world::pointLightPass(const pipeline &pl) {
 
     gl::DepthMask(GL_FALSE);
 
-    for (auto &it : m_culledPointLights) {
+    for (auto &plc : m_culledPointLights) {
+        if (!plc.visible)
+            continue;
+        auto &it = plc.light;
         float scale = it->radius * kLightRadiusTweak;
 
         pointLightMethod *method = &m_pointLightMethods[0];
 
         // Only bother if these are casting shadows
         if (it->castShadows) {
-            pointLightShadowPass(it);
+            pointLightShadowPass(&plc);
 
             gl::DepthMask(GL_FALSE);
 
@@ -831,14 +903,17 @@ void world::spotLightPass(const pipeline &pl) {
 
     gl::DepthMask(GL_FALSE);
 
-    for (auto &sl : m_culledSpotLights) {
+    for (auto &slc : m_culledSpotLights) {
+        if (!slc.visible)
+            continue;
+        auto &sl = slc.light;
         float scale = sl->radius * kLightRadiusTweak;
 
         spotLightMethod *method = &m_spotLightMethods[0];
 
         // Only bother if these are casting shadows
         if (sl->castShadows) {
-            spotLightShadowPass(sl);
+            spotLightShadowPass(&slc);
 
             gl::DepthMask(GL_FALSE);
 
@@ -1173,7 +1248,8 @@ void world::compositePass(const pipeline &pl, ::world *map) {
     }
 }
 
-void world::pointLightShadowPass(const pointLight *const pl) {
+void world::pointLightShadowPass(const pointLightChunk *const plc) {
+    const pointLight *const pl = plc->light;
     gl::DepthMask(GL_TRUE);
     gl::DepthFunc(GL_LEQUAL);
 
@@ -1209,6 +1285,7 @@ void world::pointLightShadowPass(const pointLight *const pl) {
             {  0.0f,  0.0f,  1.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_BACK }
     };
 
+    gl::BindVertexArray(vao);
     for (size_t side = 0; side < 6; ++side) {
         const auto &view = kSideViews[side];
         m_shadowMapMethod.setWVP(m::mat4::project(90.0f, 1.0f / pl->radius, sqrtf(3.0f)) *
@@ -1221,9 +1298,10 @@ void world::pointLightShadowPass(const pointLight *const pl) {
         gl::Viewport(x, y, r_smsize, r_smsize);
         gl::Scissor(x, y, r_smsize, r_smsize);
         gl::CullFace(view.cullFace);
-        gl::BindVertexArray(vao);
-        gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
+        gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, plc->ebo);
+        gl::DrawElements(GL_TRIANGLES, plc->count, GL_UNSIGNED_INT, 0);
     }
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
     gl::Viewport(0, 0, neoWidth(), neoHeight());
 
@@ -1232,7 +1310,8 @@ void world::pointLightShadowPass(const pointLight *const pl) {
     m_final.bindWriting();
 }
 
-void world::spotLightShadowPass(const spotLight *const sl) {
+void world::spotLightShadowPass(const spotLightChunk *const slc) {
+    const spotLight *const sl = slc->light;
     gl::DepthMask(GL_TRUE);
     gl::DepthFunc(GL_LEQUAL);
     gl::CullFace(GL_BACK);
@@ -1253,8 +1332,10 @@ void world::spotLightShadowPass(const spotLight *const sl) {
     // Draw the scene from the lights perspective into the shadow map
     gl::Viewport(0, 0, r_smsize, r_smsize);
     gl::BindVertexArray(vao);
-    gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, slc->ebo);
+    gl::DrawElements(GL_TRIANGLES, slc->count, GL_UNSIGNED_INT, 0);
     gl::Viewport(0, 0, neoWidth(), neoHeight());
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
     gl::Disable(GL_SCISSOR_TEST);
 
@@ -1279,7 +1360,7 @@ void world::render(const pipeline &pl, ::world *map) {
         m_defaultMethod.reload();
         r_reload.set(0);
     }
-    cullPass(pl, map);
+    cullPass(pl);
     occlusionPass(pl, map);
     geometryPass(pl, map);
     lightingPass(pl, map);

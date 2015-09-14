@@ -13,6 +13,7 @@ struct baseLight {
     };
     bool highlight;
     bool castShadows;
+    size_t hash() const;
 };
 
 inline baseLight::baseLight()
