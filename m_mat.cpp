@@ -115,7 +115,7 @@ mat4 mat4::lookat(const vec3 &p, const quat &q) {
 mat4 mat4::project(const m::perspective &p) {
     const float ar = p.width / p.height;
     const float range = p.nearp - p.farp;
-    const float halfFov = m::tan(m::toRadian(p.fov / 2.0f));
+    const float halfFov = m::tan(m::toRadian(p.fov) * 0.5f);
     return { { 1.0f / (halfFov * ar), 0.0f, 0.0f, 0.0f },
              { 0.0f, 1.0f / halfFov, 0.0f, 0.0f },
              { 0.0f, 0.0f, (-p.nearp - p.farp) / range, 2.0f * p.farp * p.nearp / range },

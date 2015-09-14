@@ -185,7 +185,7 @@ inline void vec3::maxLength(float length) {
 }
 
 inline vec3 vec3::cross(const vec3 &v) const {
-    return vec3(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
+    return { y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x };
 }
 
 inline vec3 &vec3::operator+=(const vec3 &vec) {
@@ -225,7 +225,7 @@ inline vec3 &vec3::operator /=(float value) {
 }
 
 inline vec3 vec3::operator -() const {
-    return vec3(-x, -y, -z);
+    return { -x, -y, -z };
 }
 
 inline float vec3::operator[](size_t index) const {
@@ -237,30 +237,30 @@ inline float &vec3::operator[](size_t index) {
 }
 
 inline vec3 operator+(const vec3 &a, const vec3 &b) {
-    return vec3(a.x + b.x, a.y + b.y, a.z + b.z);
+    return { a.x + b.x, a.y + b.y, a.z + b.z };
 }
 
 inline vec3 operator-(const vec3 &a, const vec3 &b) {
-    return vec3(a.x - b.x, a.y - b.y, a.z - b.z);
+    return { a.x - b.x, a.y - b.y, a.z - b.z };
 }
 
 inline vec3 operator*(const vec3 &a, float value) {
-    return vec3(a.x * value, a.y * value, a.z * value);
+    return { a.x * value, a.y * value, a.z * value };
 }
 
 inline vec3 operator*(float value, const vec3 &a) {
-    return vec3(a.x * value, a.y * value, a.z * value);
+    return { a.x * value, a.y * value, a.z * value };
 }
 
 inline vec3 operator/(const vec3 &a, float value) {
     const float inv = 1.0f / value;
-    return vec3(a.x * inv, a.y * inv, a.z * inv);
+    return { a.x * inv, a.y * inv, a.z * inv };
 }
 
 inline vec3 operator^(const vec3 &a, const vec3 &b) {
-    return vec3((a.y * b.z - a.z * b.y),
-                (a.z * b.x - a.x * b.z),
-                (a.x * b.y - a.y * b.x));
+    return { (a.y * b.z - a.z * b.y),
+             (a.z * b.x - a.x * b.z),
+             (a.x * b.y - a.y * b.x) };
 }
 
 inline float operator*(const vec3 &a, const vec3 &b) {
@@ -381,8 +381,8 @@ inline vec4 &vec4::operator+=(const vec4 &o) {
     return *this;
 }
 
-inline vec4 vec4::operator -() const {
-    return vec4(-x, -y, -z, -w);
+inline vec4 vec4::operator-() const {
+    return { -x, -y, -z, -w };
 }
 
 inline float operator*(const vec4 &l, const vec4 &r) {
