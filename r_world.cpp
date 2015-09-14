@@ -271,6 +271,14 @@ GLuint composite::texture() const {
     return m_texture;
 }
 
+world::spotLightChunk::~spotLightChunk() {
+    if (ebo) gl::DeleteBuffers(1, &ebo);
+}
+
+world::pointLightChunk::~pointLightChunk() {
+    if (ebo) gl::DeleteBuffers(1, &ebo);
+}
+
 bool world::spotLightChunk::init() {
     gl::GenBuffers(1, &ebo);
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -292,6 +300,7 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(),
         &indices[0], GL_STATIC_DRAW);
     count = indices.size();
+    u::print("[shadow] => generated `%zu' world geometry indices for spotlight\n", count);
     return true;
 }
 
@@ -317,12 +326,14 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(),
         &indices[0], GL_STATIC_DRAW);
     count = indices.size();
+    u::print("[shadow] => generated `%zu' world geometry indices for pointlight\n", count);
     return true;
 }
 
 ///! renderer
 world::world()
     : m_geomMethods(&geomMethods::instance())
+    , m_map(nullptr)
     , m_kdWorld(nullptr)
     , m_uploaded(false)
 {
@@ -488,6 +499,8 @@ bool world::upload(const m::perspective &p, ::world *map) {
     for (auto &it : m_textureBatches)
         if (!it.mat.upload())
             neoFatal("failed to upload world materials");
+
+    m_map = map;
 
     geom::upload();
 
@@ -664,12 +677,12 @@ void world::cullPass(const pipeline &pl) {
     }
 }
 
-void world::occlusionPass(const pipeline &pl, ::world *map) {
+void world::occlusionPass(const pipeline &pl) {
     if (!r_hoq)
         return;
 
     m_queries.update();
-    for (auto &it : map->m_mapModels) {
+    for (auto &it : m_map->m_mapModels) {
         // Ignore if not loaded. The geometry pass will load it in later. We defer
         // to additional occlusion passes in that case.
         if (m_models.find(it->name) == m_models.end())
@@ -706,7 +719,7 @@ void world::occlusionPass(const pipeline &pl, ::world *map) {
     m_queries.render();
 }
 
-void world::geometryPass(const pipeline &pl, ::world *map) {
+void world::geometryPass(const pipeline &pl) {
     auto p = pl;
 
     // The scene pass will be writing into the gbuffer
@@ -730,7 +743,7 @@ void world::geometryPass(const pipeline &pl, ::world *map) {
     }
 
     // Render map models
-    for (auto &it : map->m_mapModels) {
+    for (auto &it : m_map->m_mapModels) {
         // Load map models on demand
         if (m_models.find(it->name) == m_models.end()) {
             u::unique_ptr<model> next(new model);
@@ -963,7 +976,7 @@ void world::spotLightPass(const pipeline &pl) {
     gl::CullFace(GL_BACK);
 }
 
-void world::lightingPass(const pipeline &pl, ::world *map) {
+void world::lightingPass(const pipeline &pl) {
     auto p = pl;
 
     // Write to the final composite
@@ -1018,19 +1031,19 @@ void world::lightingPass(const pipeline &pl, ::world *map) {
 
         auto &method = m_directionalLightMethods[lightCalculatePermutation(!i)];
         method.enable();
-        method.setLight(map->getDirectionalLight());
+        method.setLight(m_map->getDirectionalLight());
         method.setPerspective(pl.perspective());
         method.setEyeWorldPos(pl.position());
         method.setInverse((p.projection() * p.view()).inverse());
         if (r_fog)
-            method.setFog(map->m_fog);
+            method.setFog(m_map->m_fog);
         m_quad.render();
     }
 
     gl::Disable(GL_STENCIL_TEST);
 }
 
-void world::forwardPass(const pipeline &pl, ::world *map) {
+void world::forwardPass(const pipeline &pl) {
     gl::Enable(GL_DEPTH_TEST);
 
     // Skybox:
@@ -1041,7 +1054,7 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
     //  gradient as to provide a coherent effect of world geometry fog reaching
     //  into the skybox.
     gl::BlendFunc(GL_ONE, GL_ZERO);
-    m_skybox.render(pl, map->m_fog);
+    m_skybox.render(pl, m_map->m_fog);
 
     // Editing aids
     static constexpr m::vec3 kHighlighted = { 1.0f, 0.0f, 0.0f };
@@ -1056,7 +1069,7 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
         //  culling too
         gl::Disable(GL_CULL_FACE);
         gl::BlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-        for (auto &it : map->m_billboards) {
+        for (auto &it : m_map->m_billboards) {
             // Load billboards on demand
             if (m_billboards.find(it.name) == m_billboards.end()) {
                 u::unique_ptr<billboard> next(new billboard);
@@ -1091,7 +1104,7 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
         gl::Enable(GL_CULL_FACE);
 
         // Map models
-        for (auto &it : map->m_mapModels) {
+        for (auto &it : m_map->m_mapModels) {
             auto &mdl = m_models[it->name];
 
             pipeline p = pl;
@@ -1121,7 +1134,7 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
 
         m_bboxMethod.enable();
         m_bboxMethod.setColor(kHighlighted);
-        for (auto &it : map->m_pointLights) {
+        for (auto &it : m_map->m_pointLights) {
             if (!it->highlight)
                 continue;
             float scale = it->radius * kLightRadiusTweak;
@@ -1131,7 +1144,7 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
             m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
             m_sphere.render();
         }
-        for (auto &it : map->m_spotLights) {
+        for (auto &it : m_map->m_spotLights) {
             if (!it->highlight)
                 continue;
             float scale = it->radius * kLightRadiusTweak;
@@ -1179,8 +1192,8 @@ void world::forwardPass(const pipeline &pl, ::world *map) {
     }
 }
 
-void world::compositePass(const pipeline &pl, ::world *map) {
-    auto &colorGrading = map->getColorGrader();
+void world::compositePass(const pipeline &pl) {
+    auto &colorGrading = m_map->getColorGrader();
     if (colorGrading.updated()) {
         colorGrading.grade();
         m_colorGrader.update(pl.perspective(), colorGrading.data());
@@ -1344,7 +1357,33 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
 
 NVAR(int, r_reload, "reload shaders", 0, 1, 0);
 
-void world::render(const pipeline &pl, ::world *map) {
+void world::render(const pipeline &pl) {
+    if (m_map->m_needSync) {
+        for (auto it = m_culledSpotLights.begin(), end = m_culledSpotLights.end(); it != end; ) {
+            auto find = u::find(m_map->m_spotLights.begin(),
+                                m_map->m_spotLights.end(),
+                                it->light);
+            if (find == m_map->m_spotLights.end()) {
+                it = m_culledSpotLights.erase(it);
+                end = m_culledSpotLights.end();
+            } else {
+                it++;
+            }
+        }
+        for (auto it = m_culledPointLights.begin(), end = m_culledPointLights.end(); it != end; ) {
+            auto find = u::find(m_map->m_pointLights.begin(),
+                                m_map->m_pointLights.end(),
+                                it->light);
+            if (find == m_map->m_pointLights.end()) {
+                it = m_culledPointLights.erase(it);
+                end = m_culledPointLights.end();
+            } else {
+                it++;
+            }
+        }
+        m_map->m_needSync = false;
+    }
+
     if (r_reload) {
         m_geomMethods->reload();
         for (auto &it : m_directionalLightMethods)
@@ -1361,11 +1400,11 @@ void world::render(const pipeline &pl, ::world *map) {
         r_reload.set(0);
     }
     cullPass(pl);
-    occlusionPass(pl, map);
-    geometryPass(pl, map);
-    lightingPass(pl, map);
-    forwardPass(pl, map);
-    compositePass(pl, map);
+    occlusionPass(pl);
+    geometryPass(pl);
+    lightingPass(pl);
+    forwardPass(pl);
+    compositePass(pl);
 }
 
 }

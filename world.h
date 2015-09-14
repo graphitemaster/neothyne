@@ -218,6 +218,7 @@ private:
     u::vector<jumppad*> m_jumppads;
     fog m_fog; // The fog
     colorGrader m_colorGrader;
+    bool m_needSync;
 };
 
 #endif

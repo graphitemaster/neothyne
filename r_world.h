@@ -102,17 +102,18 @@ struct world : geom {
     bool upload(const m::perspective &p, ::world *map);
 
     void unload(bool destroy = true);
-    void render(const pipeline &pl, ::world *map);
+    void render(const pipeline &pl);
 
 private:
     void cullPass(const pipeline &pl);
-    void occlusionPass(const pipeline &pl, ::world *map);
-    void geometryPass(const pipeline &pl, ::world *map);
-    void lightingPass(const pipeline &pl, ::world *map);
-    void forwardPass(const pipeline &pl, ::world *map);
-    void compositePass(const pipeline &pl, ::world *map);
+    void occlusionPass(const pipeline &pl);
+    void geometryPass(const pipeline &pl);
+    void lightingPass(const pipeline &pl);
+    void forwardPass(const pipeline &pl);
+    void compositePass(const pipeline &pl);
 
     struct spotLightChunk {
+        ~spotLightChunk();
         size_t hash;
         size_t count;
         spotLight *light;
@@ -123,6 +124,7 @@ private:
     };
 
     struct pointLightChunk {
+        ~pointLightChunk();
         size_t hash;
         size_t count;
         pointLight *light;
@@ -162,6 +164,7 @@ private:
     model m_gun;
 
     // The world itself
+    ::world *m_map;
     kdMap *m_kdWorld;
     u::vector<uint32_t> m_indices;
 

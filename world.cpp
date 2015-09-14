@@ -138,7 +138,7 @@ void world::render(const r::pipeline &pl) {
         }
     }
 
-    m_renderer.render(pl, this);
+    m_renderer.render(pl);
 }
 
 void world::setFog(const fog &f) {
@@ -252,6 +252,7 @@ world::descriptor *world::insert(const pointLight &it) {
     const size_t index = m_pointLights.size();
     m_pointLights.push_back(copy(it));
     m_entities.push_back({ entity::kPointLight, index, m_entities.size() });
+    m_needSync = true;
     return &m_entities.back();
 }
 
@@ -259,6 +260,7 @@ world::descriptor *world::insert(const spotLight &it) {
     const size_t index = m_spotLights.size();
     m_spotLights.push_back(copy(it));
     m_entities.push_back({ entity::kSpotLight, index, m_entities.size() });
+    m_needSync = true;
     return &m_entities.back();
 }
 
@@ -266,6 +268,7 @@ world::descriptor *world::insert(const mapModel &it) {
     const size_t index = m_mapModels.size();
     m_mapModels.push_back(copy(it));
     m_entities.push_back({ entity::kMapModel, index, m_entities.size() });
+    m_needSync = true;
     return &m_entities.back();
 }
 
@@ -273,6 +276,7 @@ world::descriptor *world::insert(const playerStart &it) {
     const size_t index = m_playerStarts.size();
     m_playerStarts.push_back(copy(it));
     m_entities.push_back({ entity::kPlayerStart, index, m_entities.size() });
+    m_needSync = true;
     return &m_entities.back();
 }
 
@@ -280,6 +284,7 @@ world::descriptor *world::insert(const teleport &it) {
     const size_t index = m_teleports.size();
     m_teleports.push_back(copy(it));
     m_entities.push_back({ entity::kTeleport, index, m_entities.size() });
+    m_needSync = true;
     return &m_entities.back();
 }
 
@@ -287,6 +292,7 @@ world::descriptor *world::insert(const jumppad &it) {
     const size_t index = m_jumppads.size();
     m_jumppads.push_back(copy(it));
     m_entities.push_back({ entity::kJumppad, index, m_entities.size() });
+    m_needSync = true;
     return &m_entities.back();
 }
 
@@ -322,7 +328,7 @@ void world::erase(size_t where) {
         return;
     }
     m_entities.erase(m_entities.begin() + where);
-
+    m_needSync = true;
     if (m_entities.size() <= where)
         return;
 
