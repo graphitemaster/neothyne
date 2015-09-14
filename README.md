@@ -3,6 +3,9 @@
 Neothyne is an attempt at getting back to the roots of good old twitch shooting
 akin to that of Quake World.
 
+Here's what it looks like currently
+![](http://i.imgur.com/zPHXmH2.png)
+
 ## Philosphy
 
 Neothyne is a game/engine with a focus on matching that of idTech3/Q3A in terms
