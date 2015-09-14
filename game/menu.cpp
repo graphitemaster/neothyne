@@ -464,6 +464,8 @@ static void menuEdit() {
                     (D(plightLock) ? R : G) / 255.0f,
                     (D(plightLock) ? R : B) / 255.0f
                 };
+                if (gui::check("Shadows", pl.castShadows))
+                    pl.castShadows = !pl.castShadows;
                 gui::separator();
                 if (gui::button("Delete")) {
                     gWorld.erase(gSelected->where);
@@ -498,6 +500,8 @@ static void menuEdit() {
                 gui::separator();
                 gui::slider("Radius", sl.radius, 1.0f, 1024.0f, 1.0f);
                 gui::slider("Cutoff", sl.cutOff, 1.0f, 90.0f, 1.0f);
+                if (gui::check("Shadows", sl.castShadows))
+                    sl.castShadows = !sl.castShadows;
                 sl.color = {
                     R / 255.0f,
                     (D(slightLock) ? R : G) / 255.0f,
