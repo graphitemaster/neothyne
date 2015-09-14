@@ -1209,14 +1209,15 @@ void world::pointLightShadowPass(const pointLight *const pl) {
             {  0.0f,  0.0f,  1.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_BACK }
     };
 
-    for (int side = 0; side < 6; ++side) {
+    for (size_t side = 0; side < 6; ++side) {
         const auto &view = kSideViews[side];
         m_shadowMapMethod.setWVP(m::mat4::project(90.0f, 1.0f / pl->radius, sqrtf(3.0f)) *
                                  view.view *
                                  m::mat4::scale(1.0f /  pl->radius) *
                                  m::mat4::translate(-pl->position));
 
-        size_t x = r_smsize * (side / 2), y = r_smsize * (side % 2);
+        const size_t x = r_smsize * (side / 2);
+        const size_t y = r_smsize * (side % 2);
         gl::Viewport(x, y, r_smsize, r_smsize);
         gl::Scissor(x, y, r_smsize, r_smsize);
         gl::CullFace(view.cullFace);
