@@ -33,8 +33,8 @@ struct particleSystemMethod : method {
     void setVP(const m::mat4 &vp);
     void setColorTextureUnit(int unit);
 private:
-    GLint m_VPLocation;
-    GLint m_colorTextureUnitLocation;
+    uniform *m_VP;
+    uniform *m_colorTextureUnit;
 };
 
 struct particleSystem : geom {

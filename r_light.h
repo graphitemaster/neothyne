@@ -16,6 +16,8 @@ namespace m {
 namespace r {
 
 struct lightMethod : method {
+    lightMethod();
+
     bool init(const char *vs, const char *fs, const u::vector<const char *> &defines = u::vector<const char *>());
 
     enum {
@@ -38,19 +40,19 @@ struct lightMethod : method {
     void setPerspective(const m::perspective &p);
 
 private:
-    GLint m_WVPLocation;
-    GLint m_inverseLocation;
+    uniform *m_WVP;
+    uniform *m_inverse;
 
-    GLint m_colorTextureUnitLocation;
-    GLint m_normalTextureUnitLocation;
-    GLint m_depthTextureUnitLocation;
-    GLint m_shadowMapTextureUnitLocation;
-    GLint m_occlusionTextureUnitLocation;
+    uniform *m_colorTextureUnit;
+    uniform *m_normalTextureUnit;
+    uniform *m_depthTextureUnit;
+    uniform *m_shadowMapTextureUnit;
+    uniform *m_occlusionTextureUnit;
 
-    GLint m_eyeWorldPositionLocation;
+    uniform *m_eyeWorldPosition;
 
-    GLint m_screenSizeLocation;
-    GLint m_screenFrustumLocation;
+    uniform *m_screenSize;
+    uniform *m_screenFrustum;
 };
 
 struct directionalLightMethod : lightMethod {
@@ -61,18 +63,18 @@ struct directionalLightMethod : lightMethod {
 
 private:
     struct {
-        GLint color;
-        GLint ambient;
-        GLint diffuse;
-        GLint direction;
-    } m_directionalLightLocation;
+        uniform *color;
+        uniform *ambient;
+        uniform *diffuse;
+        uniform *direction;
+    } m_directionalLight;
 
     struct {
-        GLint color;
-        GLint density;
-        GLint range;
-        GLint equation;
-    } m_fogLocation;
+        uniform *color;
+        uniform *density;
+        uniform *range;
+        uniform *equation;
+    } m_fog;
 };
 
 struct pointLightMethod : lightMethod {
@@ -83,14 +85,14 @@ struct pointLightMethod : lightMethod {
 
 private:
     struct {
-        GLint color;
-        GLint ambient;
-        GLint diffuse;
-        GLint position;
-        GLint radius;
-    } m_pointLightLocation;
+        uniform *color;
+        uniform *ambient;
+        uniform *diffuse;
+        uniform *position;
+        uniform *radius;
+    } m_pointLight;
 
-    GLint m_lightWVPLocation;
+    uniform *m_lightWVP;
 };
 
 struct spotLightMethod : lightMethod {
@@ -101,16 +103,16 @@ struct spotLightMethod : lightMethod {
 
 private:
     struct {
-        GLint color;
-        GLint ambient;
-        GLint diffuse;
-        GLint position;
-        GLint radius;
-        GLint direction;
-        GLint cutOff;
-    } m_spotLightLocation;
+        uniform *color;
+        uniform *ambient;
+        uniform *diffuse;
+        uniform *position;
+        uniform *radius;
+        uniform *direction;
+        uniform *cutOff;
+    } m_spotLight;
 
-    GLint m_lightWVPLocation;
+    uniform *m_lightWVP;
 };
 
 }

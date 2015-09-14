@@ -22,24 +22,24 @@ bool aaMethod::init(const u::initializer_list<const char *> &defines) {
     if (!finalize({ "position" }))
         return false;
 
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_colorMapLocation = getUniformLocation("gColorMap");
-    m_screenSizeLocation = getUniformLocation("gScreenSize");
+    m_WVP = getUniform("gWVP", uniform::kMat4);
+    m_colorMap = getUniform("gColorMap", uniform::kSampler);
+    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
+
+    post();
     return true;
 }
 
 void aaMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
+    m_WVP->set(wvp);
 }
 
 void aaMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorMapLocation, unit);
+    m_colorMap->set(unit);
 }
 
 void aaMethod::setPerspective(const m::perspective &p) {
-    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
-    // TODO: frustum in final shader to do other things eventually
-    //gl::Uniform2f(m_screenFrustumLocation, project.nearp, perspective.farp);
+    m_screenSize->set(m::vec2(p.width, p.height));
 }
 
 ///! aa

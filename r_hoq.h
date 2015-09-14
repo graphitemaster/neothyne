@@ -17,11 +17,11 @@ struct occlusionMethod : method {
     bool init();
     void setWVP(const m::mat4 &wvp);
 private:
-    GLint m_WVPLocation;
+    uniform *m_WVP;
 };
 
 inline occlusionMethod::occlusionMethod()
-    : m_WVPLocation(-1)
+    : m_WVP(nullptr)
 {
 }
 

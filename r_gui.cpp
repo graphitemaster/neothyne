@@ -100,8 +100,8 @@ static void printCommand(const ::gui::command &it) {
 
 ///! guiMethod
 guiMethod::guiMethod()
-    : m_screenSizeLocation(-1)
-    , m_colorMapLocation(-1)
+    : m_screenSize(nullptr)
+    , m_colorMap(nullptr)
 {
 }
 
@@ -120,26 +120,27 @@ bool guiMethod::init(const u::vector<const char *> &defines) {
     if (!finalize({ "position", "texCoord", "color" }))
         return false;
 
-    m_screenSizeLocation = getUniformLocation("gScreenSize");
-    m_colorMapLocation = getUniformLocation("gColorMap");
+    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
+    m_colorMap = getUniform("gColorMap", uniform::kSampler);
 
+    post();
     return true;
 }
 
 void guiMethod::setPerspective(const m::perspective &p) {
-    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
+    m_screenSize->set(m::vec2(p.width, p.height));
 }
 
 void guiMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorMapLocation, unit);
+    m_colorMap->set(unit);
 }
 
 ///! guiModelMethod
 guiModelMethod::guiModelMethod()
-    : m_WVPLocation(0)
-    , m_worldLocation(0)
-    , m_colorTextureUnitLocation(0)
-    , m_eyeWorldPositionLocation(0)
+    : m_WVP(nullptr)
+    , m_world(nullptr)
+    , m_colorTextureUnit(nullptr)
+    , m_eyeWorldPosition(nullptr)
 {
 }
 
@@ -157,28 +158,29 @@ bool guiModelMethod::init(const u::vector<const char *> &defines) {
     if (!finalize({ "position", "normal", "texCoord", "tangent", "w" }))
         return false;
 
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_worldLocation = getUniformLocation("gWorld");
-    m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
-    m_colorTextureUnitLocation = getUniformLocation("gColorMap");
+    m_WVP = getUniform("gWVP", uniform::kMat4);
+    m_world = getUniform("gWorld", uniform::kMat4);
+    m_eyeWorldPosition = getUniform("gEyeWorldPosition", uniform::kVec3);
+    m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
 
+    post();
     return true;
 }
 
 void guiModelMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
+    m_WVP->set(wvp);
 }
 
 void guiModelMethod::setWorld(const m::mat4 &world) {
-    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, world.ptr());
+    m_world->set(world);
 }
 
 void guiModelMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorTextureUnitLocation, unit);
+    m_colorTextureUnit->set(unit);
 }
 
 void guiModelMethod::setEyeWorldPos(const m::vec3 &pos) {
-    gl::Uniform3fv(m_eyeWorldPositionLocation, 1, &pos.x);
+    m_eyeWorldPosition->set(pos);
 }
 
 ///! gui::atlas

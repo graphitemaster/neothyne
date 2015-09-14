@@ -33,37 +33,37 @@ struct geomMethod : method {
     void setAnimation(int x, int y, float flipu, float flipv, float w, float h);
 
 private:
-    GLint m_WVPLocation;
-    GLint m_worldLocation;
-    GLint m_colorTextureUnitLocation;
-    GLint m_normalTextureUnitLocation;
-    GLint m_specTextureUnitLocation;
-    GLint m_dispTextureUnitLocation;
-    GLint m_specPowerLocation;
-    GLint m_specIntensityLocation;
-    GLint m_eyeWorldPositionLocation;
-    GLint m_parallaxLocation;
-    GLint m_boneMatsLocation;
-    GLint m_animOffsetLocation;
-    GLint m_animFlipLocation;
-    GLint m_animScaleLocation;
+    uniform *m_WVP;
+    uniform *m_world;
+    uniform *m_colorTextureUnit;
+    uniform *m_normalTextureUnit;
+    uniform *m_specTextureUnit;
+    uniform *m_dispTextureUnit;
+    uniform *m_specPower;
+    uniform *m_specIntensity;
+    uniform *m_eyeWorldPosition;
+    uniform *m_parallax;
+    uniform *m_boneMats;
+    uniform *m_animOffset;
+    uniform *m_animFlip;
+    uniform *m_animScale;
 };
 
 inline geomMethod::geomMethod()
-    : m_WVPLocation(-1)
-    , m_worldLocation(-1)
-    , m_colorTextureUnitLocation(-1)
-    , m_normalTextureUnitLocation(-1)
-    , m_specTextureUnitLocation(-1)
-    , m_dispTextureUnitLocation(-1)
-    , m_specPowerLocation(-1)
-    , m_specIntensityLocation(-1)
-    , m_eyeWorldPositionLocation(-1)
-    , m_parallaxLocation(-1)
-    , m_boneMatsLocation(-1)
-    , m_animOffsetLocation(-1)
-    , m_animFlipLocation(-1)
-    , m_animScaleLocation(-1)
+    : m_WVP(nullptr)
+    , m_world(nullptr)
+    , m_colorTextureUnit(nullptr)
+    , m_normalTextureUnit(nullptr)
+    , m_specTextureUnit(nullptr)
+    , m_dispTextureUnit(nullptr)
+    , m_specPower(nullptr)
+    , m_specIntensity(nullptr)
+    , m_eyeWorldPosition(nullptr)
+    , m_parallax(nullptr)
+    , m_boneMats(nullptr)
+    , m_animOffset(nullptr)
+    , m_animFlip(nullptr)
+    , m_animScale(nullptr)
 {
 }
 

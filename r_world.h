@@ -29,13 +29,13 @@ struct bboxMethod : method {
     void setColor(const m::vec3 &color);
 
 private:
-    GLint m_WVPLocation;
-    GLint m_colorLocation;
+    uniform *m_WVP;
+    uniform *m_color;
 };
 
 inline bboxMethod::bboxMethod()
-    : m_WVPLocation(-1)
-    , m_colorLocation(-1)
+    : m_WVP(nullptr)
+    , m_color(nullptr)
 {
 }
 
@@ -48,17 +48,17 @@ struct compositeMethod : method {
     void setPerspective(const m::perspective &perspective);
 
 private:
-    GLint m_WVPLocation;
-    GLint m_colorMapLocation;
-    GLint m_colorGradingMapLocation;
-    GLint m_screenSizeLocation;
+    uniform *m_WVP;
+    uniform *m_colorMap;
+    uniform *m_colorGradingMap;
+    uniform *m_screenSize;
 };
 
 inline compositeMethod::compositeMethod()
-    : m_WVPLocation(-1)
-    , m_colorMapLocation(-1)
-    , m_colorGradingMapLocation(-1)
-    , m_screenSizeLocation(-1)
+    : m_WVP(nullptr)
+    , m_colorMap(nullptr)
+    , m_colorGradingMap(nullptr)
+    , m_screenSize(nullptr)
 {
 }
 

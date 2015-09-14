@@ -127,18 +127,19 @@ bool bboxMethod::init() {
     if (!finalize({ "position" }, { "diffuseOut" }))
         return false;
 
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_colorLocation = getUniformLocation("gColor");
+    m_WVP = getUniform("gWVP", uniform::kMat4);
+    m_color = getUniform("gColor", uniform::kVec3);
 
+    post();
     return true;
 }
 
 void bboxMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
+    m_WVP->set(wvp);
 }
 
 void bboxMethod::setColor(const m::vec3 &color) {
-    gl::Uniform3fv(m_colorLocation, 1, &color.x);
+    m_color->set(color);
 }
 
 ///! Composite Method
@@ -159,29 +160,29 @@ bool compositeMethod::init(const u::vector<const char *> &defines) {
     if (!finalize({ "position" }))
         return false;
 
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_colorMapLocation = getUniformLocation("gColorMap");
-    m_colorGradingMapLocation = getUniformLocation("gColorGradingMap");
-    m_screenSizeLocation = getUniformLocation("gScreenSize");
+    m_WVP = getUniform("gWVP", uniform::kMat4);
+    m_colorMap = getUniform("gColorMap", uniform::kSampler);
+    m_colorGradingMap = getUniform("gColorGradingMap", uniform::kSampler);
+    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
+
+    post();
     return true;
 }
 
 void compositeMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
+    m_WVP->set(wvp);
 }
 
 void compositeMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorMapLocation, unit);
+    m_colorMap->set(unit);
 }
 
 void compositeMethod::setColorGradingTextureUnit(int unit) {
-    gl::Uniform1i(m_colorGradingMapLocation, unit);
+    m_colorGradingMap->set(unit);
 }
 
 void compositeMethod::setPerspective(const m::perspective &p) {
-    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
-    // TODO: frustum in final shader to do other things eventually
-    //gl::Uniform2f(m_screenFrustumLocation, project.nearp, perspective.farp);
+    m_screenSize->set(m::vec2(p.width, p.height));
 }
 
 composite::composite()

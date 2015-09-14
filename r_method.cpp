@@ -5,15 +5,105 @@
 #include "u_file.h"
 #include "u_misc.h"
 
-#include "m_mat.h"
-
 namespace r {
 
+///! uniform
+void uniform::set(int value) {
+    assert(m_type == kInt);
+    asInt = value;
+    post();
+}
+
+void uniform::set(int x, int y) {
+    assert(m_type == kInt2);
+    asInt2[0] = x;
+    asInt2[1] = y;
+    post();
+}
+
+void uniform::set(float value) {
+    assert(m_type == kFloat);
+    asFloat = value;
+    post();
+}
+
+void uniform::set(const m::vec2 &value) {
+    assert(m_type == kVec2);
+    asVec2 = value;
+    post();
+}
+
+void uniform::set(const m::vec3 &value) {
+    assert(m_type == kVec3);
+    asVec3 = value;
+    post();
+}
+
+void uniform::set(const m::vec4 &value) {
+    assert(m_type == kVec4);
+    asVec4 = value;
+    post();
+}
+
+void uniform::set(const m::mat4 &value, bool transposed) {
+    assert(m_type == kMat4);
+    asMat4.data = value;
+    asMat4.transposed = transposed;
+    post();
+}
+
+void uniform::set(size_t count, const float *mats) {
+    assert(m_type == kMat3x4Array);
+    //delete[] asMat3x4Array.data;
+    //asMat3x4Array.data = new float[3*4*count];
+    //memcpy(asMat3x4Array.data, mats, 3*4*count*sizeof(float));
+    asMat3x4Array.data = mats;
+    asMat3x4Array.count = count;
+    post();
+}
+
+void uniform::post() {
+    // Can't post change because the uniform handle is invalid. This is likely the
+    // result of using a uniform that is not found. This is allowed by the engine
+    // to make shader permutations less annoying to deal with. We waste some memory
+    // storing otherwise unpostable uniforms in some cases, but so be it.
+    if (m_handle == -1)
+        return;
+    switch (m_type) {
+    case kInt:
+        gl::Uniform1i(m_handle, asInt);
+        break;
+    case kInt2:
+        gl::Uniform2i(m_handle, asInt2[0], asInt2[1]);
+        break;
+    case kFloat:
+        gl::Uniform1f(m_handle, asFloat);
+        break;
+    case kVec2:
+        gl::Uniform2fv(m_handle, 1, &asVec2.x);
+        break;
+    case kVec3:
+        gl::Uniform3fv(m_handle, 1, &asVec3.x);
+        break;
+    case kVec4:
+        gl::Uniform4fv(m_handle, 1, &asVec4.x);
+        break;
+    case kMat3x4Array:
+        gl::UniformMatrix3x4fv(m_handle, asMat3x4Array.count, GL_FALSE, asMat3x4Array.data);
+        break;
+    case kMat4:
+        gl::UniformMatrix4fv(m_handle, 1, asMat4.transposed ? GL_TRUE : GL_FALSE, asMat4.data.ptr());
+        break;
+    }
+}
+
+///! method::shader
 method::shader::shader()
     : object(0)
 {
 }
 
+///! method
 method::method()
     : m_program(0)
 {
@@ -156,12 +246,16 @@ void method::enable() {
     gl::UseProgram(m_program);
 }
 
-GLint method::getUniformLocation(const char *name) {
-    return gl::GetUniformLocation(m_program, name);
+void method::post() {
+    // Lookup all uniform locations
+    for (auto &it : m_uniforms)
+        it.second.m_handle = gl::GetUniformLocation(m_program, it.first.c_str());
 }
 
-GLint method::getUniformLocation(const u::string &name) {
-    return gl::GetUniformLocation(m_program, name.c_str());
+uniform *method::getUniform(const u::string &name, uniform::type type) {
+    auto *value = &m_uniforms[name];
+    value->m_type = type;
+    return value;
 }
 
 bool method::finalize(const u::initializer_list<const char *> &attributes,
@@ -200,9 +294,9 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
 
 ///! defaultMethod
 defaultMethod::defaultMethod()
-    : m_WVPLocation(-1)
-    , m_screenSizeLocation(-1)
-    , m_colorTextureUnitLocation(-1)
+    : m_WVP(nullptr)
+    , m_screenSize(nullptr)
+    , m_colorTextureUnit(nullptr)
 {
 }
 
@@ -220,24 +314,24 @@ bool defaultMethod::init() {
     if (!finalize({ "position" }))
         return false;
 
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_screenSizeLocation = getUniformLocation("gScreenSize");
-    m_colorTextureUnitLocation = getUniformLocation("gColorMap");
+    m_WVP = getUniform("gWVP", uniform::kMat4);
+    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
+    m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
 
+    post();
     return true;
 }
 
 void defaultMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorTextureUnitLocation, unit);
+    m_colorTextureUnit->set(unit);
 }
 
 void defaultMethod::setWVP(const m::mat4 &wvp) {
-    // Will set an identity matrix as this will be a screen space QUAD
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
+    m_WVP->set(wvp, true);
 }
 
 void defaultMethod::setPerspective(const m::perspective &p) {
-    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
+    m_screenSize->set(m::vec2(p.width, p.height));
 }
 
 }

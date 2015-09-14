@@ -5,8 +5,8 @@ namespace r {
 
 ///! method
 billboardMethod::billboardMethod()
-    : m_VPLocation(0)
-    , m_colorMapLocation(0)
+    : m_VP(nullptr)
+    , m_colorMap(nullptr)
 {
 }
 
@@ -21,18 +21,19 @@ bool billboardMethod::init() {
     if (!finalize({ "position", "texCoord" }))
         return false;
 
-    m_VPLocation = getUniformLocation("gVP");
-    m_colorMapLocation = getUniformLocation("gColorMap");
+    m_VP = getUniform("gVP", uniform::kMat4);
+    m_colorMap = getUniform("gColorMap", uniform::kSampler);
 
+    post();
     return true;
 }
 
 void billboardMethod::setVP(const m::mat4 &vp) {
-    gl::UniformMatrix4fv(m_VPLocation, 1, GL_TRUE, vp.ptr());
+    m_VP->set(vp);
 }
 
 void billboardMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorMapLocation, unit);
+    m_colorMap->set(unit);
 }
 
 ///! renderer

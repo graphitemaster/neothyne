@@ -30,17 +30,17 @@ struct ssaoMethod : method {
     void setRandomTextureUnit(int unit);
 
 private:
-    GLint m_occluderBiasLocation;
-    GLint m_samplingRadiusLocation;
-    GLint m_attenuationLocation;
-    GLint m_inverseLocation;
-    GLint m_WVPLocation;
-    GLint m_screenFrustumLocation;
-    GLint m_screenSizeLocation;
-    GLint m_normalTextureLocation;
-    GLint m_depthTextureLocation;
-    GLint m_randomTextureLocation;
-    GLint m_kernelLocation[kKernelSize];
+    uniform *m_occluderBias;
+    uniform *m_samplingRadius;
+    uniform *m_attenuation;
+    uniform *m_inverse;
+    uniform *m_WVP;
+    uniform *m_screenFrustum;
+    uniform *m_screenSize;
+    uniform *m_normalTexture;
+    uniform *m_depthTexture;
+    uniform *m_randomTexture;
+    uniform *m_kernel[kKernelSize];
 };
 
 struct ssao {

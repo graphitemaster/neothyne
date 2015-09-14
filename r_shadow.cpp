@@ -81,7 +81,7 @@ float shadowMap::heightScale() const {
 
 ///! shadowMapMethod
 shadowMapMethod::shadowMapMethod()
-    : m_WVPLocation(-1)
+    : m_WVP(nullptr)
 {
 }
 
@@ -94,55 +94,14 @@ bool shadowMapMethod::init() {
     if (!finalize({ "position" }))
         return false;
 
-    m_WVPLocation = getUniformLocation("gWVP");
+    m_WVP = getUniform("gWVP", uniform::kMat4);
 
+    post();
     return true;
 }
 
 void shadowMapMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
-}
-
-///! shadowMapDebugMethod
-shadowMapDebugMethod::shadowMapDebugMethod()
-    : m_WVPLocation(-1)
-    , m_screenSizeLocation(-1)
-    , m_screenFrustumLocation(-1)
-    , m_shadowMapTextureUnitLocation(-1)
-{
-}
-
-bool shadowMapDebugMethod::init() {
-    if (!method::init())
-        return false;
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/default.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/shadow.fs"))
-        return false;
-    if (!finalize({ "position" }))
-        return false;
-
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_shadowMapTextureUnitLocation = getUniformLocation("gShadowMap");
-    m_screenSizeLocation = getUniformLocation("gScreenSize");
-    m_screenFrustumLocation = getUniformLocation("gScreenFrustum");
-
-    return true;
-}
-
-void shadowMapDebugMethod::setShadowMapTextureUnit(int unit) {
-    gl::Uniform1i(m_shadowMapTextureUnitLocation, unit);
-}
-
-void shadowMapDebugMethod::setWVP(const m::mat4 &wvp) {
-    // Will set an identity matrix as this will be a screen space quad
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
-}
-
-void shadowMapDebugMethod::setPerspective(const m::perspective &p) {
-    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
-    gl::Uniform2f(m_screenFrustumLocation, p.nearp, p.farp);
+    m_WVP->set(wvp);
 }
 
 }

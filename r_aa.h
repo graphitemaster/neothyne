@@ -20,15 +20,15 @@ struct aaMethod : method {
     void setPerspective(const m::perspective &perspective);
 
 private:
-    GLint m_WVPLocation;
-    GLint m_colorMapLocation;
-    GLint m_screenSizeLocation;
+    uniform *m_WVP;
+    uniform *m_colorMap;
+    uniform *m_screenSize;
 };
 
 inline aaMethod::aaMethod()
-    : m_WVPLocation(-1)
-    , m_colorMapLocation(-1)
-    , m_screenSizeLocation(-1)
+    : m_WVP(nullptr)
+    , m_colorMap(nullptr)
+    , m_screenSize(nullptr)
 {
 }
 

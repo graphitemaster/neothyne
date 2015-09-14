@@ -29,8 +29,8 @@ struct billboardMethod : method {
     void setColorTextureUnit(int unit);
 
 private:
-    GLuint m_VPLocation;
-    GLuint m_colorMapLocation;
+    uniform *m_VP;
+    uniform *m_colorMap;
 };
 
 struct billboard : geom {

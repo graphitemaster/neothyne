@@ -24,8 +24,8 @@ struct guiMethod : method {
     void setColorTextureUnit(int unit);
 
 private:
-    GLint m_screenSizeLocation;
-    GLint m_colorMapLocation;
+    uniform *m_screenSize;
+    uniform *m_colorMap;
 };
 
 struct guiModelMethod : method {
@@ -38,10 +38,10 @@ struct guiModelMethod : method {
     void setEyeWorldPos(const m::vec3 &pos);
 
 private:
-    GLint m_WVPLocation;
-    GLint m_worldLocation;
-    GLint m_colorTextureUnitLocation;
-    GLint m_eyeWorldPositionLocation;
+    uniform *m_WVP;
+    uniform *m_world;
+    uniform *m_colorTextureUnit;
+    uniform *m_eyeWorldPosition;
 };
 
 struct gui {

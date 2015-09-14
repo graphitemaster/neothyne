@@ -8,8 +8,8 @@ namespace r {
 
 ///! particleSystemMethod
 particleSystemMethod::particleSystemMethod()
-    : m_VPLocation(0)
-    , m_colorTextureUnitLocation(0)
+    : m_VP(nullptr)
+    , m_colorTextureUnit(nullptr)
 {
 }
 
@@ -24,18 +24,19 @@ bool particleSystemMethod::init() {
     if (!finalize({ "position", "texCoord", "color" }))
         return false;
 
-    m_VPLocation = getUniformLocation("gVP");
-    m_colorTextureUnitLocation = getUniformLocation("gColorMap");
+    m_VP = getUniform("gVP", uniform::kMat4);
+    m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
 
+    post();
     return true;
 }
 
 void particleSystemMethod::setVP(const m::mat4 &vp) {
-    gl::UniformMatrix4fv(m_VPLocation, 1, GL_TRUE, vp.ptr());
+    m_VP->set(vp);
 }
 
 void particleSystemMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorTextureUnitLocation, unit);
+    m_colorTextureUnit->set(unit);
 }
 
 ///! particleSystem

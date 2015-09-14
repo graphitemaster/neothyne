@@ -29,14 +29,14 @@ struct skyboxMethod : method {
     void setSkyColor(const m::vec3 &color);
 
 private:
-    GLint m_WVPLocation;
-    GLint m_cubeMapLocation;
-    GLint m_worldLocation;
-    GLint m_skyColor;
+    uniform *m_WVP;
+    uniform *m_cubeMap;
+    uniform *m_world;
+    uniform *m_skyColor;
     struct {
-        GLint color;
-        GLint density;
-    } m_fogLocation;
+        uniform *color;
+        uniform *density;
+    } m_fog;
 };
 
 struct skybox {

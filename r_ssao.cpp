@@ -28,73 +28,72 @@ bool ssaoMethod::init(const u::vector<const char *> &defines) {
     if (!finalize({ "position" }))
         return false;
 
-    m_occluderBiasLocation = getUniformLocation("gOccluderBias");
-    m_samplingRadiusLocation = getUniformLocation("gSamplingRadius");
-    m_attenuationLocation = getUniformLocation("gAttenuation");
-    m_inverseLocation = getUniformLocation("gInverse");
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_screenFrustumLocation = getUniformLocation("gScreenFrustum");
-    m_screenSizeLocation = getUniformLocation("gScreenSize");
-    m_normalTextureLocation = getUniformLocation("gNormalMap");
-    m_depthTextureLocation = getUniformLocation("gDepthMap");
-    m_randomTextureLocation = getUniformLocation("gRandomMap");
+    m_occluderBias = getUniform("gOccluderBias", uniform::kFloat);
+    m_samplingRadius = getUniform("gSamplingRadius", uniform::kFloat);
+    m_attenuation = getUniform("gAttenuation", uniform::kVec2);
+    m_inverse = getUniform("gInverse", uniform::kMat4);
+    m_WVP = getUniform("gWVP", uniform::kMat4);
+    m_screenFrustum = getUniform("gScreenFrustum", uniform::kVec2);
+    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
+    m_normalTexture = getUniform("gNormalMap", uniform::kSampler);
+    m_depthTexture = getUniform("gDepthMap", uniform::kSampler);
+    m_randomTexture = getUniform("gRandomMap", uniform::kSampler);
 
     for (size_t i = 0; i < kKernelSize; i++)
-        m_kernelLocation[i] = getUniformLocation(u::format("gKernel[%zu]", i));
+        m_kernel[i] = getUniform(u::format("gKernel[%zu]", i), uniform::kVec2);
+
+    post();
 
     // Setup the kernel
     // Note: This must be changed as well if kKernelSize changes
-    static const float kernel[kKernelSize * 2] = {
-        0.0f, 1.0f,
-        1.0f, 0.0f,
-        0.0f, -1.0f,
-        -1.0f, 0.0f
+    static const m::vec2 kernel[kKernelSize] = {
+        {  0.0f,  1.0f, },
+        {  1.0f,  0.0f, },
+        {  0.0f, -1.0f, },
+        { -1.0f,  0.0f  }
     };
     enable();
-    for (size_t i = 0; i < kKernelSize; i++)
-        gl::Uniform2f(m_kernelLocation[i], kernel[2 * i + 0], kernel[2 * i + 1]);
+    for (auto &it : kernel)
+        m_kernel[&it - kernel]->set(it);
 
     return true;
 }
 
 void ssaoMethod::setOccluderBias(float bias) {
-    gl::Uniform1f(m_occluderBiasLocation, bias);
+    m_occluderBias->set(bias);
 }
 
 void ssaoMethod::setSamplingRadius(float radius) {
-    gl::Uniform1f(m_samplingRadiusLocation, radius);
+    m_samplingRadius->set(radius);
 }
 
 void ssaoMethod::setAttenuation(float constant, float linear) {
-    gl::Uniform2f(m_attenuationLocation, constant, linear);
+    m_attenuation->set(m::vec2(constant, linear));
 }
 
 void ssaoMethod::setInverse(const m::mat4 &inverse) {
-    // This is the inverse projection matrix used to reconstruct position from
-    // depth in the SSAO pass
-    gl::UniformMatrix4fv(m_inverseLocation, 1, GL_TRUE, inverse.ptr());
+    m_inverse->set(inverse);
 }
 
 void ssaoMethod::setWVP(const m::mat4 &wvp) {
-    // Will set an identity matrix as this will be a screen space QUAD
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
+    m_WVP->set(wvp);
 }
 
 void ssaoMethod::setPerspective(const m::perspective &p) {
-    gl::Uniform2f(m_screenFrustumLocation, p.nearp, p.farp);
-    gl::Uniform2f(m_screenSizeLocation, p.width, p.height);
+    m_screenFrustum->set(m::vec2(p.nearp, p.farp));
+    m_screenSize->set(m::vec2(p.width, p.height));
 }
 
 void ssaoMethod::setNormalTextureUnit(int unit) {
-    gl::Uniform1i(m_normalTextureLocation, unit);
+    m_normalTexture->set(unit);
 }
 
 void ssaoMethod::setDepthTextureUnit(int unit) {
-    gl::Uniform1i(m_depthTextureLocation, unit);
+    m_depthTexture->set(unit);
 }
 
 void ssaoMethod::setRandomTextureUnit(int unit) {
-    gl::Uniform1i(m_randomTextureLocation, unit);
+    m_randomTexture->set(unit);
 }
 
 ssao::ssao()

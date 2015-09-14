@@ -34,20 +34,7 @@ struct shadowMapMethod : method {
     bool init();
     void setWVP(const m::mat4 &wvp);
 private:
-    GLint m_WVPLocation;
-};
-
-struct shadowMapDebugMethod : method {
-    shadowMapDebugMethod();
-    bool init();
-    void setShadowMapTextureUnit(int unit);
-    void setWVP(const m::mat4 &wvp);
-    void setPerspective(const m::perspective &p);
-private:
-    GLint m_WVPLocation;
-    GLint m_screenSizeLocation;
-    GLint m_screenFrustumLocation;
-    GLint m_shadowMapTextureUnitLocation;
+    uniform *m_WVP;
 };
 
 }

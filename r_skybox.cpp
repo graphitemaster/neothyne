@@ -24,35 +24,36 @@ bool skyboxMethod::init(const u::vector<const char *> &defines) {
     if (!finalize({ "position" }))
         return false;
 
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_worldLocation = getUniformLocation("gWorld");
-    m_cubeMapLocation = getUniformLocation("gCubemap");
-    m_skyColor = getUniformLocation("gSkyColor");
-    m_fogLocation.color = getUniformLocation("gFog.color");
-    m_fogLocation.density = getUniformLocation("gFog.density");
+    m_WVP = getUniform("gWVP", uniform::kMat4);
+    m_world = getUniform("gWorld", uniform::kMat4);
+    m_cubeMap = getUniform("gCubemap", uniform::kSampler);
+    m_skyColor = getUniform("gSkyColor", uniform::kVec3);
+    m_fog.color = getUniform("gFog.color", uniform::kVec3);
+    m_fog.density = getUniform("gFog.density", uniform::kFloat);
 
+    post();
     return true;
 }
 
 void skyboxMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
+    m_WVP->set(wvp);
 }
 
 void skyboxMethod::setTextureUnit(int unit) {
-    gl::Uniform1i(m_cubeMapLocation, unit);
+    m_cubeMap->set(unit);
 }
 
 void skyboxMethod::setWorld(const m::mat4 &worldInverse) {
-    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, worldInverse.ptr());
+    m_world->set(worldInverse);
 }
 
 void skyboxMethod::setFog(const fog &f) {
-    gl::Uniform3fv(m_fogLocation.color, 1, &f.color.x);
-    gl::Uniform1f(m_fogLocation.density, f.density);
+    m_fog.color->set(f.color);
+    m_fog.density->set(f.density);
 }
 
 void skyboxMethod::setSkyColor(const m::vec3 &skyColor) {
-    gl::Uniform3fv(m_skyColor, 1, &skyColor.x);
+    m_skyColor->set(skyColor);
 }
 
 ///! renderer

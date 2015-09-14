@@ -32,72 +32,74 @@ bool geomMethod::init(const u::vector<const char *> &defines) {
         return false;
     }
 
-    m_WVPLocation = getUniformLocation("gWVP");
-    m_worldLocation = getUniformLocation("gWorld");
-    m_colorTextureUnitLocation = getUniformLocation("gColorMap");
-    m_normalTextureUnitLocation = getUniformLocation("gNormalMap");
-    m_specTextureUnitLocation = getUniformLocation("gSpecMap");
-    m_dispTextureUnitLocation = getUniformLocation("gDispMap");
-    m_specPowerLocation = getUniformLocation("gSpecPower");
-    m_specIntensityLocation = getUniformLocation("gSpecIntensity");
-    m_eyeWorldPositionLocation = getUniformLocation("gEyeWorldPosition");
-    m_parallaxLocation = getUniformLocation("gParallax");
-    m_boneMatsLocation = getUniformLocation("gBoneMats");
-    m_animOffsetLocation = getUniformLocation("gAnimOffset");
-    m_animFlipLocation = getUniformLocation("gAnimFlip");
-    m_animScaleLocation = getUniformLocation("gAnimScale");
+    m_WVP = getUniform("gWVP", uniform::kMat4);
+    m_world = getUniform("gWorld", uniform::kMat4);
+    m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
+    m_normalTextureUnit = getUniform("gNormalMap", uniform::kSampler);
+    m_specTextureUnit = getUniform("gSpecMap", uniform::kSampler);
+    m_dispTextureUnit = getUniform("gDispMap", uniform::kSampler);
+    m_specPower = getUniform("gSpecPower", uniform::kFloat);
+    m_specIntensity = getUniform("gSpecIntensity", uniform::kFloat);
+    m_eyeWorldPosition = getUniform("gEyeWorldPosition", uniform::kVec3);
+    m_parallax = getUniform("gParallax", uniform::kVec2);
+    m_boneMats = getUniform("gBoneMats", uniform::kMat3x4Array);
+    m_animOffset = getUniform("gAnimOffset", uniform::kInt2);
+    m_animFlip = getUniform("gAnimFlip", uniform::kVec2);
+    m_animScale = getUniform("gAnimScale", uniform::kVec2);
 
+    post();
     return true;
 }
 
 void geomMethod::setWVP(const m::mat4 &wvp) {
-    gl::UniformMatrix4fv(m_WVPLocation, 1, GL_TRUE, wvp.ptr());
+    m_WVP->set(wvp);
 }
 
 void geomMethod::setWorld(const m::mat4 &worldInverse) {
-    gl::UniformMatrix4fv(m_worldLocation, 1, GL_TRUE, worldInverse.ptr());
+    m_world->set(worldInverse);
 }
 
 void geomMethod::setEyeWorldPos(const m::vec3 &position) {
-    gl::Uniform3fv(m_eyeWorldPositionLocation, 1, &position.x);
+    m_eyeWorldPosition->set(position);
 }
 
 void geomMethod::setParallax(float scale, float bias) {
-    gl::Uniform2f(m_parallaxLocation, scale, bias);
+    m_parallax->set(m::vec2(scale, bias));
 }
 
 void geomMethod::setColorTextureUnit(int unit) {
-    gl::Uniform1i(m_colorTextureUnitLocation, unit);
+    m_colorTextureUnit->set(unit);
 }
 
 void geomMethod::setNormalTextureUnit(int unit) {
-    gl::Uniform1i(m_normalTextureUnitLocation, unit);
+    m_normalTextureUnit->set(unit);
 }
 
 void geomMethod::setDispTextureUnit(int unit) {
-    gl::Uniform1i(m_dispTextureUnitLocation, unit);
+    m_dispTextureUnit->set(unit);
 }
 
 void geomMethod::setSpecTextureUnit(int unit) {
-    gl::Uniform1i(m_specTextureUnitLocation, unit);
+    m_specTextureUnit->set(unit);
 }
 
 void geomMethod::setSpecIntensity(float intensity) {
-    gl::Uniform1f(m_specIntensityLocation, intensity);
+    m_specIntensity->set(intensity);
 }
 
 void geomMethod::setSpecPower(float power) {
-    gl::Uniform1f(m_specPowerLocation, power);
+    m_specPower->set(power);
 }
 
 void geomMethod::setBoneMats(size_t numJoints, const float *mats) {
-    gl::UniformMatrix3x4fv(m_boneMatsLocation, numJoints, GL_FALSE, mats);
+    m_boneMats->set(numJoints, mats);
+    //gl::UniformMatrix3x4fv(m_boneMatsLocation, numJoints, GL_FALSE, mats);
 }
 
 void geomMethod::setAnimation(int x, int y, float flipu, float flipv, float w, float h) {
-    gl::Uniform2i(m_animOffsetLocation, x, y);
-    gl::Uniform2f(m_animFlipLocation, flipu, flipv);
-    gl::Uniform2f(m_animScaleLocation, w, h);
+    m_animOffset->set(x, y);
+    m_animFlip->set(m::vec2(flipu, flipv));
+    m_animScale->set(m::vec2(w, h));
 }
 
 // Generate the list of permutation names for the shader
