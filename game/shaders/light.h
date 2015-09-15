@@ -105,7 +105,7 @@ vec4 calcPointLight(pointLight light,
             vec4 project =
                 max(absDir.x, absDir.y) > absDir.z ?
                     (absDir.x > absDir.y ?
-                        vec4(lightDirection.zyx, 0.0f) :
+                        vec4(lightDirection.zyx, 0.0f / 3.0f) :
                         vec4(lightDirection.xzy, 1.0f / 3.0f)) :
                     vec4(lightDirection, 2.0f / 3.0f);
             vec4 shadowCoord = gLightWVP * vec4(project.xy, abs(project.z), 1.0f);

@@ -129,6 +129,7 @@ void TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLs
 void DrawBuffer(GLenum mode GL_INFOP);
 void ReadBuffer(GLenum mode GL_INFOP);
 void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data GL_INFOP);
+void PolygonOffset(GLfloat factor, GLfloat units GL_INFOP);
 
 }
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -223,5 +224,6 @@ void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid
 #   define DrawBuffer(...)               DrawBuffer(__VA_ARGS__, __FILE__, __LINE__)
 #   define ReadBuffer(...)               ReadBuffer(__VA_ARGS__, __FILE__, __LINE__)
 #   define BufferSubData(...)            BufferSubData(__VA_ARGS__, __FILE__, __LINE__)
+#   define PolygonOffset(...)            PolygonOffset(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif

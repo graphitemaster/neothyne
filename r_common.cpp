@@ -119,6 +119,7 @@ typedef void (APIENTRYP MYPFNGLTEXSUBIMAGE2DPROC)(GLenum, GLint, GLint, GLint, G
 typedef void (APIENTRYP MYPFNGLDRAWBUFFERPROC)(GLenum);
 typedef void (APIENTRYP MYPFNGLREADBUFFERPROC)(GLenum);
 typedef void (APIENTRYP MYPFNGLBUFFERSUBDATAPROC)(GLenum, GLintptr, GLsizeiptr, const GLvoid*);
+typedef void (APIENTRYP MYPFNGLPOLYGONOFFSETPROC)(GLfloat, GLfloat);
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -211,6 +212,7 @@ static MYPFNGLTEXSUBIMAGE2DPROC             glTexSubImage2D_            = nullpt
 static MYPFNGLDRAWBUFFERPROC                glDrawBuffer_               = nullptr;
 static MYPFNGLREADBUFFERPROC                glReadBuffer_               = nullptr;
 static MYPFNGLBUFFERSUBDATAPROC             glBufferSubData_            = nullptr;
+static MYPFNGLPOLYGONOFFSETPROC             glPolygonOffset_            = nullptr;
 
 #ifdef DEBUG_GL
 ///! ARB_debug_output
@@ -562,6 +564,7 @@ void init() {
     glDrawBuffer_               = (MYPFNGLDRAWBUFFERPROC)neoGetProcAddress("glDrawBuffer");
     glReadBuffer_               = (MYPFNGLREADBUFFERPROC)neoGetProcAddress("glReadBuffer");
     glBufferSubData_            = (MYPFNGLBUFFERSUBDATAPROC)neoGetProcAddress("glBufferSubData");
+    glPolygonOffset_            = (MYPFNGLPOLYGONOFFSETPROC)neoGetProcAddress("glPolygonOffset");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -1072,6 +1075,11 @@ void ReadBuffer(GLenum mode GL_INFOP) {
 void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data GL_INFOP) {
     glBufferSubData_(target, offset, size, data);
     GL_CHECK("2ef*0", target, offset, size, data);
+}
+
+void PolygonOffset(GLfloat factor, GLfloat units GL_INFOP) {
+    glPolygonOffset_(factor, units);
+    GL_CHECK("cc", factor, units);
 }
 
 }

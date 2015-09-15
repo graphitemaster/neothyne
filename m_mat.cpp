@@ -114,12 +114,12 @@ mat4 mat4::project(const m::perspective &p) {
              { 0.0f, 0.0f, 1.0f, 0.0f } };
 }
 
-mat4 mat4::project(float angle, float nearClip, float farClip) {
+mat4 mat4::project(float angle, float nearClip, float farClip, float bias) {
     const float halfFOV = 1.0f / m::tan(m::toRadian(angle) * 0.5f);
     const float zRange = nearClip - farClip;
     return { { halfFOV, 0.0f, 0.0f, 0.0f },
              { 0.0f, halfFOV, 0.0f, 0.0f },
-             { 0.0f, 0.0f, -(nearClip + farClip) / zRange, 2.0f * nearClip * farClip / zRange },
+             { 0.0f, 0.0f, -(nearClip + farClip) / zRange, 2.0f * nearClip * farClip / zRange + bias },
              { 0.0f, 0.0f, 1.0f, 0.0f} };
 }
 

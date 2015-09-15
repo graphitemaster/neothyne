@@ -10,19 +10,16 @@ struct shadowMap {
     shadowMap();
     ~shadowMap();
 
-    bool init(size_t size);
-    void update(size_t size);
+    bool init(size_t width, size_t height);
+    void update(size_t width, size_t height);
     void bindWriting();
 
     GLuint texture() const;
 
-    float widthScale() const;
-    float heightScale() const;
+    float widthScale(size_t size) const;
+    float heightScale(size_t size) const;
 
 private:
-    void setSize(size_t size);
-
-    size_t m_size;
     size_t m_width;
     size_t m_height;
     GLuint m_fbo;

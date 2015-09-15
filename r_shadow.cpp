@@ -4,8 +4,7 @@ namespace r {
 
 ///!shadowMap
 shadowMap::shadowMap()
-    : m_size(0)
-    , m_width(0)
+    : m_width(0)
     , m_height(0)
     , m_fbo(0)
     , m_shadowMap(0)
@@ -19,14 +18,9 @@ shadowMap::~shadowMap() {
         gl::DeleteTextures(1, &m_shadowMap);
 }
 
-void shadowMap::setSize(size_t size) {
-    m_size = size;
-    m_width = size*3;
-    m_height = size*2;
-}
-
-bool shadowMap::init(size_t size) {
-    setSize(size);
+bool shadowMap::init(size_t width, size_t height) {
+    m_width = width;
+    m_height = height;
 
     gl::GenFramebuffers(1, &m_fbo);
 
@@ -52,11 +46,12 @@ bool shadowMap::init(size_t size) {
     return status == GL_FRAMEBUFFER_COMPLETE;
 }
 
-void shadowMap::update(size_t size) {
-    if (m_size == size)
+void shadowMap::update(size_t width, size_t height) {
+    if (m_width == width && m_height == height)
         return;
 
-    setSize(size);
+    m_width = width;
+    m_height = height;
 
     gl::BindTexture(GL_TEXTURE_2D, m_shadowMap);
     gl::TexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_width, m_height, 0,
@@ -71,12 +66,12 @@ GLuint shadowMap::texture() const {
     return m_shadowMap;
 }
 
-float shadowMap::widthScale() const {
-    return float(m_size) / float(m_width);
+float shadowMap::widthScale(size_t size) const {
+    return float(size) / float(m_width);
 }
 
-float shadowMap::heightScale() const {
-    return float(m_size) / float(m_height);
+float shadowMap::heightScale(size_t size) const {
+    return float(size) / float(m_height);
 }
 
 ///! shadowMapMethod

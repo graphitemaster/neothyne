@@ -28,8 +28,11 @@ VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 VAR(int, r_spec, "specularity mapping", 0, 1, 1);
 VAR(int, r_hoq, "hardware occlusion queries", 0, 1, 1);
 VAR(int, r_fog, "fog", 0, 1, 1);
-VAR(int, r_smsize, "shadow map size", 128, 4096, 256);
-VAR(float, r_smbias, "shadow map bias", -1.0f, 1.0f, -0.01);
+VAR(int, r_smsize, "shadow map size", 16, 4096, 256);
+VAR(int, r_smborder, "shadow map border", 0, 8, 3);
+VAR(float, r_smbias, "shadow map bias", -10.0f, 10.0f, -0.1f);
+VAR(float, r_smpolyfactor, "shadow map polygon offset factor", -1000.0f, 1000.0f, 1.0f);
+VAR(float, r_smpolyoffset, "shadow map polygon offset units", -1000.0f, 1000.0f, 0.0f);
 NVAR(int, r_debug, "debug visualizations", 0, 4, 0);
 
 namespace r {
@@ -379,7 +382,7 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
         m::vec3 p3 = map->vertices[triangle.v[2]].vertex - light->position;
         if (p1 * (p2 - p1).cross(p3 - p1) > 0)
             continue;
-        uint8_t mask = calcTriangleSideMask(p1, p2, p3, 0.0f);
+        const uint8_t mask = calcTriangleSideMask(p1, p2, p3, r_smborder / float(r_smsize - r_smborder));
         for (size_t side = 0; side < 6; ++side) {
             if (mask & (1 << side)) {
                 for (const auto &it : triangle.v)
@@ -397,7 +400,7 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
     size_t offset = 0;
     for (size_t side = 0; side < 6; ++side) {
         if (sideCounts[side] > 0) {
-            gl::BufferSubData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*offset, sizeof(GLuint)*sideCounts[side], &indices[side][0]); 
+            gl::BufferSubData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*offset, sizeof(GLuint)*sideCounts[side], &indices[side][0]);
         }
         offset += sideCounts[side];
     }
@@ -700,7 +703,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
     if (!m_colorGrader.init(p, map->getColorGrader().data()))
         neoFatal("failed to initialize color grading render buffer");
 
-    if (!m_shadowMap.init(r_smsize))
+    if (!m_shadowMap.init(r_smsize*3, r_smsize*2))
         neoFatal("failed to initialize shadow map");
     if (!m_shadowMapMethod.init())
         neoFatal("failed to initialize shadow map method");
@@ -947,12 +950,14 @@ void world::pointLightPass(const pipeline &pl) {
             gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
             gl::BindTexture(GL_TEXTURE_2D, m_shadowMap.texture());
 
-            float widthScale = 0.5f * m_shadowMap.widthScale();
-            float heightScale = 0.5f * m_shadowMap.heightScale();
+            const float widthOffset = 0.5f * m_shadowMap.widthScale(r_smsize);
+            const float heightOffset = 0.5f * m_shadowMap.heightScale(r_smsize);
+            const float widthScale = 0.5f * m_shadowMap.widthScale(r_smsize - r_smborder);
+            const float heightScale = 0.5f * m_shadowMap.heightScale(r_smsize - r_smborder);
             method->enable();
-            method->setLightWVP(m::mat4::translate({widthScale, heightScale, 0.5f + r_smbias}) *
+            method->setLightWVP(m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
                                 m::mat4::scale({widthScale, heightScale, 0.5f}) *
-                                m::mat4::project(90.0f, 1.0f / it->radius, sqrtf(3.0f)) *
+                                m::mat4::project(90.0f, 1.0f / it->radius, sqrtf(3.0f), r_smbias / it->radius) *
                                 m::mat4::scale(1.0f / it->radius));
         } else {
             method->enable();
@@ -1010,12 +1015,14 @@ void world::spotLightPass(const pipeline &pl) {
             gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
             gl::BindTexture(GL_TEXTURE_2D, m_shadowMap.texture());
 
-            float widthScale = 0.5f * m_shadowMap.widthScale();
-            float heightScale = 0.5f * m_shadowMap.heightScale();
+            float widthOffset = 0.5f * m_shadowMap.widthScale(r_smsize);
+            float heightOffset = 0.5f * m_shadowMap.heightScale(r_smsize);
+            float widthScale = 0.5f * m_shadowMap.widthScale(r_smsize - r_smborder);
+            float heightScale = 0.5f * m_shadowMap.heightScale(r_smsize - r_smborder);
             method->enable();
-            method->setLightWVP(m::mat4::translate({widthScale, heightScale, 0.5f + r_smbias}) *
+            method->setLightWVP(m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
                                 m::mat4::scale({widthScale, heightScale, 0.5f}) *
-                                m::mat4::project(sl->cutOff, 1.0f / sl->radius, sqrtf(3.0f)) *
+                                m::mat4::project(sl->cutOff, 1.0f / sl->radius, sqrtf(3.0f), r_smbias / sl->radius) *
                                 m::mat4::lookat(sl->direction, m::vec3::yAxis) *
                                 m::mat4::scale(1.0f / sl->radius) *
                                 m::mat4::translate(-sl->position));
@@ -1341,9 +1348,14 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
     gl::DepthMask(GL_TRUE);
     gl::DepthFunc(GL_LEQUAL);
 
-    m_shadowMap.update(r_smsize);
+    m_shadowMap.update(r_smsize*3, r_smsize*2);
     m_shadowMap.bindWriting();
     gl::Clear(GL_DEPTH_BUFFER_BIT);
+
+    if (r_smpolyfactor || r_smpolyoffset) {
+        gl::PolygonOffset(r_smpolyfactor, r_smpolyoffset);
+        gl::Enable(GL_POLYGON_OFFSET_FILL);
+    }
 
     gl::Enable(GL_SCISSOR_TEST);
 
@@ -1375,13 +1387,15 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, plc->ebo);
+    float borderScale = float(r_smsize - r_smborder) / r_smsize;
     size_t offset = 0;
     for (size_t side = 0; side < 6; ++side) {
         if (plc->sideCounts[side] <= 0)
             continue;
 
         const auto &view = kSideViews[side];
-        m_shadowMapMethod.setWVP(m::mat4::project(90.0f, 1.0f / pl->radius, sqrtf(3.0f)) *
+        m_shadowMapMethod.setWVP(m::mat4::scale({borderScale, borderScale, 1.0f}) *
+                                 m::mat4::project(90.0f, 1.0f / pl->radius, sqrtf(3.0f)) *
                                  view.view *
                                  m::mat4::scale(1.0f /  pl->radius) *
                                  m::mat4::translate(-pl->position));
@@ -1401,6 +1415,9 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 
     gl::Disable(GL_SCISSOR_TEST);
 
+    if (r_smpolyfactor || r_smpolyoffset)
+        gl::Disable(GL_POLYGON_OFFSET_FILL);
+
     m_final.bindWriting();
 }
 
@@ -1410,15 +1427,22 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
     gl::DepthFunc(GL_LEQUAL);
     gl::CullFace(GL_BACK);
 
+    if (r_smpolyfactor || r_smpolyoffset) {
+        gl::PolygonOffset(r_smpolyfactor, r_smpolyoffset);
+        gl::Enable(GL_POLYGON_OFFSET_FILL);
+    }
+
     gl::Enable(GL_SCISSOR_TEST);
     gl::Scissor(0, 0, r_smsize, r_smsize);
 
-    m_shadowMap.update(r_smsize);
+    m_shadowMap.update(r_smsize*3, r_smsize*2);
     m_shadowMap.bindWriting();
     gl::Clear(GL_DEPTH_BUFFER_BIT);
 
+    float borderScale = float(r_smsize - r_smborder) / r_smsize;
     m_shadowMapMethod.enable();
-    m_shadowMapMethod.setWVP(m::mat4::project(sl->cutOff, 1.0f / sl->radius, sqrtf(3.0f)) *
+    m_shadowMapMethod.setWVP(m::mat4::scale({borderScale, borderScale, 1.0f}) *
+                             m::mat4::project(sl->cutOff, 1.0f / sl->radius, sqrtf(3.0f)) *
                              m::mat4::lookat(sl->direction, m::vec3::yAxis) *
                              m::mat4::scale(1.0f / sl->radius) *
                              m::mat4::translate(-sl->position));
@@ -1432,6 +1456,9 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
     gl::Disable(GL_SCISSOR_TEST);
+
+    if (r_smpolyfactor || r_smpolyoffset)
+        gl::Disable(GL_POLYGON_OFFSET_FILL);
 
     m_final.bindWriting();
 }

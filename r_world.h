@@ -112,6 +112,13 @@ private:
     void forwardPass(const pipeline &pl);
     void compositePass(const pipeline &pl);
 
+    struct lightChunk {
+        size_t hash;
+        size_t count;
+        GLuint ebo;
+        bool visible;
+    };
+
     struct spotLightChunk {
         ~spotLightChunk();
         size_t hash;
