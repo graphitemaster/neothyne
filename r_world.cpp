@@ -290,9 +290,14 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
     u::vector<size_t> triangleIndices;
     u::vector<GLuint> indices;
     map->inSphere(triangleIndices, light->position, light->radius);
-    indices.reserve(triangleIndices.size() * 3);
+    indices.reserve(triangleIndices.size() * 3 / 2);
     for (const auto &it : triangleIndices) {
         const auto &triangle = map->triangles[it];
+        m::vec3 p1 = map->vertices[triangle.v[0]].vertex - light->position;
+        m::vec3 p2 = map->vertices[triangle.v[1]].vertex - light->position;
+        m::vec3 p3 = map->vertices[triangle.v[2]].vertex - light->position;
+        if (p1 * (p2 - p1).cross(p3 - p1) > 0)
+            continue;
         for (const auto &it : triangle.v)
             indices.push_back(it);
     }
@@ -300,7 +305,7 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(),
         &indices[0], GL_STATIC_DRAW);
     count = indices.size();
-    u::print("[shadow] => generated `%zu' world geometry indices for spotlight\n", count);
+    u::print("[shadow] => generated `%zu/%zu' world geometry indices for spotlight\n", count, triangleIndices.size() * 3);
     return true;
 }
 
@@ -311,22 +316,92 @@ bool world::pointLightChunk::init() {
     return true;
 }
 
+static uint8_t calcTriangleSideMask(const m::vec3 &p1, const m::vec3 &p2, const m::vec3 &p3, float bias)
+{
+    // p1, p2, p3 are in the cubemap's local coordinate system
+    // bias = border/(size - border)
+    uint8_t mask = 0x3F;
+    float dp1 = p1.x + p1.y, dn1 = p1.x - p1.y, ap1 = fabs(dp1), an1 = fabs(dn1),
+          dp2 = p2.x + p2.y, dn2 = p2.x - p2.y, ap2 = fabs(dp2), an2 = fabs(dn2),
+          dp3 = p3.x + p3.y, dn3 = p3.x - p3.y, ap3 = fabs(dp3), an3 = fabs(dn3);
+    if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+        mask &= (3<<4)
+            | (dp1 < 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2))
+            | (dp2 < 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2))
+            | (dp3 < 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
+    if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+        mask &= (3<<4)
+            | (dn1 < 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
+            | (dn2 < 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
+            | (dn3 < 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
+
+    dp1 = p1.y + p1.z, dn1 = p1.y - p1.z, ap1 = fabs(dp1), an1 = fabs(dn1),
+    dp2 = p2.y + p2.z, dn2 = p2.y - p2.z, ap2 = fabs(dp2), an2 = fabs(dn2),
+    dp3 = p3.y + p3.z, dn3 = p3.y - p3.z, ap3 = fabs(dp3), an3 = fabs(dn3);
+    if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+        mask &= (3<<0)
+            | (dp1 < 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
+            | (dp2 < 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
+            | (dp3 < 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
+    if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+        mask &= (3<<0)
+            | (dn1 < 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
+            | (dn2 < 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
+            | (dn3 < 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
+
+    dp1 = p1.z + p1.x, dn1 = p1.z - p1.x, ap1 = fabs(dp1), an1 = fabs(dn1),
+    dp2 = p2.z + p2.x, dn2 = p2.z - p2.x, ap2 = fabs(dp2), an2 = fabs(dn2),
+    dp3 = p3.z + p3.x, dn3 = p3.z - p3.x, ap3 = fabs(dp3), an3 = fabs(dn3);
+    if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+        mask &= (3<<2)
+            | (dp1 < 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
+            | (dp2 < 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
+            | (dp3 < 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
+    if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+        mask &= (3<<2)
+            | (dn1 < 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
+            | (dn2 < 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
+            | (dn3 < 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
+
+    return mask;
+}
+
 bool world::pointLightChunk::buildMesh(kdMap *map) {
     u::vector<size_t> triangleIndices;
-    u::vector<GLuint> indices;
+    u::vector<GLuint> indices[6];
     map->inSphere(triangleIndices, light->position, light->radius);
-    indices.reserve(triangleIndices.size() * 3);
-    u::vector<m::vec3> positions;
+    for (size_t side = 0; side < 6; ++side)
+        indices[side].reserve(triangleIndices.size() * 3 / 6);
     for (const auto &it : triangleIndices) {
         const auto &triangle = map->triangles[it];
-        for (const auto &it : triangle.v)
-            indices.push_back(it);
+        m::vec3 p1 = map->vertices[triangle.v[0]].vertex - light->position;
+        m::vec3 p2 = map->vertices[triangle.v[1]].vertex - light->position;
+        m::vec3 p3 = map->vertices[triangle.v[2]].vertex - light->position;
+        if (p1 * (p2 - p1).cross(p3 - p1) > 0)
+            continue;
+        uint8_t mask = calcTriangleSideMask(p1, p2, p3, 0.0f);
+        for (size_t side = 0; side < 6; ++side) {
+            if (mask & (1 << side)) {
+                for (const auto &it : triangle.v)
+                    indices[side].push_back(it);
+            }
+        }
+    }
+    count = 0;
+    for (size_t side = 0; side < 6; ++side) {
+        sideCounts[side] = indices[side].size();
+        count += sideCounts[side];
     }
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(),
-        &indices[0], GL_STATIC_DRAW);
-    count = indices.size();
-    u::print("[shadow] => generated `%zu' world geometry indices for pointlight\n", count);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*count, nullptr, GL_STATIC_DRAW);
+    size_t offset = 0;
+    for (size_t side = 0; side < 6; ++side) {
+        if (sideCounts[side] > 0) {
+            gl::BufferSubData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*offset, sizeof(GLuint)*sideCounts[side], &indices[side][0]); 
+        }
+        offset += sideCounts[side];
+    }
+    u::print("[shadow] => generated `%zu/%zu' world geometry indices for pointlight\n", count, triangleIndices.size() * 3);
     return true;
 }
 
@@ -638,7 +713,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     // Copy light entities into our rendering representation.
     for (auto &it : map->m_pointLights)
-        m_culledPointLights.push_back( { 0, 0, it, 0, false } );
+        m_culledPointLights.push_back( { 0, 0, { 0 }, it, 0, false } );
     for (auto &it : map->m_spotLights)
         m_culledSpotLights.push_back( { 0, 0, it, 0, false } );
     for (auto &it : m_culledPointLights)
@@ -1276,30 +1351,35 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 
     // v = identity
     // for i=0 to 6:
-    //  if i < 2: swap(v.a, v.b)
-    //  if i < 4: swap(v.b, v.c)
+    //  if i < 2: swap(v.a, v.c)
+    //  else if i < 4: swap(v.b, v.c)
     //  if even(i): v.c = -v.c
-    //  c = (odd(i) ^ i >= 4) ? GL_FRONT : GL_BACK
-    static struct {
+    //  c = (odd(i) ^ (i >= 4)) ? GL_FRONT : GL_BACK
+    static const struct {
         m::mat4 view;
         GLenum cullFace;
     } kSideViews[] = {
         { { {  0.0f,  0.0f,  1.0f,  0.0f }, {  0.0f,  1.0f,  0.0f,  0.0f },
-            { -1.0f, -0.0f, -0.0f, -0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_BACK },
+            { -1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_BACK },
         { { {  0.0f,  0.0f,  1.0f,  0.0f }, {  0.0f,  1.0f,  0.0f,  0.0f },
             {  1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_FRONT },
         { { {  1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  0.0f,  1.0f,  0.0f },
-            { -0.0f, -1.0f, -0.0f, -0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_BACK },
+            {  0.0f, -1.0f,  0.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_BACK },
         { { {  1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  0.0f,  1.0f,  0.0f },
             {  0.0f,  1.0f,  0.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_FRONT },
         { { {  1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  1.0f,  0.0f,  0.0f },
-            { -0.0f, -0.0f, -1.0f, -0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_FRONT },
+            {  0.0f,  0.0f, -1.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_FRONT },
         { { {  1.0f,  0.0f,  0.0f,  0.0f }, {  0.0f,  1.0f,  0.0f,  0.0f },
             {  0.0f,  0.0f,  1.0f,  0.0f }, {  0.0f,  0.0f,  0.0f,  1.0f } }, GL_BACK }
     };
 
     gl::BindVertexArray(vao);
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, plc->ebo);
+    size_t offset = 0;
     for (size_t side = 0; side < 6; ++side) {
+        if (plc->sideCounts[side] <= 0)
+            continue;
+
         const auto &view = kSideViews[side];
         m_shadowMapMethod.setWVP(m::mat4::project(90.0f, 1.0f / pl->radius, sqrtf(3.0f)) *
                                  view.view *
@@ -1311,8 +1391,9 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
         gl::Viewport(x, y, r_smsize, r_smsize);
         gl::Scissor(x, y, r_smsize, r_smsize);
         gl::CullFace(view.cullFace);
-        gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, plc->ebo);
-        gl::DrawElements(GL_TRIANGLES, plc->count, GL_UNSIGNED_INT, 0);
+        gl::DrawElements(GL_TRIANGLES, plc->sideCounts[side], GL_UNSIGNED_INT, (const GLvoid *)(sizeof(GLuint)*offset));
+
+        offset += plc->sideCounts[side];
     }
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 

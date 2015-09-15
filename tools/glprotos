@@ -88,3 +88,4 @@ void: BindFragDataLocation(GLuint: program, GLuint: colorNumber, const GLchar*: 
 void: TexSubImage2D(GLenum: target, GLint: level, GLint: xoffset, GLint: yoffset, GLsizei: width, GLsizei: height, GLenum: format, GLenum: type, const GLvoid*: data);
 void: DrawBuffer(GLenum: mode);
 void: ReadBuffer(GLenum: mode);
+void: BufferSubData(GLenum: target, GLintptr: offset, GLsizeiptr: size, const GLvoid*: data);

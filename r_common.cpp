@@ -118,6 +118,7 @@ typedef void (APIENTRYP MYPFNGLBINDFRAGDATALOCATIONPROC)(GLuint, GLuint, const G
 typedef void (APIENTRYP MYPFNGLTEXSUBIMAGE2DPROC)(GLenum, GLint, GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, const GLvoid*);
 typedef void (APIENTRYP MYPFNGLDRAWBUFFERPROC)(GLenum);
 typedef void (APIENTRYP MYPFNGLREADBUFFERPROC)(GLenum);
+typedef void (APIENTRYP MYPFNGLBUFFERSUBDATAPROC)(GLenum, GLintptr, GLsizeiptr, const GLvoid*);
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -209,6 +210,7 @@ static MYPFNGLBINDFRAGDATALOCATIONPROC      glBindFragDataLocation_     = nullpt
 static MYPFNGLTEXSUBIMAGE2DPROC             glTexSubImage2D_            = nullptr;
 static MYPFNGLDRAWBUFFERPROC                glDrawBuffer_               = nullptr;
 static MYPFNGLREADBUFFERPROC                glReadBuffer_               = nullptr;
+static MYPFNGLBUFFERSUBDATAPROC             glBufferSubData_            = nullptr;
 
 #ifdef DEBUG_GL
 ///! ARB_debug_output
@@ -559,6 +561,7 @@ void init() {
     glTexSubImage2D_            = (MYPFNGLTEXSUBIMAGE2DPROC)neoGetProcAddress("glTexSubImage2D");
     glDrawBuffer_               = (MYPFNGLDRAWBUFFERPROC)neoGetProcAddress("glDrawBuffer");
     glReadBuffer_               = (MYPFNGLREADBUFFERPROC)neoGetProcAddress("glReadBuffer");
+    glBufferSubData_            = (MYPFNGLBUFFERSUBDATAPROC)neoGetProcAddress("glBufferSubData");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -1064,6 +1067,11 @@ void DrawBuffer(GLenum mode GL_INFOP) {
 void ReadBuffer(GLenum mode GL_INFOP) {
     glReadBuffer_(mode);
     GL_CHECK("2", mode);
+}
+
+void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data GL_INFOP) {
+    glBufferSubData_(target, offset, size, data);
+    GL_CHECK("2ef*0", target, offset, size, data);
 }
 
 }

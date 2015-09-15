@@ -128,6 +128,7 @@ void BindFragDataLocation(GLuint program, GLuint colorNumber, const GLchar* name
 void TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* data GL_INFOP);
 void DrawBuffer(GLenum mode GL_INFOP);
 void ReadBuffer(GLenum mode GL_INFOP);
+void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data GL_INFOP);
 
 }
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -221,5 +222,6 @@ void ReadBuffer(GLenum mode GL_INFOP);
 #   define TexSubImage2D(...)            TexSubImage2D(__VA_ARGS__, __FILE__, __LINE__)
 #   define DrawBuffer(...)               DrawBuffer(__VA_ARGS__, __FILE__, __LINE__)
 #   define ReadBuffer(...)               ReadBuffer(__VA_ARGS__, __FILE__, __LINE__)
+#   define BufferSubData(...)            BufferSubData(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif

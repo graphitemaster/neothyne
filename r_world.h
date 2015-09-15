@@ -127,6 +127,7 @@ private:
         ~pointLightChunk();
         size_t hash;
         size_t count;
+        size_t sideCounts[6];
         pointLight *light;
         GLuint ebo;
         bool visible;
