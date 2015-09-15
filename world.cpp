@@ -19,9 +19,12 @@ NVAR(int, map_fog_equation, "map fog equation", 0, 2, 0);
 NVAR(float, map_fog_range_start, "map fog range start (for linear only)", 0.0f, 1.0f, 0.0f);
 NVAR(float, map_fog_range_end, "map fog range end (for linear only)", 0.0f, 1.0f, 1.0f);
 
-size_t baseLight::hash() const {
-    // Evil but works!
+size_t pointLight::hash() const {
     return u::hash((const unsigned char *)this, sizeof *this);
+}
+
+size_t spotLight::hash() const {
+    return pointLight::hash() ^ u::hash((const unsigned char *)this, sizeof *this);
 }
 
 enum {

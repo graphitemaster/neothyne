@@ -13,7 +13,6 @@ struct baseLight {
     };
     bool highlight;
     bool castShadows;
-    size_t hash() const;
 };
 
 inline baseLight::baseLight()
@@ -33,6 +32,7 @@ struct pointLight : baseLight {
     pointLight();
     m::vec3 position;
     float radius;
+    size_t hash() const;
 };
 
 inline pointLight::pointLight()
@@ -45,6 +45,7 @@ struct spotLight : pointLight {
     spotLight();
     m::vec3 direction;
     float cutOff;
+    size_t hash() const;
 };
 
 inline spotLight::spotLight()

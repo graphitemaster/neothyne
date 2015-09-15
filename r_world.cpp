@@ -670,7 +670,7 @@ void world::cullPass(const pipeline &pl) {
         m_frustum.setup(light->position, pl.rotation(), pl.perspective());
         it.visible = m_frustum.testSphere(pl.position(), scale);
         const auto hash = light->hash();
-        if (it.visible &&it.hash != hash) {
+        if (it.visible && it.hash != hash) {
             it.buildMesh(m_kdWorld);
             it.hash = hash;
         }
@@ -1399,6 +1399,7 @@ void world::render(const pipeline &pl) {
         m_defaultMethod.reload();
         r_reload.set(0);
     }
+
     cullPass(pl);
     occlusionPass(pl);
     geometryPass(pl);
