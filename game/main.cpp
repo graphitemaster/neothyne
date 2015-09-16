@@ -163,7 +163,8 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     gWorld.insert(m);
 
     m.name = "models/ball";
-    m.position = { 100, 95, 50 };
+    m.position = { 100, 110, 90 };
+    m.scale = { 10, 10, 10 };
 
     gWorld.insert(m);
 
