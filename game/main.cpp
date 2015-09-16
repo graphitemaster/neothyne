@@ -167,18 +167,6 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
 
     gWorld.insert(m);
 
-    // spot light
-    spotLight sl;
-    sl.position = { 97.0f, 98.0f, -214.0f };
-    sl.direction = { 105.0f, 3.0f, 360.0f };
-    sl.color = { 1.0f, 0.0f, 0.0f };
-    sl.ambient = 0.15f;
-    sl.diffuse = 1.0f;
-    sl.radius = 400;
-    sl.cutOff = 45.0f;
-
-    gWorld.insert(sl);
-
     if (!gWorld.load("garden.kdgz"))
         neoFatal("failed to load world");
 #endif
