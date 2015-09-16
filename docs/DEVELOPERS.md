@@ -32,6 +32,12 @@ As well as a plethora of type traits and algorithmic functions which can be
 found in `u_traits.h` and `u_algorithm.h` respectively. Miscellaneous utilites can
 be found in `u_misc.h`.
 
+## Strings
+String in Neothyne are allocated using a special string heap with a fixed size.
+A custom allocator is used for allocating strings which allocates from this fixed
+size heap. The allocation strategy is buddy allocation and will always make blocks
+of memory for strings of size 8, 16, 32, 64, 128, 256, ...
+
 ## Shaders
 
 Shaders in Neothyne are written in GLSL with a bit of syntax sugar.
