@@ -35,7 +35,6 @@ embodies the following:
   * Screen space ambient occlusion (SSAO)
   * View frustum culling
   * Skeletal model animation (IQM)
-  * Hardware occlusion query culling
   * Variable color grading (supporting)
     * Color balance (shadows, midtones and highlights)
     * Hue, lightness and saturation
