@@ -113,6 +113,10 @@ The result of the shadow map is used immediately after it's available during the
 lighting pass. There is only one shadow map, this is to keep the memory requirements
 low. No batching or caching of shadow maps is done.
 
+To make use of throughput an unusual PCF algorithm is used when sampling shadow
+maps which makes sure the distance between taps is 4 unique pixels and that
+they're correctly weighted by the area they take up in the final average.
+
 The same technique is used for rendering the spot lights as well.
 
 Finally the directional lighting is rendered in two passes of its own. First and
