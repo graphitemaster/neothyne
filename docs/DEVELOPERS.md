@@ -84,7 +84,17 @@ Some things shouldn't contribute to ambient occlusion so we draw those elements
 to our geometry buffer as well by way of stencil replace.
 
 Special care was taken to keep the geometry buffer small in size to reduce over
-all bandwidth
+all bandwidth.
+
+The geometry buffer is setup as follows:
+```
+R          G          B          A
+[diffuse R][diffuse G][diffuse B][spec power]
+[normals R][normals G][normals B][spec intensity]
+```
+
+Position is calculated in later stages from depth by using an inverse
+world-view-projection matrix.
 
 #### Lighting pass
 
