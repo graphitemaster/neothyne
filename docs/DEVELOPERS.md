@@ -86,9 +86,9 @@ to our geometry buffer as well by way of stencil replace.
 Special care was taken to keep the geometry buffer small in size to reduce over
 all bandwidth.
 
-The geometry buffer is setup as follows:
+The geometry buffer is setup as follows (both attachments are RGBA8)
 ```
-R          G          B          A
+ R          G          B          A
 [diffuse R][diffuse G][diffuse B][spec power]
 [normals R][normals G][normals B][spec intensity]
 ```
