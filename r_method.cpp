@@ -8,9 +8,6 @@
 namespace r {
 
 ///! uniform
-static constexpr size_t kMat3x4Space = 80;
-static m::mat3x4 gUniformMat3x4Scratch[kMat3x4Space];
-
 uniform::uniform() {
     memset(this, 0, sizeof *this);
 }
@@ -60,10 +57,9 @@ void uniform::set(const m::mat4 &value) {
 
 void uniform::set(size_t count, const float *mats) {
     assert(m_type == kMat3x4Array);
-    assert(count <= kMat3x4Space);
+    assert(count <= method::kMat3x4Space);
 
-    memcpy(gUniformMat3x4Scratch, mats, sizeof(m::mat3x4) * count);
-    asMat3x4Array.data = (float *)&gUniformMat3x4Scratch[0];
+    memcpy(asMat3x4Array.data, mats, sizeof(m::mat3x4) * count);
     asMat3x4Array.count = count;
     post();
 }
@@ -104,6 +100,8 @@ void uniform::post() {
 }
 
 ///! method
+m::mat3x4 method::m_mat3x4Scratch[method::kMat3x4Space];
+
 method::method()
     : m_program(0)
 {
@@ -256,6 +254,8 @@ void method::post() {
 uniform *method::getUniform(const u::string &name, uniform::type type) {
     auto *value = &m_uniforms[name];
     value->m_type = type;
+    if (type == uniform::kMat3x4Array)
+        value->asMat3x4Array.data = (float *)&m_mat3x4Scratch[0];
     return value;
 }
 

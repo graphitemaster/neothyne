@@ -56,7 +56,6 @@ private:
         m::vec3 asVec3;
         m::vec4 asVec4;
         m::mat4 asMat4;
-
         struct {
             float *data;
             size_t count;
@@ -73,6 +72,8 @@ inline uniform::uniform(type t)
 }
 
 struct method {
+    static constexpr size_t kMat3x4Space = 80;
+
     method();
     ~method();
 
@@ -99,6 +100,8 @@ protected:
     void post();
 
 private:
+    static m::mat3x4 m_mat3x4Scratch[kMat3x4Space];
+
     u::string m_prelude;
     u::map<GLenum, u::pair<const char*, GLuint>> m_shaders;
     u::map<u::string, uniform> m_uniforms;
