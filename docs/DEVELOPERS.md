@@ -119,10 +119,9 @@ they're correctly weighted by the area they take up in the final average.
 
 The same technique is used for rendering the spot lights as well.
 
-Finally the directional lighting is rendered in two passes of its own. First and
-foremost, the first pass does directional lighting without stencil test. The
-second pass uses stencil so that the results of the stuff which should not contibute
-to ambient occlusion don't actually get ambient occlusion.
+Finally the directional lighting is rendered in two passes of its own. The first
+pass does directional lighting without stencil test. The second pass uses stencil
+so that the things specifically rendered without AO don't get AO applied to them.
 
 #### Forward pass
 
