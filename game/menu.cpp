@@ -214,8 +214,6 @@ static void menuDeveloper() {
     auto &spec = varGet<int>("r_spec");
     auto &texcompcache = varGet<int>("r_tex_compress_cache");
     auto &texcompcachezlib = varGet<int>("r_tex_compress_cache_zlib");
-    auto &hoq = varGet<int>("r_hoq");
-    auto &maxhoq = varGet<int>("r_maxhoq");
     auto &mipmaps = varGet<int>("r_mipmaps");
     auto &fov = varGet<float>("cl_fov");
     auto &nearp = varGet<float>("cl_nearp");
@@ -253,12 +251,6 @@ static void menuDeveloper() {
                     fog.toggle();
                 if (gui::check("Specularity", spec.get()))
                     spec.toggle();
-            gui::dedent();
-            gui::label("Occlusion queries");
-            gui::indent();
-                if (gui::check("Hardware occlusion queries", hoq.get()))
-                    hoq.toggle();
-                gui::slider("Maximum occlusion queries", maxhoq.get(), maxhoq.min(), maxhoq.max(), 1, hoq.get());
             gui::dedent();
             gui::label("Clipping planes");
             gui::indent();

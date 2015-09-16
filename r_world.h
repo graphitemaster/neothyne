@@ -11,7 +11,6 @@
 #include "r_grader.h"
 #include "r_model.h"
 #include "r_light.h"
-#include "r_hoq.h"
 #include "r_shadow.h"
 
 #include "u_map.h"
@@ -106,7 +105,6 @@ struct world : geom {
 
 private:
     void cullPass(const pipeline &pl);
-    void occlusionPass(const pipeline &pl);
     void geometryPass(const pipeline &pl);
     void lightingPass(const pipeline &pl);
     void forwardPass(const pipeline &pl);
@@ -119,6 +117,7 @@ private:
         spotLight *light;
         GLuint ebo;
         bool visible;
+        m::mat4 transform;
         bool init();
         bool buildMesh(kdMap *map);
     };
@@ -131,6 +130,7 @@ private:
         pointLight *light;
         GLuint ebo;
         bool visible;
+        m::mat4 transform;
         bool init();
         bool buildMesh(kdMap *map);
     };
@@ -180,7 +180,6 @@ private:
 
     m::mat4 m_identity;
     m::frustum m_frustum;
-    occlusionQueries m_queries;
 
     u::vector<spotLightChunk> m_culledSpotLights;
     u::vector<pointLightChunk> m_culledPointLights;

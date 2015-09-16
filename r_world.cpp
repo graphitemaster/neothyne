@@ -26,7 +26,6 @@ VAR(int, r_fxaa, "fast approximate anti-aliasing", 0, 1, 1);
 VAR(int, r_parallax, "parallax mapping", 0, 1, 1);
 VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 VAR(int, r_spec, "specularity mapping", 0, 1, 1);
-VAR(int, r_hoq, "hardware occlusion queries", 0, 1, 1);
 VAR(int, r_fog, "fog", 0, 1, 1);
 VAR(int, r_smsize, "shadow map size", 16, 4096, 256);
 VAR(int, r_smborder, "shadow map border", 0, 8, 3);
@@ -308,7 +307,6 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(),
         &indices[0], GL_STATIC_DRAW);
     count = indices.size();
-    u::print("[shadow] => generated `%zu/%zu' world geometry indices for spotlight\n", count, triangleIndices.size() * 3);
     return true;
 }
 
@@ -404,7 +402,6 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
         }
         offset += sideCounts[side];
     }
-    u::print("[shadow] => generated `%zu/%zu' world geometry indices for pointlight\n", count, triangleIndices.size() * 3);
     return true;
 }
 
@@ -710,15 +707,11 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_shadowMapMethod.enable();
     m_shadowMapMethod.setWVP(m_identity);
 
-    // setup occlusion stuff
-    if (!m_queries.init())
-        neoFatal("failed to initialize occlusion queries");
-
     // Copy light entities into our rendering representation.
     for (auto &it : map->m_pointLights)
-        m_culledPointLights.push_back( { 0, 0, { 0 }, it, 0, false } );
+        m_culledPointLights.push_back( { 0, 0, { 0 }, it, 0, false, {} } );
     for (auto &it : map->m_spotLights)
-        m_culledSpotLights.push_back( { 0, 0, it, 0, false } );
+        m_culledSpotLights.push_back( { 0, 0, it, 0, false, {} } );
     for (auto &it : m_culledPointLights)
         it.init();
     for (auto &it : m_culledSpotLights)
@@ -731,6 +724,11 @@ bool world::upload(const m::perspective &p, ::world *map) {
 static constexpr float kLightRadiusTweak = 1.11f;
 
 void world::cullPass(const pipeline &pl) {
+    const float widthOffset = 0.5f * m_shadowMap.widthScale(r_smsize);
+    const float heightOffset = 0.5f * m_shadowMap.heightScale(r_smsize);
+    const float widthScale = 0.5f * m_shadowMap.widthScale(r_smsize - r_smborder);
+    const float heightScale = 0.5f * m_shadowMap.heightScale(r_smsize - r_smborder);
+
     for (auto &it : m_culledSpotLights) {
         const auto &light = it.light;
         const float scale = light->radius * kLightRadiusTweak;
@@ -740,8 +738,17 @@ void world::cullPass(const pipeline &pl) {
         if (it.visible && it.hash != hash) {
             it.buildMesh(m_kdWorld);
             it.hash = hash;
+            if (light->castShadows) {
+                it.transform = m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
+                               m::mat4::scale({widthScale, heightScale, 0.5f}) *
+                               m::mat4::project(light->cutOff, 1.0f / light->radius, sqrtf(3.0f), r_smbias / light->radius) *
+                               m::mat4::lookat(light->direction, m::vec3::yAxis) *
+                               m::mat4::scale(1.0f / light->radius) *
+                               m::mat4::translate(-light->position);
+            }
         }
     }
+
     for (auto &it : m_culledPointLights) {
         const auto &light = it.light;
         const float scale = light->radius * kLightRadiusTweak;
@@ -751,50 +758,14 @@ void world::cullPass(const pipeline &pl) {
         if (it.visible && it.hash != hash) {
             it.buildMesh(m_kdWorld);
             it.hash = hash;
+            if (light->castShadows) {
+                it.transform = m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
+                               m::mat4::scale({widthScale, heightScale, 0.5f}) *
+                               m::mat4::project(90.0f, 1.0f / light->radius, sqrtf(3.0f), r_smbias / light->radius) *
+                               m::mat4::scale(1.0f / light->radius);
+            }
         }
     }
-}
-
-void world::occlusionPass(const pipeline &pl) {
-    if (!r_hoq)
-        return;
-
-    m_queries.update();
-    for (auto &it : m_map->m_mapModels) {
-        // Ignore if not loaded. The geometry pass will load it in later. We defer
-        // to additional occlusion passes in that case.
-        if (m_models.find(it->name) == m_models.end())
-            continue;
-
-        auto &mdl = m_models[it->name];
-
-        pipeline p = pl;
-        p.setWorld(it->position);
-        p.setScale(it->scale + mdl->scale);
-
-        const m::vec3 rot = mdl->rotate + it->rotate;
-        m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
-        m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
-        m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
-        m::mat4 rotate;
-        (rz * ry * rx).getMatrix(&rotate);
-        p.setRotate(rotate);
-
-        pipeline bp;
-        bp.setWorld(mdl->bounds().center());
-        bp.setScale(mdl->bounds().size());
-        const m::mat4 wvp = (p.projection() * p.view() * p.world()) * bp.world();
-
-        // Get an occlusion query slot
-        auto occlusionQuery = m_queries.add(wvp);
-        if (!occlusionQuery)
-            continue;
-
-        it->occlusionQuery = *occlusionQuery;
-    }
-
-    // Dispatch all the queries
-    m_queries.render();
 }
 
 void world::geometryPass(const pipeline &pl) {
@@ -831,14 +802,6 @@ void world::geometryPass(const pipeline &pl) {
                 neoFatal("failed to upload model '%s'\n", it->name);
             m_models[it->name] = next.release();
         } else {
-            // Occlusion queries.
-            //  TODO: Implement a space-partitioning data-structure to contain
-            //  the bounding boxes of scene geometry in an efficient manner and
-            //  apply HOQ's on those larger, more appropriate bounding volumes to
-            //  disable / enable batches of models within those volumes.
-            if (r_hoq && m_queries.passed(it->occlusionQuery))
-                continue;
-
             auto &mdl = m_models[it->name];
 
             pipeline pm = p;
@@ -950,15 +913,8 @@ void world::pointLightPass(const pipeline &pl) {
             gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
             gl::BindTexture(GL_TEXTURE_2D, m_shadowMap.texture());
 
-            const float widthOffset = 0.5f * m_shadowMap.widthScale(r_smsize);
-            const float heightOffset = 0.5f * m_shadowMap.heightScale(r_smsize);
-            const float widthScale = 0.5f * m_shadowMap.widthScale(r_smsize - r_smborder);
-            const float heightScale = 0.5f * m_shadowMap.heightScale(r_smsize - r_smborder);
             method->enable();
-            method->setLightWVP(m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
-                                m::mat4::scale({widthScale, heightScale, 0.5f}) *
-                                m::mat4::project(90.0f, 1.0f / it->radius, sqrtf(3.0f), r_smbias / it->radius) *
-                                m::mat4::scale(1.0f / it->radius));
+            method->setLightWVP(plc.transform);
         } else {
             method->enable();
         }
@@ -1015,17 +971,8 @@ void world::spotLightPass(const pipeline &pl) {
             gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
             gl::BindTexture(GL_TEXTURE_2D, m_shadowMap.texture());
 
-            float widthOffset = 0.5f * m_shadowMap.widthScale(r_smsize);
-            float heightOffset = 0.5f * m_shadowMap.heightScale(r_smsize);
-            float widthScale = 0.5f * m_shadowMap.widthScale(r_smsize - r_smborder);
-            float heightScale = 0.5f * m_shadowMap.heightScale(r_smsize - r_smborder);
             method->enable();
-            method->setLightWVP(m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
-                                m::mat4::scale({widthScale, heightScale, 0.5f}) *
-                                m::mat4::project(sl->cutOff, 1.0f / sl->radius, sqrtf(3.0f), r_smbias / sl->radius) *
-                                m::mat4::lookat(sl->direction, m::vec3::yAxis) *
-                                m::mat4::scale(1.0f / sl->radius) *
-                                m::mat4::translate(-sl->position));
+            method->setLightWVP(slc.transform);
         } else {
             method->enable();
         }
@@ -1466,6 +1413,7 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
 NVAR(int, r_reload, "reload shaders", 0, 1, 0);
 
 void world::render(const pipeline &pl) {
+    // TODO: rewrite world manager such that this hack is not needed
     if (m_map->m_needSync) {
         for (auto it = m_culledSpotLights.begin(), end = m_culledSpotLights.end(); it != end; ) {
             auto find = u::find(m_map->m_spotLights.begin(),
@@ -1492,6 +1440,7 @@ void world::render(const pipeline &pl) {
         m_map->m_needSync = false;
     }
 
+    // TODO: commands (u::function needs to be implemented)
     if (r_reload) {
         m_geomMethods->reload();
         for (auto &it : m_directionalLightMethods)
@@ -1509,7 +1458,6 @@ void world::render(const pipeline &pl) {
     }
 
     cullPass(pl);
-    occlusionPass(pl);
     geometryPass(pl);
     lightingPass(pl);
     forwardPass(pl);

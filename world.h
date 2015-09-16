@@ -84,13 +84,11 @@ struct mapModel {
     m::vec3 rotate;
     u::string name;
     bool highlight;
-    r::occlusionQueries::ref occlusionQuery;
     float curFrame;
 };
 
 inline mapModel::mapModel()
     : highlight(false)
-    , occlusionQuery(size_t(-1))
     , curFrame(0.0f)
 {
 }
