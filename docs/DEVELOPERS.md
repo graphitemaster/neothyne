@@ -11,7 +11,6 @@ which is also named `u`. The following namespaces and file prefixes exist:
 | u_     | u         | utility     |
 | m_     | m         | math        |
 | r_     | r         | renderer    |
-| c_     | c         | client      |
 
 ## Utility library
 Neothyne doesn't use the C++ standard library, instead it rolls its own
@@ -19,13 +18,15 @@ implementation of common containers. They're not meant to be compatible with the
 standard in any way, even if they share a similar API. The following containers
 exist.
 
+* u::buffer
+* u::lru
+* u::map
+* u::optional
 * u::pair
 * u::set
-* u::map
+* u::stack
 * u::string
 * u::vector
-* u::buffer
-* u::stack
 
 As well as a plethora of type traits and algorithmic functions which can be
 found in `u_traits.h` and `u_algorithm.h` respectively. Miscellaneous utilites can
@@ -41,25 +42,94 @@ feature. You can find a list of the macros it emits by searching for
 `method::define` in the code-base.
 
 Neothyne supports the `#include` directive in GLSL; similarly, Neothyne will emit
-uniform guards to prevent declaring uniforms more than once.
+uniform guards to prevent declaring uniforms more than once. This is useful as
+headers typically declare uniforms throughout.
 
-The following code:
-```
-    uniform vec2 foo;
-    uniform vec4 bar;
-```
+## Rendering pipeline
 
-Will be converted into:
-```
-    #ifndef uniform_foo
-    uniform vec2 foo;
-    #define uniform_foo
-    #define line 1
-    #endif
-    #ifndef uniform_bar
-    uniform vec4 bar;
-    #define line 2
-    #endif
-```
-This way you can have uniforms declared in headers which can be included without
-causing conflicts.
+Each frame is broken into five distinctive passes. The passes are only responsible
+for rendering the scene. The scene does not include the UI. The UI pass is applied
+as a layer on the final window back buffer. The passes are as follows:
+
+* Compile & Cull pass
+
+The compile and cull pass is in charge of compiling the information required
+to render the frame as well as culling anything not within the viewing frustum.
+
+Currently this involves running through all spot and point lights in the scene
+and checking if they're visible. When they are visible, they are hashed and
+compared against their previous hashed value to see if any changes were made
+to them. If there are changes present and the light is set to cast shadows, the
+world geometry is traversed to calculate which indices are responsible for the
+vertices that are within that light's contributing light sphere. These indices
+are used when rendering the geometry for the world into the shadow map. When
+the light is a point light, the vertices are checked against a shadow frustum
+to determine which faces they are present in. Six separate indices counts are
+kept per frustum side in this case.
+
+To prevent calculating the transforms required to render the shadow map every frame,
+this pass also calculates the world-view-projection matrix to render the shadow
+map only when the light's properties have changed.
+
+* Geometry pass
+
+The geometry pass renders into a frame buffer with two texture attachments and
+a depth-stencil attachment which are used to store diffuse, normal and spec information.
+
+All geometry is rendered here including map models.
+
+Ambient occlusion also happens during this pass on a separate FBO.
+
+Some things shouldn't contribute to ambient occlusion so we draw those elements
+to our geometry buffer as well by way of stencil replace.
+
+Special care was taken to keep the geometry buffer small in size to reduce over
+all bandwidth
+
+* Lighting pass
+
+Lighting pass begins by outputting to a final composite FBO with blending enabled.
+
+First the point lights are rendered with a sphere of appropriate radius for each
+light, taking special care to change the culling order of weather the observer
+is inside the sphere or not.
+
+The precalculated world-view-projection matrix is used to render into a shadow
+map the depth from the light's perspective. The precalculated indices list during
+the compile and cull pass are used here to reduce the amount of geometry rendered.
+Rendering of the shadow map itself uses polygon offset to do slope-dependent bias.
+
+The result of the shadow map is used immediately after it's available during the
+lighting pass. There is only one shadow map, this is to keep the memory requirements
+low. No batching or caching of shadow maps is done.
+
+The same technique is used for rendering the spot lights as well.
+
+Finally the directional lighting is rendered in two passes of its own. First and
+foremost, the first pass does directional lighting without stencil test. The
+second pass uses stencil so that the results of the stuff which should not contibute
+to ambient occlusion don't actually get ambient occlusion.
+
+* Forward pass
+
+The forward pass is responsible for rendering everything else that simply cannot
+be rendered with the deferred lighting design. This includes the skybox, billboards
+and particles.
+
+First the skybox is rendered. Special care is kept to ignore the background color
+in blending since it contains fog contribution from directional lighting. Instead
+the skybox is independently fogged with a gradient to provide a coherent effect
+of world geometry reaching into the skybox.
+
+Editing aids (bounding boxes, billboards, etc) are rendered next. We take
+special care to ensure anything with transparency during this has premultipled alpha
+to prevent strange blending errors around transparent edges.
+
+Particles are then rendered by disabling of culling. Currently soft particles
+are not possible with this setup as the depth buffer from the geometry pass is
+not used.
+
+* Composite pass
+
+The composite pass is responsible for applying color grading to the final result
+as well as optional anti-aliasing. It outputs to the window back buffer.
