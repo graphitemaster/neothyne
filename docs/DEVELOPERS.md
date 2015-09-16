@@ -51,7 +51,7 @@ Each frame is broken into five distinctive passes. The passes are only responsib
 for rendering the scene. The scene does not include the UI. The UI pass is applied
 as a layer on the final window back buffer. The passes are as follows:
 
-### Compile & Cull pass
+#### Compile & Cull pass
 
 The compile and cull pass is in charge of compiling the information required
 to render the frame as well as culling anything not within the viewing frustum.
@@ -71,7 +71,7 @@ To prevent calculating the transforms required to render the shadow map every fr
 this pass also calculates the world-view-projection matrix to render the shadow
 map only when the light's properties have changed.
 
-### Geometry pass
+#### Geometry pass
 
 The geometry pass renders into a frame buffer with two texture attachments and
 a depth-stencil attachment which are used to store diffuse, normal and spec information.
@@ -86,7 +86,7 @@ to our geometry buffer as well by way of stencil replace.
 Special care was taken to keep the geometry buffer small in size to reduce over
 all bandwidth
 
-### Lighting pass
+#### Lighting pass
 
 Lighting pass begins by outputting to a final composite FBO with blending enabled.
 
@@ -110,7 +110,7 @@ foremost, the first pass does directional lighting without stencil test. The
 second pass uses stencil so that the results of the stuff which should not contibute
 to ambient occlusion don't actually get ambient occlusion.
 
-### Forward pass
+#### Forward pass
 
 The forward pass is responsible for rendering everything else that simply cannot
 be rendered with the deferred lighting design. This includes the skybox, billboards
@@ -129,7 +129,7 @@ Particles are then rendered by disabling of culling. Currently soft particles
 are not possible with this setup as the depth buffer from the geometry pass is
 not used.
 
-### Composite pass
+#### Composite pass
 
 The composite pass is responsible for applying color grading to the final result
 as well as optional anti-aliasing. It outputs to the window back buffer.
