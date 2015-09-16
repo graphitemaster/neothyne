@@ -83,8 +83,8 @@ Ambient occlusion also happens during this pass on a separate FBO.
 Some things shouldn't contribute to ambient occlusion so we draw those elements
 to our geometry buffer as well by way of stencil replace.
 
-Special care was taken to keep the geometry buffer small in size to reduce over
-all bandwidth.
+Special care was taken to keep the geometry buffer small in size to reduce overall
+bandwidth.
 
 The geometry buffer is setup as follows (both attachments are RGBA8)
 ```
@@ -101,7 +101,7 @@ world-view-projection matrix.
 Lighting pass begins by outputting to a final composite FBO with blending enabled.
 
 First the point lights are rendered with a sphere of appropriate radius for each
-light, taking special care to change the culling order of weather the observer
+light, taking special care to change the culling order of whether the observer
 is inside the sphere or not.
 
 The precalculated world-view-projection matrix is used to render into a shadow
