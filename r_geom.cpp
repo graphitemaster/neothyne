@@ -234,4 +234,54 @@ void cube::render() {
     gl::DrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_BYTE, 0);
 }
 
+bool cone::upload() {
+    geom::upload();
+    u::vector<m::vec3> vertices;
+
+    vertices.push_back(m::vec3::yAxis);
+
+    for (float a = 0.0f; a < m::kTau; a += m::kPi / (kSlices+1) ) {
+        float sin, cos;
+        m::sincos(a, sin, cos);
+        vertices.push_back({sin, 1.0f, cos});
+    }
+
+    u::vector<GLushort> indices;
+    const size_t count = vertices.size();
+    for (size_t i = 0; i < count; i++)
+        indices.push_back(i);
+
+    m_indices.first = indices.size();
+    vertices.push_back(m::vec3::origin);
+    indices.push_back(m_indices.first);
+    for (size_t i = 1; i < count-1; i++)
+        indices.push_back(i);
+    m_indices.second = indices.size() - m_indices.first;
+
+    gl::BindVertexArray(vao);
+    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    if (gl::has(gl::ARB_half_float_vertex)) {
+        const auto convert = m::convertToHalf((const float *)&vertices[0], vertices.size() * 3);
+        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
+    } else {
+        gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(m::vec3), &vertices[0], GL_STATIC_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
+    }
+    gl::EnableVertexAttribArray(0);
+
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(), &indices[0], GL_STATIC_DRAW);
+
+    return true;
+}
+
+void cone::render() {
+    gl::BindVertexArray(vao);
+    gl::DrawElements(GL_TRIANGLE_FAN, m_indices.first, GL_UNSIGNED_SHORT, 0);
+    gl::DrawElements(GL_TRIANGLE_FAN, m_indices.second, GL_UNSIGNED_SHORT,
+        (const GLvoid *)(sizeof(GLushort) * m_indices.first));
+}
+
 }

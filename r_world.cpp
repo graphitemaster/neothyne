@@ -561,6 +561,8 @@ bool world::upload(const m::perspective &p, ::world *map) {
         neoFatal("failed to upload sphere");
     if (!m_bbox.upload())
         neoFatal("failed to upload bbox");
+    if (!m_cone.upload())
+        neoFatal("failed to upload cone");
 
     // HACK: Testing only
     if (!m_gun.upload())
@@ -1173,15 +1175,25 @@ void world::forwardPass(const pipeline &pl) {
             m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
             m_sphere.render();
         }
+
         for (auto &it : m_map->m_spotLights) {
             if (!it->highlight)
                 continue;
             float scale = it->radius * kLightRadiusTweak;
             pipeline p = pl;
             p.setWorld(it->position);
-            p.setScale({scale, scale, scale});
+            p.setScale({it->cutOff, scale, it->cutOff});
+
+            const m::vec3 rot = it->direction;
+            m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+            m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+            m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
+            m::mat4 rotate;
+            (rz * ry * rx).getMatrix(&rotate);
+            p.setRotate(rotate);
+
             m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
-            m_sphere.render();
+            m_cone.render();
         }
 
         gl::Enable(GL_CULL_FACE);

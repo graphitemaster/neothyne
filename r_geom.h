@@ -1,6 +1,13 @@
 #ifndef R_GEOM_HDR
 #define R_GEOM_HDR
 #include "r_common.h"
+#include "u_pair.h"
+
+namespace m {
+
+struct vec3;
+
+}
 
 namespace r {
 
@@ -43,6 +50,14 @@ struct bbox : geom {
 struct cube : geom {
     bool upload();
     void render();
+};
+
+struct cone : geom {
+    bool upload();
+    void render();
+private:
+    u::pair<size_t, size_t> m_indices;
+    static constexpr int kSlices = 8;
 };
 
 }

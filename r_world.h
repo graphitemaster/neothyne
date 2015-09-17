@@ -156,6 +156,7 @@ private:
     quad m_quad;
     sphere m_sphere;
     bbox m_bbox;
+    cone m_cone;
     u::map<u::string, model*> m_models;
     u::map<u::string, billboard*> m_billboards;
 
