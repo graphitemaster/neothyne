@@ -54,7 +54,7 @@ struct cube : geom {
 
 struct cone : geom {
     bool upload();
-    void render();
+    void render(bool bottom = true);
 private:
     u::pair<size_t, size_t> m_indices;
     static constexpr int kSlices = 8;

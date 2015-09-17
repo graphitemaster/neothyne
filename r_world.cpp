@@ -1193,7 +1193,7 @@ void world::forwardPass(const pipeline &pl) {
             p.setRotate(rotate);
 
             m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
-            m_cone.render();
+            m_cone.render(false);
         }
 
         gl::Enable(GL_CULL_FACE);

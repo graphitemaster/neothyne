@@ -238,8 +238,6 @@ bool cone::upload() {
     geom::upload();
     u::vector<m::vec3> vertices;
 
-    vertices.push_back(m::vec3::yAxis);
-
     for (float a = 0.0f; a < m::kTau; a += m::kPi / (kSlices+1) ) {
         float sin, cos;
         m::sincos(a, sin, cos);
@@ -254,7 +252,7 @@ bool cone::upload() {
     m_indices.first = indices.size();
     vertices.push_back(m::vec3::origin);
     indices.push_back(m_indices.first);
-    for (size_t i = 1; i < count-1; i++)
+    for (size_t i = 0; i < count; i++)
         indices.push_back(i);
     m_indices.second = indices.size() - m_indices.first;
 
@@ -277,9 +275,10 @@ bool cone::upload() {
     return true;
 }
 
-void cone::render() {
+void cone::render(bool bottom) {
     gl::BindVertexArray(vao);
-    gl::DrawElements(GL_TRIANGLE_FAN, m_indices.first, GL_UNSIGNED_SHORT, 0);
+    if (bottom)
+        gl::DrawElements(GL_TRIANGLE_FAN, m_indices.first, GL_UNSIGNED_SHORT, 0);
     gl::DrawElements(GL_TRIANGLE_FAN, m_indices.second, GL_UNSIGNED_SHORT,
         (const GLvoid *)(sizeof(GLushort) * m_indices.first));
 }
