@@ -30,8 +30,12 @@ float evalLinearDepth(vec2 texCoord, float depth) {
             depth * (gScreenFrustum.y - gScreenFrustum.x));
 }
 
+float calcDepth(vec2 texCoord) {
+    return neoTexture2D(gDepthMap, texCoord).x;
+}
+
 float calcLinearDepth(vec2 texCoord) {
-    return evalLinearDepth(texCoord, neoTexture2D(gDepthMap, texCoord).x);
+    return evalLinearDepth(texCoord, calcDepth(texCoord));
 }
 
 #endif

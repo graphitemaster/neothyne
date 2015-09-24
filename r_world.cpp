@@ -1205,6 +1205,10 @@ void world::forwardPass(const pipeline &pl) {
     // Particles
     for (auto *it : m_particleSystems) {
         it->update(pl);
+
+        // Bind the depth buffer for soft particles
+        gl::ActiveTexture(GL_TEXTURE1);
+        gl::BindTexture(GL_TEXTURE_RECTANGLE, m_gBuffer.texture(gBuffer::kDepth));
         it->render(pl);
     }
     // Don't need depth testing or blending anymore

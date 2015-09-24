@@ -10,6 +10,7 @@ namespace r {
 particleSystemMethod::particleSystemMethod()
     : m_VP(nullptr)
     , m_colorTextureUnit(nullptr)
+    , m_depthTextureUnit(nullptr)
 {
 }
 
@@ -26,6 +27,7 @@ bool particleSystemMethod::init() {
 
     m_VP = getUniform("gVP", uniform::kMat4);
     m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
+    m_depthTextureUnit = getUniform("gDepthMap", uniform::kSampler);
 
     post();
     return true;
@@ -37,6 +39,10 @@ void particleSystemMethod::setVP(const m::mat4 &vp) {
 
 void particleSystemMethod::setColorTextureUnit(int unit) {
     m_colorTextureUnit->set(unit);
+}
+
+void particleSystemMethod::setDepthTextureUnit(int unit) {
+    m_depthTextureUnit->set(unit);
 }
 
 ///! particleSystem
@@ -75,6 +81,7 @@ bool particleSystem::upload() {
 
     m_method.enable();
     m_method.setColorTextureUnit(0);
+    m_method.setDepthTextureUnit(1);
 
     return true;
 }

@@ -32,9 +32,11 @@ struct particleSystemMethod : method {
     bool init();
     void setVP(const m::mat4 &vp);
     void setColorTextureUnit(int unit);
+    void setDepthTextureUnit(int unit);
 private:
     uniform *m_VP;
     uniform *m_colorTextureUnit;
+    uniform *m_depthTextureUnit;
 };
 
 struct particleSystem : geom {
