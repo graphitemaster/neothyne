@@ -295,9 +295,9 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
     indices.reserve(triangleIndices.size() * 3 / 2);
     for (const auto &it : triangleIndices) {
         const auto &triangle = map->triangles[it];
-        m::vec3 p1 = map->vertices[triangle.v[0]].vertex - light->position;
-        m::vec3 p2 = map->vertices[triangle.v[1]].vertex - light->position;
-        m::vec3 p3 = map->vertices[triangle.v[2]].vertex - light->position;
+        const m::vec3 p1 = map->vertices[triangle.v[0]].vertex - light->position;
+        const m::vec3 p2 = map->vertices[triangle.v[1]].vertex - light->position;
+        const m::vec3 p3 = map->vertices[triangle.v[2]].vertex - light->position;
         if (p1 * (p2 - p1).cross(p3 - p1) > 0)
             continue;
         for (const auto &it : triangle.v)
@@ -317,20 +317,23 @@ bool world::pointLightChunk::init() {
     return true;
 }
 
-static uint8_t calcTriangleSideMask(const m::vec3 &p1, const m::vec3 &p2, const m::vec3 &p3, float bias)
+static uint8_t calcTriangleSideMask(const m::vec3 &p1,
+                                    const m::vec3 &p2,
+                                    const m::vec3 &p3,
+                                    float bias)
 {
     // p1, p2, p3 are in the cubemap's local coordinate system
     // bias = border/(size - border)
     uint8_t mask = 0x3F;
-    float dp1 = p1.x + p1.y, dn1 = p1.x - p1.y, ap1 = fabs(dp1), an1 = fabs(dn1),
-          dp2 = p2.x + p2.y, dn2 = p2.x - p2.y, ap2 = fabs(dp2), an2 = fabs(dn2),
-          dp3 = p3.x + p3.y, dn3 = p3.x - p3.y, ap3 = fabs(dp3), an3 = fabs(dn3);
-    if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+    float dp1 = p1.x + p1.y, dn1 = p1.x - p1.y, ap1 = m::abs(dp1), an1 = m::abs(dn1),
+          dp2 = p2.x + p2.y, dn2 = p2.x - p2.y, ap2 = m::abs(dp2), an2 = m::abs(dn2),
+          dp3 = p3.x + p3.y, dn3 = p3.x - p3.y, ap3 = m::abs(dp3), an3 = m::abs(dn3);
+    if (ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
         mask &= (3<<4)
             | (dp1 < 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2))
             | (dp2 < 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2))
             | (dp3 < 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
-    if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+    if (an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
         mask &= (3<<4)
             | (dn1 < 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
             | (dn2 < 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
@@ -339,12 +342,12 @@ static uint8_t calcTriangleSideMask(const m::vec3 &p1, const m::vec3 &p2, const 
     dp1 = p1.y + p1.z, dn1 = p1.y - p1.z, ap1 = fabs(dp1), an1 = fabs(dn1),
     dp2 = p2.y + p2.z, dn2 = p2.y - p2.z, ap2 = fabs(dp2), an2 = fabs(dn2),
     dp3 = p3.y + p3.z, dn3 = p3.y - p3.z, ap3 = fabs(dp3), an3 = fabs(dn3);
-    if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+    if (ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
         mask &= (3<<0)
             | (dp1 < 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
             | (dp2 < 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
             | (dp3 < 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
-    if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+    if (an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
         mask &= (3<<0)
             | (dn1 < 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
             | (dn2 < 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
@@ -353,12 +356,12 @@ static uint8_t calcTriangleSideMask(const m::vec3 &p1, const m::vec3 &p2, const 
     dp1 = p1.z + p1.x, dn1 = p1.z - p1.x, ap1 = fabs(dp1), an1 = fabs(dn1),
     dp2 = p2.z + p2.x, dn2 = p2.z - p2.x, ap2 = fabs(dp2), an2 = fabs(dn2),
     dp3 = p3.z + p3.x, dn3 = p3.z - p3.x, ap3 = fabs(dp3), an3 = fabs(dn3);
-    if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+    if (ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
         mask &= (3<<2)
             | (dp1 < 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
             | (dp2 < 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
             | (dp3 < 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
-    if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+    if (an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
         mask &= (3<<2)
             | (dn1 < 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
             | (dn2 < 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
@@ -375,9 +378,9 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
         indices[side].reserve(triangleIndices.size() * 3 / 6);
     for (const auto &it : triangleIndices) {
         const auto &triangle = map->triangles[it];
-        m::vec3 p1 = map->vertices[triangle.v[0]].vertex - light->position;
-        m::vec3 p2 = map->vertices[triangle.v[1]].vertex - light->position;
-        m::vec3 p3 = map->vertices[triangle.v[2]].vertex - light->position;
+        const m::vec3 p1 = map->vertices[triangle.v[0]].vertex - light->position;
+        const m::vec3 p2 = map->vertices[triangle.v[1]].vertex - light->position;
+        const m::vec3 p3 = map->vertices[triangle.v[2]].vertex - light->position;
         if (p1 * (p2 - p1).cross(p3 - p1) > 0)
             continue;
         const uint8_t mask = calcTriangleSideMask(p1, p2, p3, r_smborder / float(r_smsize - r_smborder));
@@ -398,7 +401,8 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
     size_t offset = 0;
     for (size_t side = 0; side < 6; ++side) {
         if (sideCounts[side] > 0) {
-            gl::BufferSubData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*offset, sizeof(GLuint)*sideCounts[side], &indices[side][0]);
+            gl::BufferSubData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*offset,
+                sizeof(GLuint)*sideCounts[side], &indices[side][0]);
         }
         offset += sideCounts[side];
     }
@@ -425,8 +429,8 @@ void world::unload(bool destroy) {
         delete it.second;
     for (auto &it : m_billboards)
         delete it.second;
-    for (auto *it : m_particleSystems)
-        delete it;
+    //for (auto *it : m_particleSystems)
+    //    delete it; TODO: fix
 
     if (destroy) {
         m_models.clear();
@@ -450,7 +454,7 @@ private:
 };
 
 dustSystem::dustSystem(const m::vec3 &ownerPosition) {
-    static constexpr size_t kParticles = 2048*2;
+    static constexpr size_t kParticles = 1024;
     m_particles.reserve(kParticles);
     for (size_t i = 0; i < kParticles; i++) {
         particle p;
@@ -547,6 +551,9 @@ bool world::upload(const m::perspective &p, ::world *map) {
         return true;
 
     m_identity = m::mat4::identity();
+
+    // hack
+    m_particleSystems.push_back(new dustSystem(m::vec3::origin));
 
     // particles for entities
     for (auto *it : m_particleSystems)
@@ -1079,12 +1086,6 @@ void world::forwardPass(const pipeline &pl) {
 
     // Skybox:
     //  Forwarded rendered and the last thing rendered to prevent overdraw.
-    //
-    //  Blending function ignores background since it contains fog contribution
-    //  from directional lighting. The skybox is independently fogged with a
-    //  gradient as to provide a coherent effect of world geometry fog reaching
-    //  into the skybox.
-    gl::BlendFunc(GL_ONE, GL_ZERO);
     m_skybox.render(pl, m_map->m_fog);
 
     // Editing aids
@@ -1201,13 +1202,10 @@ void world::forwardPass(const pipeline &pl) {
     }
 
     // Particles
-    gl::Disable(GL_CULL_FACE);
     for (auto *it : m_particleSystems) {
         it->update(pl);
         it->render(pl);
     }
-    gl::Enable(GL_CULL_FACE);
-
     // Don't need depth testing or blending anymore
     gl::Disable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
@@ -1346,7 +1344,7 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, plc->ebo);
-    float borderScale = float(r_smsize - r_smborder) / r_smsize;
+    const float borderScale = float(r_smsize - r_smborder) / r_smsize;
     size_t offset = 0;
     for (size_t side = 0; side < 6; ++side) {
         if (plc->sideCounts[side] <= 0)
@@ -1364,7 +1362,8 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
         gl::Viewport(x, y, r_smsize, r_smsize);
         gl::Scissor(x, y, r_smsize, r_smsize);
         gl::CullFace(view.cullFace);
-        gl::DrawElements(GL_TRIANGLES, plc->sideCounts[side], GL_UNSIGNED_INT, (const GLvoid *)(sizeof(GLuint)*offset));
+        gl::DrawElements(GL_TRIANGLES, plc->sideCounts[side], GL_UNSIGNED_INT,
+            (const GLvoid *)(sizeof(GLuint)*offset));
 
         offset += plc->sideCounts[side];
     }
@@ -1398,7 +1397,7 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
     m_shadowMap.bindWriting();
     gl::Clear(GL_DEPTH_BUFFER_BIT);
 
-    float borderScale = float(r_smsize - r_smborder) / r_smsize;
+    const float borderScale = float(r_smsize - r_smborder) / r_smsize;
     m_shadowMapMethod.enable();
     m_shadowMapMethod.setWVP(m::mat4::scale({borderScale, borderScale, 1.0f}) *
                              m::mat4::project(sl->cutOff, 1.0f / sl->radius, sqrtf(3.0f)) *

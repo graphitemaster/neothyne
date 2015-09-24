@@ -92,6 +92,15 @@ void particleSystem::render(const pipeline &pl) {
     u::vector<GLuint> indices;
     indices.reserve(m_particles.size() * 6);
 
+    // sort particles by ones closest to camera
+    u::sort(m_particles.begin(), m_particles.end(),
+        [&pl](const particle &lhs, const particle &rhs) {
+            const float d1 = (lhs.origin - pl.position()).abs();
+            const float d2 = (rhs.origin - pl.position()).abs();
+            return d1 > d2;
+        }
+    );
+
     for (auto &it : m_particles) {
         if (it.lifeTime < 0.0f)
             continue;
@@ -133,11 +142,10 @@ void particleSystem::render(const pipeline &pl) {
     m_method.setVP(p.projection() * p.view());
     m_texture.bind(GL_TEXTURE0);
     gl::Disable(GL_CULL_FACE);
-    gl::DepthMask(GL_FALSE);
+    gl::DepthFunc(GL_LESS);
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     gl::DrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
     gl::Enable(GL_CULL_FACE);
-    gl::DepthMask(GL_TRUE);
 }
 
 void particleSystem::addParticle(particle &&p) {

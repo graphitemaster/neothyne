@@ -131,6 +131,7 @@ void skybox::render(const pipeline &pl, const fog &f) {
     // render skybox cube
     gl::DepthFunc(GL_LEQUAL);
     gl::CullFace(GL_FRONT);
+    gl::Disable(GL_BLEND);
 
     m_cubemap.bind(GL_TEXTURE0); // bind cubemap texture
 
@@ -138,6 +139,7 @@ void skybox::render(const pipeline &pl, const fog &f) {
 
     gl::DepthFunc(GL_LESS);
     gl::CullFace(GL_BACK);
+    gl::Enable(GL_BLEND);
 }
 
 }
