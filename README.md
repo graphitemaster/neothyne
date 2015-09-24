@@ -28,6 +28,7 @@ embodies the following:
   * Point lighting (with omnidirectional shadow mapping)
   * Spot lighting (with shadow mapping)
   * Skybox
+  * Soft particles
   * Normal mapping (dot3 bump mapping)
   * Displacement mapping (steep parallax and relief mapping)
   * Fog (linear, exp and exp2)
