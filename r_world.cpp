@@ -1092,6 +1092,7 @@ void world::forwardPass(const pipeline &pl) {
     static constexpr m::vec3 kHighlighted = { 1.0f, 0.0f, 0.0f };
     static constexpr m::vec3 kOutline = { 0.0f, 0.0f, 1.0f };
 
+    gl::DepthMask(GL_FALSE);
     if (varGet<int>("cl_edit").get()) {
         // World billboards:
         //  All billboards have pre-multiplied alpha to prevent strange blending
@@ -1207,6 +1208,7 @@ void world::forwardPass(const pipeline &pl) {
         it->render(pl);
     }
     // Don't need depth testing or blending anymore
+    gl::DepthMask(GL_TRUE);
     gl::Disable(GL_DEPTH_TEST);
     gl::Disable(GL_BLEND);
 
