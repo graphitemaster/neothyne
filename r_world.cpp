@@ -474,8 +474,8 @@ void dustSystem::initParticle(particle &p, const m::vec3 &ownerPosition) {
     p.lifeTime = p.totalLifeTime;
     p.origin = m::vec3::rand(0.05f, 0.0f, 0.05f) + ownerPosition;
     p.origin.y = ownerPosition.y - 3.0f;;
-    p.size = 1.0f;
-    p.startSize = 1.0f;
+    p.size = 10.0f;
+    p.startSize = 10.0f;
     p.velocity = (m_direction + m::vec3::rand(1.5f, 0.0f, 1.5f)).normalized() * 10.0f;
     p.velocity.y = 0.1f;
     p.respawn = true;

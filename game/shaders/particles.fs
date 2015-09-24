@@ -9,7 +9,7 @@ uniform sampler2D gColorMap;
 
 out vec4 fragColor;
 
-float kPower = 1.5f;
+float kPower = 2.5f;
 
 float contrast(float d) {
     float value = clamp(2.0f*((d > 0.5f) ? 1.0f-d : d), 0.0f, 1.0f);
@@ -19,6 +19,6 @@ float contrast(float d) {
 
 void main() {
     vec4 color = texture(gColorMap, texCoord0);
-    float depth = calcDepth(calcTexCoord());
-    fragColor = color * vec4(1.0f, 1.0f, 1.0f, contrast(depth));
+    float depth = calcDepth(calcDepthCoord(calcTexCoord()));
+    fragColor = color * vec4(1.0f, 1.0f, 1.0f, contrast(depth - gl_FragDepth));
 }
