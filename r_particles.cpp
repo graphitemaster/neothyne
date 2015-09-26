@@ -75,13 +75,13 @@ bool particleSystem::upload() {
         halfVertex *v = nullptr;
         gl::BufferData(GL_ARRAY_BUFFER, sizeof(halfVertex), 0, GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(halfVertex), &v->position); // position
-        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(halfVertex), &v->color); // color
+        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(halfVertex), &v->color); // color
         gl::VertexAttribPointer(2, 1, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(halfVertex), &v->power); // power
     } else {
         singleVertex *v = nullptr;
         gl::BufferData(GL_ARRAY_BUFFER, sizeof(singleVertex), 0, GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(singleVertex), &v->position); // position
-        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(singleVertex), &v->color); // color
+        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(singleVertex), &v->color); // color
         gl::VertexAttribPointer(2, 1, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(singleVertex), &v->power); // power
     }
 
@@ -139,18 +139,19 @@ void particleSystem::render(const pipeline &pl) {
             const auto &c = m::convertToHalf((const float *)q, 3*4);
             for (size_t i = 0; i < c.size(); i += 3) {
                 halfVertex newVertex;
-                newVertex.power = it.power * 255.0f;
+                newVertex.power = it.power;
                 for (size_t j = 0; j < 3; j++) {
                     newVertex.color[j] = it.color[j] * 255.0f;
                     newVertex.position[j] = c[i+j];
                 }
+                newVertex.color[3] = it.alpha * 255.0f;
                 m_halfVertices.push_back(newVertex);
             }
         } else {
             index = m_singleVertices.size();
             for (const auto &jt : q) {
                 singleVertex newVertex;
-                newVertex.power = it.power * 255.0f;
+                newVertex.power = it.power;
                 newVertex.position = jt;
                 for (size_t i = 0; i < 3; i++)
                     newVertex.color[i] = it.color[i] * 255.0f;
@@ -175,13 +176,13 @@ void particleSystem::render(const pipeline &pl) {
         halfVertex *v = nullptr;
         gl::BufferData(GL_ARRAY_BUFFER, m_halfVertices.size() * sizeof(halfVertex), &m_halfVertices[0], GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(halfVertex), &v->position); // position
-        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(halfVertex), &v->color); // color
+        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(halfVertex), &v->color); // color
         gl::VertexAttribPointer(2, 1, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(halfVertex), &v->power); // power
     } else {
         singleVertex *v = nullptr;
         gl::BufferData(GL_ARRAY_BUFFER, m_singleVertices.size() * sizeof(singleVertex), &m_singleVertices[0], GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(singleVertex), &v->position); // position
-        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(singleVertex), &v->color); // color
+        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(singleVertex), &v->color); // color
         gl::VertexAttribPointer(2, 1, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(singleVertex), &v->power); // power
     }
 

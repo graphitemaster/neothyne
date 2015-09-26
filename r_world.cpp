@@ -456,13 +456,17 @@ private:
 dustSystem::dustSystem(const m::vec3 &ownerPosition) {
     static constexpr size_t kParticles = 1024*2;
     m_particles.reserve(kParticles);
-    static const float powers[] = { 2.5f, 5.0f, 10.0f, 20.0f };
-    for (size_t i = 0; i < kParticles; i++) {
+    for (size_t i = 0; i < kParticles-1; i++) {
         particle p;
-        p.power = powers[i % (sizeof(powers)/sizeof(*powers))];
+        p.power = 5.0f;
         initParticle(p, ownerPosition);
         addParticle(u::move(p));
     }
+    // an outlier
+    particle p;
+    p.power = 1.0f;
+    initParticle(p, ownerPosition);
+    addParticle(u::move(p));
     m_direction = { 0.0f, 0.0f, -1.0f };
     if (m_direction*m_direction > 0.1f)
         m_direction = m_direction.normalized() * 12.0f;
