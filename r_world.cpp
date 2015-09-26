@@ -430,7 +430,7 @@ void world::unload(bool destroy) {
     for (auto &it : m_billboards)
         delete it.second;
     //for (auto *it : m_particleSystems)
-    //    delete it; TODO: fix
+    //    delete it; //TODO: fix
 
     if (destroy) {
         m_models.clear();
@@ -458,6 +458,7 @@ dustSystem::dustSystem(const m::vec3 &ownerPosition) {
     m_particles.reserve(kParticles);
     for (size_t i = 0; i < kParticles; i++) {
         particle p;
+        p.power = u::randf() * 5.0f;
         initParticle(p, ownerPosition);
         addParticle(u::move(p));
     }

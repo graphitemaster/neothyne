@@ -17,6 +17,7 @@ struct pipeline;
 struct particle {
     m::vec3 origin;
     m::vec3 velocity;
+    float power;
     float size;
     float startSize;
     m::vec3 color;
@@ -33,10 +34,12 @@ struct particleSystemMethod : method {
     void setVP(const m::mat4 &vp);
     void setColorTextureUnit(int unit);
     void setDepthTextureUnit(int unit);
+    void setPower(float power);
 private:
     uniform *m_VP;
     uniform *m_colorTextureUnit;
     uniform *m_depthTextureUnit;
+    uniform *m_power;
 };
 
 struct particleSystem : geom {

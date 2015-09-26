@@ -11,6 +11,7 @@ particleSystemMethod::particleSystemMethod()
     : m_VP(nullptr)
     , m_colorTextureUnit(nullptr)
     , m_depthTextureUnit(nullptr)
+    , m_power(nullptr)
 {
 }
 
@@ -28,6 +29,7 @@ bool particleSystemMethod::init() {
     m_VP = getUniform("gVP", uniform::kMat4);
     m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
     m_depthTextureUnit = getUniform("gDepthMap", uniform::kSampler);
+    m_power = getUniform("gPower", uniform::kFloat);
 
     post();
     return true;
@@ -43,6 +45,10 @@ void particleSystemMethod::setColorTextureUnit(int unit) {
 
 void particleSystemMethod::setDepthTextureUnit(int unit) {
     m_depthTextureUnit->set(unit);
+}
+
+void particleSystemMethod::setPower(float power) {
+    m_power->set(power);
 }
 
 ///! particleSystem
@@ -82,6 +88,7 @@ bool particleSystem::upload() {
     m_method.enable();
     m_method.setColorTextureUnit(0);
     m_method.setDepthTextureUnit(1);
+    m_method.setPower(2.5f);
 
     return true;
 }
@@ -96,9 +103,6 @@ void particleSystem::render(const pipeline &pl) {
     m_vertices.destroy();
     m_vertices.reserve(m_particles.size() * 4);
 
-    u::vector<GLuint> indices;
-    indices.reserve(m_particles.size() * 6);
-
     // sort particles by ones closest to camera
     u::sort(m_particles.begin(), m_particles.end(),
         [&pl](const particle &lhs, const particle &rhs) {
@@ -107,6 +111,9 @@ void particleSystem::render(const pipeline &pl) {
             return d1 > d2;
         }
     );
+
+    // generate individual "indices" lists based on particle power
+    u::map<float, u::vector<GLuint>> indicesMap;
 
     for (auto &it : m_particles) {
         if (it.lifeTime < 0.0f)
@@ -125,6 +132,8 @@ void particleSystem::render(const pipeline &pl) {
         m_vertices.push_back({q3, 1.0f, 1.0f, it.color.x, it.color.y, it.color.z, it.alpha});
         m_vertices.push_back({q4, 0.0f, 1.0f, it.color.x, it.color.y, it.color.z, it.alpha});
 
+        auto &indices = indicesMap[it.power];
+        indices.reserve(indices.size() + 6);
         indices.push_back(index + 0);
         indices.push_back(index + 1);
         indices.push_back(index + 2);
@@ -132,8 +141,27 @@ void particleSystem::render(const pipeline &pl) {
         indices.push_back(index + 3);
         indices.push_back(index + 0);
     }
-    if (indices.empty())
+    if (indicesMap.empty())
         return;
+
+    // now generate the actual indices in order but batched by "power"
+    struct batch {
+        float power;
+        size_t begin;
+        size_t count;
+    };
+    u::vector<batch> batches;
+    batches.reserve(indicesMap.size());
+
+    u::vector<GLuint> indices;
+    indices.reserve(m_particles.size() * 6);
+    for (auto &it : indicesMap) {
+        batch newBatch = { it.first, indices.size() };
+        for (auto &jt : it.second)
+            indices.push_back(jt);
+        newBatch.count = indices.size() - newBatch.begin;
+        batches.push_back(newBatch);
+    }
 
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -151,7 +179,13 @@ void particleSystem::render(const pipeline &pl) {
     gl::Disable(GL_CULL_FACE);
     gl::DepthFunc(GL_LESS);
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    gl::DrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
+
+    for (auto &it : batches) {
+        m_method.setPower(it.power);
+        gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
+            (const GLvoid*)(sizeof(GLuint) * it.begin));
+    }
+
     gl::Enable(GL_CULL_FACE);
 }
 
