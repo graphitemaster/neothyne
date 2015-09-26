@@ -122,6 +122,19 @@ low. No batching or caching of shadow maps is done.
 To make use of throughput an unusual PCF algorithm is used when sampling shadow
 maps which makes sure the distance between taps is 4 unique pixels and that
 they're correctly weighted by the area they take up in the final average.
+The filter is listed here:
+```
+vec2 scale = 1.0f / textureSize(gShadowMap, 0);
+shadowCoord.xy *= textureSize(gShadowMap, 0);
+vec2 offset = fract(shadowCoord.xy - 0.5f);
+shadowCoord.xy -= offset*0.5f;
+vec4 size = vec4(offset + 1.0f, 2.0f - offset);
+return (1.0f / 9.0f) * dot(size.zxzx*size.wwyy,
+    vec4(texture(gShadowMap, vec3(scale * (shadowCoord.xy + vec2(-0.5f, -0.5f)), shadowCoord.z)),
+         texture(gShadowMap, vec3(scale * (shadowCoord.xy + vec2(1.0f, -0.5f)), shadowCoord.z)),
+         texture(gShadowMap, vec3(scale * (shadowCoord.xy + vec2(-0.5f, 1.0f)), shadowCoord.z)),
+         texture(gShadowMap, vec3(scale * (shadowCoord.xy + vec2(1.0f, 1.0f)), shadowCoord.z))));
+```
 
 The same technique is used for rendering the spot lights as well.
 
@@ -144,10 +157,29 @@ Editing aids (bounding boxes, billboards, etc) are rendered next. We take
 special care to ensure anything with transparency during this has premultipled alpha
 to prevent strange blending errors around transparent edges.
 
-Particles are then rendered by disabling of culling. Currently soft particles
-are not possible with this setup as the depth buffer from the geometry pass is
-not used.
+Particles are rendered next using an unusual vertex format void of texture
+coordinates to reduce bandwidth costs of uploading them every frame. Since particles
+in Neothyne are rendered as billboarded quads, the texture coordinates are always
+```
+[0, 0]
+[1, 0]
+[1, 1]
+[0, 1]
+```
+The coordinates are thus encoded as a single integer constant where each byte
+represents a coordinate pair (each nibble represents U and V respectively.)
+On little endian GPUs this constant is `0x0FFFF00`.
 
+Thus the coordinates can be calculated by using `gl_VertexID & 3` as a byte
+index into the constant. The code is listed here for posterity's sake:
+```
+int uv = (0x0FFFF000 >> (8*(gl_VertexID & 3))) & 0xFF;
+texCoord0 = vec2((uv & 0x0F) & 1, ((uv & 0xF0) >> 4) & 1);
+```
+
+Each vertex has its own exponent for the power-term in soft-particle rendering.
+The depth buffer from the geometry pass is bound during particle rendering and
+sampled to make soft-particles possible.
 #### Composite pass
 
 The composite pass is responsible for applying color grading to the final result
