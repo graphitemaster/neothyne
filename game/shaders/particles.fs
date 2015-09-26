@@ -4,15 +4,16 @@
 in vec2 texCoord0;
 in vec4 color0;
 in vec2 position0;
+in float power0;
+in float depth0;
 
 uniform sampler2D gColorMap;
-uniform float gPower;
 
 out vec4 fragColor;
 
 float contrast(float d) {
     float value = clamp(2.0f*((d > 0.5f) ? 1.0f-d : d), 0.0f, 1.0f);
-    float alpha = 0.5f * pow(value, gPower);
+    float alpha = 0.5f * pow(value, power0);
     return (d > 0.5f) ? 1.0f - alpha : alpha;
 }
 

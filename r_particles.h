@@ -5,6 +5,7 @@
 #include "r_texture.h"
 
 #include "m_vec.h"
+#include "m_half.h"
 
 namespace m {
     struct mat4;
@@ -34,12 +35,10 @@ struct particleSystemMethod : method {
     void setVP(const m::mat4 &vp);
     void setColorTextureUnit(int unit);
     void setDepthTextureUnit(int unit);
-    void setPower(float power);
 private:
     uniform *m_VP;
     uniform *m_colorTextureUnit;
     uniform *m_depthTextureUnit;
-    uniform *m_power;
 };
 
 struct particleSystem : geom {
@@ -61,14 +60,26 @@ protected:
     u::vector<particle> m_particles;
 
 private:
-    struct vertex {
-        m::vec3 p;
-        float u, v;
-        float r, g, b, a;
+    struct singleVertex {
+        // 32 bytes
+        m::vec3 position;
+        m::vec3 rgb;
+        float a;
+        float power;
     };
-    u::vector<vertex> m_vertices;
+    struct halfVertex {
+        // 26 bytes
+        m::half x, y, z;
+        m::vec3 rgb;
+        float a;
+        float power;
+    };
+    u::vector<singleVertex> m_singleVertices;
+    u::vector<halfVertex> m_halfVertices;
+
     particleSystemMethod m_method;
     texture2D m_texture;
+    u::vector<GLuint> m_indices;
 };
 
 }

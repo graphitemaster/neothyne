@@ -454,11 +454,12 @@ private:
 };
 
 dustSystem::dustSystem(const m::vec3 &ownerPosition) {
-    static constexpr size_t kParticles = 1024;
+    static constexpr size_t kParticles = 1024*2;
     m_particles.reserve(kParticles);
+    static const float powers[] = { 2.5f, 5.0f, 10.0f, 20.0f };
     for (size_t i = 0; i < kParticles; i++) {
         particle p;
-        p.power = u::randf() * 5.0f;
+        p.power = powers[i % (sizeof(powers)/sizeof(*powers))];
         initParticle(p, ownerPosition);
         addParticle(u::move(p));
     }
