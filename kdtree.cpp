@@ -133,8 +133,7 @@ m::plane kdNode::findSplittingPlane(const kdTree *tree, const u::vector<int> &tr
 
     // sort coordinates for a L1 median estimation, this keeps us rather
     // robust against vertex outliers.
-    // TODO: radix sort coords
-    //u::sort(coords.begin(), coords.end());
+    u::sort(coords.begin(), coords.end(), [](float a, float b) { return a < b; });
     const float split = coords[coords.size() / 2]; // median like
     const m::vec3 point(m::vec3::getAxis(axis) * split);
     const m::vec3 normal(m::vec3::getAxis(axis));
