@@ -68,10 +68,67 @@ compared against their previous hashed value to see if any changes were made
 to them. If there are changes present and the light is set to cast shadows, the
 world geometry is traversed to calculate which indices are responsible for the
 vertices that are within that light's contributing light sphere. These indices
-are used when rendering the geometry for the world into the shadow map. When
-the light is a point light, the vertices are checked against a shadow frustum
-to determine which faces they are present in. Six separate indices counts are
-kept per frustum side in this case.
+are used when rendering the geometry for the world into the shadow map.
+
+When the light is a point light, each triangle in the light sphere is checked to
+see which plane the triangle is on in the viewing frustum. The triangles are then
+outputted to six separate indices lists. This is done using masks though as
+triangles can be in multiple frustum planes at once. The code for this is listed
+here to give the reader a better understanding of what is involved:
+```
+static uint8_t calcTriangleSideMask(const m::vec3 &p1,
+                                    const m::vec3 &p2,
+                                    const m::vec3 &p3,
+                                    float bias)
+{
+    // p1, p2, p3 are in the cubemap's local coordinate system
+    // bias = border/(size - border)
+    uint8_t mask = 0x3F;
+    float dp1 = p1.x + p1.y, dn1 = p1.x - p1.y, ap1 = m::abs(dp1), an1 = m::abs(dn1),
+          dp2 = p2.x + p2.y, dn2 = p2.x - p2.y, ap2 = m::abs(dp2), an2 = m::abs(dn2),
+          dp3 = p3.x + p3.y, dn3 = p3.x - p3.y, ap3 = m::abs(dp3), an3 = m::abs(dn3);
+    if (ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+        mask &= (3<<4)
+            | (dp1 < 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2))
+            | (dp2 < 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2))
+            | (dp3 < 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
+    if (an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+        mask &= (3<<4)
+            | (dn1 < 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
+            | (dn2 < 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
+            | (dn3 < 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
+
+    dp1 = p1.y + p1.z, dn1 = p1.y - p1.z, ap1 = fabs(dp1), an1 = fabs(dn1),
+    dp2 = p2.y + p2.z, dn2 = p2.y - p2.z, ap2 = fabs(dp2), an2 = fabs(dn2),
+    dp3 = p3.y + p3.z, dn3 = p3.y - p3.z, ap3 = fabs(dp3), an3 = fabs(dn3);
+    if (ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+        mask &= (3<<0)
+            | (dp1 < 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
+            | (dp2 < 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
+            | (dp3 < 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
+    if (an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+        mask &= (3<<0)
+            | (dn1 < 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
+            | (dn2 < 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
+            | (dn3 < 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
+
+    dp1 = p1.z + p1.x, dn1 = p1.z - p1.x, ap1 = fabs(dp1), an1 = fabs(dn1),
+    dp2 = p2.z + p2.x, dn2 = p2.z - p2.x, ap2 = fabs(dp2), an2 = fabs(dn2),
+    dp3 = p3.z + p3.x, dn3 = p3.z - p3.x, ap3 = fabs(dp3), an3 = fabs(dn3);
+    if (ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+        mask &= (3<<2)
+            | (dp1 < 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
+            | (dp2 < 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
+            | (dp3 < 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
+    if (an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+        mask &= (3<<2)
+            | (dn1 < 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
+            | (dn2 < 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
+            | (dn3 < 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
+
+    return mask;
+}
+```
 
 To prevent calculating the transforms required to render the shadow map every frame,
 this pass also calculates the world-view-projection matrix to render the shadow
@@ -159,7 +216,7 @@ to prevent strange blending errors around transparent edges.
 
 Particles are rendered next using an unusual vertex format void of texture
 coordinates to reduce bandwidth costs of uploading them every frame. Since particles
-in Neothyne are rendered as billboarded quads, the texture coordinates are always
+in Neothyne are rendered as billboarded quads, the texture coordinates are always:
 ```
 [0, 0]
 [1, 0]
