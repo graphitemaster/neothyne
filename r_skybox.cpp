@@ -129,6 +129,7 @@ void skybox::render(const pipeline &pl, const fog &f) {
     renderMethod->setWorld(wpl.world());
 
     // render skybox cube
+    gl::DepthRange(1, 1);
     gl::DepthFunc(GL_LEQUAL);
     gl::CullFace(GL_FRONT);
     gl::Disable(GL_BLEND);
@@ -137,6 +138,7 @@ void skybox::render(const pipeline &pl, const fog &f) {
 
     m_cube.render();
 
+    gl::DepthRange(0, 1);
     gl::DepthFunc(GL_LESS);
     gl::CullFace(GL_BACK);
     gl::Enable(GL_BLEND);

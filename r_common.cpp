@@ -120,6 +120,7 @@ typedef void (APIENTRYP MYPFNGLDRAWBUFFERPROC)(GLenum);
 typedef void (APIENTRYP MYPFNGLREADBUFFERPROC)(GLenum);
 typedef void (APIENTRYP MYPFNGLBUFFERSUBDATAPROC)(GLenum, GLintptr, GLsizeiptr, const GLvoid*);
 typedef void (APIENTRYP MYPFNGLPOLYGONOFFSETPROC)(GLfloat, GLfloat);
+typedef void (APIENTRYP MYPFNGLDEPTHRANGEPROC)(GLclampd, GLclampd);
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -213,6 +214,7 @@ static MYPFNGLDRAWBUFFERPROC                glDrawBuffer_               = nullpt
 static MYPFNGLREADBUFFERPROC                glReadBuffer_               = nullptr;
 static MYPFNGLBUFFERSUBDATAPROC             glBufferSubData_            = nullptr;
 static MYPFNGLPOLYGONOFFSETPROC             glPolygonOffset_            = nullptr;
+static MYPFNGLDEPTHRANGEPROC                glDepthRange_               = nullptr;
 
 #ifdef DEBUG_GL
 ///! ARB_debug_output
@@ -283,6 +285,10 @@ template<>
 u::string stringize<'f', GLsizeiptr>(GLsizeiptr value, char) {
     return u::format("GLsizeiptr=%p", value);
 }
+template<>
+u::string stringize<'g', GLclampd>(GLclampd value, char) {
+    return u::format("GLclampd=%.2f", value);
+}
 template <>
 u::string stringize<'*', void *>(void *value, char base) {
     switch (base) {
@@ -303,6 +309,7 @@ u::string stringize<'*', void *>(void *value, char base) {
         case 'd': return u::format("GLclampf*=%p", value);
         case 'e': return u::format("GLintptr*=%p", value);
         case 'f': return u::format("GLsizeiptr*=%p", value);
+        case 'g': return u::format("GLclampd*=%p", value);
     }
 
     return u::format("GLchar*=\"%s\"", (const char *)value);
@@ -377,6 +384,9 @@ static void debugCheck(const char *spec, const char *function, const char *file,
                 break;
             case 'f':
                 contents += stringize<'f'>((GLsizeiptr)va_arg(va, intptr_t));
+                break;
+            case 'g':
+                contents += stringize<'g'>((GLclampd)va_arg(va, double));
                 break;
             case '*':
                 contents += stringize<'*'>(va_arg(va, void *), s[1]);
@@ -565,6 +575,7 @@ void init() {
     glReadBuffer_               = (MYPFNGLREADBUFFERPROC)neoGetProcAddress("glReadBuffer");
     glBufferSubData_            = (MYPFNGLBUFFERSUBDATAPROC)neoGetProcAddress("glBufferSubData");
     glPolygonOffset_            = (MYPFNGLPOLYGONOFFSETPROC)neoGetProcAddress("glPolygonOffset");
+    glDepthRange_               = (MYPFNGLDEPTHRANGEPROC)neoGetProcAddress("glDepthRange");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -1080,6 +1091,11 @@ void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid
 void PolygonOffset(GLfloat factor, GLfloat units GL_INFOP) {
     glPolygonOffset_(factor, units);
     GL_CHECK("cc", factor, units);
+}
+
+void DepthRange(GLclampd nearVal, GLclampd farVal GL_INFOP) {
+    glDepthRange_(nearVal, farVal);
+    GL_CHECK("gg", nearVal, farVal);
 }
 
 }

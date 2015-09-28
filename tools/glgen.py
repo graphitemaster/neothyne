@@ -24,7 +24,8 @@ types = [
     {'name': 'GLfloat',    'format': '%.2f', 'promote': 'double',       'spec': 'c' },
     {'name': 'GLclampf',   'format': '%f',   'promote': 'double',       'spec': 'd' },
     {'name': 'GLintptr',   'format': '%p',   'promote': 'intptr_t',     'spec': 'e' },
-    {'name': 'GLsizeiptr', 'format': '%p',   'promote': 'intptr_t',     'spec': 'f' }
+    {'name': 'GLsizeiptr', 'format': '%p',   'promote': 'intptr_t',     'spec': 'f' },
+    {'name': 'GLclampd',   'format': '%.2f', 'promote': 'double',       'spec': 'g' }
 ]
 
 # Read a list of extensions from an extension file and return a list of strings
