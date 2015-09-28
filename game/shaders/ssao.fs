@@ -35,13 +35,12 @@ float samplePixels(vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
 void main() {
     vec2 texCoord = calcTexCoord() * 2.0f; // Half resultion adjustment
 
-    vec2 randomJitter = normalize(neoTexture2D(gRandomMap, texCoord).xy * 2.0f - 2.0f);
-    vec3 srcNormal = neoTexture2D(gNormalMap, texCoord).rgb * 2.0f - 1.0f;
-
     float depth = calcDepth(texCoord);
     if (depth == 1.0f) {
         fragColor.r = 1.0f;
     } else {
+        vec2 randomJitter = normalize(neoTexture2D(gRandomMap, texCoord).xy * 2.0f - 2.0f);
+        vec3 srcNormal = neoTexture2D(gNormalMap, texCoord).rgb * 2.0f - 1.0f;
         float srcDepth = evalLinearDepth(texCoord, depth);
         vec3 srcPosition = calcPosition(texCoord);
 
