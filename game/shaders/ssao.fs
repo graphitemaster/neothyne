@@ -38,60 +38,65 @@ void main() {
     vec2 randomJitter = normalize(neoTexture2D(gRandomMap, texCoord).xy * 2.0f - 2.0f);
     vec3 srcNormal = neoTexture2D(gNormalMap, texCoord).rgb * 2.0f - 1.0f;
 
-    float srcDepth = calcLinearDepth(texCoord);
-    vec3 srcPosition = calcPosition(texCoord);
+    float depth = calcDepth(texCoord);
+    if (depth == 1.0f) {
+        fragColor.r = 1.0f;
+    } else {
+        float srcDepth = evalLinearDepth(texCoord, depth);
+        vec3 srcPosition = calcPosition(texCoord);
 
-    float kernelRadius = gSamplingRadius * (1.0f - srcDepth);
+        float kernelRadius = gSamplingRadius * (1.0f - srcDepth);
 
-    float occlusion = 0.0f;
+        float occlusion = 0.0f;
 
-    // Unrolled completely
-    vec2 k10 = reflect(gKernel[0], randomJitter);
-    vec2 k11 = reflect(gKernel[1], randomJitter);
-    vec2 k12 = reflect(gKernel[2], randomJitter);
-    vec2 k13 = reflect(gKernel[3], randomJitter);
+        // Unrolled completely
+        vec2 k10 = reflect(gKernel[0], randomJitter);
+        vec2 k11 = reflect(gKernel[1], randomJitter);
+        vec2 k12 = reflect(gKernel[2], randomJitter);
+        vec2 k13 = reflect(gKernel[3], randomJitter);
 
-    vec2 k20 = vec2(k10.x * kKernelFactor - k10.y * kKernelFactor,
-                    k10.x * kKernelFactor + k10.y * kKernelFactor);
-    vec2 k21 = vec2(k11.x * kKernelFactor - k11.y * kKernelFactor,
-                    k11.x * kKernelFactor + k11.y * kKernelFactor);
-    vec2 k22 = vec2(k12.x * kKernelFactor - k12.y * kKernelFactor,
-                    k12.x * kKernelFactor + k12.y * kKernelFactor);
-    vec2 k23 = vec2(k13.x * kKernelFactor - k13.y * kKernelFactor,
-                    k13.x * kKernelFactor + k13.y * kKernelFactor);
+        vec2 k20 = vec2(k10.x * kKernelFactor - k10.y * kKernelFactor,
+                        k10.x * kKernelFactor + k10.y * kKernelFactor);
+        vec2 k21 = vec2(k11.x * kKernelFactor - k11.y * kKernelFactor,
+                        k11.x * kKernelFactor + k11.y * kKernelFactor);
+        vec2 k22 = vec2(k12.x * kKernelFactor - k12.y * kKernelFactor,
+                        k12.x * kKernelFactor + k12.y * kKernelFactor);
+        vec2 k23 = vec2(k13.x * kKernelFactor - k13.y * kKernelFactor,
+                        k13.x * kKernelFactor + k13.y * kKernelFactor);
 
 #ifndef HAS_TEXTURE_RECTANGLE
-    vec2 texelSize = 1.0f / (gScreenSize / 2.0f); // Half resolution adjustment
+        vec2 texelSize = 1.0f / (gScreenSize / 2.0f); // Half resolution adjustment
 
-    k10 *= texelSize;
-    k11 *= texelSize;
-    k12 *= texelSize;
-    k13 *= texelSize;
-    k20 *= texelSize;
-    k21 *= texelSize;
-    k22 *= texelSize;
-    k23 *= texelSize;
+        k10 *= texelSize;
+        k11 *= texelSize;
+        k12 *= texelSize;
+        k13 *= texelSize;
+        k20 *= texelSize;
+        k21 *= texelSize;
+        k22 *= texelSize;
+        k23 *= texelSize;
 #endif
 
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k10 * kernelRadius);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k20 * kernelRadius * 0.75f);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k10 * kernelRadius * 0.50f);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k20 * kernelRadius * 0.25f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k10 * kernelRadius);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k20 * kernelRadius * 0.75f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k10 * kernelRadius * 0.50f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k20 * kernelRadius * 0.25f);
 
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k11 * kernelRadius);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k21 * kernelRadius * 0.75f);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k11 * kernelRadius * 0.50f);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k21 * kernelRadius * 0.25f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k11 * kernelRadius);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k21 * kernelRadius * 0.75f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k11 * kernelRadius * 0.50f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k21 * kernelRadius * 0.25f);
 
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k12 * kernelRadius);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k22 * kernelRadius * 0.75f);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k12 * kernelRadius * 0.50f);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k22 * kernelRadius * 0.25f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k12 * kernelRadius);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k22 * kernelRadius * 0.75f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k12 * kernelRadius * 0.50f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k22 * kernelRadius * 0.25f);
 
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k13 * kernelRadius);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k23 * kernelRadius * 0.75f);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k13 * kernelRadius * 0.50f);
-    occlusion += samplePixels(srcPosition, srcNormal, texCoord + k23 * kernelRadius * 0.25f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k13 * kernelRadius);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k23 * kernelRadius * 0.75f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k13 * kernelRadius * 0.50f);
+        occlusion += samplePixels(srcPosition, srcNormal, texCoord + k23 * kernelRadius * 0.25f);
 
-    fragColor.r = 1.0f - clamp(occlusion / (kKernelSize * kKernelSize), 0.0f, 1.0f);
+        fragColor.r = 1.0f - clamp(occlusion / (kKernelSize * kKernelSize), 0.0f, 1.0f);
+    }
 }
