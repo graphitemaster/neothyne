@@ -115,9 +115,9 @@ struct face {
 };
 
 inline face::face()
-    : vertex((size_t)-1)
-    , normal((size_t)-1)
-    , coordinate((size_t)-1)
+    : vertex(size_t(-1))
+    , normal(size_t(-1))
+    , coordinate(size_t(-1))
 {
 }
 
@@ -131,10 +131,10 @@ inline bool operator==(const face &lhs, const face &rhs) {
 namespace u {
 
 inline size_t hash(const ::face &f) {
-    static constexpr size_t prime1 = 73856093u;
-    static constexpr size_t prime2 = 19349663u;
-    static constexpr size_t prime3 = 83492791u;
-    return (f.vertex * prime1) ^ (f.normal * prime2) ^ (f.coordinate * prime3);
+    static constexpr size_t kPrime1 = 73856093u;
+    static constexpr size_t kPrime2 = 19349663u;
+    static constexpr size_t kPrime3 = 83492791u;
+    return (f.vertex * kPrime1) ^ (f.normal * kPrime2) ^ (f.coordinate * kPrime3);
 }
 
 }

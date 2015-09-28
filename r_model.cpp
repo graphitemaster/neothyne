@@ -18,7 +18,7 @@ bool geomMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
 
-    for (auto &it : defines)
+    for (const auto &it : defines)
         method::define(it);
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/geom.vs"))
@@ -209,9 +209,9 @@ bool geomMethods::init() {
 
     // geometry shader permutations
     m_geomMethods = new u::vector<geomMethod>;
-    static const size_t geomCount = sizeof(kGeomPermutations)/sizeof(kGeomPermutations[0]);
-    (*m_geomMethods).resize(geomCount);
-    for (size_t i = 0; i < geomCount; i++) {
+    static const size_t kGeomCount = sizeof(kGeomPermutations)/sizeof(kGeomPermutations[0]);
+    (*m_geomMethods).resize(kGeomCount);
+    for (size_t i = 0; i < kGeomCount; i++) {
         const auto &p = kGeomPermutations[i];
         if (!(*m_geomMethods)[i].init(generatePermutation(kGeomPermutationNames, p)))
             return false;
@@ -496,7 +496,7 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
     u::vector<u::string> materialFiles;
     u::string name;
     while (auto getline = u::getline(fp)) {
-        auto split = u::split(*getline);
+        const auto split = u::split(*getline);
         if (split.size() < 2)
             continue;
         if (split[0] == "model" && name.empty())

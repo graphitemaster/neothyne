@@ -554,7 +554,7 @@ bool engine::initData(int &argc, char **argv) {
     }
 
     // Get a path for the user
-    auto get = SDL_GetPrefPath("Neothyne", "");
+    const auto get = SDL_GetPrefPath("Neothyne", "");
     m_userPath = get;
     m_userPath.pop_back(); // Remove additional path separator
     m_userPath = u::fixPath(m_userPath); // Fix path separator (w.r.t platform)
@@ -1065,7 +1065,7 @@ static int entryPoint(int argc, char **argv) {
     u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
 
     // Launch the game
-    int status = neoMain(gEngine.m_frameTimer, argc, argv, (bool &)gShutdown);
+    const int status = neoMain(gEngine.m_frameTimer, argc, argv, (bool &)gShutdown);
     writeConfig(gEngine.userPath());
 
     // Instance must be released before OpenGL context is lost
@@ -1107,7 +1107,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
         return buf;
     };
     u::vector<char *> args;
-    char *buf = parseCommandLine(GetCommandLine(), args);
+    const char *buf = parseCommandLine(GetCommandLine(), args);
     SDL_SetMainReady();
     int status = entryPoint(args.size() - 1, &args[0]);
     delete[] buf;

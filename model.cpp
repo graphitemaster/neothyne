@@ -205,7 +205,7 @@ bool obj::load(const u::string &file, model *store) {
     u::vector<m::vec3> positions_(count);
     u::vector<m::vec3> normals_(count);
     u::vector<m::vec2> coordinates_(count);
-    for (auto &it : uniques) {
+    for (const auto &it : uniques) {
         const auto &first = it.first;
         const auto &second = it.second;
         positions_[second] = vertices[first.vertex];
@@ -246,7 +246,7 @@ bool obj::load(const u::string &file, model *store) {
     }
 
     // Generate batches
-    for (auto &g : groups) {
+    for (const auto &g : groups) {
         model::batch b;
         b.offset = (void *)(store->m_indices.size() * sizeof(uint32_t));
         b.count = g.second.size();
@@ -440,7 +440,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
         }
     }
 
-    const iqmJoint *joints = (iqmJoint*)&buf[hdr->ofsJoints];
+    const iqmJoint *const joints = (iqmJoint*)&buf[hdr->ofsJoints];
 
     const bool animated = hdr->numFrames != 0;
     store->m_numFrames = hdr->numFrames;
@@ -466,7 +466,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
     }
 
     // indices
-    const iqmTriangle *triangles = (iqmTriangle*)&buf[hdr->ofsTriangles];
+    const iqmTriangle *const triangles = (iqmTriangle*)&buf[hdr->ofsTriangles];
     store->m_indices.reserve(hdr->numTriangles);
     for (uint32_t i = 0; i < hdr->numTriangles; i++) {
         const iqmTriangle &triangle = triangles[i];
@@ -553,11 +553,11 @@ bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store) {
     u::endianSwap((uint32_t *)&buf[hdr->ofsAnims], hdr->numAnims*sizeof(iqmAnim)/sizeof(uint32_t));
     u::endianSwap((uint16_t *)&buf[hdr->ofsFrames], hdr->numFrames*hdr->numFrameChannels);
 
-    const iqmPose *poses = (iqmPose*)&buf[hdr->ofsPoses];
+    const iqmPose *const poses = (iqmPose*)&buf[hdr->ofsPoses];
 
     const size_t size = store->m_frames.size();
     store->m_frames.resize(size + hdr->numFrames * hdr->numPoses);
-    uint16_t *frameData = (uint16_t*)&buf[hdr->ofsFrames];
+    const uint16_t *frameData = (uint16_t*)&buf[hdr->ofsFrames];
     for (uint32_t i = 0; i < hdr->numFrames; i++) {
         for (uint32_t j = 0; j < hdr->numPoses; j++) {
             const iqmPose &p = poses[j];
@@ -612,7 +612,7 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
     }
 
     // load optional animation files
-    for (auto &it : anims) {
+    for (const auto &it : anims) {
         const auto fileName = u::format("%s%c%s.iqm", neoGamePath(), u::kPathSep, it);
         auto readAnim = u::read(fileName, "rb");
         // this silently ignores animation files which are not valid or correct
@@ -720,14 +720,14 @@ void model::animate(float curFrame) {
     frame1 %= m_numFrames;
     frame2 %= m_numFrames;
 
-    m::mat3x4 *mat1 = &m_frames[frame1 * m_numJoints];
-    m::mat3x4 *mat2 = &m_frames[frame2 * m_numJoints];
+    const m::mat3x4 *const mat1 = &m_frames[frame1 * m_numJoints];
+    const m::mat3x4 *const mat2 = &m_frames[frame2 * m_numJoints];
 
     // Interpolate matrices between the two closest frames and concatenate with
     // parent matrix if necessary.
     // Concatenate the result with the inverse base pose.
     for (size_t i = 0; i < m_numJoints; i++) {
-        m::mat3x4 mat = mat1[i]*(1 - frameOffset) + mat2[i] * frameOffset;
+        const m::mat3x4 mat = mat1[i]*(1 - frameOffset) + mat2[i] * frameOffset;
         if (m_parents[i] >= 0)
             m_outFrame[i] = m_outFrame[m_parents[i]] * mat;
         else

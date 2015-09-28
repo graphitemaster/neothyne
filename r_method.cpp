@@ -130,7 +130,7 @@ bool method::reload() {
     destroy();
     if (!(m_program = gl::CreateProgram()))
         return false;
-    for (auto &it : m_shaders)
+    for (const auto &it : m_shaders)
         if (!addShader(it.first, it.second.first))
             return false;
     if (!finalize(m_attributes, m_fragData))
@@ -169,8 +169,8 @@ u::optional<u::string> method::preprocess(const u::string &file, bool initial) {
             auto split = u::split(&line[1]);
             if (split.size() == 2 && split[0] == "include") {
                 auto thing = split[1];
-                auto front = thing.pop_front(); // '"' or '<'
-                auto back = thing.pop_back(); // '"' or '>'
+                const auto front = thing.pop_front(); // '"' or '<'
+                const auto back = thing.pop_back(); // '"' or '>'
                 if ((front == '<' && back != '>') && (front != back))
                     return u::format("#error invalid use of include directive on line %zu\n", lineno);
                 u::optional<u::string> include = preprocess(thing, false);
@@ -188,7 +188,7 @@ u::optional<u::string> method::preprocess(const u::string &file, bool initial) {
             split[2].pop_back(); // Remove the semicolon
             auto name = split[2];
             // Erase anything after '[', which would mark an array
-            auto find = name.find('[');
+            const auto find = name.find('[');
             if (find != u::string::npos)
                 name.erase(find, name.size());
             result += u::format("#ifndef uniform_%s\n"
@@ -252,7 +252,7 @@ void method::post() {
 }
 
 uniform *method::getUniform(const u::string &name, uniform::type type) {
-    auto *value = &m_uniforms[name];
+    auto *const value = &m_uniforms[name];
     value->m_type = type;
     if (type == uniform::kMat3x4Array)
         value->asMat3x4Array.data = (float *)&m_mat3x4Scratch[0];

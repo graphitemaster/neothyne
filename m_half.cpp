@@ -85,16 +85,8 @@ halfData::halfData() {
 half convertToHalf(float in) {
     floatShape shape;
     shape.asFloat = in;
-    return
-        gHalf.baseTable[
-        (shape.asInt >> 23) & 0x1FF
-        ] +
-        (
-            (shape.asInt & 0x007FFFFF) >>
-            gHalf.shiftTable[
-                (shape.asInt >> 23) & 0x1FF
-            ]
-        );
+    return gHalf.baseTable[(shape.asInt >> 23) & 0x1FF] +
+        ((shape.asInt & 0x007FFFFF) >> gHalf.shiftTable[(shape.asInt >> 23) & 0x1FF]);
 }
 
 float convertToFloat(half in) {

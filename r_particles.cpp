@@ -122,7 +122,7 @@ void particleSystem::render(const pipeline &pl) {
         }
     );
 
-    for (auto &it : m_particles) {
+    for (const auto &it : m_particles) {
         if (it.lifeTime < 0.0f)
             continue;
 

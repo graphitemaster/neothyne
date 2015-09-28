@@ -359,10 +359,10 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
 bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius, int32_t node) const {
     // is this a leaf node?
     if (node < 0) {
-        size_t leafIndex = -node - 1;
+        const size_t leafIndex = -node - 1;
         const size_t triangleCount = leafs[leafIndex].triangles.size();
         for (size_t i = 0; i < triangleCount; i++) {
-            size_t triangleIndex = leafs[leafIndex].triangles[i];
+            const size_t triangleIndex = leafs[leafIndex].triangles[i];
             if (sphereTriangleIntersectStatic(triangleIndex, position, radius))
                 triangleIndices.push_back(triangleIndex);
         }
@@ -388,10 +388,10 @@ bool kdMap::isSphereStuck(const m::vec3 &position, float radius) const {
 bool kdMap::isSphereStuck(const m::vec3 &position, float radius, int32_t node) const {
     // this is a leaf node?
     if (node < 0) {
-        size_t leafIndex = -node - 1;
+        const size_t leafIndex = -node - 1;
         const size_t triangleCount = leafs[leafIndex].triangles.size();
         for (size_t i = 0; i < triangleCount; i++) {
-            size_t triangleIndex = leafs[leafIndex].triangles[i];
+            const size_t triangleIndex = leafs[leafIndex].triangles[i];
             if (sphereTriangleIntersectStatic(triangleIndex, position, radius))
                 return true;
         }

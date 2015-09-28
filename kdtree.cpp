@@ -30,7 +30,7 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth)
     , back(nullptr)
     , sphereRadius(0.0f)
 {
-    size_t triangleCount = tris.size();
+    const size_t triangleCount = tris.size();
 
     if (recursionDepth > tree->depth)
         tree->depth = recursionDepth;
@@ -97,7 +97,7 @@ bool kdNode::isLeaf() const {
 void kdNode::split(const kdTree *tree, const u::vector<int> &tris, m::axis axis,
     u::vector<int> &frontList, u::vector<int> &backList, u::vector<int> &splitList, m::plane &plane) const
 {
-    size_t triangleCount = tris.size();
+    const size_t triangleCount = tris.size();
     plane = findSplittingPlane(tree, tris, axis);
     for (size_t i = 0; i < triangleCount; i++) {
         switch (tree->testTriangle(tris[i], plane)) {
@@ -145,7 +145,7 @@ void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
     m::vec3 min;
     m::vec3 max;
     for (size_t i = 0; i < triangleCount; i++) {
-        int index = tris[i];
+        const int index = tris[i];
         for (size_t j = 0; j < 3; j++) {
             const size_t vertexIndex = tree->triangles[index].vertices[j];
             const m::vec3 *v = &tree->vertices[vertexIndex];
@@ -157,7 +157,7 @@ void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
             if (v->z > max.z) max.z = v->z;
         }
     }
-    m::vec3 mid = (max - min) * 0.5f;
+    const m::vec3 mid = (max - min) * 0.5f;
     sphereOrigin = min + mid;
     sphereRadius = mid.abs();
 
@@ -221,7 +221,8 @@ kdTree::kdTree()
     , leafCount(0)
     , textureCount(0)
     , depth(0)
-{ }
+{
+}
 
 kdTree::~kdTree() {
     unload();
@@ -354,11 +355,11 @@ static void kdBinCalculateTangent(const u::vector<kdBinTriangle> &triangles, con
     const m::vec3 &z = vertices[triangles[index].v[2]].vertex;
     const m::vec3 q1(y - x);
     const m::vec3 q2(z - x);
-    float s1 = vertices[triangles[index].v[1]].tu - vertices[triangles[index].v[0]].tu;
-    float s2 = vertices[triangles[index].v[2]].tu - vertices[triangles[index].v[0]].tu;
-    float t1 = vertices[triangles[index].v[1]].tv - vertices[triangles[index].v[0]].tv;
-    float t2 = vertices[triangles[index].v[2]].tv - vertices[triangles[index].v[0]].tv;
-    float det = s1*t2 - s2*t1;
+    const float s1 = vertices[triangles[index].v[1]].tu - vertices[triangles[index].v[0]].tu;
+    const float s2 = vertices[triangles[index].v[2]].tu - vertices[triangles[index].v[0]].tu;
+    const float t1 = vertices[triangles[index].v[1]].tv - vertices[triangles[index].v[0]].tv;
+    const float t2 = vertices[triangles[index].v[2]].tv - vertices[triangles[index].v[0]].tv;
+    const float det = s1*t2 - s2*t1;
     if (m::abs(det) <= m::kEpsilon) {
         // Unable to compute tangent + bitangent, default tangent along xAxis and
         // bitangent along yAxis.
@@ -368,7 +369,7 @@ static void kdBinCalculateTangent(const u::vector<kdBinTriangle> &triangles, con
         return;
     }
 
-    float inv = 1.0f / det;
+    const float inv = 1.0f / det;
     tangent = m::vec3(inv * (t2 * q1.x - t1 * q2.x),
                       inv * (t2 * q1.y - t1 * q2.y),
                       inv * (t2 * q1.z - t1 * q2.z));
@@ -496,11 +497,11 @@ inline void kdSerializeLump(u::vector<unsigned char> &buffer, const u::vector<T>
 template <>
 inline void kdSerializeLump<kdBinLeaf>(u::vector<unsigned char> &buffer, const u::vector<kdBinLeaf> &leafs) {
     for (auto &it : leafs) {
-        uint32_t triangleCount = it.triangles.size();
-        uint32_t serializeCount = u::endianSwap(triangleCount);
+        const uint32_t triangleCount = it.triangles.size();
+        const uint32_t serializeCount = u::endianSwap(triangleCount);
         kdSerialize(buffer, &serializeCount, sizeof(uint32_t));
         for (size_t i = 0; i < triangleCount; i++) {
-            uint32_t triangleIndex = u::endianSwap(it.triangles[i]);
+            const uint32_t triangleIndex = u::endianSwap(it.triangles[i]);
             kdSerialize(buffer, &triangleIndex, sizeof(uint32_t));
         }
     }

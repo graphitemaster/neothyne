@@ -61,7 +61,7 @@ struct plane {
     }
 
     vec3 project(const vec3 &point) const {
-        float distance = getDistanceFromPlane(point);
+        const float distance = getDistanceFromPlane(point);
         return vec3(point.x - n.x * distance,
                     point.y - n.y * distance,
                     point.z - n.z * distance);

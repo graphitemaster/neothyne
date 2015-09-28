@@ -137,7 +137,7 @@ u::optional<u::vector<unsigned char>> read(const u::string &file, const char *mo
 
     u::vector<unsigned char> data;
     fseek(fp.get(), 0, SEEK_END);
-    auto size = ftell(fp.get());
+    const auto size = ftell(fp.get());
     if (size <= 0)
         return u::none;
     data.resize(size);

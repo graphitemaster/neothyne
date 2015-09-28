@@ -11,7 +11,7 @@ bool ssaoMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
 
-    for (auto &it : defines)
+    for (const auto &it : defines)
         method::define(it);
 
     if (gl::has(gl::ARB_texture_rectangle))
@@ -46,15 +46,15 @@ bool ssaoMethod::init(const u::vector<const char *> &defines) {
 
     // Setup the kernel
     // Note: This must be changed as well if kKernelSize changes
-    static const m::vec2 kernel[kKernelSize] = {
+    static const m::vec2 kKernel[kKernelSize] = {
         {  0.0f,  1.0f, },
         {  1.0f,  0.0f, },
         {  0.0f, -1.0f, },
         { -1.0f,  0.0f  }
     };
     enable();
-    for (auto &it : kernel)
-        m_kernel[&it - kernel]->set(it);
+    for (const auto &it : kKernel)
+        m_kernel[&it - kKernel]->set(it);
 
     return true;
 }
@@ -113,8 +113,7 @@ bool ssao::init(const m::perspective &p) {
     m_width = p.width / 2;
     m_height = p.height / 2;
 
-    GLenum format = gl::has(gl::ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    const GLenum format = gl::has(gl::ARB_texture_rectangle) ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     gl::GenTextures(2, m_textures);
 
@@ -145,7 +144,7 @@ bool ssao::init(const m::perspective &p) {
 
     gl::DrawBuffers(1, drawBuffers);
 
-    GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
+    const GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)
         return false;
 
@@ -154,14 +153,13 @@ bool ssao::init(const m::perspective &p) {
 }
 
 void ssao::update(const m::perspective &p) {
-    size_t width = p.width / 2;
-    size_t height = p.height / 2;
+    const size_t width = p.width / 2;
+    const size_t height = p.height / 2;
 
     if (m_width == width && m_height == height)
         return;
 
-    GLenum format = gl::has(gl::ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    const GLenum format = gl::has(gl::ARB_texture_rectangle) ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
     m_width = width;
     m_height = height;
     gl::BindTexture(format, m_textures[kBuffer]);

@@ -323,8 +323,10 @@ static inline void dxtCompressAlphaBlock(const unsigned char *const uncompressed
     unsigned char a0 = uncompressed[3];
     unsigned char a1 = uncompressed[3];
     for (size_t i = 4+3; i < 16*4; i += 4) {
-        if (uncompressed[i] > a0) a0 = uncompressed[i];
-        if (uncompressed[i] < a1) a1 = uncompressed[i];
+        if (uncompressed[i] > a0)
+            a0 = uncompressed[i];
+        if (uncompressed[i] < a1)
+            a1 = uncompressed[i];
     }
     compressed[0] = a0;
     compressed[1] = a1;
@@ -423,15 +425,15 @@ static const char *cacheFormat(GLuint internal) {
 }
 
 static u::string sizeMetric(size_t size) {
-    static const char *sizes[] = { "B", "kB", "MB", "GB" };
+    static const char *kSizes[] = { "B", "kB", "MB", "GB" };
     size_t r = 0;
     size_t i = 0;
-    for (; size >= 1024 && i < sizeof(sizes)/sizeof(*sizes); i++) {
+    for (; size >= 1024 && i < sizeof(kSizes)/sizeof(*kSizes); i++) {
         r = size % 1024;
         size /= 1024;
     }
-    assert(i != sizeof(sizes)/sizeof(*sizes));
-    return u::format("%.2f %s", float(size) + float(r) / 1024.0f, sizes[i]);
+    assert(i != sizeof(kSizes)/sizeof(*kSizes));
+    return u::format("%.2f %s", float(size) + float(r) / 1024.0f, kSizes[i]);
 }
 
 static bool readCache(texture &tex, GLuint &internal) {
@@ -894,7 +896,7 @@ bool texture2D::upload() {
 
         // Load all mip levels
         for (size_t i = 0; i < m_texture.mips(); i++) {
-            size_t mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * blockSize;
+            const size_t mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * blockSize;
             gl::CompressedTexImage2D(GL_TEXTURE_2D, i, format.internal, mipWidth,
                 mipHeight, 0, mipSize, m_texture.data() + offset);
             mipWidth = u::max(mipWidth >> 1, size_t(1));

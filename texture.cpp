@@ -308,7 +308,7 @@ private:
             m_buf = sls(m_buf, 8) | newbyte;
             if (newbyte == 0xFF) {
                 if (m_size) {
-                    unsigned char marker = *m_position++;
+                    const unsigned char marker = *m_position++;
                     m_size--;
                     switch (marker) {
                     case 0:
@@ -1106,7 +1106,7 @@ private:
         const size_t outlength = (m_height * m_width * bpp + 7) / 8;
 
         out.resize(outlength);
-        unsigned char* out_ = outlength ? &out[0] : 0;
+        unsigned char *const out_ = outlength ? &out[0] : 0;
 
         // no interlace, just filter
         if (m_interlaceMethod == 0) {
@@ -1115,7 +1115,7 @@ private:
             if (bpp >= 8) {
                 for (size_t y = 0; y < m_height; y++) {
                     const size_t filterType = scanlines[linestart];
-                    const unsigned char *prevline = (y == 0)
+                    const unsigned char *const prevline = (y == 0)
                         ? 0 : &out_[(y - 1) * m_width * bytewidth];
                     unfilterScanline(&out_[linestart - y], &scanlines[linestart + 1],
                         prevline, bytewidth, filterType, linelength);
@@ -1127,7 +1127,7 @@ private:
                 u::vector<unsigned char> templine((m_width * bpp + 7) >> 3);
                 for (size_t y = 0, obp = 0; y < m_height; y++) {
                     const size_t filterType = scanlines[linestart];
-                    const unsigned char* prevline = (y == 0) ? 0 : &out_[(y - 1) * m_width * bytewidth];
+                    const unsigned char *const prevline = (y == 0) ? 0 : &out_[(y - 1) * m_width * bytewidth];
                     unfilterScanline(&templine[0], &scanlines[linestart + 1],
                         prevline, bytewidth, filterType, linelength);
                     if (m_error)
@@ -1227,8 +1227,8 @@ private:
         m_error = validateColor(m_colorType, m_bitDepth);
     }
 
-    void unfilterScanline(unsigned char* recon, const unsigned char* scanline,
-        const unsigned char* precon, size_t bytewidth, size_t filterType, size_t length)
+    void unfilterScanline(unsigned char *recon, const unsigned char *scanline,
+        const unsigned char *precon, size_t bytewidth, size_t filterType, size_t length)
     {
         switch (filterType) {
         case 0:
@@ -1280,8 +1280,8 @@ private:
     }
 
 
-    void adam7Pass(unsigned char* out, unsigned char* linen, unsigned char* lineo,
-        const unsigned char* in, size_t w, size_t i, size_t passw, size_t passh, size_t bpp)
+    void adam7Pass(unsigned char *out, unsigned char *linen, unsigned char *lineo,
+        const unsigned char *in, size_t w, size_t i, size_t passw, size_t passh, size_t bpp)
     {
         if (passw == 0)
             return;
@@ -1323,7 +1323,7 @@ private:
     }
 
     size_t readBitReverse(size_t& bitp, const unsigned char* bits) {
-        size_t r = (bits[bitp >> 3] >> (7 - (bitp & 0x7))) & 1;
+        const size_t r = (bits[bitp >> 3] >> (7 - (bitp & 0x7))) & 1;
         bitp++;
         return r;
     }
@@ -1368,10 +1368,10 @@ private:
 
     // Paeth predicter
     static unsigned char paethPredictor(short a, short b, short c) {
-        short p = a + b - c;
-        short pa = p > a ? (p - a) : (a - p);
-        short pb = p > b ? (p - b) : (b - p);
-        short pc = p > c ? (p - c) : (c - p);
+        const short p = a + b - c;
+        const short pa = p > a ? (p - a) : (a - p);
+        const short pb = p > b ? (p - b) : (b - p);
+        const short pc = p > c ? (p - c) : (c - p);
         return (unsigned char)((pa <= pb && pa <= pc) ? a : pb <= pc ? b : c);
     }
 
@@ -1504,7 +1504,7 @@ private:
     }
 
     void decodeColor() {
-        size_t colorMapSize = m_header.colorMapSize[0] | (m_header.colorMapSize[1] << 8);
+        const size_t colorMapSize = m_header.colorMapSize[0] | (m_header.colorMapSize[1] << 8);
         if (!memchr("\x8\x18\x20", m_header.colorMapEntrySize, 3))
             returnResult(kUnsupported);
 
@@ -1517,9 +1517,9 @@ private:
             convert(&colorMap[0], m_bpp * colorMapSize, m_bpp);
 
         m_data.resize(m_bpp * m_width * m_height);
-        unsigned char *indices = &m_data[(m_bpp - 1) * m_width * m_height];
+        unsigned char *const indices = &m_data[(m_bpp - 1) * m_width * m_height];
         read(indices, m_width * m_height);
-        unsigned char *src = indices;
+        const unsigned char *src = indices;
         unsigned char *dst = &m_data[m_bpp * m_width * m_height];
 
         for (size_t i = 0; i < m_height; i++) {
@@ -1544,7 +1544,7 @@ private:
     }
 
     void decodeColorRLE() {
-        size_t colorMapSize = m_header.colorMapSize[0] | (m_header.colorMapSize[1] << 8);
+        const size_t colorMapSize = m_header.colorMapSize[0] | (m_header.colorMapSize[1] << 8);
         if (!memchr("\x8\x18\x20", m_header.colorMapEntrySize, 3))
             returnResult(kUnsupported);
 
@@ -1562,13 +1562,13 @@ private:
         for (unsigned char *end = &m_data[m_bpp * m_width * m_height], *dst = end - m_bpp * m_width; dst >= &m_data[0]; ) {
             int c = get();
             if (c & 0x80) {
-                int index = get();
+                const int index = get();
                 const unsigned char *column = &colorMap[index * m_bpp];
                 c -= 0x7F;
                 c *= m_bpp;
 
                 while (c > 0 && dst >= &m_data[0]) {
-                    int n = u::min(c, int(end - dst));
+                    const int n = u::min(c, int(end - dst));
                     for (unsigned char *run = dst + n; dst < run; dst += m_bpp)
                         memcpy(dst, column, m_bpp);
                     c -= n;
@@ -1580,7 +1580,7 @@ private:
             } else {
                 c += 1;
                 while (c > 0 && dst >= &m_data[0]) {
-                    int n = u::min(c, int(end - dst) / int(m_bpp));
+                    const int n = u::min(c, int(end - dst) / int(m_bpp));
                     read(buffer, n);
                     for (unsigned char *src = buffer; src <= &buffer[n]; dst += m_bpp)
                         memcpy(dst, &colorMap[*src++ * m_bpp], m_bpp);
@@ -1607,7 +1607,7 @@ private:
                 c *= m_bpp;
 
                 while (c > 0) {
-                    int n = u::min(c, int(end - dst));
+                    const int n = u::min(c, int(end - dst));
                     for (unsigned char *run = dst + n; dst < run; dst += m_bpp)
                         memcpy(dst, buffer, m_bpp);
                     c -= n;
@@ -1622,7 +1622,7 @@ private:
                 c += 1;
                 c *= m_bpp;
                 while (c > 0) {
-                    int n = u::min(c, int(end - dst));
+                    const int n = u::min(c, int(end - dst));
                     read(dst, n);
                     if (m_bpp >= 3)
                         convert(dst, n, m_bpp);
@@ -1939,17 +1939,17 @@ void texture::convert() {
         if (m_format == kTexFormatBGR || m_format == kTexFormatBGRA) {
             // Format is BGR[A]
             for (size_t i = 0; i < m_data.size(); i+= m_bpp) {
-                unsigned char R = m_data[i + 2];
-                unsigned char G = m_data[i + 1];
-                unsigned char B = m_data[i];
+                const unsigned char R = m_data[i + 2];
+                const unsigned char G = m_data[i + 1];
+                const unsigned char B = m_data[i];
                 rework.push_back((unsigned char)((((R << 1) + ((G << 2) + G) + B)) >> 3));
             }
         } else {
             // Format is RGB[A]
             for (size_t i = 0; i < m_data.size(); i+= m_bpp) {
-                unsigned char R = m_data[i];
-                unsigned char G = m_data[i + 1];
-                unsigned char B = m_data[i + 2];
+                const unsigned char R = m_data[i];
+                const unsigned char G = m_data[i + 1];
+                const unsigned char B = m_data[i + 2];
                 rework.push_back((unsigned char)((((R << 1) + ((G << 2) + G) + B)) >> 3));
             }
         }
@@ -2088,7 +2088,7 @@ u::optional<u::string> texture::find(const u::string &infile) {
         if (end == u::string::npos)
             return u::none;
         const size_t length = end - beg - 1;
-        for (auto &it : tags)
+        for (const auto &it : tags)
             if (!strncmp(&file[beg+1], it.name, length))
                 m_flags |= it.flag;
         file.erase(beg, end+1);

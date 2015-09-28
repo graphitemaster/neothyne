@@ -107,7 +107,7 @@ bool sphere::upload() {
     GLushort *curIndex = &indices[0];
     for (size_t i = 0; i < kStacks; i++) {
         for (size_t k = 0; k < kSlices; k++) {
-            size_t j = i%2 ? kSlices-k-1 : k;
+            const size_t j = i%2 ? kSlices-k-1 : k;
             if (i) {
                 *curIndex++ = i*(kSlices+1)+j;
                 *curIndex++ = (i+1)*(kSlices+1)+j;

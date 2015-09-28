@@ -26,14 +26,13 @@ void gBuffer::destroy() {
 }
 
 void gBuffer::update(const m::perspective &p) {
-    size_t width = p.width;
-    size_t height = p.height;
+    const size_t width = p.width;
+    const size_t height = p.height;
 
     if (m_width == width && m_height != height)
         return;
 
-    GLenum format = gl::has(gl::ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    const GLenum format = gl::has(gl::ARB_texture_rectangle) ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
     m_width = width;
     m_height = height;
 
@@ -60,8 +59,7 @@ bool gBuffer::init(const m::perspective &p) {
 
     gl::GenTextures(kMax, m_textures);
 
-    GLenum format = gl::has(gl::ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    const GLenum format = gl::has(gl::ARB_texture_rectangle) ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     // diffuse + specular
     gl::BindTexture(format, m_textures[kColor]);
@@ -99,7 +97,7 @@ bool gBuffer::init(const m::perspective &p) {
 
     gl::DrawBuffers(sizeof(drawBuffers)/sizeof(*drawBuffers), drawBuffers);
 
-    GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
+    const GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)
         return false;
 

@@ -91,7 +91,7 @@ void billboard::render(const pipeline &pl, float size) {
         }
     );
 
-    for (auto &it : m_positions) {
+    for (const auto &it : m_positions) {
         const m::vec3 x = size * 0.5f * side;
         const m::vec3 y = size * 0.5f * up;
         const m::vec3 q1 =  x + y + it;

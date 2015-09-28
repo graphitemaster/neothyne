@@ -12,12 +12,12 @@ size_t vertexCacheData::findTriangle(size_t triangle) {
     for (size_t i = 0; i < indices.size(); i++)
         if (indices[i] == triangle)
             return i;
-    return (size_t)-1;
+    return size_t(-1);
 }
 
 void vertexCacheData::moveTriangle(size_t triangle) {
-    size_t index = findTriangle(triangle);
-    assert(index != (size_t)-1);
+    const size_t index = findTriangle(triangle);
+    assert(index != size_t(-1));
 
     // Erase the index and add it to the end
     indices.erase(indices.begin() + index,
@@ -26,7 +26,7 @@ void vertexCacheData::moveTriangle(size_t triangle) {
 }
 
 vertexCacheData::vertexCacheData()
-    : cachePosition((size_t)-1)
+    : cachePosition(size_t(-1))
     , currentScore(0.0f)
     , totalValence(0)
     , remainingValence(0)
@@ -40,9 +40,9 @@ triangleCacheData::triangleCacheData()
     , currentScore(0.0f)
     , calculated(false)
 {
-    vertices[0] = (size_t)-1;
-    vertices[1] = (size_t)-1;
-    vertices[2] = (size_t)-1;
+    vertices[0] = size_t(-1);
+    vertices[1] = size_t(-1);
+    vertices[2] = size_t(-1);
 }
 
 ///! vertexCache
@@ -50,7 +50,7 @@ size_t vertexCache::findVertex(size_t vertex) {
     for (size_t i = 0; i < 32; i++)
         if (m_cache[i] == vertex)
             return i;
-    return (size_t)-1;
+    return size_t(-1);
 }
 
 void vertexCache::removeVertex(size_t stackIndex) {
@@ -59,9 +59,9 @@ void vertexCache::removeVertex(size_t stackIndex) {
 }
 
 void vertexCache::addVertex(size_t vertex) {
-    size_t w = findVertex(vertex);
+    const size_t w = findVertex(vertex);
     // remove the vertex for later reinsertion at the top
-    if (w != (size_t)-1)
+    if (w != size_t(-1))
         removeVertex(w);
     else // not found, cache miss!
         m_misses++;
@@ -84,7 +84,7 @@ size_t vertexCache::getCacheMissCount() const {
 
 size_t vertexCache::getCacheMissCount(const u::vector<size_t> &indices) {
     clear();
-    for (auto &it : indices)
+    for (const auto &it : indices)
         addVertex(it);
     return m_misses;
 }
@@ -109,14 +109,14 @@ vertexCacheOptimizer::vertexCacheOptimizer()
 }
 
 vertexCacheOptimizer::result vertexCacheOptimizer::optimize(u::vector<size_t> &indices) {
-    size_t find = (size_t)-1;
+    size_t find = size_t(-1);
     for (size_t i = 0; i < indices.size(); i++)
-        if (find == (size_t)-1 || (find != (size_t)-1 && indices[i] > find))
+        if (find == size_t(-1) || (find != size_t(-1) && indices[i] > find))
             find = indices[i];
-    if (find == (size_t)-1)
+    if (find == size_t(-1))
         return kErrorNoVertices;
 
-    result begin = init(indices, find + 1);
+    const result begin = init(indices, find + 1);
     if (begin != kSuccess)
         return begin;
 
@@ -133,12 +133,12 @@ vertexCacheOptimizer::result vertexCacheOptimizer::optimize(u::vector<size_t> &i
 }
 
 float vertexCacheOptimizer::calcVertexScore(size_t vertex) {
-    vertexCacheData *v = &m_vertices[vertex];
-    if (v->remainingValence == (size_t)-1 || v->remainingValence == 0)
+    const vertexCacheData *const v = &m_vertices[vertex];
+    if (v->remainingValence == size_t(-1) || v->remainingValence == 0)
         return -1.0f; // No triangle needs this vertex
 
     float value = 0.0f;
-    if (v->cachePosition == (size_t)-1) {
+    if (v->cachePosition == size_t(-1)) {
         // Vertex is not in FIFO cache.
     } else {
         if (v->cachePosition < 3) {
@@ -154,7 +154,7 @@ float vertexCacheOptimizer::calcVertexScore(size_t vertex) {
     }
 
     // Bonus points for having a low number of triangles.
-    float valenceBoost = powf(float(v->remainingValence), -kValenceBoostPower);
+    const float valenceBoost = powf(float(v->remainingValence), -kValenceBoostPower);
     value += kValenceBoostScale * valenceBoost;
     return value;
 }
@@ -166,7 +166,7 @@ size_t vertexCacheOptimizer::fullScoreRecalculation() {
 
     // Calculate scores for all active triangles
     float maxScore = 0.0f;
-    size_t maxScoreTriangle = (size_t)-1;
+    size_t maxScoreTriangle = size_t(-1);
     bool firstTime = true;
 
     for (size_t i = 0; i < m_triangles.size(); i++) {
@@ -175,9 +175,9 @@ size_t vertexCacheOptimizer::fullScoreRecalculation() {
             continue;
 
         // Sum the score of all the triangle's vertices
-        float sum = m_vertices[it.vertices[0]].currentScore +
-                    m_vertices[it.vertices[1]].currentScore +
-                    m_vertices[it.vertices[2]].currentScore;
+        const float sum = m_vertices[it.vertices[0]].currentScore +
+                          m_vertices[it.vertices[1]].currentScore +
+                          m_vertices[it.vertices[2]].currentScore;
         it.currentScore = sum;
 
         if (firstTime || sum > maxScore) {
@@ -192,8 +192,8 @@ size_t vertexCacheOptimizer::fullScoreRecalculation() {
 
 vertexCacheOptimizer::result vertexCacheOptimizer::initialPass() {
     for (size_t i = 0; i < m_indices.size(); i++) {
-        size_t index = m_indices[i];
-        if (index == (size_t)-1 || index >= m_vertices.size())
+        const size_t index = m_indices[i];
+        if (index == size_t(-1) || index >= m_vertices.size())
             return kErrorInvalidIndex;
         m_vertices[index].totalValence++;
         m_vertices[index].remainingValence++;
@@ -228,12 +228,12 @@ vertexCacheOptimizer::result vertexCacheOptimizer::init(u::vector<size_t> &indic
     // Copy the indices
     m_indices.clear();
     m_indices.reserve(indices.size());
-    for (auto &it : indices)
+    for (const auto &it : indices)
         m_indices.push_back(it);
 
     // Run the initial pass
     m_vertexCache.clear();
-    m_bestTriangle = (size_t)-1;
+    m_bestTriangle = size_t(-1);
 
     return initialPass();
 }
@@ -241,20 +241,20 @@ vertexCacheOptimizer::result vertexCacheOptimizer::init(u::vector<size_t> &indic
 void vertexCacheOptimizer::addTriangle(size_t triangle) {
     // reset all cache positions
     for (size_t i = 0; i < 32; i++) {
-        size_t find = m_vertexCache.getCachedVertex(i);
-        if (find == (size_t)-1)
+        const size_t find = m_vertexCache.getCachedVertex(i);
+        if (find == size_t(-1))
             continue;
-        m_vertices[find].cachePosition = (size_t)-1;
+        m_vertices[find].cachePosition = size_t(-1);
     }
 
-    triangleCacheData *t = &m_triangles[triangle];
+    triangleCacheData *const t = &m_triangles[triangle];
     if (t->rendered)
         return;
 
     for (size_t i = 0; i < 3; i++) {
         // Add all the triangle's vertices to the cache
         m_vertexCache.addVertex(t->vertices[i]);
-        vertexCacheData *v = &m_vertices[t->vertices[i]];
+        vertexCacheData *const v = &m_vertices[t->vertices[i]];
 
         // Decrease the remaining valence.
         v->remainingValence--;
@@ -271,8 +271,8 @@ void vertexCacheOptimizer::addTriangle(size_t triangle) {
 
     // Update all the vertex cache positions
     for (size_t i = 0; i < 32; i++) {
-        size_t index = m_vertexCache.getCachedVertex(i);
-        if (index == (size_t)-1)
+        const size_t index = m_vertexCache.getCachedVertex(i);
+        if (index == size_t(-1))
             continue;
         m_vertices[index].cachePosition = i;
     }
@@ -288,13 +288,13 @@ void vertexCacheOptimizer::addTriangle(size_t triangle) {
 bool vertexCacheOptimizer::cleanFlags() {
     bool found = false;
     for (size_t i = 0; i < 32; i++) {
-        size_t find = m_vertexCache.getCachedVertex(i);
-        if (find == (size_t)-1)
+        const size_t find = m_vertexCache.getCachedVertex(i);
+        if (find == size_t(-1))
             continue;
 
-        vertexCacheData *v = &m_vertices[find];
+        const vertexCacheData *const v = &m_vertices[find];
         for (size_t j = 0; j < v->remainingValence; j++) {
-            triangleCacheData *t = &m_triangles[v->indices[j]];
+            triangleCacheData *const t = &m_triangles[v->indices[j]];
             found = true;
             // Clear flags
             t->calculated = false;
@@ -306,13 +306,13 @@ bool vertexCacheOptimizer::cleanFlags() {
 }
 
 void vertexCacheOptimizer::triangleScoreRecalculation(size_t triangle) {
-    triangleCacheData *t = &m_triangles[triangle];
+    triangleCacheData *const t = &m_triangles[triangle];
 
     // Calculate vertex scores
     float sum = 0.0f;
     for (size_t i = 0; i < 3; i++) {
-        vertexCacheData *v = &m_vertices[t->vertices[i]];
-        float score = v->calculated ? v->currentScore : calcVertexScore(t->vertices[i]);
+        vertexCacheData *const v = &m_vertices[t->vertices[i]];
+        const float score = v->calculated ? v->currentScore : calcVertexScore(t->vertices[i]);
         v->currentScore = score;
         v->calculated = true;
         sum += score;
@@ -326,24 +326,24 @@ size_t vertexCacheOptimizer::partialScoreRecalculation() {
     // Iterate through all the vertices of the cache
     bool firstTime = true;
     float maxScore = 0.0f;
-    size_t maxScoreTriangle = (size_t)-1;
+    size_t maxScoreTriangle = size_t(-1);
     for (size_t i = 0; i < 32; i++) {
-        size_t find = m_vertexCache.getCachedVertex(i);
-        if (find == (size_t)-1)
+        const size_t find = m_vertexCache.getCachedVertex(i);
+        if (find == size_t(-1))
             continue;
 
-        vertexCacheData *v = &m_vertices[find];
+        const vertexCacheData *const v = &m_vertices[find];
 
         // Iterate through all the active triangles of this vertex
         for (size_t j = 0; j < v->remainingValence; j++) {
-            size_t triangle = v->indices[j];
-            triangleCacheData *t = &m_triangles[triangle];
+            const size_t triangle = v->indices[j];
+            const triangleCacheData *const t = &m_triangles[triangle];
 
             // Calculate triangle score if it isn't already calculated
             if (!t->calculated)
                 triangleScoreRecalculation(triangle);
 
-            float score = t->currentScore;
+            const float score = t->currentScore;
             // Found a triangle to process
             if (firstTime || score > maxScore) {
                 firstTime = false;

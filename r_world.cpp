@@ -149,7 +149,7 @@ bool compositeMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
 
-    for (auto &it : defines)
+    for (const auto &it : defines)
         method::define(it);
 
     if (gl::has(gl::ARB_texture_rectangle))
@@ -210,8 +210,7 @@ void composite::update(const m::perspective &p) {
     const size_t width = p.width;
     const size_t height = p.height;
 
-    GLenum format = gl::has(gl::ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    const GLenum format = gl::has(gl::ARB_texture_rectangle) ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     if (m_width == width && m_height == height)
         return;
@@ -236,8 +235,7 @@ bool composite::init(const m::perspective &p, GLuint depth) {
 
     gl::GenTextures(1, &m_texture);
 
-    GLenum format = gl::has(gl::ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    const GLenum format = gl::has(gl::ARB_texture_rectangle) ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     // output composite
     gl::BindTexture(format, m_texture);
@@ -257,7 +255,7 @@ bool composite::init(const m::perspective &p, GLuint depth) {
     static GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
     gl::DrawBuffers(1, drawBuffers);
 
-    GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
+    const GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)
         return false;
 
@@ -274,11 +272,13 @@ GLuint composite::texture() const {
 }
 
 world::spotLightChunk::~spotLightChunk() {
-    if (ebo) gl::DeleteBuffers(1, &ebo);
+    if (ebo)
+        gl::DeleteBuffers(1, &ebo);
 }
 
 world::pointLightChunk::~pointLightChunk() {
-    if (ebo) gl::DeleteBuffers(1, &ebo);
+    if (ebo)
+        gl::DeleteBuffers(1, &ebo);
 }
 
 bool world::spotLightChunk::init() {
@@ -824,9 +824,9 @@ void world::geometryPass(const pipeline &pl) {
             pm.setScale(it->scale + mdl->scale);
 
             const m::vec3 rot = mdl->rotate + it->rotate;
-            m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
-            m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
-            m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
+            const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+            const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+            const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
             m::mat4 rotate;
             (rz * ry * rx).getMatrix(&rotate);
             pm.setRotate(rotate);
@@ -886,9 +886,9 @@ void world::geometryPass(const pipeline &pl) {
         {
             p.setRotation(m::quat());
             const m::vec3 rot = m::vec3(0, 180, 0);
-            m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
-            m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
-            m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
+            const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+            const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+            const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
             m::mat4 rotate;
             (rz * ry * rx).getMatrix(&rotate);
             p.setRotate(rotate);
@@ -1120,7 +1120,7 @@ void world::forwardPass(const pipeline &pl) {
             }
 
             if (it.bbox) {
-                for (auto &jt : it.boards) {
+                for (const auto &jt : it.boards) {
                     if (!jt.highlight)
                         continue;
 
@@ -1135,8 +1135,8 @@ void world::forwardPass(const pipeline &pl) {
                 }
             }
 
-            auto &board = m_billboards[it.name];
-            for (auto &jt : it.boards)
+            const auto &board = m_billboards[it.name];
+            for (const auto &jt : it.boards)
                 board->add(jt.position);
             board->render(pl, it.size);
         }
@@ -1151,9 +1151,9 @@ void world::forwardPass(const pipeline &pl) {
             p.setScale(it->scale + mdl->scale);
 
             const m::vec3 rot = mdl->rotate + it->rotate;
-            m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
-            m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
-            m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
+            const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+            const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+            const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
             m::mat4 rotate;
             (rz * ry * rx).getMatrix(&rotate);
             p.setRotate(rotate);
@@ -1173,10 +1173,10 @@ void world::forwardPass(const pipeline &pl) {
 
         m_bboxMethod.enable();
         m_bboxMethod.setColor(kHighlighted);
-        for (auto &it : m_map->m_pointLights) {
+        for (const auto &it : m_map->m_pointLights) {
             if (!it->highlight)
                 continue;
-            float scale = it->radius * kLightRadiusTweak;
+            const float scale = it->radius * kLightRadiusTweak;
             pipeline p = pl;
             p.setWorld(it->position);
             p.setScale({scale, scale, scale});
@@ -1184,18 +1184,18 @@ void world::forwardPass(const pipeline &pl) {
             m_sphere.render();
         }
 
-        for (auto &it : m_map->m_spotLights) {
+        for (const auto &it : m_map->m_spotLights) {
             if (!it->highlight)
                 continue;
-            float scale = it->radius * kLightRadiusTweak;
+            const float scale = it->radius * kLightRadiusTweak;
             pipeline p = pl;
             p.setWorld(it->position);
             p.setScale({it->cutOff, scale, it->cutOff});
 
             const m::vec3 rot = it->direction;
-            m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
-            m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
-            m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
+            const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+            const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+            const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
             m::mat4 rotate;
             (rz * ry * rx).getMatrix(&rotate);
             p.setRotate(rotate);
@@ -1256,8 +1256,7 @@ void world::compositePass(const pipeline &pl) {
     // Writing to color grader
     m_colorGrader.bindWriting();
 
-    const GLenum format = gl::has(gl::ARB_texture_rectangle)
-        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+    const GLenum format = gl::has(gl::ARB_texture_rectangle) ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
     // take final composite on unit 0
     gl::ActiveTexture(GL_TEXTURE0);

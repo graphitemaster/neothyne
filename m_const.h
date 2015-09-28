@@ -114,7 +114,7 @@ static inline int rempio2(float x, double &y) {
     static const double kInvPio2 = 6.36619772367581382433e-01;
     static const double kPIO2H = 1.57079631090164184570e+00;
     static const double kPIO2T = 1.58932547735281966916e-08;
-    floatShape shape = { x };
+    const floatShape shape = { x };
     const uint32_t ix = shape.asInt & 0x7FFFFFFF;
     if (ix < 0x4DC90FDB) { // |x| ~< 2^28*(pi/2)
         const f64 fn = x*kInvPio2 + kToInt - kToInt;
@@ -132,7 +132,7 @@ static inline int rempio2(float x, double &y) {
 }
 
 static inline float cos(float x) {
-    floatShape shape = { x };
+    const floatShape shape = { x };
     uint32_t ix = shape.asInt;
     const uint32_t sign = ix >> 31;
     ix &= 0x7FFFFFFF;
@@ -164,7 +164,7 @@ static inline float cos(float x) {
 }
 
 static inline float sin(float x) {
-    floatShape shape = { x };
+    const floatShape shape = { x };
     uint32_t ix = shape.asInt;
     const uint32_t sign = ix >> 31;
     ix &= 0x7FFFFFFF;
@@ -202,7 +202,7 @@ static inline float sin(float x) {
 }
 
 static inline float tan(float x) {
-    floatShape shape = { x };
+    const floatShape shape = { x };
     uint32_t ix = shape.asInt;
     const uint32_t sign = ix >> 31;
     ix &= 0x7FFFFFFF;
@@ -229,7 +229,7 @@ static inline float tan(float x) {
 }
 
 static inline void sincos(float x, float &s, float &c) {
-    floatShape shape = { x };
+    const floatShape shape = { x };
     uint32_t ix = shape.asInt;
     const uint32_t sign = ix >> 31;
     ix &= 0x7FFFFFFF;

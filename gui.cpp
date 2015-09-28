@@ -310,7 +310,7 @@ inline bool state::buttonLogic(ref thing, bool over) {
 
 inline void state::update(mouseState &mouse) {
     // Update the input state
-    bool left = mouse.button & kMouseButtonLeft;
+    const bool left = mouse.button & kMouseButtonLeft;
     m_mouse.x = mouse.x;
     m_mouse.y = mouse.y;
     m_mouse.wheel = mouse.wheel * -ui_scroll_speed;
@@ -361,8 +361,8 @@ bool areaBegin(const char *contents, int x, int y, int w, int h, int &value, boo
     S.focusBottom = y-header+h;
     S.inside = G.inRectangle(x, y, w, h, false);
 
-    int totalHeight = int(neoHeight());
-    int totalWidth = int(neoWidth());
+    const int totalHeight = int(neoHeight());
+    const int totalWidth = int(neoWidth());
 
     G.m_insideCurrentScroll = S.inside;
     if (style) {

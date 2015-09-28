@@ -25,7 +25,7 @@ bool lightMethod::init(const char *vs, const char *fs, const u::vector<const cha
     if (gl::has(gl::ARB_texture_rectangle))
         method::define("HAS_TEXTURE_RECTANGLE");
 
-    for (auto &it : defines)
+    for (const auto &it : defines)
         method::define(it);
 
     if (!addShader(GL_VERTEX_SHADER, vs))

@@ -125,7 +125,7 @@ u::optional<u::string> varValue(const u::string &name) {
     if (gVariables()->find(name) == gVariables()->end())
         return u::none;
 
-    auto &ref = (*gVariables())[name];
+    const auto &ref = (*gVariables())[name];
 
     switch (ref.type) {
     case kVarFloat:
@@ -143,7 +143,7 @@ template <typename T>
 static inline varStatus varSet(const u::string &name, const T &value, bool callback) {
     if (gVariables()->find(name) == gVariables()->end())
         return kVarNotFoundError;
-    auto &ref = (*gVariables())[name];
+    const auto &ref = (*gVariables())[name];
     if (ref.type != varTypeTraits<T>::type)
         return kVarTypeError;
     auto &val = *(var<T>*)(ref.self);
@@ -156,7 +156,7 @@ static inline varStatus varSet(const u::string &name, const T &value, bool callb
 varStatus varChange(const u::string &name, const u::string &value, bool callback) {
     if (gVariables()->find(name) == gVariables()->end())
         return kVarNotFoundError;
-    auto &ref = (*gVariables())[name];
+    const auto &ref = (*gVariables())[name];
     if (ref.type == kVarInt) {
         for (int it : value)
             if (!strchr("0123456789", it))
@@ -171,7 +171,7 @@ varStatus varChange(const u::string &name, const u::string &value, bool callback
         u::string copy(value);
         copy.pop_front();
         copy.pop_back();
-        return varSet<u::string>(name, copy, callback);
+        return varSet<u::string>(name, u::move(copy), callback);
     }
     return kVarTypeError;
 }
@@ -189,17 +189,17 @@ bool writeConfig(const u::string &userPath) {
     auto writeLine = [](FILE *fp, const u::string &name, const varReference &ref) {
         if (ref.type == kVarInt) {
             auto handle = (var<int>*)ref.self;
-            auto v = handle->get();
+            const auto &v = handle->get();
             if (handle->flags() & kVarPersist)
                 u::fprint(fp, "%s %d\n", name, v);
         } else if (ref.type == kVarFloat) {
             auto handle = (var<float>*)ref.self;
-            auto v = handle->get();
+            const auto &v = handle->get();
             if (handle->flags() & kVarPersist)
                 u::fprint(fp, "%s %.2f\n", name, v);
         } else if (ref.type == kVarString) {
             auto handle = (var<u::string>*)ref.self;
-            auto v = handle->get();
+            const auto &v = handle->get();
             if (handle->flags() & kVarPersist) {
                 if (v.empty())
                     return;
@@ -207,7 +207,7 @@ bool writeConfig(const u::string &userPath) {
             }
         }
     };
-    for (auto &it : *gVariables())
+    for (const auto &it : *gVariables())
         writeLine(file, it.first, it.second);
     return true;
 }

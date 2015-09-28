@@ -137,9 +137,9 @@ void zlib::inflator::generateFixedTrees(huffmanTree& tree, huffmanTree& treeD) {
     u::vector<size_t> bitlen(288, 8);
     u::vector<size_t> bitlenD(32, 5);
 
-    for(size_t i = 144; i <= 255; i++)
+    for (size_t i = 144; i <= 255; i++)
         bitlen[i] = 9;
-    for(size_t i = 256; i <= 279; i++)
+    for (size_t i = 256; i <= 279; i++)
         bitlen[i] = 7;
 
     tree.make(bitlen, 15);
@@ -290,14 +290,14 @@ void zlib::inflator::inflateHuffmanBlock(u::vector<unsigned char> &out, const un
             return;
 
         // literal symbol
-        else if(code <= 255) {
+        else if (code <= 255) {
             if (pos >= out.size())
                 out.resize((pos + 1) * 2);
             out[pos++] = (unsigned char)(code);
         }
 
         // length code
-        else if(code >= 257 && code <= 285) {
+        else if (code >= 257 && code <= 285) {
             size_t length = kLengthBases[code - 257];
             size_t numextrabits = kLengthExtras[code - 257];
 
@@ -345,8 +345,8 @@ void zlib::inflator::inflateNoCompression(u::vector<unsigned char> &out,
     if (p >= inlength - 4)
         returnError();
 
-    size_t length = in[p] + 256 * in[p + 1];
-    size_t numberOfLengths = in[p + 2] + 256 * in[p + 3];
+    const size_t length = in[p] + 256 * in[p + 1];
+    const size_t numberOfLengths = in[p + 2] + 256 * in[p + 3];
 
     p += 4;
     if (length + numberOfLengths != 65535)
@@ -371,9 +371,9 @@ bool zlib::decompress(u::vector<unsigned char> &out, const unsigned char *in, si
     // 256 * in[0] + in[1] must be a multiple of 31, the FCHECK value is supposed to be made that way
     if ((in[0] * 256 + in[1]) % 31 != 0)
         return false;
-    size_t cm = in[0] & 15;
-    size_t cinfo = (in[0] >> 4) & 15;
-    size_t fdict = (in[1] >> 5) & 1;
+    const size_t cm = in[0] & 15;
+    const size_t cinfo = (in[0] >> 4) & 15;
+    const size_t fdict = (in[1] >> 5) & 1;
     // only compression method 8 is supported: `inflate with sliding window of 32k is supported'
     if (cm != 8 || cinfo > 7)
         return false;

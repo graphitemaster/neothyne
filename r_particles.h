@@ -61,13 +61,13 @@ protected:
 
 private:
     struct singleVertex {
-        // 16 bytes
+        // 20 bytes
         m::vec3 position;
         unsigned char color[4];
         unsigned char power;
     };
     struct halfVertex {
-        // 10 bytes
+        // 12 bytes
         m::half position[3];
         unsigned char color[4];
         unsigned char power;

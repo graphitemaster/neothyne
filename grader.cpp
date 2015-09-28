@@ -64,7 +64,7 @@ void colorGrader::generateTexture() {
 }
 
 void colorGrader::generateColorBalanceTables() {
-    double *transfer[3][kBalanceMax];
+    const double *transfer[3][kBalanceMax];
     for (size_t i = kBalanceShadows; i < kBalanceMax; i++)
         for (size_t j = 0; j < 3; j++)
             transfer[j][i] = m_balance[j][i] > 0.0 ? m_balanceAdd[i] : m_balanceSub[i];
@@ -112,9 +112,9 @@ void colorGrader::generateHueSaturationTables() {
 //  S [0, 255]
 //  L [0, 255]
 void colorGrader::RGB2HSL(int &red, int &green, int &blue) {
-    int r = red;
-    int g = green;
-    int b = blue;
+    const int r = red;
+    const int g = green;
+    const int b = blue;
 
     int min;
     int max;
@@ -128,7 +128,7 @@ void colorGrader::RGB2HSL(int &red, int &green, int &blue) {
 
     double h = 0.0;
     double s = 0.0;
-    double l = (max + min) / 2.0;
+    const double l = (max + min) / 2.0;
     if (max != min) {
         int delta = max - min;
         if (l < 128.0)
@@ -176,9 +176,9 @@ int colorGrader::HSLINT(double n1, double n2, double hue) {
 }
 
 void colorGrader::HSL2RGB(int &hue, int &saturation, int &lightness) {
-    int h = hue;
-    int s = saturation;
-    int l = lightness;
+    const int h = hue;
+    const int s = saturation;
+    const int l = lightness;
     if (s == 0) { // Achromatic
         hue = l;
         saturation = l;

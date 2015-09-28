@@ -109,7 +109,7 @@ bool guiMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
 
-    for (auto &it : defines)
+    for (const auto &it : defines)
         method::define(it);
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/gui.vs"))
@@ -148,7 +148,7 @@ bool guiModelMethod::init(const u::vector<const char *> &defines) {
     if (!method::init())
         return false;
 
-    for (auto &it : defines)
+    for (const auto &it : defines)
         method::define(it);
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/guimodel.vs"))
@@ -636,7 +636,7 @@ void gui::render(const pipeline &pl) {
                 gl::Viewport(0, 0, neoWidth(), neoHeight());
                 continue;
             }
-            auto &mdl = m_models[it.asModel.path];
+            const auto &mdl = m_models[it.asModel.path];
             auto p = it.asModel.pipeline;
             gl::Viewport(it.asModel.x, it.asModel.y, it.asModel.w, it.asModel.h);
             m_modelMethod.setWorld(p.world());
@@ -701,10 +701,10 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
         m_coords[i*2+1] = coords[i*2+1]+dmy*r;
     }
 
-    float R = float(color & 0xFF) / 255.0f;
-    float G = float((color >> 8) & 0xFF) / 255.0f;
-    float B = float((color >> 16) & 0xFF) / 255.0f;
-    float A = float((color >> 24) & 0xFF) / 255.0f;
+    const float R = float(color & 0xFF) / 255.0f;
+    const float G = float((color >> 8) & 0xFF) / 255.0f;
+    const float B = float((color >> 16) & 0xFF) / 255.0f;
+    const float A = float((color >> 24) & 0xFF) / 255.0f;
 
     batch b;
     b.start = m_vertices.size();
@@ -771,7 +771,7 @@ u::optional<gui::glyphQuad> gui::getGlyphQuad(int pw, int ph, size_t index, floa
     if (m_glyphs.size() <= index)
         return u::none;
 
-    auto &b = m_glyphs[index];
+    const auto &b = m_glyphs[index];
     const int roundX = int(m::floor(xpos + b.xoff));
     const int roundY = int(m::floor(ypos - b.yoff));
 
@@ -833,7 +833,7 @@ void gui::drawText(float x, float y, const char *contents, int align, uint32_t c
         for (const char *ch = contents; *ch; ch++, size++) {
             if (*ch < 32 || m_glyphs.size() <= size_t(*ch - 32))
                 continue;
-            auto &b = m_glyphs[*ch - 32];
+            const auto &b = m_glyphs[*ch - 32];
             const int round = int(m::floor(position + b.xoff) + 0.5f);
             length = round + b.x1 - b.x0;
             position += b.xadvance;
@@ -890,10 +890,10 @@ void gui::drawImage(float x, float y, float w, float h, const char *path) {
     batch b;
     auto tex = m_textures[path];
 
-    float x1 = float(tex->x) / float(m_atlas.width());
-    float y1 = float(tex->y) / float(m_atlas.height());
-    float x2 = float(tex->x+tex->w) / float(m_atlas.width());
-    float y2 = float(tex->y+tex->h) / float(m_atlas.height());
+    const float x1 = float(tex->x) / float(m_atlas.width());
+    const float y1 = float(tex->y) / float(m_atlas.height());
+    const float x2 = float(tex->x+tex->w) / float(m_atlas.width());
+    const float y2 = float(tex->y+tex->h) / float(m_atlas.height());
 
     b.start = m_vertices.size();
     m_vertices.reserve(m_vertices.size() + 6);
