@@ -262,7 +262,9 @@ round(fract(gl_VertexID * 0.25 + vec2(0.125, 0.375)))
 
 Each vertex has its own exponent for the power-term in soft-particle rendering.
 The depth buffer from the geometry pass is bound during particle rendering and
-sampled to make soft-particles possible.#### Composite pass
+sampled to make soft-particles possible.
+
+#### Composite pass
 
 The composite pass is responsible for applying color grading to the final result
 as well as optional anti-aliasing. It outputs to the window back buffer.
