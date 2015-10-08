@@ -223,21 +223,46 @@ in Neothyne are rendered as billboarded quads, the texture coordinates are alway
 [1, 1]
 [0, 1]
 ```
-The coordinates are thus encoded as a single integer constant where each byte
-represents a coordinate pair (each nibble represents U and V respectively.)
-On little endian GPUs this constant is `0x0FFFF00`.
 
-Thus the coordinates can be calculated by using `gl_VertexID & 3` as a byte
-index into the constant. The code is listed here for posterity's sake:
+To do this `fract` is used to modulate `gl_VertexID` into four possible values:
+`0, 0.25, 0.50, 0.75`.
+
+For `u`, we only need a value of `1` when the result of the modulation is either
+`0.25` or `0.50`. For `v` we only need a value of `1` when the value of the
+modulation is `>= 0.50`.
+
+Thus, just `round` (defined as `floor(value + 0.5)`) will give the right value
+for `v`. To get `u` the process is slightly more involved.
+
+Through various experimenting it was observed that `floor(fract(value + 0.25) + 0.25)`
+has the following properties:
+* `0.75` gets turned into `1.00`, which `fract` turns to `0.00`.
+* `0.00` gets turned into `0.25`, which `round` turns to `0.00`.
+* `0.25` gets turned into `0.50`, which `round` turns to `1.00`.
+* `0.50` gets turned into `0.75`, whcih `round` turns to `1.00`.
+
+These properties match that of how we need to generate the texture coordinates,
+leaving us with the following:
 ```
-int uv = (0x0FFFF000 >> (8*(gl_VertexID & 3))) & 0xFF;
-texCoord0 = vec2((uv & 0x0F) & 1, ((uv & 0xF0) >> 4) & 1);
+vec2(floor(fract(value + 0.25) + 0.50), floor(value + 0.50))
+```
+
+Or more appropriately:
+```
+vec2(round(fract(value + 0.25)), round(value))
+```
+
+However, due to strange rounding errors, the result of this operation does not
+exactly produces the correct coordinates. So to compensate, we bias the
+result of the `fract` by `0.125`, leaving us with this slightly scarier, albeit
+shorter way of calculating the texture coordinates:
+```
+round(fract(gl_VertexID * 0.25 + vec2(0.125, 0.375)))
 ```
 
 Each vertex has its own exponent for the power-term in soft-particle rendering.
 The depth buffer from the geometry pass is bound during particle rendering and
-sampled to make soft-particles possible.
-#### Composite pass
+sampled to make soft-particles possible.#### Composite pass
 
 The composite pass is responsible for applying color grading to the final result
 as well as optional anti-aliasing. It outputs to the window back buffer.
