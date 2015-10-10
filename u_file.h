@@ -70,6 +70,7 @@ bool remove(const u::string &file, pathType type = kFile);
 // open a file
 u::file fopen(const u::string& infile, const char *type);
 // read file line by line
+bool getline(u::file &fp, u::string &line);
 u::optional<u::string> getline(u::file &fp);
 // read a file into vector
 u::optional<u::vector<unsigned char>> read(const u::string &file, const char *mode = "rb");

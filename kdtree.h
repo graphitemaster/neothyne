@@ -4,6 +4,7 @@
 
 #include "u_string.h"
 #include "u_vector.h"
+#include "u_set.h"
 
 #include "m_plane.h"
 #include "m_quat.h"
@@ -27,7 +28,7 @@ private:
     int vertices[3];
     int texCoords[3];
     m::plane plane;
-    u::string texturePath;
+    const u::string *textureReference;
 };
 
 enum polyPlane : size_t {
@@ -79,15 +80,18 @@ struct kdTree {
     void unload();
     u::vector<unsigned char> serialize();
 
+    const u::set<u::string> &textures_() const { return textures; }
+
 private:
     friend struct kdNode;
     friend struct kdTriangle;
 
     kdNode                 *root;
     u::vector<m::vec3>      vertices;
-    u::vector<m::vec3>      texCoords;
+    u::vector<m::vec2>      texCoords;
     u::vector<kdTriangle>   triangles;
     u::vector<kdEnt>        entities;
+    u::set<u::string>       textures;
     size_t                  nodeCount;
     size_t                  leafCount;
     size_t                  textureCount;
@@ -151,14 +155,14 @@ struct kdBinTriangle {
 };
 
 struct kdBinVertex {
+    // GPU layout:
+    // P.X  P.Y  P.Z  N.X
+    // N.Y  N.Z  C.X  C.Y
+    // T.X  T.Y  T.Z  T.W
     m::vec3 vertex;
     m::vec3 normal;
-    float tu;
-    float tv;
-    m::vec3 tangent;
-    float w; // bitangent = w * (normal x tangent)
-    float padding[2];
-
+    m::vec2 coordinate;
+    m::vec4 tangent;
     void endianSwap();
 };
 

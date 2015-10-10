@@ -21,8 +21,8 @@ namespace u {
 
 ///! stringMemory
 struct stringMemory {
-    static constexpr size_t kMemorySize = 32 << 20; // 32MB pool
-    static constexpr size_t kMinChunkSize = 0x20; // 32 byte smallest chunk
+    static constexpr size_t kMemorySize = 64 << 20; // 64MB pool
+    static constexpr size_t kMinChunkSize = 32; // 32 byte smallest chunk
 
     stringMemory();
     ~stringMemory();
@@ -424,6 +424,10 @@ void string::resize(size_t size) {
     for (char *it = m_last, *end = m_first + size + 1; it < end; ++it)
         *it = '\0';
     m_last += size;
+}
+
+void string::clear() {
+    m_last = m_first;
 }
 
 string &string::append(const char *first, const char *last) {

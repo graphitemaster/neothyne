@@ -5,6 +5,7 @@
 #include "u_file.h"
 #include "u_algorithm.h"
 #include "u_misc.h"
+#include "u_zlib.h"
 
 ///! triangle
 m::vec3 kdTriangle::getNormal(const kdTree *const tree) {
@@ -200,12 +201,8 @@ void kdBinTriangle::endianSwap() {
 void kdBinVertex::endianSwap() {
     vertex.endianSwap();
     normal.endianSwap();
-    tu = u::endianSwap(tu);
-    tv = u::endianSwap(tv);
     tangent.endianSwap();
-    w = u::endianSwap(w);
-    // padding[0] is not important
-    // padding[1] is not important
+    coordinate.endianSwap();
 }
 
 void kdBinEnt::endianSwap() {
@@ -271,25 +268,29 @@ bool kdTree::load(const u::string &file) {
     if (!fp.get())
         return false;
 
-    u::string texturePath;
-    while (auto getline = u::getline(fp)) {
-        u::string& line = *getline;
+    // This is a minimal OBJ loader which makes assumptions about the format.
+    // Specifically it assumes the format looks like that of a Cube2 exported
+    // map. It expects "g slot%d" for texture slots. It expects the vertex data
+    // is already in triangulated format as well.
+    const u::string *textureReference = nullptr;
+    u::string line;
+    while (u::getline(fp, line)) {
         float x0, y0, z0, x1, y1, z1, w;
         int v0, v1, v2, t0, t1, t2, i;
         int s0, s1, s2;
-        char texture[256];
+        int slot;
         if (u::sscanf(line, "v %f %f %f", &x0, &y0, &z0) == 3) {
-            vertices.push_back(m::vec3(x0, y0, z0));
+            vertices.push_back({ x0, y0, z0 });
         } else if (u::sscanf(line, "vt %f %f", &x0, &y0) == 2
                 || u::sscanf(line, "vt %f %f %f", &x0, &y0, &z0) == 3) {
-            texCoords.push_back(m::vec3(x0, y0, 0.0f));
+            texCoords.push_back({ x0, y0 });
         } else if (u::sscanf(line, "ent %i %f %f %f %f %f %f %f",
                         &i, &x0, &y0, &z0, &x1, &y1, &z1, &w) == 8)
         {
             kdEnt ent;
             ent.id = i;
-            ent.origin = m::vec3(x0, y0, z0);
-            ent.rotation = m::quat(x1, y1, z1, w);
+            ent.origin = { x0, y0, z0 };
+            ent.rotation = { x1, y1, z1, w };
             entities.push_back(ent);
         } else if (u::sscanf(line, "f %i/%i %i/%i %i/%i",
                         &v0, &t0, &v1, &t1, &v2, &t2) == 6
@@ -297,7 +298,7 @@ bool kdTree::load(const u::string &file) {
                         &v0, &t0, &s0, &v1, &t1, &s1, &v2, &t2, &s2) == 9)
         {
             kdTriangle triangle;
-            triangle.texturePath = texturePath;
+            triangle.textureReference = textureReference;
             triangle.vertices[0] = v0 - 1;
             triangle.vertices[1] = v1 - 1;
             triangle.vertices[2] = v2 - 1;
@@ -308,15 +309,19 @@ bool kdTree::load(const u::string &file) {
             triangles.push_back(triangle);
         } else if (u::sscanf(line, "f %i %i %i", &v0, &v1, &v2) == 3) {
             kdTriangle triangle;
-            triangle.texturePath = texturePath;
+            triangle.textureReference = textureReference;
             triangle.vertices[0] = v0 - 1;
             triangle.vertices[1] = v1 - 1;
             triangle.vertices[2] = v2 - 1;
             triangle.generatePlane(this);
             triangles.push_back(triangle);
-        } else if (u::sscanf(line, "tex %s", texture) == 1) {
-            texturePath = texture;
+        } else if (u::sscanf(line, "g slot%d", &slot) == 1) {
             textureCount++;
+            auto format = u::format("textures/%d", slot);
+            auto find = textures.find(format);
+            if (find == textures.end())
+                find = textures.insert(format).first;
+            textureReference = &*find;
         }
     }
 
@@ -355,10 +360,13 @@ static void kdBinCalculateTangent(const u::vector<kdBinTriangle> &triangles, con
     const m::vec3 &z = vertices[triangles[index].v[2]].vertex;
     const m::vec3 q1(y - x);
     const m::vec3 q2(z - x);
-    const float s1 = vertices[triangles[index].v[1]].tu - vertices[triangles[index].v[0]].tu;
-    const float s2 = vertices[triangles[index].v[2]].tu - vertices[triangles[index].v[0]].tu;
-    const float t1 = vertices[triangles[index].v[1]].tv - vertices[triangles[index].v[0]].tv;
-    const float t2 = vertices[triangles[index].v[2]].tv - vertices[triangles[index].v[0]].tv;
+    const m::vec2 &c0 = vertices[triangles[index].v[0]].coordinate;
+    const m::vec2 &c1 = vertices[triangles[index].v[1]].coordinate;
+    const m::vec2 &c2 = vertices[triangles[index].v[2]].coordinate;
+    const float s1 = c1.x - c0.x;
+    const float s2 = c2.x - c0.x;
+    const float t1 = c1.y - c0.y;
+    const float t2 = c2.y - c0.y;
     const float det = s1*t2 - s2*t1;
     if (m::abs(det) <= m::kEpsilon) {
         // Unable to compute tangent + bitangent, default tangent along xAxis and
@@ -419,24 +427,24 @@ static void kdBinCreateTangents(u::vector<kdBinVertex> &vertices, const u::vecto
         vertices[i].normal = normals[i].normalized();
         const m::vec3 &n = vertices[i].normal;
         m::vec3 t = tangents[i];
-        vertices[i].tangent = (t - n * (n * t)).normalized();
+        m::vec3 tangent = (t - n * (n * t)).normalized();
 
-        if (!vertices[i].tangent.isNormalized()) {
+        if (!tangent.isNormalized()) {
             // Couldn't calculate vertex tangent for vertex, so we fill it in along
             // the x axis.
-            vertices[i].tangent = m::vec3::xAxis;
-            t = vertices[i].tangent;
+            tangent = m::vec3::xAxis;
+            t = tangent;
         }
 
         // bitangents are only stored by handness in the W component (-1.0f or 1.0f).
-        vertices[i].w = (((n ^ t) * bitangents[i]) < 0.0f) ? -1.0f : 1.0f;
+        vertices[i].tangent = m::vec4(tangent, (((n ^ t) * bitangents[i]) < 0.0f) ? -1.0f : 1.0f);
     }
 }
 
 static bool kdBinCompare(const kdBinVertex &lhs, const kdBinVertex &rhs, float epsilon) {
     return lhs.vertex.equals(rhs.vertex, epsilon)
-        && (m::abs(lhs.tu - rhs.tu) < epsilon)
-        && (m::abs(lhs.tv - rhs.tv) < epsilon);
+        && (m::abs(lhs.coordinate.x - rhs.coordinate.x) < epsilon)
+        && (m::abs(lhs.coordinate.y - rhs.coordinate.y) < epsilon);
 }
 
 static int32_t kdBinInsertLeaf(const kdNode *leaf, u::vector<kdBinLeaf> &leafs) {
@@ -526,14 +534,12 @@ u::vector<unsigned char> kdTree::serialize() {
 
     for (size_t i = 0; i < triangles.size(); i++) {
         kdBinTriangle triangle;
-        triangle.texture = kdBinAddTexture(compiledTextures, triangles[i].texturePath);
+        triangle.texture = kdBinAddTexture(compiledTextures, *triangles[i].textureReference);
         for (size_t j = 0; j < 3; j++) {
             kdBinVertex vertex;
             vertex.vertex = vertices[triangles[i].vertices[j]];
-            if (!texCoords.empty()) {
-                vertex.tu = texCoords[triangles[i].texCoords[j]].x;
-                vertex.tv = texCoords[triangles[i].texCoords[j]].y;
-            }
+            if (!texCoords.empty())
+                vertex.coordinate = texCoords[triangles[i].texCoords[j]];
             // If we can reuse vertices for several faces, then do so
             int k = 0;
             for (k = compiledVertices.size() - 1; k >= 0; k--) {
@@ -629,5 +635,10 @@ u::vector<unsigned char> kdTree::serialize() {
     const uint32_t end = u::endianSwap(kdBinHeader::kMagic);
     kdSerialize(store, &end, sizeof(uint32_t));
 
-    return store;
+    // compress
+    u::vector<unsigned char> compressed;
+    compressed.reserve(store.size() * 2);
+    u::zlib::compress(compressed, store);
+
+    return compressed;
 }

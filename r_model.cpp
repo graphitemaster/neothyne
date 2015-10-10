@@ -337,7 +337,20 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
                     (*store)->colorize(colorized);
                 }
             } else {
-                *store = nullptr;
+                // Make it a "no texture" texture
+                auto notex = textures.find("textures/notex");
+                if (notex == textures.end()) {
+                    u::unique_ptr<texture2D> tex(new texture2D);
+                    if (tex->load("textures/notex")) {
+                        auto release = tex.release();
+                        textures["textures/notex"] = release;
+                        *store = release;
+                    } else {
+                        neoFatal("failed to load \"no texture\" texture!");
+                    }
+                } else {
+                    *store = notex->second;
+                }
             }
         }
     };

@@ -108,26 +108,30 @@ u::file fopen(const u::string& infile, const char *type) {
     return ::fopen(fixPath(infile).c_str(), type);
 }
 
-u::optional<u::string> getline(u::file &fp) {
-    u::string s;
+bool getline(u::file &fp, u::string &line) {
+    line.clear();
     for (;;) {
         char buf[256];
         if (!fgets(buf, sizeof(buf), fp.get())) {
-            if (feof(fp.get())) {
-                if (s.empty())
-                    return u::none;
-                else
-                    return u::move(s);
-            }
+            if (feof(fp.get()))
+                return !line.empty();
             abort();
         }
         size_t n = strlen(buf);
         if (n && buf[n - 1] == '\n')
             --n;
-        s.append(buf, n);
+        line.append(buf, n);
         if (n < sizeof(buf) - 1)
-            return u::move(s);
+            return true;
     }
+    return false;
+}
+
+u::optional<u::string> getline(u::file &fp) {
+    u::string s;
+    if (!getline(fp, s))
+        return u::none;
+    return u::move(s);
 }
 
 u::optional<u::vector<unsigned char>> read(const u::string &file, const char *mode) {

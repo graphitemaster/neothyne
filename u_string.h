@@ -37,6 +37,7 @@ struct string {
 
     void reserve(size_t size);
     void resize(size_t size);
+    void clear();
 
     string &append(char ch);
     string &append(const char *first, const char* last);

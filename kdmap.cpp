@@ -132,8 +132,10 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
     uint32_t endMark;
     mapUnserialize(&endMark, data, seek);
     endMark = u::endianSwap(endMark);
-    if (endMark != kdBinHeader::kMagic)
+    if (endMark != kdBinHeader::kMagic) {
+        u::print("INTEGRITY CHECK FAILED!\n");
         return false;
+    }
 
     // verify the indices are within a valid range
     for (size_t i = 0; i < nodes.size(); i++) {
