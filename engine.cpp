@@ -540,7 +540,7 @@ bool engine::initData(int &argc, char **argv) {
         }
     }
 
-    m_gamePath = fixedDirectory.empty() ? "./game" : fixedDirectory;
+    m_gamePath = fixedDirectory.empty() ? u::fixPath("./game") : fixedDirectory;
 
     // Add trailing path separator
     if (m_gamePath.end()[-1] != u::kPathSep)

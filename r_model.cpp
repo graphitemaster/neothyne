@@ -672,7 +672,7 @@ bool model::upload() {
 
     const size_t materials = m_model.meshNames().size();
     u::print("[model] => loaded %s model `%s' (containing %zu %s) using %s-precision float\n",
-        state, m_model.name(), materials, materials > 1 ? "materials" : "material", precision);
+        state, u::fixPath(m_model.name()), materials, materials > 1 ? "materials" : "material", precision);
 
     return true;
 }
