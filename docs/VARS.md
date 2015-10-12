@@ -172,6 +172,11 @@ Softness factor for vignette
 
 * any value in range [0.0, 1.0]
 
+##### r_vignette_opacity
+Opacity for vignette
+
+* any value in range [0.0, 1.0]
+
 ##### r_smbias
 Shadow map bias
 
