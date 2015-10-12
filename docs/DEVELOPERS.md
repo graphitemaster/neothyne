@@ -51,6 +51,10 @@ Neothyne supports the `#include` directive in GLSL; similarly, Neothyne will emi
 uniform guards to prevent declaring uniforms more than once. This is useful as
 headers typically declare uniforms throughout.
 
+If supported, Neothyne will fetch compiled program binaries and cache them disk
+for subsequent launches to reduce startup costs associated with processing,
+compiling and linking source.
+
 ## Rendering pipeline
 
 Each frame is broken into five distinctive passes. The passes are only responsible
