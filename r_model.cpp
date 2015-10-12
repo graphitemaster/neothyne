@@ -285,8 +285,7 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
 
     int32_t colorized = -1;
 
-    while (auto line = u::getline(fp)) {
-        auto get = *line;
+    for (u::string get; u::getline(fp, get); ) {
         auto split = u::split(get);
         if (split.size() < 2)
             continue;
@@ -508,8 +507,8 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
     u::vector<u::string> materialNames;
     u::vector<u::string> materialFiles;
     u::string name;
-    while (auto getline = u::getline(fp)) {
-        const auto split = u::split(*getline);
+    for (u::string line; u::getline(fp, line); ) {
+        const auto split = u::split(line);
         if (split.size() < 2)
             continue;
         if (split[0] == "model" && name.empty())

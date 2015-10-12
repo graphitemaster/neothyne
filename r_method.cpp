@@ -170,8 +170,7 @@ u::optional<u::string> method::preprocess(const u::string &file, bool initial) {
     if (initial)
         result = m_prelude;
     size_t lineno = 1;
-    while (auto read = u::getline(fp)) {
-        auto line = *read;
+    for (u::string line; u::getline(fp, line); ) {
         while (line[0] && strchr(" \t", line[0])) line.pop_front();
         if (line[0] == '#') {
             auto split = u::split(&line[1]);

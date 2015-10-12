@@ -122,8 +122,7 @@ bool obj::load(const u::string &file, model *store) {
     u::map<u::string, u::vector<size_t>> groups;
 
     size_t count = 0;
-    while (auto get = u::getline(fp)) {
-        auto &line = *get;
+    for (u::string line; u::getline(fp, line); ) {
         // Skip whitespace
         while (line.size() && strchr(" \t", line[0]))
             line.pop_front();

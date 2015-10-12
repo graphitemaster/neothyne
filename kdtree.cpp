@@ -273,8 +273,7 @@ bool kdTree::load(const u::string &file) {
     // map. It expects "g slot%d" for texture slots. It expects the vertex data
     // is already in triangulated format as well.
     const u::string *textureReference = nullptr;
-    u::string line;
-    while (u::getline(fp, line)) {
+    for (u::string line; u::getline(fp, line); ) {
         float x0, y0, z0, x1, y1, z1, w;
         int v0, v1, v2, t0, t1, t2, i;
         int s0, s1, s2;

@@ -613,8 +613,7 @@ void engine::swap() {
 
     char format[1024];
     const char *keyName;
-    SDL_Event e;
-    while (SDL_PollEvent(&e)) {
+    for (SDL_Event e; SDL_PollEvent(&e); ) {
         switch (e.type) {
         case SDL_QUIT:
             gShutdown = true;

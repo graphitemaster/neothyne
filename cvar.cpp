@@ -216,8 +216,7 @@ bool readConfig(const u::string &userPath) {
     u::file file = u::fopen(userPath + "init.cfg", "r");
     if (!file)
         return false;
-    while (auto getline = u::getline(file)) {
-        const u::string &line = *getline;
+    for (u::string line; u::getline(file, line); ) {
         u::vector<u::string> kv = u::split(line);
         if (kv.size() != 2)
             continue;

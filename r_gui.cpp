@@ -413,8 +413,7 @@ bool gui::load(const u::string &font) {
         return false;
 
     u::string fontMap = "<grey>";
-    while (auto get = u::getline(fp)) {
-        auto &line = *get;
+    for (u::string line; u::getline(fp, line); ) {
         auto contents = u::split(line);
         if (contents[0] == "font" && contents.size() == 2) {
             fontMap += contents[1];
