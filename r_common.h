@@ -28,7 +28,8 @@ enum : size_t {
     ARB_texture_compression_bptc,
     ARB_texture_rectangle,
     ARB_debug_output,
-    ARB_half_float_vertex
+    ARB_half_float_vertex,
+    ARB_get_program_binary
 };
 
 void init();
@@ -131,6 +132,9 @@ void ReadBuffer(GLenum mode GL_INFOP);
 void BufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data GL_INFOP);
 void PolygonOffset(GLfloat factor, GLfloat units GL_INFOP);
 void DepthRange(GLclampd nearVal, GLclampd farVal GL_INFOP);
+void ProgramParameteri(GLuint program, GLenum pname, GLint value GL_INFOP);
+void GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, GLvoid* binary GL_INFOP);
+void ProgramBinary(GLuint program, GLenum binaryFormat, const GLvoid* binary, GLsizei length GL_INFOP);
 
 }
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -227,5 +231,8 @@ void DepthRange(GLclampd nearVal, GLclampd farVal GL_INFOP);
 #   define BufferSubData(...)            BufferSubData(__VA_ARGS__, __FILE__, __LINE__)
 #   define PolygonOffset(...)            PolygonOffset(__VA_ARGS__, __FILE__, __LINE__)
 #   define DepthRange(...)               DepthRange(__VA_ARGS__, __FILE__, __LINE__)
+#   define ProgramParameteri(...)        ProgramParameteri(__VA_ARGS__, __FILE__, __LINE__)
+#   define GetProgramBinary(...)         GetProgramBinary(__VA_ARGS__, __FILE__, __LINE__)
+#   define ProgramBinary(...)            ProgramBinary(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif

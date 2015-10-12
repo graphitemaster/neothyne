@@ -103,8 +103,15 @@ protected:
 private:
     static m::mat3x4 m_mat3x4Scratch[kMat3x4Space];
 
+    struct shader {
+        shader();
+        const char *shaderFile;
+        u::string shaderText;
+        GLuint object;
+    };
+
     u::string m_prelude;
-    u::map<GLenum, u::pair<const char*, GLuint>> m_shaders;
+    u::map<GLenum, shader> m_shaders;
     u::map<u::string, uniform> m_uniforms;
     u::initializer_list<const char *> m_attributes;
     u::initializer_list<const char *> m_fragData;
@@ -112,6 +119,12 @@ private:
     const char *m_description;
     u::vector<u::string> m_defines;
 };
+
+inline method::shader::shader()
+    : shaderFile(nullptr)
+    , object(0)
+{
+}
 
 struct defaultMethod : method {
     defaultMethod();

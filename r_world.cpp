@@ -539,8 +539,8 @@ void world::unload(bool destroy) {
         delete it.second;
     for (auto &it : m_billboards)
         delete it.second;
-    //for (auto *it : m_particleSystems)
-    //    delete it; //TODO: fix
+    for (auto *it : m_particleSystems)
+        delete it;
 
     if (destroy) {
         m_models.clear();
@@ -551,6 +551,7 @@ void world::unload(bool destroy) {
     }
 
     m_uploaded = false;
+    u::print("[world] => unloaded\n");
 }
 
 void world::render(const pipeline &pl) {

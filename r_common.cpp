@@ -121,6 +121,9 @@ typedef void (APIENTRYP MYPFNGLREADBUFFERPROC)(GLenum);
 typedef void (APIENTRYP MYPFNGLBUFFERSUBDATAPROC)(GLenum, GLintptr, GLsizeiptr, const GLvoid*);
 typedef void (APIENTRYP MYPFNGLPOLYGONOFFSETPROC)(GLfloat, GLfloat);
 typedef void (APIENTRYP MYPFNGLDEPTHRANGEPROC)(GLclampd, GLclampd);
+typedef void (APIENTRYP MYPFNGLPROGRAMPARAMETERIPROC)(GLuint, GLenum, GLint);
+typedef void (APIENTRYP MYPFNGLGETPROGRAMBINARYPROC)(GLuint, GLsizei, GLsizei*, GLenum*, GLvoid*);
+typedef void (APIENTRYP MYPFNGLPROGRAMBINARYPROC)(GLuint, GLenum, const GLvoid*, GLsizei);
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -215,6 +218,9 @@ static MYPFNGLREADBUFFERPROC                glReadBuffer_               = nullpt
 static MYPFNGLBUFFERSUBDATAPROC             glBufferSubData_            = nullptr;
 static MYPFNGLPOLYGONOFFSETPROC             glPolygonOffset_            = nullptr;
 static MYPFNGLDEPTHRANGEPROC                glDepthRange_               = nullptr;
+static MYPFNGLPROGRAMPARAMETERIPROC         glProgramParameteri_        = nullptr;
+static MYPFNGLGETPROGRAMBINARYPROC          glGetProgramBinary_         = nullptr;
+static MYPFNGLPROGRAMBINARYPROC             glProgramBinary_            = nullptr;
 
 #ifdef DEBUG_GL
 ///! ARB_debug_output
@@ -451,7 +457,8 @@ static const char *kExtensions[] = {
     "GL_ARB_texture_compression_bptc",
     "GL_ARB_texture_rectangle",
     "GL_ARB_debug_output",
-    "GL_ARB_half_float_vertex"
+    "GL_ARB_half_float_vertex",
+    "GL_ARB_get_program_binary"
 };
 
 static int gGLSLVersion = -1;
@@ -576,6 +583,9 @@ void init() {
     glBufferSubData_            = (MYPFNGLBUFFERSUBDATAPROC)neoGetProcAddress("glBufferSubData");
     glPolygonOffset_            = (MYPFNGLPOLYGONOFFSETPROC)neoGetProcAddress("glPolygonOffset");
     glDepthRange_               = (MYPFNGLDEPTHRANGEPROC)neoGetProcAddress("glDepthRange");
+    glProgramParameteri_        = (MYPFNGLPROGRAMPARAMETERIPROC)neoGetProcAddress("glProgramParameteri");
+    glGetProgramBinary_         = (MYPFNGLGETPROGRAMBINARYPROC)neoGetProcAddress("glGetProgramBinary");
+    glProgramBinary_            = (MYPFNGLPROGRAMBINARYPROC)neoGetProcAddress("glProgramBinary");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -1096,6 +1106,21 @@ void PolygonOffset(GLfloat factor, GLfloat units GL_INFOP) {
 void DepthRange(GLclampd nearVal, GLclampd farVal GL_INFOP) {
     glDepthRange_(nearVal, farVal);
     GL_CHECK("gg", nearVal, farVal);
+}
+
+void ProgramParameteri(GLuint program, GLenum pname, GLint value GL_INFOP) {
+    glProgramParameteri_(program, pname, value);
+    GL_CHECK("b27", program, pname, value);
+}
+
+void GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, GLvoid* binary GL_INFOP) {
+    glGetProgramBinary_(program, bufSize, length, binaryFormat, binary);
+    GL_CHECK("b8*8*2*0", program, bufSize, length, binaryFormat, binary);
+}
+
+void ProgramBinary(GLuint program, GLenum binaryFormat, const GLvoid* binary, GLsizei length GL_INFOP) {
+    glProgramBinary_(program, binaryFormat, binary, length);
+    GL_CHECK("b2*08", program, binaryFormat, binary, length);
 }
 
 }

@@ -4,6 +4,7 @@
 
 #include "u_file.h"
 #include "u_misc.h"
+#include "u_sha512.h"
 
 namespace r {
 
@@ -99,6 +100,22 @@ void uniform::post() {
     }
 }
 
+///! methodCacheHeader
+struct methodCacheHeader {
+    static constexpr const char *kMagic = "SHADER";
+    static constexpr uint16_t kVersion = 1;
+    char magic[6];
+    uint16_t version;
+    uint32_t format;
+    void endianSwap();
+};
+
+inline void methodCacheHeader::endianSwap() {
+    version = u::endianSwap(version);
+    format = u::endianSwap(format);
+}
+
+
 ///! method
 m::mat3x4 method::m_mat3x4Scratch[method::kMat3x4Space];
 
@@ -114,8 +131,8 @@ method::~method() {
 
 void method::destroy() {
     for (auto &it : m_shaders)
-        if (it.second.second)
-            gl::DeleteShader(it.second.second);
+        if (it.second.object)
+            gl::DeleteShader(it.second.object);
     if (m_program)
         gl::DeleteProgram(m_program);
 }
@@ -133,7 +150,7 @@ bool method::reload() {
     if (!(m_program = gl::CreateProgram()))
         return false;
     for (const auto &it : m_shaders)
-        if (!addShader(it.first, it.second.first))
+        if (!addShader(it.first, it.second.shaderFile))
             return false;
     if (!finalize(m_attributes, m_fragData, false))
         return false;
@@ -220,31 +237,10 @@ bool method::addShader(GLenum type, const char *shaderFile) {
     if (!pp)
         neoFatal("failed preprocessing `%s'", shaderFile);
 
-    GLuint object = gl::CreateShader(type);
-    if (object == 0)
-        return false;
+    auto &what = m_shaders[type];
+    what.shaderFile = shaderFile;
+    what.shaderText = u::move(*pp);
 
-    m_shaders[type] = u::make_pair(shaderFile, object);
-
-    const GLchar *source = &(*pp)[0];
-    const GLint size = (*pp).size();
-
-    gl::ShaderSource(object, 1, &source, &size);
-    gl::CompileShader(object);
-
-    GLint status = 0;
-    gl::GetShaderiv(object, GL_COMPILE_STATUS, &status);
-    if (status == 0) {
-        u::string log;
-        GLint length = 0;
-        gl::GetShaderiv(object, GL_INFO_LOG_LENGTH, &length);
-        log.resize(length);
-        gl::GetShaderInfoLog(object, length, nullptr, &log[0]);
-        u::print("shader compilation error `%s':\n%s\n%s", shaderFile, log, source);
-        return false;
-    }
-
-    gl::AttachShader(m_program, object);
     return true;
 }
 
@@ -270,35 +266,170 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
                       const u::initializer_list<const char *> &fragData,
                       bool initial)
 {
-    GLint success = 0;
-    GLint infoLogLength = 0;
-    u::string infoLog;
+    // Before compiling the shaders, concatenate their text and hash their contents.
+    // We'll then check if there exists a cached copy of this program and load
+    // that instead.
+    bool notUsingCache = true;
+    while (gl::has(gl::ARB_get_program_binary)) {
+        u::string concatenate;
+        // Calculate how much memory we need to concatenate the shaders
+        size_t size = 0;
+        for (auto &it : m_shaders)
+            size += it.second.shaderText.size();
+        concatenate.reserve(size);
+        // Concatenate the shaders
+        for (auto &it : m_shaders)
+            concatenate += it.second.shaderText;
+        // Hash the result of the concatenation
+        auto hash = u::sha512((const unsigned char *)&concatenate[0],
+                              concatenate.size());
+        // Does this program exist?
+        const u::string cacheString = u::format("cache/shaders/%s", hash.hex());
+        const u::string file = neoUserPath() + cacheString;
+        if (!u::exists(file))
+            break;
+        // Load the cached program in memory
+        auto load = u::read(file, "r");
+        if (!load)
+            break;
+        methodCacheHeader *header = (methodCacheHeader*)&(*load)[0];
+        header->endianSwap();
+        if (memcmp(header->magic, (const void *)methodCacheHeader::kMagic, sizeof header->magic)
+            || header->version != methodCacheHeader::kVersion)
+        {
+            u::remove(file);
+            break;
+        }
 
-    for (size_t i = 0; i < attributes.size(); i++)
-        gl::BindAttribLocation(m_program, i, attributes[i]);
-
-    for (size_t i = 0; i < fragData.size(); i++)
-        gl::BindFragDataLocation(m_program, i, fragData[i]);
-
-    gl::LinkProgram(m_program);
-    gl::GetProgramiv(m_program, GL_LINK_STATUS, &success);
-    if (!success) {
-        gl::GetProgramiv(m_program, GL_INFO_LOG_LENGTH, &infoLogLength);
-        infoLog.resize(infoLogLength);
-        gl::GetProgramInfoLog(m_program, infoLogLength, nullptr, &infoLog[0]);
-        u::print("shader link error:\n%s\n", infoLog);
-        return false;
+        GLint status = 0;
+        // Use the program Binary
+        gl::ProgramBinary(m_program, header->format, &(*load)[sizeof *header], (*load).size() - sizeof *header);
+        // Verify that this program is valid (linked)
+        gl::GetProgramiv(m_program, GL_LINK_STATUS, &status);
+        if (status) {
+            u::print("[cache] => loaded %.50s...\n",
+                     u::fixPath(cacheString));
+            notUsingCache = false;
+        }
+        break;
     }
 
-    // Don't need these anymore
-    for (auto &it : m_shaders)
-        if (it.second.second)
-            gl::DeleteShader(it.second.second);
+    if (notUsingCache) {
+        // compile the individual shaders
+        auto compile = [this](GLenum type, shader &shader_) {
+            GLint size = shader_.shaderText.size(),
+                  status = 0,
+                  length = 0;
+
+            if (!(shader_.object = gl::CreateShader(type)))
+                return false;
+
+            const GLchar *source = &shader_.shaderText[0];
+            gl::ShaderSource(shader_.object, 1, &source, &size);
+            gl::CompileShader(shader_.object);
+            gl::GetShaderiv(shader_.object, GL_COMPILE_STATUS, &status);
+
+            if (status) {
+                gl::AttachShader(m_program, shader_.object);
+                return true;
+            }
+
+            gl::GetShaderiv(shader_.object, GL_INFO_LOG_LENGTH, &length);
+
+            u::vector<char> log(length+1);
+            gl::GetShaderInfoLog(shader_.object, length, nullptr, &log[0]);
+            u::print("shader compilation error `%s':\n%s\n%s",
+                     shader_.shaderFile,
+                     &log[0],
+                     source);
+            return false;
+        };
+        for (auto &it : m_shaders)
+            compile(it.first, it.second);
+
+        // Check if compilation succeeded
+        GLint success = 0;
+        GLint infoLogLength = 0;
+        u::string infoLog;
+
+        // Setup attributes
+        for (size_t i = 0; i < attributes.size(); i++)
+            gl::BindAttribLocation(m_program, i, attributes[i]);
+        for (size_t i = 0; i < fragData.size(); i++)
+            gl::BindFragDataLocation(m_program, i, fragData[i]);
+
+        if (gl::has(gl::ARB_get_program_binary)) {
+            // Need to hint to the compiler that in the future we'll be needing
+            // to retrieve the program binary
+            gl::ProgramParameteri(m_program, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
+        }
+
+        gl::LinkProgram(m_program);
+        gl::GetProgramiv(m_program, GL_LINK_STATUS, &success);
+        if (!success) {
+            gl::GetProgramiv(m_program, GL_INFO_LOG_LENGTH, &infoLogLength);
+            infoLog.resize(infoLogLength);
+            gl::GetProgramInfoLog(m_program, infoLogLength, nullptr, &infoLog[0]);
+            u::print("shader link error:\n%s\n", infoLog);
+            return false;
+        }
+
+        if (gl::has(gl::ARB_get_program_binary)) {
+            u::string concatenate;
+            // Calculate how much memory we need to concatenate the shaders
+            size_t size = 0;
+            for (auto &it : m_shaders)
+                size += it.second.shaderText.size();
+            concatenate.reserve(size);
+            // Concatenate the shaders
+            for (auto &it : m_shaders)
+                concatenate += it.second.shaderText;
+
+            // Hash the result of the concatenation
+            auto hash = u::sha512((const unsigned char *const)&concatenate[0],
+                                  concatenate.size());
+            const u::string cacheString = u::format("cache/shaders/%s", hash.hex());
+            const u::string file = neoUserPath() + cacheString;
+
+            // Get the program binary from the driver
+            GLint length = 0;
+            GLenum binaryFormat = 0;
+            gl::GetProgramiv(m_program, GL_PROGRAM_BINARY_LENGTH, &length);
+            u::vector<unsigned char> programBinary(length);
+            gl::GetProgramBinary(m_program, length, nullptr, &binaryFormat, &programBinary[0]);
+
+            // Create the header
+            methodCacheHeader header;
+            memcpy(header.magic, (const void *)methodCacheHeader::kMagic, 6);
+            header.version = methodCacheHeader::kVersion;
+            header.format = binaryFormat;
+            header.endianSwap();
+
+            // Serialize the data
+            u::vector<unsigned char> serialize;
+            serialize.resize(sizeof header + programBinary.size());
+            memcpy(&serialize[0], &header, sizeof header);
+            memcpy(&serialize[sizeof header], &programBinary[0], programBinary.size());
+
+            u::write(serialize, file, "w");
+            u::print("[cache] => wrote %.50s...\n", u::fixPath(cacheString));
+        }
+
+        // Don't need these anymore
+        for (auto &it : m_shaders) {
+            if (it.second.object) {
+                gl::DeleteShader(it.second.object);
+                it.second.object = 0;
+            }
+        }
+    }
 
     // Make a copy of these for reloads
     m_attributes = attributes;
     m_fragData = fragData;
 
+    // Make a pretty list of all the "USE_" and "HAS_" permutators for this
+    // shader.
     u::string contents;
     for (size_t i = 0; i < m_defines.size(); i++) {
         contents += m_defines[i];

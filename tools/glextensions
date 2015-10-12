@@ -5,3 +5,4 @@ ARB_texture_compression_bptc
 ARB_texture_rectangle
 ARB_debug_output
 ARB_half_float_vertex
+ARB_get_program_binary

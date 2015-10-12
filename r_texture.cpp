@@ -451,7 +451,7 @@ static bool readCache(texture &tex, GLuint &internal) {
         return false;
 
     // Do we even have it in cache?
-    const u::string cacheString = u::format("cache%c%s", u::kPathSep, tex.hashString());
+    const u::string cacheString = u::format("cache/textures/%s", tex.hashString());
     const u::string file = neoUserPath() + cacheString;
     if (!u::exists(file))
         return false;
@@ -516,7 +516,7 @@ static bool readCache(texture &tex, GLuint &internal) {
     // Now swap!
     tex.unload();
     tex.from(fromData, fromSize, head.width, head.height, false, textureFormat(head.format));
-    u::print("[cache] => loaded %.50s... %s (%s)\n", cacheString,
+    u::print("[cache] => loaded %.50s... %s (%s)\n", u::fixPath(cacheString),
         cacheFormat(head.internal), sizeMetric(fromSize));
     return true;
 }
@@ -621,7 +621,7 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
         return false;
 
     // Don't bother caching if we already have it
-    const u::string cacheString = u::format("cache%c%s", u::kPathSep, tex.hashString());
+    const u::string cacheString = u::format("cache/textures/%s", tex.hashString());
     const u::string file = neoUserPath() + cacheString;
     if (u::exists(file))
         return false;
@@ -933,11 +933,11 @@ bool texture2D::upload() {
                 }
 
                 // Write cache data
-                const u::string cacheString = u::format("cache%c%s", u::kPathSep,
-                    m_texture.hashString());
+                const u::string cacheString = u::format("cache/textures/%s",
+                                                        m_texture.hashString());
                 if (!writeCacheData(m_texture.format(),
                                     m_texture.size(),
-                                    cacheString,
+                                    u::fixPath(cacheString),
                                     &compressed[0],
                                     m_texture.width(),
                                     m_texture.height(),

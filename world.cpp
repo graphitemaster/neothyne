@@ -51,10 +51,10 @@ void world::unload(bool destroy) {
     for (auto &it : m_playerStarts)
         delete it;
 
-    m_map.unload();
-    m_renderer.unload();
-
     if (destroy) {
+        m_map.unload();
+        m_renderer.unload();
+
         m_entities.destroy();
         m_billboards.destroy();
         m_spotLights.destroy();

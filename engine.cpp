@@ -535,13 +535,12 @@ bool engine::initData(int &argc, char **argv) {
     if (directory) {
         fixedDirectory = u::fixPath(directory);
         if (!u::exists(fixedDirectory, u::kDirectory)) {
-            u::print("Game directory `%s' doesn't exist (falling back to .%cgame%c)\n",
-                fixedDirectory, u::kPathSep, u::kPathSep);
+            u::print("Game directory `%s' doesn't exist (falling back to %s)\n",
+                fixedDirectory, u::fixPath("./game/"));
         }
     }
 
-    m_gamePath = fixedDirectory.empty()
-        ? u::format(".%cgame", u::kPathSep) : fixedDirectory;
+    m_gamePath = fixedDirectory.empty() ? "./game" : fixedDirectory;
 
     // Add trailing path separator
     if (m_gamePath.end()[-1] != u::kPathSep)
@@ -549,7 +548,7 @@ bool engine::initData(int &argc, char **argv) {
 
     // Verify that path even exists
     if (!u::exists(m_gamePath, u::kDirectory)) {
-        u::print("Game directory `%s' doesn't exist", m_gamePath);
+        u::print("Game directory `%s' doesn't exist", u::fixPath(m_gamePath));
         return false;
     }
 
@@ -563,7 +562,7 @@ bool engine::initData(int &argc, char **argv) {
     // Verify all the paths exist for the user directory. If they don't exist
     // create them.
     static const char *kPaths[] = {
-        "screenshots", "cache"
+        "screenshots", "cache", "cache/textures", "cache/shaders"
     };
 
     for (auto &it : kPaths) {
@@ -799,8 +798,8 @@ void engine::screenShot() {
     // Generate a unique filename from the time
     time_t t = time(nullptr);
     struct tm tm = *localtime(&t);
-    u::string file = u::format("%sscreenshots%c%d-%d-%d-%d%d%d",
-        neoUserPath(), u::kPathSep, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+    u::string file = u::format("%sscreenshots/%d-%d-%d-%d%d%d",
+        neoUserPath(), tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
         tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     // Get metrics for reading the final composite from GL
@@ -878,18 +877,19 @@ void engine::screenShot() {
     if (!tex.from(temp.get(), screenSize*3, screenWidth, screenHeight, false, kTexFormatRGB))
         u::print("[screenshot] => failed to create screenshot texture\n");
 
+    auto fixedPath = u::fixPath(file);
     switch (scr_format) {
     case kSaveBMP:
         if (tex.save(file, kSaveBMP, scr_quality))
-            u::print("[screenshot] => %s.bmp\n", file);
+            u::print("[screenshot] => %s.bmp\n", fixedPath);
         break;
     case kSaveTGA:
         if (tex.save(file, kSaveTGA, scr_quality))
-            u::print("[screenshot] => %s.tga\n", file);
+            u::print("[screenshot] => %s.tga\n", fixedPath);
         break;
     case kSavePNG:
         if (tex.save(file, kSavePNG, scr_quality))
-            u::print("[screenshot] => %s.png\n", file);
+            u::print("[screenshot] => %s.png\n", fixedPath);
         break;
     }
 }

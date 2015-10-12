@@ -556,7 +556,7 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
         m_materials.resize(materialNames.size());
         u::string fileName;
         for (size_t i = 0; i < materialNames.size(); i++) {
-            fileName = u::format("models%c%s", u::kPathSep, materialFiles[i]);
+            fileName = u::format("models/%s", materialFiles[i]);
             if (!m_materials[i].load(textures, fileName, "models/"))
                 return false;
         }

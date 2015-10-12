@@ -612,7 +612,7 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
 
     // load optional animation files
     for (const auto &it : anims) {
-        const auto fileName = u::format("%s%c%s.iqm", neoGamePath(), u::kPathSep, it);
+        const auto fileName = u::format("%s/%s.iqm", neoGamePath(), it);
         auto readAnim = u::read(fileName, "rb");
         // this silently ignores animation files which are not valid or correct
         // version IQM files or cannot be opened (permission, non existent, etc.)
@@ -627,7 +627,7 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
             continue;
         if (animHdr->numAnims > 0 && !loadAnims(animHdr, &animData[0], store))
             continue;
-        u::print("[model] => loaded animation `%s' for `%s'\n", it, file);
+        u::print("[model] => loaded animation `%s' for `%s'\n", it, u::fixPath(file));
     }
 
     return true;
@@ -689,8 +689,8 @@ void model::makeSingle() {
 }
 
 bool model::load(const u::string &file, const u::vector<u::string> &anims) {
-    const auto iqm_ = u::format("%s%c%s.iqm", neoGamePath(), u::kPathSep, file);
-    const auto obj_ = u::format("%s%c%s.obj", neoGamePath(), u::kPathSep, file);
+    const auto iqm_ = u::format("%s/%s.iqm", neoGamePath(), file);
+    const auto obj_ = u::format("%s/%s.obj", neoGamePath(), file);
     if (u::exists(iqm_) && !iqm().load(file, this, anims))
         return false;
     else if (u::exists(obj_) && !obj().load(file, this))

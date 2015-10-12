@@ -91,3 +91,6 @@ void: ReadBuffer(GLenum: mode);
 void: BufferSubData(GLenum: target, GLintptr: offset, GLsizeiptr: size, const GLvoid*: data);
 void: PolygonOffset(GLfloat: factor, GLfloat: units);
 void: DepthRange(GLclampd: nearVal, GLclampd: farVal);
+void: ProgramParameteri(GLuint: program, GLenum: pname, GLint: value);
+void: GetProgramBinary(GLuint: program, GLsizei: bufSize, GLsizei*: length, GLenum*: binaryFormat, GLvoid*: binary);
+void: ProgramBinary(GLuint: program, GLenum: binaryFormat, const GLvoid*: binary, GLsizei: length);
