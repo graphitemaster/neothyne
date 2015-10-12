@@ -44,6 +44,7 @@ private:
 
 struct particleSystem : geom {
     particleSystem() = default;
+    particleSystem(const char *description);
     virtual ~particleSystem() = default;
 
     bool load(const u::string &file);
@@ -54,13 +55,15 @@ struct particleSystem : geom {
 
     void addParticle(particle &&p);
 
+    size_t memory() const;
+    const char *description() const;
+
 protected:
     virtual void initParticle(particle &p, const m::vec3 &ownerPosition) = 0;
     virtual float gravity() { return 25.0f; }
     virtual float power() { return 5.0f; }
 
     u::vector<particle> m_particles;
-
 private:
     struct singleVertex {
         // 16 bytes
@@ -78,7 +81,23 @@ private:
     particleSystemMethod m_method;
     texture2D m_texture;
     u::vector<GLuint> m_indices;
+    const char *m_description;
+    size_t m_memory;
 };
+
+inline particleSystem::particleSystem(const char *description)
+    : particleSystem()
+{
+    m_description = description;
+}
+
+inline size_t particleSystem::memory() const {
+    return m_memory;
+}
+
+inline const char *particleSystem::description() const {
+    return m_description;
+}
 
 }
 

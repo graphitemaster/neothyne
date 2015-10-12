@@ -196,6 +196,7 @@ private:
             bool highlight;
         };
         const char *name;
+        const char *description;
         float size;
         bool bbox;
         u::vector<board> boards;

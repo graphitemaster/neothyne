@@ -424,18 +424,6 @@ static const char *cacheFormat(GLuint internal) {
     return "";
 }
 
-static u::string sizeMetric(size_t size) {
-    static const char *kSizes[] = { "B", "kB", "MB", "GB" };
-    size_t r = 0;
-    size_t i = 0;
-    for (; size >= 1024 && i < sizeof(kSizes)/sizeof(*kSizes); i++) {
-        r = size % 1024;
-        size /= 1024;
-    }
-    assert(i != sizeof(kSizes)/sizeof(*kSizes));
-    return u::format("%.2f %s", float(size) + float(r) / 1024.0f, kSizes[i]);
-}
-
 static bool readCache(texture &tex, GLuint &internal) {
     if (!r_tex_compress)
         return false;
@@ -517,7 +505,7 @@ static bool readCache(texture &tex, GLuint &internal) {
     tex.unload();
     tex.from(fromData, fromSize, head.width, head.height, false, textureFormat(head.format));
     u::print("[cache] => loaded %.50s... %s (%s)\n", u::fixPath(cacheString),
-        cacheFormat(head.internal), sizeMetric(fromSize));
+        cacheFormat(head.internal), u::sizeMetric(fromSize));
     return true;
 }
 
@@ -576,8 +564,8 @@ static bool writeCacheData(textureFormat format,
     u::print("[cache] => wrote %.50s... %s (compressed %s to %s with %s compressor)",
         cacheString,
         cacheFormat(internal),
-        sizeMetric(texSize),
-        sizeMetric(compressedSize),
+        u::sizeMetric(texSize),
+        u::sizeMetric(compressedSize),
         from
     );
 
@@ -790,6 +778,7 @@ texture2D::texture2D(bool mipmaps, int filter)
     , m_textureHandle(0)
     , m_mipmaps(mipmaps)
     , m_filter(filter)
+    , m_memory(0)
 {
     //
 }
@@ -811,6 +800,7 @@ bool texture2D::useCache() {
         return false;
     gl::CompressedTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
         m_texture.width(), m_texture.height(), 0, m_texture.size(), m_texture.data());
+    m_memory = m_texture.size();
     return true;
 }
 
@@ -895,6 +885,7 @@ bool texture2D::upload() {
         queryFormat format = *query;
 
         // Load all mip levels
+        m_memory = 0;
         for (size_t i = 0; i < m_texture.mips(); i++) {
             const size_t mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * blockSize;
             gl::CompressedTexImage2D(GL_TEXTURE_2D, i, format.internal, mipWidth,
@@ -902,6 +893,7 @@ bool texture2D::upload() {
             mipWidth = u::max(mipWidth >> 1, size_t(1));
             mipHeight = u::max(mipHeight >> 1, size_t(1));
             offset += mipSize;
+            m_memory += mipSize;
         }
 
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);

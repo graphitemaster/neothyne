@@ -201,6 +201,12 @@ Debug visualizations of various renderer buffers
 * 3 = position buffer
 * 4 = ambient occlusion buffer
 
+##### r_stats
+Debug memory statistics for the world
+
+* 0 = disable
+* 1 = enable
+
 
 ## Client
 ##### cl_farp

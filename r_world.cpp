@@ -37,6 +37,7 @@ VAR(float, r_smbias, "shadow map bias", -10.0f, 10.0f, -0.1f);
 VAR(float, r_smpolyfactor, "shadow map polygon offset factor", -1000.0f, 1000.0f, 1.0f);
 VAR(float, r_smpolyoffset, "shadow map polygon offset units", -1000.0f, 1000.0f, 0.0f);
 NVAR(int, r_debug, "debug visualizations", 0, 4, 0);
+NVAR(int, r_stats, "rendering statistics", 0, 1, 0);
 NVAR(int, r_reload, "reload shaders", 0, 1, 0);
 
 namespace r {
@@ -261,7 +262,9 @@ private:
     m::vec3 m_direction;
 };
 
-dustSystem::dustSystem(const m::vec3 &ownerPosition) {
+dustSystem::dustSystem(const m::vec3 &ownerPosition)
+    : particleSystem("Dust System")
+{
     static constexpr size_t kParticles = 1024*2;
     m_particles.reserve(kParticles);
     for (size_t i = 0; i < kParticles-1; i++) {
@@ -380,9 +383,10 @@ bool world::upload(const m::perspective &p, ::world *map) {
     geom::upload();
 
     const auto &vertices = m_kdWorld->vertices;
+    m_memory = vertices.size() * sizeof(kdBinVertex);
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(kdBinVertex), &vertices[0], GL_STATIC_DRAW);
+    gl::BufferData(GL_ARRAY_BUFFER, m_memory, &vertices[0], GL_STATIC_DRAW);
     gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(0));  // vertex
     gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(3));  // normals
     gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(6));  // texCoord
@@ -395,6 +399,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
     // upload data
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
+    m_memory += m_indices.size() * sizeof(GLuint);
 
     // composite shader
     if (!m_compositeMethod.init())
@@ -846,7 +851,7 @@ void world::forwardPass(const pipeline &pl) {
         for (auto &it : m_map->m_billboards) {
             // Load billboards on demand
             if (m_billboards.find(it.name) == m_billboards.end()) {
-                u::unique_ptr<billboard> next(new billboard);
+                u::unique_ptr<billboard> next(new billboard(it.description));
                 if (!next->load(it.name))
                     neoFatal("failed to load billboard '%s'\n", it.name);
                 if (!next->upload())
@@ -975,6 +980,75 @@ void world::forwardPass(const pipeline &pl) {
         break;
     default:
         break;
+    }
+
+    // Render some memory statistics
+    if (r_stats) {
+        size_t y = neoHeight() / 2 + 20 * 2;
+        // Particle memory
+        gui::drawText(10, y, gui::kAlignLeft, "WORLD", gui::RGBA(255, 255, 255));
+        y -= 20;
+        const auto format = u::format("Geometry: %s", u::sizeMetric(m_memory));
+        gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
+        y -= 20;
+        if (m_particleSystems.size()) {
+            gui::drawText(10, y, gui::kAlignLeft, "PARTICLE", gui::RGBA(255, 255, 255));
+            y -= 20;
+            for (auto *it : m_particleSystems) {
+                if (it->memory() == 0)
+                    continue;
+                const auto format = u::format("%s: %s", it->description(), u::sizeMetric(it->memory()));
+                gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
+                y -= 20;
+            }
+        }
+        // Billboard memory
+        if (m_billboards.size()) {
+            gui::drawText(10, y, gui::kAlignLeft, "BILLBOARD", gui::RGBA(255, 255, 255));
+            y -= 20;
+            for (const auto &it : m_billboards) {
+                const billboard *const b = it.second;
+                if (b->memory() == 0)
+                    continue;
+                const auto format = u::format("%s: %s", b->description(), u::sizeMetric(b->memory()));
+                gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
+                y -= 20;
+            }
+        }
+        // Shadow EBO memory
+        size_t slShadowEBO = 0,
+               plShadowEBO = 0;
+        for (auto &it : m_culledSpotLights)
+            slShadowEBO += it.count * sizeof(GLuint);
+        for (auto &it : m_culledPointLights)
+            plShadowEBO += it.count * sizeof(GLuint);
+        if (slShadowEBO || plShadowEBO) {
+            gui::drawText(10, y, gui::kAlignLeft, "SHADOW EBO", gui::RGBA(255, 255, 255));
+            y -= 20;
+            if (slShadowEBO) {
+                const auto format = u::format("Spot Lights: %s", u::sizeMetric(slShadowEBO));
+                gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
+                y -= 20;
+            }
+            if (plShadowEBO) {
+                const auto format = u::format("Point Lights: %s", u::sizeMetric(plShadowEBO));
+                gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
+                y -= 20;
+            }
+        }
+        // Texture memory
+        size_t textureMemory = 0;
+        for (const auto &it : m_textures2D) {
+            const texture2D *const tex = it.second;
+            textureMemory += tex->memory();
+        }
+        if (textureMemory) {
+            gui::drawText(10, y, gui::kAlignLeft, "TEXTURE", gui::RGBA(255, 255, 255));
+            y -= 20;
+            const auto format = u::format("2D Assets: %s", u::sizeMetric(textureMemory));
+            gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
+            y -= 20;
+        }
     }
 }
 

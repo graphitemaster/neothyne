@@ -77,10 +77,10 @@ bool world::load(const u::vector<unsigned char> &data) {
     if (!m_map.load(data))
         return false;
     m_billboards.resize(kBillboardCount);
-    m_billboards[kBillboardJumpPad] = { "textures/icons/jumppad", 5.0f, true, { } };
-    m_billboards[kBillboardLight] = { "textures/icons/light", 5.0f, false, { } };
-    m_billboards[kBillboardPlayerStart] = { "textures/icons/playerstart", 5.0f, true, { } };
-    m_billboards[kBillboardTeleport] = { "textures/icons/teleport", 5.0f, true, { } };
+    m_billboards[kBillboardJumpPad] = { "textures/icons/jumppad", "Jumppad Entity", 5.0f, true, { } };
+    m_billboards[kBillboardLight] = { "textures/icons/light", "Light Entity", 5.0f, false, { } };
+    m_billboards[kBillboardPlayerStart] = { "textures/icons/playerstart", "Start Entity", 5.0f, true, { } };
+    m_billboards[kBillboardTeleport] = { "textures/icons/teleport", "Teleport Entity", 5.0f, true, { } };
     return true;
 }
 

@@ -27,6 +27,7 @@ struct texture2D {
     textureFormat format() const;
     size_t width() const;
     size_t height() const;
+    size_t memory() const;
 
 private:
     bool useCache();
@@ -36,6 +37,7 @@ private:
     texture m_texture;
     bool m_mipmaps;
     int m_filter;
+    size_t m_memory;
 };
 
 inline size_t texture2D::width() const {
@@ -44,6 +46,10 @@ inline size_t texture2D::width() const {
 
 inline size_t texture2D::height() const {
     return m_texture.height();
+}
+
+inline size_t texture2D::memory() const {
+    return m_memory;
 }
 
 struct texture3D {

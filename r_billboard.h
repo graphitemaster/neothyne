@@ -32,6 +32,7 @@ private:
 };
 
 struct billboard : geom {
+    billboard(const char *description);
     bool load(const u::string &billboardTexture);
     bool upload();
 
@@ -39,6 +40,9 @@ struct billboard : geom {
 
     // you must add all positions for this billboard before calling `upload'
     void add(const m::vec3 &position);
+
+    const char *description() const;
+    size_t memory() const;
 
 private:
     struct vertex {
@@ -49,7 +53,23 @@ private:
     u::vector<vertex> m_vertices;
     texture2D m_texture;
     billboardMethod m_method;
+    size_t m_memory;
+    const char *m_description;
 };
+
+inline billboard::billboard(const char *description)
+    : m_memory(0)
+    , m_description(description)
+{
+}
+
+inline const char *billboard::description() const {
+    return m_description;
+}
+
+inline size_t billboard::memory() const {
+    return m_memory;
+}
 
 }
 

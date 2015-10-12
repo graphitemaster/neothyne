@@ -108,6 +108,7 @@ private:
     ::world *m_map;
     kdMap *m_kdWorld;
     u::vector<uint32_t> m_indices;
+    size_t m_memory;
 
     u::vector<renderTextureBatch> m_textureBatches;
     u::map<u::string, texture2D*> m_textures2D;

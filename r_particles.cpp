@@ -169,12 +169,14 @@ void particleSystem::render(const pipeline &pl) {
 
     if (gl::has(gl::ARB_half_float_vertex)) {
         halfVertex *v = nullptr;
-        gl::BufferData(GL_ARRAY_BUFFER, m_halfVertices.size() * sizeof(halfVertex), &m_halfVertices[0], GL_DYNAMIC_DRAW);
+        m_memory = m_halfVertices.size() * sizeof(halfVertex);
+        gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_halfVertices[0], GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(halfVertex), &v->position); // position
         gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(halfVertex), &v->color); // color
     } else {
         singleVertex *v = nullptr;
-        gl::BufferData(GL_ARRAY_BUFFER, m_singleVertices.size() * sizeof(singleVertex), &m_singleVertices[0], GL_DYNAMIC_DRAW);
+        m_memory = m_singleVertices.size() * sizeof(singleVertex);
+        gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_singleVertices[0], GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(singleVertex), &v->position); // position
         gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(singleVertex), &v->color); // color
     }
@@ -182,6 +184,7 @@ void particleSystem::render(const pipeline &pl) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * m_indices.size(),
         &m_indices[0], GL_DYNAMIC_DRAW);
+    m_memory += m_indices.size() * sizeof(GLuint);
 
     m_method.enable();
     m_method.setVP(p.projection() * p.view());
