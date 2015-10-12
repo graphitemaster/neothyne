@@ -256,7 +256,7 @@ struct dustSystem : particleSystem {
     dustSystem(const m::vec3 &ownerPosition);
 protected:
     void initParticle(particle &p, const m::vec3 &ownerPosition);
-    virtual float getGravity() { return 98.0f; }
+    virtual float gravity() { return 98.0f; }
 private:
     m::vec3 m_direction;
 };
@@ -266,18 +266,9 @@ dustSystem::dustSystem(const m::vec3 &ownerPosition) {
     m_particles.reserve(kParticles);
     for (size_t i = 0; i < kParticles-1; i++) {
         particle p;
-        p.power = 5.0f;
         initParticle(p, ownerPosition);
         addParticle(u::move(p));
     }
-    // an outlier
-    particle p;
-    p.power = 1.0f;
-    initParticle(p, ownerPosition);
-    addParticle(u::move(p));
-    m_direction = { 0.0f, 0.0f, -1.0f };
-    if (m_direction*m_direction > 0.1f)
-        m_direction = m_direction.normalized() * 12.0f;
 }
 
 void dustSystem::initParticle(particle &p, const m::vec3 &ownerPosition) {

@@ -2,14 +2,11 @@ uniform mat4 gVP;
 
 in vec3 position;
 in vec4 color;
-in float power;
 
 out vec2 texCoord0;
 out vec4 color0;
-out float power0;
 
 void main() {
-    power0 = power;
     color0 = color;
     //
     // The idea here is to generate one of the following texture coordinates based

@@ -11,6 +11,7 @@ particleSystemMethod::particleSystemMethod()
     : m_VP(nullptr)
     , m_colorTextureUnit(nullptr)
     , m_depthTextureUnit(nullptr)
+    , m_power(nullptr)
 {
 }
 
@@ -28,6 +29,7 @@ bool particleSystemMethod::init() {
     m_VP = getUniform("gVP", uniform::kMat4);
     m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
     m_depthTextureUnit = getUniform("gDepthMap", uniform::kSampler);
+    m_power = getUniform("gPower", uniform::kFloat);
 
     post();
     return true;
@@ -45,13 +47,11 @@ void particleSystemMethod::setDepthTextureUnit(int unit) {
     m_depthTextureUnit->set(unit);
 }
 
+void particleSystemMethod::setPower(float power) {
+    m_power->set(power);
+}
+
 ///! particleSystem
-particleSystem::particleSystem() {
-}
-
-particleSystem::~particleSystem() {
-}
-
 bool particleSystem::load(const u::string &file) {
     return m_texture.load(file);
 }
@@ -68,7 +68,6 @@ bool particleSystem::upload() {
     gl::BindVertexArray(vao);
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
-    gl::EnableVertexAttribArray(2);
 
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     if (gl::has(gl::ARB_half_float_vertex)) {
@@ -76,13 +75,11 @@ bool particleSystem::upload() {
         gl::BufferData(GL_ARRAY_BUFFER, sizeof(halfVertex), 0, GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(halfVertex), &v->position); // position
         gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(halfVertex), &v->color); // color
-        gl::VertexAttribPointer(2, 1, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(halfVertex), &v->power); // power
     } else {
         singleVertex *v = nullptr;
         gl::BufferData(GL_ARRAY_BUFFER, sizeof(singleVertex), 0, GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(singleVertex), &v->position); // position
         gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(singleVertex), &v->color); // color
-        gl::VertexAttribPointer(2, 1, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(singleVertex), &v->power); // power
     }
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
@@ -139,7 +136,6 @@ void particleSystem::render(const pipeline &pl) {
             const auto &c = m::convertToHalf((const float *)q, 3*4);
             for (size_t i = 0; i < c.size(); i += 3) {
                 halfVertex newVertex;
-                newVertex.power = it.power;
                 for (size_t j = 0; j < 3; j++) {
                     newVertex.color[j] = it.color[j] * 255.0f;
                     newVertex.position[j] = c[i+j];
@@ -151,7 +147,6 @@ void particleSystem::render(const pipeline &pl) {
             index = m_singleVertices.size();
             for (const auto &jt : q) {
                 singleVertex newVertex;
-                newVertex.power = it.power;
                 newVertex.position = jt;
                 for (size_t i = 0; i < 3; i++)
                     newVertex.color[i] = it.color[i] * 255.0f;
@@ -177,13 +172,11 @@ void particleSystem::render(const pipeline &pl) {
         gl::BufferData(GL_ARRAY_BUFFER, m_halfVertices.size() * sizeof(halfVertex), &m_halfVertices[0], GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(halfVertex), &v->position); // position
         gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(halfVertex), &v->color); // color
-        gl::VertexAttribPointer(2, 1, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(halfVertex), &v->power); // power
     } else {
         singleVertex *v = nullptr;
         gl::BufferData(GL_ARRAY_BUFFER, m_singleVertices.size() * sizeof(singleVertex), &m_singleVertices[0], GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(singleVertex), &v->position); // position
         gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(singleVertex), &v->color); // color
-        gl::VertexAttribPointer(2, 1, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(singleVertex), &v->power); // power
     }
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
@@ -192,6 +185,7 @@ void particleSystem::render(const pipeline &pl) {
 
     m_method.enable();
     m_method.setVP(p.projection() * p.view());
+    m_method.setPower(power());
     m_texture.bind(GL_TEXTURE0);
 
     gl::Disable(GL_CULL_FACE);
@@ -209,7 +203,7 @@ void particleSystem::addParticle(particle &&p) {
 
 void particleSystem::update(const pipeline &p) {
     const float dt = p.delta() * 0.1f;
-    const float gravity = getGravity();
+    const float g = gravity();
 
     for (auto &it : m_particles) {
         if (it.lifeTime < 0.0f) {
@@ -218,8 +212,8 @@ void particleSystem::update(const pipeline &p) {
             else
                 continue;
         }
-        it.origin = it.origin + it.velocity*dt - m::vec3(0.0f, dt*dt*0.5f*gravity, 0.0f);
-        it.velocity.y -= gravity*dt;
+        it.origin = it.origin + it.velocity*dt - m::vec3(0.0f, dt*dt*0.5f*g, 0.0f);
+        it.velocity.y -= g*dt;
         it.lifeTime -= dt;
         const float f = it.lifeTime / it.totalLifeTime;
         const float scale = m::sin(f * m::kPi);

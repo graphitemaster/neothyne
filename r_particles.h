@@ -18,7 +18,6 @@ struct pipeline;
 struct particle {
     m::vec3 origin;
     m::vec3 velocity;
-    float power;
     float size;
     float startSize;
     m::vec3 color;
@@ -35,15 +34,17 @@ struct particleSystemMethod : method {
     void setVP(const m::mat4 &vp);
     void setColorTextureUnit(int unit);
     void setDepthTextureUnit(int unit);
+    void setPower(float power);
 private:
     uniform *m_VP;
     uniform *m_colorTextureUnit;
     uniform *m_depthTextureUnit;
+    uniform *m_power;
 };
 
 struct particleSystem : geom {
-    particleSystem();
-    virtual ~particleSystem();
+    particleSystem() = default;
+    virtual ~particleSystem() = default;
 
     bool load(const u::string &file);
     bool upload();
@@ -55,22 +56,21 @@ struct particleSystem : geom {
 
 protected:
     virtual void initParticle(particle &p, const m::vec3 &ownerPosition) = 0;
-    virtual float getGravity() { return 25.0f; };
+    virtual float gravity() { return 25.0f; }
+    virtual float power() { return 5.0f; }
 
     u::vector<particle> m_particles;
 
 private:
     struct singleVertex {
-        // 20 bytes
+        // 16 bytes
         m::vec3 position;
         unsigned char color[4];
-        unsigned char power;
     };
     struct halfVertex {
         // 12 bytes
         m::half position[3];
         unsigned char color[4];
-        unsigned char power;
     };
     u::vector<singleVertex> m_singleVertices;
     u::vector<halfVertex> m_halfVertices;
