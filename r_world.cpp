@@ -30,8 +30,9 @@ VAR(int, r_fog, "fog", 0, 1, 1);
 VAR(int, r_smsize, "shadow map size", 16, 4096, 256);
 VAR(int, r_smborder, "shadow map border", 0, 8, 3);
 VAR(int, r_vignette, "vignette", 0, 1, 1);
-VAR(float, r_vignette_radius, "vignette radius", 0.25f, 1.0f, 0.5f);
+VAR(float, r_vignette_radius, "vignette radius", 0.25f, 1.0f, 0.90f);
 VAR(float, r_vignette_softness, "vignette softness", 0.0f, 1.0f, 0.45f);
+VAR(float, r_vignette_opacity, "vignette opacity", 0.0f, 1.0f, 0.5f);
 VAR(float, r_smbias, "shadow map bias", -10.0f, 10.0f, -0.1f);
 VAR(float, r_smpolyfactor, "shadow map polygon offset factor", -1000.0f, 1000.0f, 1.0f);
 VAR(float, r_smpolyoffset, "shadow map polygon offset units", -1000.0f, 1000.0f, 0.0f);
@@ -1024,7 +1025,9 @@ void world::compositePass(const pipeline &pl) {
         // render vignette
         m_vignetteMethod.enable();
         m_vignetteMethod.setPerspective(pl.perspective());
-        m_vignetteMethod.setProperties(r_vignette_radius, r_vignette_softness);
+        m_vignetteMethod.setProperties(r_vignette_radius,
+                                       r_vignette_softness,
+                                       r_vignette_opacity);
         m_quad.render();
     }
 

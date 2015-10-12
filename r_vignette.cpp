@@ -23,7 +23,7 @@ bool vignetteMethod::init(const u::initializer_list<const char *> &defines) {
     m_WVP = getUniform("gWVP", uniform::kMat4);
     m_colorMap = getUniform("gColorMap", uniform::kSampler);
     m_screenSize = getUniform("gScreenSize", uniform::kVec2);
-    m_properties = getUniform("gProperties", uniform::kVec2);
+    m_properties = getUniform("gProperties", uniform::kVec3);
 
     post();
     return true;
@@ -41,8 +41,8 @@ void vignetteMethod::setPerspective(const m::perspective &p) {
     m_screenSize->set(m::vec2(p.width, p.height));
 }
 
-void vignetteMethod::setProperties(float radius, float softness) {
-    m_properties->set(m::vec2(radius, softness));
+void vignetteMethod::setProperties(float radius, float softness, float opacity) {
+    m_properties->set(m::vec3(radius, softness, opacity));
 }
 
 ///! vignette

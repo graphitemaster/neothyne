@@ -13,7 +13,7 @@ struct vignetteMethod : method {
     void setWVP(const m::mat4 &wvp);
     void setColorTextureUnit(int unit);
     void setPerspective(const m::perspective &perspective);
-    void setProperties(float radius, float softness);
+    void setProperties(float radius, float softness, float opacity);
 
 private:
     uniform *m_WVP;

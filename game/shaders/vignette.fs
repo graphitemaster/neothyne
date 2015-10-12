@@ -3,7 +3,7 @@
 
 uniform neoSampler2D gColorMap;
 
-uniform vec2 gProperties;
+uniform vec3 gProperties;
 
 out vec4 fragColor;
 
@@ -27,5 +27,5 @@ void main() {
                                 length(position));
 
     // Apply vignette
-    fragColor = MASK_ALPHA(texColor * vignette);
+    fragColor = MASK_ALPHA(mix(texColor, texColor * vignette, gProperties.z));
 }
