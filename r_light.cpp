@@ -18,8 +18,12 @@ lightMethod::lightMethod()
 {
 }
 
-bool lightMethod::init(const char *vs, const char *fs, const u::vector<const char *> &defines) {
-    if (!method::init())
+bool lightMethod::init(const char *vs,
+                       const char *fs,
+                       const char *description,
+                       const u::vector<const char *> &defines)
+{
+    if (!method::init(description))
         return false;
 
     if (gl::has(gl::ARB_texture_rectangle))
@@ -96,7 +100,10 @@ void lightMethod::setPerspective(const m::perspective &p) {
 
 ///! Directional Light Rendering Method
 bool directionalLightMethod::init(const u::vector<const char *> &defines) {
-    if (!lightMethod::init("shaders/dlight.vs", "shaders/dlight.fs", defines))
+    if (!lightMethod::init("shaders/dlight.vs",
+                           "shaders/dlight.fs",
+                           "directional lighting",
+                           defines))
         return false;
 
     m_directionalLight.color = getUniform("gDirectionalLight.base.color", uniform::kVec3);
@@ -129,7 +136,10 @@ void directionalLightMethod::setFog(const fog &f) {
 
 ///! Point Light Rendering Method
 bool pointLightMethod::init(const u::vector<const char *> &defines) {
-    if (!lightMethod::init("shaders/plight.vs", "shaders/plight.fs", defines))
+    if (!lightMethod::init("shaders/plight.vs",
+                           "shaders/plight.fs",
+                           "point lighting",
+                           defines))
         return false;
 
     m_pointLight.color = getUniform("gPointLight.base.color", uniform::kVec3);
@@ -158,7 +168,10 @@ void pointLightMethod::setLightWVP(const m::mat4 &wvp) {
 
 ///! Spot Light Rendering Method
 bool spotLightMethod::init(const u::vector<const char *> &defines) {
-    if (!lightMethod::init("shaders/slight.vs", "shaders/slight.fs", defines))
+    if (!lightMethod::init("shaders/slight.vs",
+                           "shaders/slight.fs",
+                           "spot lighting",
+                           defines))
         return false;
 
     m_spotLight.color = getUniform("gSpotLight.base.base.color", uniform::kVec3);

@@ -8,7 +8,7 @@
 namespace r {
 
 bool ssaoMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init())
+    if (!method::init("screen space ambient occlusion"))
         return false;
 
     for (const auto &it : defines)

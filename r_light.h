@@ -18,7 +18,10 @@ namespace r {
 struct lightMethod : method {
     lightMethod();
 
-    bool init(const char *vs, const char *fs, const u::vector<const char *> &defines = u::vector<const char *>());
+    bool init(const char *vs,
+              const char *fs,
+              const char *description,
+              const u::vector<const char *> &defines = u::vector<const char *>());
 
     enum {
         // First three must have same layout as gBuffer

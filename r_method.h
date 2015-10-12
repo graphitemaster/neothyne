@@ -80,7 +80,7 @@ struct method {
     void enable();
     void destroy();
 
-    bool init();
+    bool init(const char *description = "unknown");
     bool reload();
 
     void define(const char *string);
@@ -93,7 +93,8 @@ protected:
     bool addShader(GLenum shaderType, const char *shaderText);
 
     bool finalize(const u::initializer_list<const char *> &attributes = {},
-                  const u::initializer_list<const char *> &fragData = {});
+                  const u::initializer_list<const char *> &fragData = {},
+                  bool initial = true);
 
     u::optional<u::string> preprocess(const u::string &file, bool initial = true);
 
@@ -108,6 +109,8 @@ private:
     u::initializer_list<const char *> m_attributes;
     u::initializer_list<const char *> m_fragData;
     GLuint m_program;
+    const char *m_description;
+    u::vector<u::string> m_defines;
 };
 
 struct defaultMethod : method {

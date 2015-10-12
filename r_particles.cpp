@@ -15,7 +15,7 @@ particleSystemMethod::particleSystemMethod()
 }
 
 bool particleSystemMethod::init() {
-    if (!method::init())
+    if (!method::init("particle system"))
         return false;
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/particles.vs"))

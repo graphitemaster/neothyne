@@ -11,7 +11,7 @@ billboardMethod::billboardMethod()
 }
 
 bool billboardMethod::init() {
-    if (!method::init())
+    if (!method::init("billboarding"))
         return false;
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/billboard.vs"))

@@ -110,29 +110,30 @@ private:
     void forwardPass(const pipeline &pl);
     void compositePass(const pipeline &pl);
 
-    struct spotLightChunk {
-        ~spotLightChunk();
+    struct lightChunk {
+        lightChunk() = default;
+        ~lightChunk();
         size_t hash;
         size_t count;
-        spotLight *light;
-        GLuint ebo;
         bool visible;
         m::mat4 transform;
+        GLuint ebo;
         bool init();
-        bool buildMesh(kdMap *map);
     };
 
-    struct pointLightChunk {
-        ~pointLightChunk();
-        size_t hash;
-        size_t count;
+    struct spotLightChunk : lightChunk {
+        spotLightChunk() = default;
+        spotLightChunk(spotLight *light) : light(light) { }
+        bool buildMesh(kdMap *map);
+        spotLight *light;
+    };
+
+    struct pointLightChunk : lightChunk {
+        pointLightChunk() = default;
+        pointLightChunk(pointLight *light) : light(light) { }
+        bool buildMesh(kdMap *map);
         size_t sideCounts[6];
         pointLight *light;
-        GLuint ebo;
-        bool visible;
-        m::mat4 transform;
-        bool init();
-        bool buildMesh(kdMap *map);
     };
 
     void pointLightPass(const pipeline &pl);

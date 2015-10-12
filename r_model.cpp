@@ -15,7 +15,7 @@ namespace r {
 
 ///! Geometry rendering method (used for models and the world.)
 bool geomMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init())
+    if (!method::init("geometry"))
         return false;
 
     for (const auto &it : defines)

@@ -11,7 +11,7 @@
 namespace r {
 ///! method
 bool skyboxMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init())
+    if (!method::init("skybox"))
         return false;
 
     for (auto &it : defines)

@@ -83,7 +83,7 @@ shadowMapMethod::shadowMapMethod()
 }
 
 bool shadowMapMethod::init() {
-    if (!method::init())
+    if (!method::init("shadow map"))
         return false;
     if (!addShader(GL_VERTEX_SHADER, "shaders/shadow.vs"))
         return false;

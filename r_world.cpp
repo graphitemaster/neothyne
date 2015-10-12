@@ -119,7 +119,7 @@ static size_t lightCalculatePermutation(bool stencil) {
 
 ///! Bounding box Rendering method
 bool bboxMethod::init() {
-    if (!method::init())
+    if (!method::init("bounding box"))
         return false;
 
     if (!addShader(GL_VERTEX_SHADER, "shaders/bbox.vs"))
@@ -146,7 +146,7 @@ void bboxMethod::setColor(const m::vec3 &color) {
 
 ///! Composite Method
 bool compositeMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init())
+    if (!method::init("composite"))
         return false;
 
     for (const auto &it : defines)
@@ -271,52 +271,6 @@ GLuint composite::texture() const {
     return m_texture;
 }
 
-world::spotLightChunk::~spotLightChunk() {
-    if (ebo)
-        gl::DeleteBuffers(1, &ebo);
-}
-
-world::pointLightChunk::~pointLightChunk() {
-    if (ebo)
-        gl::DeleteBuffers(1, &ebo);
-}
-
-bool world::spotLightChunk::init() {
-    gl::GenBuffers(1, &ebo);
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, 0, nullptr, GL_STATIC_DRAW);
-    return true;
-}
-
-bool world::spotLightChunk::buildMesh(kdMap *map) {
-    u::vector<size_t> triangleIndices;
-    u::vector<GLuint> indices;
-    map->inSphere(triangleIndices, light->position, light->radius);
-    indices.reserve(triangleIndices.size() * 3 / 2);
-    for (const auto &it : triangleIndices) {
-        const auto &triangle = map->triangles[it];
-        const m::vec3 p1 = map->vertices[triangle.v[0]].vertex - light->position;
-        const m::vec3 p2 = map->vertices[triangle.v[1]].vertex - light->position;
-        const m::vec3 p3 = map->vertices[triangle.v[2]].vertex - light->position;
-        if (p1 * (p2 - p1).cross(p3 - p1) > 0)
-            continue;
-        for (const auto &it : triangle.v)
-            indices.push_back(it);
-    }
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(),
-        &indices[0], GL_STATIC_DRAW);
-    count = indices.size();
-    return true;
-}
-
-bool world::pointLightChunk::init() {
-    gl::GenBuffers(1, &ebo);
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, 0, nullptr, GL_STATIC_DRAW);
-    return true;
-}
-
 static uint8_t calcTriangleSideMask(const m::vec3 &p1,
                                     const m::vec3 &p2,
                                     const m::vec3 &p3,
@@ -370,6 +324,43 @@ static uint8_t calcTriangleSideMask(const m::vec3 &p1,
     return mask;
 }
 
+///! lightChunk
+world::lightChunk::~lightChunk() {
+    if (ebo)
+        gl::DeleteBuffers(1, &ebo);
+}
+
+bool world::lightChunk::init() {
+    gl::GenBuffers(1, &ebo);
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, 0, nullptr, GL_STATIC_DRAW);
+    return true;
+}
+
+///! spotLightChunk
+bool world::spotLightChunk::buildMesh(kdMap *map) {
+    u::vector<size_t> triangleIndices;
+    u::vector<GLuint> indices;
+    map->inSphere(triangleIndices, light->position, light->radius);
+    indices.reserve(triangleIndices.size() * 3 / 2);
+    for (const auto &it : triangleIndices) {
+        const auto &triangle = map->triangles[it];
+        const m::vec3 p1 = map->vertices[triangle.v[0]].vertex - light->position;
+        const m::vec3 p2 = map->vertices[triangle.v[1]].vertex - light->position;
+        const m::vec3 p3 = map->vertices[triangle.v[2]].vertex - light->position;
+        if (p1 * (p2 - p1).cross(p3 - p1) > 0)
+            continue;
+        for (const auto &it : triangle.v)
+            indices.push_back(it);
+    }
+    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(),
+        &indices[0], GL_STATIC_DRAW);
+    count = indices.size();
+    return true;
+}
+
+///! pointLightChunk
 bool world::pointLightChunk::buildMesh(kdMap *map) {
     u::vector<size_t> triangleIndices;
     u::vector<GLuint> indices[6];
@@ -724,9 +715,9 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     // Copy light entities into our rendering representation.
     for (auto &it : map->m_pointLights)
-        m_culledPointLights.push_back( { 0, 0, { 0 }, it, 0, false, {} } );
+        m_culledPointLights.push_back({ it });
     for (auto &it : map->m_spotLights)
-        m_culledSpotLights.push_back( { 0, 0, it, 0, false, {} } );
+        m_culledSpotLights.push_back({ it });
     for (auto &it : m_culledPointLights)
         it.init();
     for (auto &it : m_culledSpotLights)

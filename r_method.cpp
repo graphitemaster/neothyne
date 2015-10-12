@@ -104,6 +104,7 @@ m::mat3x4 method::m_mat3x4Scratch[method::kMat3x4Space];
 
 method::method()
     : m_program(0)
+    , m_description(nullptr)
 {
 }
 
@@ -119,9 +120,10 @@ void method::destroy() {
         gl::DeleteProgram(m_program);
 }
 
-bool method::init() {
+bool method::init(const char *description) {
     m_program = gl::CreateProgram();
     m_prelude = u::move(u::format("#version %d\n", gl::glslVersion()));
+    m_description = description;
     return !!m_program;
 }
 
@@ -133,7 +135,7 @@ bool method::reload() {
     for (const auto &it : m_shaders)
         if (!addShader(it.first, it.second.first))
             return false;
-    if (!finalize(m_attributes, m_fragData))
+    if (!finalize(m_attributes, m_fragData, false))
         return false;
     post();
     enable();
@@ -144,13 +146,19 @@ bool method::reload() {
 
 void method::define(const char *macro) {
     m_prelude += u::format("#define %s\n", macro);
+    // keep a list of "feature" macros
+    if (!strncmp(macro, "HAS_", 3) ||
+        !strncmp(macro, "USE_", 3))
+        m_defines.push_back(macro + 4); // skip "HAS_" or "USE_"
 }
 
 void method::define(const char *macro, size_t value) {
+    // keep a list of defines
     m_prelude += u::format("#define %s %zu\n", macro, value);
 }
 
 void method::define(const char *macro, float value) {
+    // keep a list of defines
     m_prelude += u::format("#define %s %f\n", macro, value);
 }
 
@@ -260,7 +268,8 @@ uniform *method::getUniform(const u::string &name, uniform::type type) {
 }
 
 bool method::finalize(const u::initializer_list<const char *> &attributes,
-                      const u::initializer_list<const char *> &fragData)
+                      const u::initializer_list<const char *> &fragData,
+                      bool initial)
 {
     GLint success = 0;
     GLint infoLogLength = 0;
@@ -291,6 +300,18 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
     m_attributes = attributes;
     m_fragData = fragData;
 
+    u::string contents;
+    for (size_t i = 0; i < m_defines.size(); i++) {
+        contents += m_defines[i];
+        if (i != m_defines.size() - 1)
+            contents += ", ";
+    }
+
+    const char *whence = initial ? "loaded" : "reloaded";
+    if (contents.empty())
+        u::print("[method] => %s `%s' program\n", whence, m_description);
+    else
+        u::print("[method] => %s `%s' program using [%s]\n", whence, m_description, contents);
     return true;
 }
 
@@ -303,7 +324,7 @@ defaultMethod::defaultMethod()
 }
 
 bool defaultMethod::init() {
-    if (!method::init())
+    if (!method::init("default"))
         return false;
 
     if (gl::has(gl::ARB_texture_rectangle))

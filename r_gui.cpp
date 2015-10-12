@@ -106,7 +106,7 @@ guiMethod::guiMethod()
 }
 
 bool guiMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init())
+    if (!method::init("user interface"))
         return false;
 
     for (const auto &it : defines)
@@ -145,7 +145,7 @@ guiModelMethod::guiModelMethod()
 }
 
 bool guiModelMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init())
+    if (!method::init("user interface model rendering"))
         return false;
 
     for (const auto &it : defines)
