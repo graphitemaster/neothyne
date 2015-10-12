@@ -289,7 +289,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
         if (!u::exists(file))
             break;
         // Load the cached program in memory
-        auto load = u::read(file, "r");
+        auto load = u::read(file, "rb");
         if (!load)
             break;
         methodCacheHeader *header = (methodCacheHeader*)&(*load)[0];
@@ -298,6 +298,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             || header->version != methodCacheHeader::kVersion)
         {
             u::remove(file);
+            neoFatal("malformatted file");
             break;
         }
 
@@ -310,6 +311,8 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             u::print("[cache] => loaded %.50s...\n",
                      u::fixPath(cacheString));
             notUsingCache = false;
+        } else {
+            neoFatal("driver says fuck you");
         }
         break;
     }
