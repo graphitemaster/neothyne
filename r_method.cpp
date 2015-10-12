@@ -298,7 +298,6 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             || header->version != methodCacheHeader::kVersion)
         {
             u::remove(file);
-            neoFatal("malformatted file");
             break;
         }
 
