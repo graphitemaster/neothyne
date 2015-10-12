@@ -825,31 +825,34 @@ void engine::screenShot() {
     if (scr_info) {
         size_t line = 0;
         auto drawString = [&temp, &line](const char *s) {
-            u::vector<unsigned char *> pixelData;
-            for (; *s; s++) {
-                u::unique_ptr<unsigned char> glyph(new unsigned char[8*8*3]);
+            u::vector<unsigned char> pixelData;
+            size_t c = 0;
+            unsigned char glyph[8*8*3];
+            for (; *s; s++, c++) {
+                memset(glyph, 0, sizeof glyph);
                 unsigned char *prev = &glyph[8*8*3-1];
                 uint64_t n = 1;
                 for (size_t h = 0; h < 8; h++)
                     for (size_t w = 0; w < 8; w++, n+=n)
                         for (size_t k = 0; k < 3; k++)
                             *prev-- = (kFont[int(*s)] & n) ? 255 : 0;
-                pixelData.push_back(glyph.release());
+                const size_t size = pixelData.size();
+                pixelData.resize(size + sizeof glyph);
+                memcpy(&pixelData[size], glyph, sizeof glyph);
             }
-            const size_t size = 8*pixelData.size()*8*3;
-            u::unique_ptr<unsigned char> output(new unsigned char[size]);
-            memset(output.get(), 0, size);
-            for (size_t i = 0; i < pixelData.size(); i++) {
-                unsigned char *s = pixelData[i];
-                unsigned char *d = output.get()+i*8*3;
-                for (size_t h = 0; h < 8; h++, s+=8*3, d+=8*pixelData.size()*3)
+            const size_t size = 8*c*8*3,
+                         offset = pixelData.size();
+            pixelData.resize(offset + size);
+            for (size_t i = 0; i < c; i++) {
+                unsigned char *s = &pixelData[8*i*8*3];
+                unsigned char *d = &pixelData[offset]+i*8*3;
+                for (size_t h = 0; h < 8; h++, s+=8*3, d+=8*c*3)
                     memcpy(d, s, 8*3);
-                delete[] pixelData[i];
             }
             for (size_t h = 0; h < 8; h++) {
-                unsigned char *s = output.get() + 8*pixelData.size()*3*h;
+                unsigned char *s = &pixelData[offset]+8*c*3*h;
                 unsigned char *d = temp.get() + 8*neoWidth()*3*line + neoWidth()*3*h;
-                memcpy(d, s, 8*pixelData.size()*3);
+                memcpy(d, s, 8*c*3);
             }
             line++;
         };
