@@ -68,7 +68,7 @@ private:
         unsigned char color[4];
     };
     struct halfVertex {
-        // 12 bytes
+        // 10 bytes
         m::half position[3];
         unsigned char color[4];
     };
