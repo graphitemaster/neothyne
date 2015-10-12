@@ -52,7 +52,6 @@ screenshot output format
 * 1 = TGA
 * 2 = PNG (default)
 
-
 ##### scr_quality
 adjust screenshot resolution
 
@@ -123,28 +122,70 @@ Fast approximate anti-aliasing
 * 0 = disable
 * 1 = enable
 
-##### r_ssao
-Screen space ambient occlusion
-
-* 0 = disable
-* 1 = enable
-
 ##### r_parallax
 Displacement mapping
 
 * 0 = disable
 * 1 = enable
 
-##### r_hoq
-Hardware occlusion queries
+##### r_ssao
+Screen space ambient occlusion
 
 * 0 = disable
 * 1 = enable
 
-##### r_maxhoq
-Maximum amount of occlusion queries that can be in asynchronous wait state.
+##### r_spec
+Specular highlights
 
-* any value in the range [1, 16]
+* 0 = disable
+* 1 = enable
+
+##### r_fog
+Fog
+
+* 0 = disable
+* 1 = enable
+
+##### r_smsize
+Shadow map resolution
+
+* any value in range [16, 4096]
+
+##### r_smborder
+Shadow map border
+
+* any value in range [0, 8]
+
+##### r_vignette
+Vignette
+
+* 0 = disable
+* 1 = enable
+
+##### r_vignette_radius
+Radius of vignette
+
+* any value in range [0.25, 1.0f]
+
+##### r_vignette_softness
+Softness factor for vignette
+
+* any value in range [0.0, 1.0]
+
+##### r_smbias
+Shadow map bias
+
+* any value in range [-10.0,  10.0]
+
+##### r_smpolyfactor
+Shadow map polygon offset factor (for slope dependent bias)
+
+* any value in range [-1000.0, 1000.0]
+
+##### r_smpolyoffset
+Shadow map polygon offset units (for slope dependent bias)
+
+* any value in range [-1000.0, 1000.0]
 
 ##### r_debug
 Debug visualizations of various renderer buffers

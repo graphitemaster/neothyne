@@ -12,78 +12,14 @@
 #include "r_model.h"
 #include "r_light.h"
 #include "r_shadow.h"
+#include "r_composite.h"
+#include "r_vignette.h"
 
 #include "u_map.h"
 
 struct world;
 
 namespace r {
-
-struct bboxMethod : method {
-    bboxMethod();
-
-    bool init();
-
-    void setWVP(const m::mat4 &wvp);
-    void setColor(const m::vec3 &color);
-
-private:
-    uniform *m_WVP;
-    uniform *m_color;
-};
-
-inline bboxMethod::bboxMethod()
-    : m_WVP(nullptr)
-    , m_color(nullptr)
-{
-}
-
-struct compositeMethod : method {
-    compositeMethod();
-    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
-    void setWVP(const m::mat4 &wvp);
-    void setColorTextureUnit(int unit);
-    void setColorGradingTextureUnit(int unit);
-    void setPerspective(const m::perspective &perspective);
-
-private:
-    uniform *m_WVP;
-    uniform *m_colorMap;
-    uniform *m_colorGradingMap;
-    uniform *m_screenSize;
-};
-
-inline compositeMethod::compositeMethod()
-    : m_WVP(nullptr)
-    , m_colorMap(nullptr)
-    , m_colorGradingMap(nullptr)
-    , m_screenSize(nullptr)
-{
-}
-
-struct composite {
-    composite();
-    ~composite();
-
-    bool init(const m::perspective &p, GLuint depth);
-    void update(const m::perspective &p);
-    void bindWriting();
-
-    GLuint texture() const;
-
-private:
-    enum {
-        kBuffer,
-        kDepth
-    };
-
-    void destroy();
-
-    GLuint m_fbo;
-    GLuint m_texture;
-    size_t m_width;
-    size_t m_height;
-};
 
 struct renderTextureBatch {
     int permute;
@@ -140,6 +76,7 @@ private:
     void pointLightShadowPass(const pointLightChunk *const pl);
     void spotLightPass(const pipeline &pl);
     void spotLightShadowPass(const spotLightChunk *const sl);
+    void directionalLightPass(const pipeline &pl, bool stencil);
 
     // world shading methods and permutations
     geomMethods *m_geomMethods;
@@ -151,6 +88,7 @@ private:
     bboxMethod m_bboxMethod;
     aaMethod m_aaMethod;
     defaultMethod m_defaultMethod;
+    vignetteMethod m_vignetteMethod;
 
     // Other things in the world to render
     skybox m_skybox;
@@ -178,6 +116,7 @@ private:
     gBuffer m_gBuffer;
     ssao m_ssao;
     composite m_final;
+    vignette m_vignette;
     grader m_colorGrader;
 
     m::mat4 m_identity;

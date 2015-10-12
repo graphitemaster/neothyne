@@ -4,8 +4,6 @@
 #include "r_texture.h"
 #include "r_method.h"
 
-#include "u_vector.h"
-
 #include "m_vec.h"
 
 namespace u {

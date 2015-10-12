@@ -1,6 +1,5 @@
 #ifndef R_SHADOW_HDR
 #define R_SHADOW_HDR
-#include "r_common.h"
 #include "r_method.h"
 #include "m_mat.h"
 

@@ -29,10 +29,14 @@ VAR(int, r_spec, "specularity mapping", 0, 1, 1);
 VAR(int, r_fog, "fog", 0, 1, 1);
 VAR(int, r_smsize, "shadow map size", 16, 4096, 256);
 VAR(int, r_smborder, "shadow map border", 0, 8, 3);
+VAR(int, r_vignette, "vignette", 0, 1, 1);
+VAR(float, r_vignette_radius, "vignette radius", 0.25f, 1.0f, 0.5f);
+VAR(float, r_vignette_softness, "vignette softness", 0.0f, 1.0f, 0.45f);
 VAR(float, r_smbias, "shadow map bias", -10.0f, 10.0f, -0.1f);
 VAR(float, r_smpolyfactor, "shadow map polygon offset factor", -1000.0f, 1000.0f, 1.0f);
 VAR(float, r_smpolyoffset, "shadow map polygon offset units", -1000.0f, 1000.0f, 0.0f);
 NVAR(int, r_debug, "debug visualizations", 0, 4, 0);
+NVAR(int, r_reload, "reload shaders", 0, 1, 0);
 
 namespace r {
 
@@ -115,160 +119,6 @@ static size_t lightCalculatePermutation(bool stencil) {
         if (it.permute == permute)
             return &it - lightPermutations;
     return 0;
-}
-
-///! Bounding box Rendering method
-bool bboxMethod::init() {
-    if (!method::init("bounding box"))
-        return false;
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/bbox.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/bbox.fs"))
-        return false;
-    if (!finalize({ "position" }, { "diffuseOut" }))
-        return false;
-
-    m_WVP = getUniform("gWVP", uniform::kMat4);
-    m_color = getUniform("gColor", uniform::kVec3);
-
-    post();
-    return true;
-}
-
-void bboxMethod::setWVP(const m::mat4 &wvp) {
-    m_WVP->set(wvp);
-}
-
-void bboxMethod::setColor(const m::vec3 &color) {
-    m_color->set(color);
-}
-
-///! Composite Method
-bool compositeMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init("composite"))
-        return false;
-
-    for (const auto &it : defines)
-        method::define(it);
-
-    if (gl::has(gl::ARB_texture_rectangle))
-        method::define("HAS_TEXTURE_RECTANGLE");
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/final.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/final.fs"))
-        return false;
-    if (!finalize({ "position" }))
-        return false;
-
-    m_WVP = getUniform("gWVP", uniform::kMat4);
-    m_colorMap = getUniform("gColorMap", uniform::kSampler);
-    m_colorGradingMap = getUniform("gColorGradingMap", uniform::kSampler);
-    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
-
-    post();
-    return true;
-}
-
-void compositeMethod::setWVP(const m::mat4 &wvp) {
-    m_WVP->set(wvp);
-}
-
-void compositeMethod::setColorTextureUnit(int unit) {
-    m_colorMap->set(unit);
-}
-
-void compositeMethod::setColorGradingTextureUnit(int unit) {
-    m_colorGradingMap->set(unit);
-}
-
-void compositeMethod::setPerspective(const m::perspective &p) {
-    m_screenSize->set(m::vec2(p.width, p.height));
-}
-
-composite::composite()
-    : m_fbo(0)
-    , m_texture(0)
-    , m_width(0)
-    , m_height(0)
-{
-}
-
-composite::~composite() {
-    destroy();
-}
-
-void composite::destroy() {
-    if (m_fbo)
-        gl::DeleteFramebuffers(1, &m_fbo);
-    if (m_texture)
-        gl::DeleteTextures(1, &m_texture);
-}
-
-void composite::update(const m::perspective &p) {
-    const size_t width = p.width;
-    const size_t height = p.height;
-
-    const GLenum format = gl::has(gl::ARB_texture_rectangle) ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
-
-    if (m_width == width && m_height == height)
-        return;
-
-    m_width = width;
-    m_height = height;
-    gl::BindTexture(format, m_texture);
-    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA,
-        GL_FLOAT, nullptr);
-    gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-}
-
-bool composite::init(const m::perspective &p, GLuint depth) {
-    m_width = p.width;
-    m_height = p.height;
-
-    gl::GenFramebuffers(1, &m_fbo);
-    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
-
-    gl::GenTextures(1, &m_texture);
-
-    const GLenum format = gl::has(gl::ARB_texture_rectangle) ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
-
-    // output composite
-    gl::BindTexture(format, m_texture);
-    gl::TexImage2D(format, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_FLOAT,
-        nullptr);
-    gl::TexParameteri(format, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    gl::TexParameteri(format, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    gl::TexParameteri(format, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl::TexParameteri(format, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, format,
-        m_texture, 0);
-
-    gl::BindTexture(format, depth);
-    gl::FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-        format, depth, 0);
-
-    static GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
-    gl::DrawBuffers(1, drawBuffers);
-
-    const GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE)
-        return false;
-
-    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    return true;
-}
-
-void composite::bindWriting() {
-    gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, m_fbo);
-}
-
-GLuint composite::texture() const {
-    return m_texture;
 }
 
 static uint8_t calcTriangleSideMask(const m::vec3 &p1,
@@ -400,41 +250,7 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
     return true;
 }
 
-///! renderer
-world::world()
-    : m_geomMethods(&geomMethods::instance())
-    , m_map(nullptr)
-    , m_kdWorld(nullptr)
-    , m_uploaded(false)
-{
-}
-
-world::~world() {
-    unload(false);
-}
-
-void world::unload(bool destroy) {
-    for (auto &it : m_textures2D)
-        delete it.second;
-    for (auto &it : m_models)
-        delete it.second;
-    for (auto &it : m_billboards)
-        delete it.second;
-    //for (auto *it : m_particleSystems)
-    //    delete it; //TODO: fix
-
-    if (destroy) {
-        m_models.clear();
-        m_billboards.clear();
-        m_indices.destroy();
-        m_textureBatches.destroy();
-        m_textures2D.clear();
-    }
-
-    m_uploaded = false;
-}
-
-// a particle!
+/// NOTE: Testing only
 struct dustSystem : particleSystem {
     dustSystem(const m::vec3 &ownerPosition);
 protected:
@@ -478,6 +294,21 @@ void dustSystem::initParticle(particle &p, const m::vec3 &ownerPosition) {
     p.respawn = true;
 }
 
+///! world
+static constexpr float kLightRadiusTweak = 1.11f;
+
+world::world()
+    : m_geomMethods(&geomMethods::instance())
+    , m_map(nullptr)
+    , m_kdWorld(nullptr)
+    , m_uploaded(false)
+{
+}
+
+world::~world() {
+    unload(false);
+}
+
 bool world::load(kdMap *map) {
     // load skybox
     if (!m_skybox.load("textures/sky01"))
@@ -498,35 +329,6 @@ bool world::load(kdMap *map) {
     }
 
     m_kdWorld = map;
-
-// TODO: Offline step in kdtree.cpp instead
-#if 0
-    u::print("Optimizing world geometry (this could take awhile)\n");
-    // optimize the indices
-    size_t cacheMissesBefore = 0;
-    size_t cacheMissesAfter = 0;
-    for (auto &it : m_textureBatches) {
-        // collect the indices to optimize
-        u::vector<size_t> indices;
-        indices.resize(it.count);
-        for (size_t i = 0; i < it.count; i++)
-            indices[i] = m_indices[it.start + i];
-
-        // Calculate the number of cache misses in the unoptimized mesh
-        vertexCache cache;
-        cacheMissesBefore += cache.getCacheMissCount(indices);
-
-        // Optimize the indices
-        vertexCacheOptimizer opt;
-        auto result = opt.optimize(indices);
-        if (result == vertexCacheOptimizer::kSuccess) {
-            cacheMissesAfter += opt.getCacheMissCount();
-            for (size_t i = 0; i < it.count; i++)
-                m_indices[it.start + i] = indices[i];
-        }
-    }
-    u::print("Eliminated %zu cache misses\n", cacheMissesBefore - cacheMissesAfter);
-#endif
 
     // load materials
     for (auto &it : m_textureBatches) {
@@ -694,6 +496,15 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_ssaoMethod.setDepthTextureUnit(ssaoMethod::kDepth);
     m_ssaoMethod.setRandomTextureUnit(ssaoMethod::kRandom);
 
+    // vignette method
+    if (!m_vignetteMethod.init())
+        neoFatal("failed to initialize vignette rendering method");
+
+    // Setup default uniforms for vignette
+    m_vignetteMethod.enable();
+    m_vignetteMethod.setWVP(m_identity);
+    m_vignetteMethod.setColorTextureUnit(0);
+
     // render buffers
     if (!m_gBuffer.init(p))
         neoFatal("failed to initialize world render buffer");
@@ -705,6 +516,8 @@ bool world::upload(const m::perspective &p, ::world *map) {
         neoFatal("failed to initialize anti-aliasing render buffer");
     if (!m_colorGrader.init(p, map->getColorGrader().data()))
         neoFatal("failed to initialize color grading render buffer");
+    if (!m_vignette.init(p))
+        neoFatal("failed to initialize vignette render buffer");
 
     if (!m_shadowMap.init(r_smsize*3, r_smsize*2))
         neoFatal("failed to initialize shadow map");
@@ -727,7 +540,78 @@ bool world::upload(const m::perspective &p, ::world *map) {
     return m_uploaded = true;
 }
 
-static constexpr float kLightRadiusTweak = 1.11f;
+void world::unload(bool destroy) {
+    for (auto &it : m_textures2D)
+        delete it.second;
+    for (auto &it : m_models)
+        delete it.second;
+    for (auto &it : m_billboards)
+        delete it.second;
+    //for (auto *it : m_particleSystems)
+    //    delete it; //TODO: fix
+
+    if (destroy) {
+        m_models.clear();
+        m_billboards.clear();
+        m_indices.destroy();
+        m_textureBatches.destroy();
+        m_textures2D.clear();
+    }
+
+    m_uploaded = false;
+}
+
+void world::render(const pipeline &pl) {
+    // TODO: rewrite world manager such that this hack is not needed
+    if (m_map->m_needSync) {
+        for (auto it = m_culledSpotLights.begin(), end = m_culledSpotLights.end(); it != end; ) {
+            auto find = u::find(m_map->m_spotLights.begin(),
+                                m_map->m_spotLights.end(),
+                                it->light);
+            if (find == m_map->m_spotLights.end()) {
+                it = m_culledSpotLights.erase(it);
+                end = m_culledSpotLights.end();
+            } else {
+                it++;
+            }
+        }
+        for (auto it = m_culledPointLights.begin(), end = m_culledPointLights.end(); it != end; ) {
+            auto find = u::find(m_map->m_pointLights.begin(),
+                                m_map->m_pointLights.end(),
+                                it->light);
+            if (find == m_map->m_pointLights.end()) {
+                it = m_culledPointLights.erase(it);
+                end = m_culledPointLights.end();
+            } else {
+                it++;
+            }
+        }
+        m_map->m_needSync = false;
+    }
+
+    // TODO: commands (u::function needs to be implemented)
+    if (r_reload) {
+        m_geomMethods->reload();
+        for (auto &it : m_directionalLightMethods)
+            it.reload();
+        m_compositeMethod.reload();
+        for (auto &it : m_pointLightMethods)
+            it.reload();
+        for (auto &it : m_spotLightMethods)
+            it.reload();
+        m_ssaoMethod.reload();
+        m_bboxMethod.reload();
+        m_aaMethod.reload();
+        m_defaultMethod.reload();
+        r_reload.set(0);
+    }
+
+    cullPass(pl);
+    geometryPass(pl);
+    lightingPass(pl);
+    forwardPass(pl);
+    compositePass(pl);
+}
 
 void world::cullPass(const pipeline &pl) {
     const float widthOffset = 0.5f * m_shadowMap.widthScale(r_smsize);
@@ -873,7 +757,7 @@ void world::geometryPass(const pipeline &pl) {
         gl::StencilFunc(GL_ALWAYS, 1, 0xFF); // Stencil to 1
         gl::StencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 #if 1
-        // HACK: Testing only
+        // NOTE: Testing Only
         {
             p.setRotation(m::quat());
             const m::vec3 rot = m::vec3(0, 180, 0);
@@ -893,122 +777,6 @@ void world::geometryPass(const pipeline &pl) {
         gl::Disable(GL_STENCIL_TEST);
         gl::Disable(GL_DEPTH_TEST);
     }
-}
-
-void world::pointLightPass(const pipeline &pl) {
-    pipeline p = pl;
-
-    gl::DepthMask(GL_FALSE);
-
-    for (auto &plc : m_culledPointLights) {
-        if (!plc.visible)
-            continue;
-        auto &it = plc.light;
-        float scale = it->radius * kLightRadiusTweak;
-
-        pointLightMethod *method = &m_pointLightMethods[0];
-
-        // Only bother if these are casting shadows
-        if (it->castShadows) {
-            pointLightShadowPass(&plc);
-
-            gl::DepthMask(GL_FALSE);
-
-            method = &m_pointLightMethods[1];
-
-            gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
-            gl::BindTexture(GL_TEXTURE_2D, m_shadowMap.texture());
-
-            method->enable();
-            method->setLightWVP(plc.transform);
-        } else {
-            method->enable();
-        }
-
-        method->setPerspective(pl.perspective());
-        method->setEyeWorldPos(pl.position());
-        method->setInverse((p.projection() * p.view()).inverse());
-
-        p.setWorld(it->position);
-        p.setScale({scale, scale, scale});
-
-        const m::mat4 wvp = p.projection() * p.view() * p.world();
-        method->setLight(*it);
-        method->setWVP(wvp);
-
-        const m::vec3 dist = it->position - p.position();
-        scale += p.perspective().nearp + 1.0f;
-        if (dist*dist >= scale*scale) {
-            gl::DepthFunc(GL_LESS);
-            gl::CullFace(GL_BACK);
-        } else {
-            gl::DepthFunc(GL_GEQUAL);
-            gl::CullFace(GL_FRONT);
-        }
-        m_sphere.render();
-    }
-
-    gl::DepthMask(GL_TRUE);
-    gl::DepthFunc(GL_LESS);
-    gl::CullFace(GL_BACK);
-}
-
-void world::spotLightPass(const pipeline &pl) {
-    pipeline p = pl;
-
-    gl::DepthMask(GL_FALSE);
-
-    for (auto &slc : m_culledSpotLights) {
-        if (!slc.visible)
-            continue;
-        auto &sl = slc.light;
-        float scale = sl->radius * kLightRadiusTweak;
-
-        spotLightMethod *method = &m_spotLightMethods[0];
-
-        // Only bother if these are casting shadows
-        if (sl->castShadows) {
-            spotLightShadowPass(&slc);
-
-            gl::DepthMask(GL_FALSE);
-
-            method = &m_spotLightMethods[1];
-
-            gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
-            gl::BindTexture(GL_TEXTURE_2D, m_shadowMap.texture());
-
-            method->enable();
-            method->setLightWVP(slc.transform);
-        } else {
-            method->enable();
-        }
-
-        method->setPerspective(pl.perspective());
-        method->setEyeWorldPos(pl.position());
-        method->setInverse((p.projection() * p.view()).inverse());
-
-        p.setWorld(sl->position);
-        p.setScale({scale, scale, scale});
-
-        const m::mat4 wvp = p.projection() * p.view() * p.world();
-        method->setLight(*sl);
-        method->setWVP(wvp);
-
-        const m::vec3 dist = sl->position - p.position();
-        scale += p.perspective().nearp + 1.0f;
-        if (dist*dist >= scale*scale) {
-            gl::DepthFunc(GL_LESS);
-            gl::CullFace(GL_BACK);
-        } else {
-            gl::DepthFunc(GL_GEQUAL);
-            gl::CullFace(GL_FRONT);
-        }
-        m_sphere.render();
-    }
-
-    gl::DepthMask(GL_TRUE);
-    gl::DepthFunc(GL_LESS);
-    gl::CullFace(GL_BACK);
 }
 
 void world::lightingPass(const pipeline &pl) {
@@ -1048,32 +816,15 @@ void world::lightingPass(const pipeline &pl) {
 
     // Change the blending function such that point and spot lights get fogged
     // as well.
-    if (r_fog) {
+    if (r_fog)
         gl::BlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-    }
 
     // Two lighting passes for directional light (stencil and non stencil)
     gl::Enable(GL_STENCIL_TEST);
     gl::StencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-    for (size_t i = 0; i < 2; i++) {
-        if ((r_ssao || r_debug == kDebugSSAO) && !i) {
-            gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kOcclusion);
-            gl::BindTexture(format, m_ssao.texture(ssao::kBuffer));
-        }
-
-        gl::StencilFunc(GL_EQUAL, !i, 0xFF);
-
-        auto &method = m_directionalLightMethods[lightCalculatePermutation(!i)];
-        method.enable();
-        method.setLight(m_map->getDirectionalLight());
-        method.setPerspective(pl.perspective());
-        method.setEyeWorldPos(pl.position());
-        method.setInverse((p.projection() * p.view()).inverse());
-        if (r_fog)
-            method.setFog(m_map->m_fog);
-        m_quad.render();
-    }
+    directionalLightPass(pl, true);
+    directionalLightPass(pl, false);
 
     gl::Disable(GL_STENCIL_TEST);
 }
@@ -1262,13 +1013,33 @@ void world::compositePass(const pipeline &pl) {
     m_compositeMethod.setPerspective(pl.perspective());
     m_quad.render();
 
-    if (r_fxaa) {
-        // write to aa buffer
-        m_aa.bindWriting();
+    // apply vignette now
+    if (r_vignette) {
+        m_vignette.bindWriting();
 
         // take color grading result on unit 0
         gl::ActiveTexture(GL_TEXTURE0);
         gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
+
+        // render vignette
+        m_vignetteMethod.enable();
+        m_vignetteMethod.setPerspective(pl.perspective());
+        m_vignetteMethod.setProperties(r_vignette_radius, r_vignette_softness);
+        m_quad.render();
+    }
+
+    if (r_fxaa) {
+        // write to aa buffer
+        m_aa.bindWriting();
+
+        gl::ActiveTexture(GL_TEXTURE0);
+        if (r_vignette) {
+            // take vignette result on unit 0
+            gl::BindTexture(format, m_vignette.texture());
+        } else {
+            // take color grading result on unit 0
+            gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
+        }
 
         // render aa buffer
         m_aaMethod.enable();
@@ -1291,15 +1062,78 @@ void world::compositePass(const pipeline &pl) {
         // write to window buffer
         gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
-        // take color grading result on unit 0
         gl::ActiveTexture(GL_TEXTURE0);
-        gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
+        if (r_vignette) {
+            // take vignette result on unit 0
+            gl::BindTexture(format, m_vignette.texture());
+        } else {
+            // take color grading result on unit 0
+            gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
+        }
 
         // render window buffer
         m_defaultMethod.enable();
         m_defaultMethod.setPerspective(pl.perspective());
         m_quad.render();
     }
+}
+
+void world::pointLightPass(const pipeline &pl) {
+    pipeline p = pl;
+
+    gl::DepthMask(GL_FALSE);
+
+    for (auto &plc : m_culledPointLights) {
+        if (!plc.visible)
+            continue;
+        auto &it = plc.light;
+        float scale = it->radius * kLightRadiusTweak;
+
+        pointLightMethod *method = &m_pointLightMethods[0];
+
+        // Only bother if these are casting shadows
+        if (it->castShadows) {
+            pointLightShadowPass(&plc);
+
+            gl::DepthMask(GL_FALSE);
+
+            method = &m_pointLightMethods[1];
+
+            gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
+            gl::BindTexture(GL_TEXTURE_2D, m_shadowMap.texture());
+
+            method->enable();
+            method->setLightWVP(plc.transform);
+        } else {
+            method->enable();
+        }
+
+        method->setPerspective(pl.perspective());
+        method->setEyeWorldPos(pl.position());
+        method->setInverse((p.projection() * p.view()).inverse());
+
+        p.setWorld(it->position);
+        p.setScale({scale, scale, scale});
+
+        const m::mat4 wvp = p.projection() * p.view() * p.world();
+        method->setLight(*it);
+        method->setWVP(wvp);
+
+        const m::vec3 dist = it->position - p.position();
+        scale += p.perspective().nearp + 1.0f;
+        if (dist*dist >= scale*scale) {
+            gl::DepthFunc(GL_LESS);
+            gl::CullFace(GL_BACK);
+        } else {
+            gl::DepthFunc(GL_GEQUAL);
+            gl::CullFace(GL_FRONT);
+        }
+        m_sphere.render();
+    }
+
+    gl::DepthMask(GL_TRUE);
+    gl::DepthFunc(GL_LESS);
+    gl::CullFace(GL_BACK);
 }
 
 void world::pointLightShadowPass(const pointLightChunk *const plc) {
@@ -1381,6 +1215,64 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
     m_final.bindWriting();
 }
 
+void world::spotLightPass(const pipeline &pl) {
+    pipeline p = pl;
+
+    gl::DepthMask(GL_FALSE);
+
+    for (auto &slc : m_culledSpotLights) {
+        if (!slc.visible)
+            continue;
+        auto &sl = slc.light;
+        float scale = sl->radius * kLightRadiusTweak;
+
+        spotLightMethod *method = &m_spotLightMethods[0];
+
+        // Only bother if these are casting shadows
+        if (sl->castShadows) {
+            spotLightShadowPass(&slc);
+
+            gl::DepthMask(GL_FALSE);
+
+            method = &m_spotLightMethods[1];
+
+            gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kShadowMap);
+            gl::BindTexture(GL_TEXTURE_2D, m_shadowMap.texture());
+
+            method->enable();
+            method->setLightWVP(slc.transform);
+        } else {
+            method->enable();
+        }
+
+        method->setPerspective(pl.perspective());
+        method->setEyeWorldPos(pl.position());
+        method->setInverse((p.projection() * p.view()).inverse());
+
+        p.setWorld(sl->position);
+        p.setScale({scale, scale, scale});
+
+        const m::mat4 wvp = p.projection() * p.view() * p.world();
+        method->setLight(*sl);
+        method->setWVP(wvp);
+
+        const m::vec3 dist = sl->position - p.position();
+        scale += p.perspective().nearp + 1.0f;
+        if (dist*dist >= scale*scale) {
+            gl::DepthFunc(GL_LESS);
+            gl::CullFace(GL_BACK);
+        } else {
+            gl::DepthFunc(GL_GEQUAL);
+            gl::CullFace(GL_FRONT);
+        }
+        m_sphere.render();
+    }
+
+    gl::DepthMask(GL_TRUE);
+    gl::DepthFunc(GL_LESS);
+    gl::CullFace(GL_BACK);
+}
+
 void world::spotLightShadowPass(const spotLightChunk *const slc) {
     const spotLight *const sl = slc->light;
     gl::DepthMask(GL_TRUE);
@@ -1423,58 +1315,28 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
     m_final.bindWriting();
 }
 
-NVAR(int, r_reload, "reload shaders", 0, 1, 0);
+void world::directionalLightPass(const pipeline &pl, bool stencil) {
+    auto p = pl;
 
-void world::render(const pipeline &pl) {
-    // TODO: rewrite world manager such that this hack is not needed
-    if (m_map->m_needSync) {
-        for (auto it = m_culledSpotLights.begin(), end = m_culledSpotLights.end(); it != end; ) {
-            auto find = u::find(m_map->m_spotLights.begin(),
-                                m_map->m_spotLights.end(),
-                                it->light);
-            if (find == m_map->m_spotLights.end()) {
-                it = m_culledSpotLights.erase(it);
-                end = m_culledSpotLights.end();
-            } else {
-                it++;
-            }
-        }
-        for (auto it = m_culledPointLights.begin(), end = m_culledPointLights.end(); it != end; ) {
-            auto find = u::find(m_map->m_pointLights.begin(),
-                                m_map->m_pointLights.end(),
-                                it->light);
-            if (find == m_map->m_pointLights.end()) {
-                it = m_culledPointLights.erase(it);
-                end = m_culledPointLights.end();
-            } else {
-                it++;
-            }
-        }
-        m_map->m_needSync = false;
+    GLenum format = gl::has(gl::ARB_texture_rectangle)
+        ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
+
+    if ((r_ssao || r_debug == kDebugSSAO) && stencil) {
+        gl::ActiveTexture(GL_TEXTURE0 + lightMethod::kOcclusion);
+        gl::BindTexture(format, m_ssao.texture(ssao::kBuffer));
     }
 
-    // TODO: commands (u::function needs to be implemented)
-    if (r_reload) {
-        m_geomMethods->reload();
-        for (auto &it : m_directionalLightMethods)
-            it.reload();
-        m_compositeMethod.reload();
-        for (auto &it : m_pointLightMethods)
-            it.reload();
-        for (auto &it : m_spotLightMethods)
-            it.reload();
-        m_ssaoMethod.reload();
-        m_bboxMethod.reload();
-        m_aaMethod.reload();
-        m_defaultMethod.reload();
-        r_reload.set(0);
-    }
+    gl::StencilFunc(GL_EQUAL, stencil, 0xFF);
 
-    cullPass(pl);
-    geometryPass(pl);
-    lightingPass(pl);
-    forwardPass(pl);
-    compositePass(pl);
+    auto &method = m_directionalLightMethods[lightCalculatePermutation(stencil)];
+    method.enable();
+    method.setLight(m_map->getDirectionalLight());
+    method.setPerspective(pl.perspective());
+    method.setEyeWorldPos(pl.position());
+    method.setInverse((p.projection() * p.view()).inverse());
+    if (r_fog)
+        method.setFog(m_map->m_fog);
+    m_quad.render();
 }
 
 }

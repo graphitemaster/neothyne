@@ -3,7 +3,6 @@
 #include "model.h"
 
 #include "r_geom.h"
-#include "r_common.h"
 #include "r_method.h"
 
 #include "u_string.h"

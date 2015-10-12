@@ -34,6 +34,7 @@ embodies the following:
   * Fog (linear, exp and exp2)
   * Fast approximate anti-aliasing (FXAA)
   * Screen space ambient occlusion (SSAO)
+  * Vignette
   * View frustum culling
   * Skeletal model animation (IQM)
   * Variable color grading (supporting)

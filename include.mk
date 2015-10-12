@@ -15,6 +15,7 @@ RENDERER_SOURCES = \
 	r_aa.cpp \
 	r_billboard.cpp \
 	r_common.cpp \
+	r_composite.cpp \
 	r_gbuffer.cpp \
 	r_model.cpp \
 	r_method.cpp \
@@ -25,6 +26,7 @@ RENDERER_SOURCES = \
 	r_skybox.cpp \
 	r_ssao.cpp \
 	r_texture.cpp \
+	r_vignette.cpp \
 	r_world.cpp \
 	r_gui.cpp \
 	r_light.cpp \

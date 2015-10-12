@@ -125,6 +125,25 @@ private:
     uniform *m_colorTextureUnit;
 };
 
+struct bboxMethod : method {
+    bboxMethod();
+
+    bool init();
+
+    void setWVP(const m::mat4 &wvp);
+    void setColor(const m::vec3 &color);
+
+private:
+    uniform *m_WVP;
+    uniform *m_color;
+};
+
+inline bboxMethod::bboxMethod()
+    : m_WVP(nullptr)
+    , m_color(nullptr)
+{
+}
+
 }
 
 #endif

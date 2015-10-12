@@ -357,4 +357,31 @@ void defaultMethod::setPerspective(const m::perspective &p) {
     m_screenSize->set(m::vec2(p.width, p.height));
 }
 
+///! bboxMethod
+bool bboxMethod::init() {
+    if (!method::init("bounding box"))
+        return false;
+
+    if (!addShader(GL_VERTEX_SHADER, "shaders/bbox.vs"))
+        return false;
+    if (!addShader(GL_FRAGMENT_SHADER, "shaders/bbox.fs"))
+        return false;
+    if (!finalize({ "position" }, { "diffuseOut" }))
+        return false;
+
+    m_WVP = getUniform("gWVP", uniform::kMat4);
+    m_color = getUniform("gColor", uniform::kVec3);
+
+    post();
+    return true;
+}
+
+void bboxMethod::setWVP(const m::mat4 &wvp) {
+    m_WVP->set(wvp);
+}
+
+void bboxMethod::setColor(const m::vec3 &color) {
+    m_color->set(color);
+}
+
 }
