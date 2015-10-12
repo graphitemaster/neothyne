@@ -413,7 +413,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             memcpy(&serialize[0], &header, sizeof header);
             memcpy(&serialize[sizeof header], &programBinary[0], programBinary.size());
 
-            u::write(serialize, file, "w");
+            u::write(serialize, file, "wb");
             u::print("[cache] => wrote %.50s...\n", u::fixPath(cacheString));
         }
 
