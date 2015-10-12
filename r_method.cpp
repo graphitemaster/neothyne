@@ -307,8 +307,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
         // Verify that this program is valid (linked)
         gl::GetProgramiv(m_program, GL_LINK_STATUS, &status);
         if (status) {
-            u::print("[cache] => loaded %.50s...\n",
-                     u::fixPath(cacheString));
+            u::print("[cache] => loaded %.50s...\n", u::fixPath(cacheString));
             notUsingCache = false;
         } else {
             neoFatal("driver says fuck you");

@@ -562,7 +562,7 @@ static bool writeCacheData(textureFormat format,
     memcpy(&data[0] + sizeof(head), toData, toSize);
 
     u::print("[cache] => wrote %.50s... %s (compressed %s to %s with %s compressor)",
-        cacheString,
+        u::fixPath(cacheString),
         cacheFormat(internal),
         u::sizeMetric(texSize),
         u::sizeMetric(compressedSize),
