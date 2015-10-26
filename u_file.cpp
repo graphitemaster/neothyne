@@ -112,7 +112,7 @@ bool getline(u::file &fp, u::string &line) {
     line.clear();
     for (;;) {
         char buf[256];
-        if (!fgets(buf, sizeof(buf), fp.get())) {
+        if (!fgets(buf, sizeof buf, fp.get())) {
             if (feof(fp.get()))
                 return !line.empty();
             abort();
@@ -121,7 +121,7 @@ bool getline(u::file &fp, u::string &line) {
         if (n && buf[n - 1] == '\n')
             --n;
         line.append(buf, n);
-        if (n < sizeof(buf) - 1)
+        if (n < sizeof buf - 1)
             return true;
     }
     return false;
@@ -225,10 +225,10 @@ inline findContext::findContext(const char *where)
 {
     static constexpr const char kPathExtra[] = "\\*";
     const size_t length = strlen(where);
-    assert(length + sizeof(kPathExtra) < MAX_PATH);
+    assert(length + sizeof kPathExtra < MAX_PATH);
     char path[MAX_PATH];
     memcpy((void *)path, (const void *)where, length);
-    memcpy((void *)&path[length], (const void *)kPathExtra, sizeof(kPathExtra));
+    memcpy((void *)&path[length], (const void *)kPathExtra, sizeof kPathExtra);
     if (!(handle = FindFirstFileA(path, &findData)))
         return;
     // Ignore "." and ".."

@@ -11,7 +11,7 @@ gBuffer::gBuffer()
     , m_width(0)
     , m_height(0)
 {
-    memset(m_textures, 0, sizeof(m_textures));
+    memset(m_textures, 0, sizeof m_textures);
 }
 
 gBuffer::~gBuffer() {
@@ -95,7 +95,7 @@ bool gBuffer::init(const m::perspective &p) {
         GL_COLOR_ATTACHMENT1  // normal + specular power
     };
 
-    gl::DrawBuffers(sizeof(drawBuffers)/sizeof(*drawBuffers), drawBuffers);
+    gl::DrawBuffers(sizeof drawBuffers / sizeof *drawBuffers, drawBuffers);
 
     const GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)

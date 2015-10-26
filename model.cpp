@@ -53,12 +53,8 @@ static void createTangents(const u::vector<m::vec3> &vertices,
     // Computing Tangent Space Basis Vectors for an Arbitrary Mesh (Lengyel’s Method)
     // Section 7.8 (or in Section 6.8 of the second edition).
     const size_t vertexCount = vertices.size();
-    u::vector<m::vec3> tangents;
-    u::vector<m::vec3> bitangents;
-
-    tangents.resize(vertexCount);
-    bitangents.resize(vertexCount);
-
+    u::vector<m::vec3> tangents(vertexCount);
+    u::vector<m::vec3> bitangents(vertexCount);
     m::vec3 tangent;
     m::vec3 bitangent;
 
@@ -489,30 +485,30 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
         for (uint32_t i = 0; i < hdr->numVertexes; i++) {
             if (isHalf) {
                 mesh::animHalfVertex &v = store->m_animHalfVertices[i];
-                if (inPosition)    memcpy(v.position, &inPosition.asHalf[i*3], sizeof(v.position));
-                if (inCoordinate)  memcpy(v.coordinate, &inCoordinate.asHalf[i*2], sizeof(v.coordinate));
-                if (inTangent)     memcpy(v.tangent, &inTangent.asHalf[i*4], sizeof(v.tangent));
+                if (inPosition)    memcpy(v.position, &inPosition.asHalf[i*3], sizeof v.position);
+                if (inCoordinate)  memcpy(v.coordinate, &inCoordinate.asHalf[i*2], sizeof v.coordinate);
+                if (inTangent)     memcpy(v.tangent, &inTangent.asHalf[i*4], sizeof v.tangent);
                 if (inNormal) {
                     for (size_t j = 0; j < 3; j++)
                         inNormal.asHalf[i*3+j] ^= 0x8000;
-                    memcpy(v.normal, &inNormal.asHalf[i*3], sizeof(v.normal));
+                    memcpy(v.normal, &inNormal.asHalf[i*3], sizeof v.normal);
                 }
-                if (inBlendIndex)  memcpy(v.blendIndex, &inBlendIndex[i*4], sizeof(v.blendIndex));
-                if (inBlendWeight) memcpy(v.blendWeight, &inBlendWeight[i*4], sizeof(v.blendWeight));
+                if (inBlendIndex)  memcpy(v.blendIndex, &inBlendIndex[i*4], sizeof v.blendIndex);
+                if (inBlendWeight) memcpy(v.blendWeight, &inBlendWeight[i*4], sizeof v.blendWeight);
             } else {
                 mesh::animVertex &v = store->m_animVertices[i];
-                if (inPosition)    memcpy(v.position, &inPosition.asFloat[i*3], sizeof(v.position));
-                if (inCoordinate)  memcpy(v.coordinate, &inCoordinate.asFloat[i*2], sizeof(v.coordinate));
-                if (inTangent)     memcpy(v.tangent, &inTangent.asFloat[i*4], sizeof(v.tangent));
+                if (inPosition)    memcpy(v.position, &inPosition.asFloat[i*3], sizeof v.position);
+                if (inCoordinate)  memcpy(v.coordinate, &inCoordinate.asFloat[i*2], sizeof v.coordinate);
+                if (inTangent)     memcpy(v.tangent, &inTangent.asFloat[i*4], sizeof v.tangent);
                 if (inNormal) {
                     // Flip normals
                     const m::vec3 flip = -1.0f * m::vec3(inNormal.asFloat[i*3+0],
                                                          inNormal.asFloat[i*3+1],
                                                          inNormal.asFloat[i*3+2]);
-                    memcpy(v.normal, &flip.x, sizeof(v.normal));
+                    memcpy(v.normal, &flip.x, sizeof v.normal);
                 }
-                if (inBlendIndex)  memcpy(v.blendIndex, &inBlendIndex[i*4], sizeof(v.blendIndex));
-                if (inBlendWeight) memcpy(v.blendWeight, &inBlendWeight[i*4], sizeof(v.blendWeight));
+                if (inBlendIndex)  memcpy(v.blendIndex, &inBlendIndex[i*4], sizeof v.blendIndex);
+                if (inBlendWeight) memcpy(v.blendWeight, &inBlendWeight[i*4], sizeof v.blendWeight);
             }
         }
     } else {
@@ -520,25 +516,25 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
         for (uint32_t i = 0; i < hdr->numVertexes; i++) {
             if (isHalf) {
                 mesh::basicHalfVertex &v = store->m_basicHalfVertices[i];
-                if (inPosition)   memcpy(v.position, &inPosition.asHalf[i*3], sizeof(v.position));
-                if (inCoordinate) memcpy(v.coordinate, &inCoordinate.asHalf[i*2], sizeof(v.coordinate));
-                if (inTangent)    memcpy(v.tangent, &inTangent.asHalf[i*4], sizeof(v.tangent));
+                if (inPosition)   memcpy(v.position, &inPosition.asHalf[i*3], sizeof v.position);
+                if (inCoordinate) memcpy(v.coordinate, &inCoordinate.asHalf[i*2], sizeof v.coordinate);
+                if (inTangent)    memcpy(v.tangent, &inTangent.asHalf[i*4], sizeof v.tangent);
                 if (inNormal) {
                     for (size_t j = 0; j < 3; j++)
                         inNormal.asHalf[i*3+j] ^= 0x8000;
-                    memcpy(v.normal, &inNormal.asHalf[i*3], sizeof(v.normal));
+                    memcpy(v.normal, &inNormal.asHalf[i*3], sizeof v.normal);
                 }
             } else {
                 mesh::basicVertex &v = store->m_basicVertices[i];
-                if (inPosition)   memcpy(v.position, &inPosition.asFloat[i*3], sizeof(v.position));
-                if (inCoordinate) memcpy(v.coordinate, &inCoordinate.asFloat[i*2], sizeof(v.coordinate));
-                if (inTangent)    memcpy(v.tangent, &inTangent.asFloat[i*4], sizeof(v.tangent));
+                if (inPosition)   memcpy(v.position, &inPosition.asFloat[i*3], sizeof v.position);
+                if (inCoordinate) memcpy(v.coordinate, &inCoordinate.asFloat[i*2], sizeof v.coordinate);
+                if (inTangent)    memcpy(v.tangent, &inTangent.asFloat[i*4], sizeof v.tangent);
                 if (inNormal) {
                     // Flip normals
                     const m::vec3 flip = -1.0f * m::vec3(inNormal.asFloat[i*3+0],
                                                          inNormal.asFloat[i*3+1],
                                                          inNormal.asFloat[i*3+2]);
-                    memcpy(v.normal, &flip.x, sizeof(v.normal));
+                    memcpy(v.normal, &flip.x, sizeof v.normal);
                 }
             }
         }
@@ -561,7 +557,7 @@ bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store) {
         for (uint32_t j = 0; j < hdr->numPoses; j++) {
             const iqmPose &p = poses[j];
             float data[10];
-            memcpy(data, p.channelOffset, sizeof(p.channelOffset));
+            memcpy(data, p.channelOffset, sizeof p.channelOffset);
             for (size_t v = 0; v < 10; v++)
                 if (p.mask & (1 << v))
                     data[v] += (*frameData++) * p.channelScale[v];
@@ -586,7 +582,7 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
     auto data = *read;
 
     iqmHeader *hdr = (iqmHeader*)&data[0];
-    if (memcmp(hdr->magic, (const void *)iqmHeader::kMagic, sizeof(hdr->magic)))
+    if (memcmp(hdr->magic, (const void *)iqmHeader::kMagic, sizeof hdr->magic))
         return false;
 
     hdr->endianSwap();
@@ -620,7 +616,7 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
             continue;
         auto animData = *read;
         iqmHeader *animHdr = (iqmHeader*)&animData[0];
-        if (memcmp(animHdr->magic, (const void *)iqmHeader::kMagic, sizeof(animHdr->magic)))
+        if (memcmp(animHdr->magic, (const void *)iqmHeader::kMagic, sizeof animHdr->magic))
             continue;
         animHdr->endianSwap();
         if (animHdr->version != iqmHeader::kVersion)

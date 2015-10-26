@@ -79,9 +79,7 @@ void billboard::render(const pipeline &pl, float size) {
 
     m_vertices.destroy();
     m_vertices.reserve(m_positions.size() * 4);
-
-    u::vector<GLuint> indices;
-    indices.reserve(m_positions.size() * 6);
+    u::vector<GLuint> indices(m_positions.size() * 6);
 
     u::sort(m_positions.begin(), m_positions.end(),
         [&pl](const m::vec3 &lhs, const m::vec3 &rhs) {

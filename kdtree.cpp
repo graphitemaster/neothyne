@@ -344,7 +344,7 @@ static uint32_t kdBinAddTexture(u::vector<kdBinTexture> &textures, const u::stri
     }
     kdBinTexture texture;
     // Truncate the string if it doesn't fit
-    const size_t length = u::min(sizeof(texture.name) - 1, texturePath.size());
+    const size_t length = u::min(sizeof texture.name - 1, texturePath.size());
     memcpy(texture.name, (const void *)texturePath.c_str(), length);
     texture.name[length] = '\0';
     textures.push_back(texture);
@@ -391,14 +391,9 @@ static void kdBinCreateTangents(u::vector<kdBinVertex> &vertices, const u::vecto
     // Section 7.8 (or in Section 6.8 of the second edition).
     const size_t vertexCount = vertices.size();
     const size_t triangleCount = triangles.size();
-    u::vector<m::vec3> normals;
-    u::vector<m::vec3> tangents;
-    u::vector<m::vec3> bitangents;
-
-    normals.resize(vertexCount);
-    tangents.resize(vertexCount);
-    bitangents.resize(vertexCount);
-
+    u::vector<m::vec3> normals(vertexCount);
+    u::vector<m::vec3> tangents(vertexCount);
+    u::vector<m::vec3> bitangents(vertexCount);
     m::vec3 normal;
     m::vec3 tangent;
     m::vec3 bitangent;

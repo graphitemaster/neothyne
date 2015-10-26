@@ -10,7 +10,7 @@ grader::grader()
     , m_width(0)
     , m_height(0)
 {
-    memset(m_textures, 0, sizeof(m_textures));
+    memset(m_textures, 0, sizeof m_textures);
 }
 
 grader::~grader() {
@@ -69,7 +69,7 @@ bool grader::init(const m::perspective &p, const unsigned char *const colorGradi
 
     static GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 
-    gl::DrawBuffers(sizeof(drawBuffers)/sizeof(*drawBuffers), drawBuffers);
+    gl::DrawBuffers(sizeof drawBuffers / sizeof *drawBuffers, drawBuffers);
 
     const GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)

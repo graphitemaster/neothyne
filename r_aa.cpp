@@ -101,7 +101,7 @@ bool aa::init(const m::perspective &p) {
 
     static GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 
-    gl::DrawBuffers(sizeof(drawBuffers)/sizeof(*drawBuffers), drawBuffers);
+    gl::DrawBuffers(sizeof drawBuffers / sizeof *drawBuffers, drawBuffers);
 
     const GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)

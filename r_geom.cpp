@@ -47,7 +47,7 @@ bool quad::upload() {
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
     if (gl::has(gl::ARB_half_float_vertex)) {
-        const auto convert = m::convertToHalf(vertices, sizeof(vertices)/sizeof(*vertices));
+        const auto convert = m::convertToHalf(vertices, sizeof vertices / sizeof *vertices);
         gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(m::half)*5, (const GLvoid *)(0)); // position
         gl::VertexAttribPointer(1, 2, GL_HALF_FLOAT, GL_FALSE, sizeof(m::half)*5, (const GLvoid *)(sizeof(m::half)*3)); // uvs
@@ -60,7 +60,7 @@ bool quad::upload() {
     gl::EnableVertexAttribArray(1);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof indices, indices, GL_STATIC_DRAW);
 
     return true;
 }
@@ -79,8 +79,7 @@ bool sphere::upload() {
     geom::upload();
 
     constexpr size_t numVertices = (kStacks + 1) * (kSlices + 1);
-    u::vector<m::vec3> vertices;
-    vertices.resize(numVertices);
+    u::vector<m::vec3> vertices(numVertices);
 
     const float ds = 1.0f / kSlices;
     const float dt = 1.0f / kStacks;
@@ -102,8 +101,7 @@ bool sphere::upload() {
     }
 
     m_indices = (kStacks - 1) * kSlices * 3 * 2;
-    u::vector<GLushort> indices;
-    indices.resize(m_indices);
+    u::vector<GLushort> indices(m_indices);
     GLushort *curIndex = &indices[0];
     for (size_t i = 0; i < kStacks; i++) {
         for (size_t k = 0; k < kSlices; k++) {
@@ -170,7 +168,7 @@ bool bbox::upload() {
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
     if (gl::has(gl::ARB_half_float_vertex)) {
-        const auto convert = m::convertToHalf(vertices, sizeof(vertices)/sizeof(*vertices));
+        const auto convert = m::convertToHalf(vertices, sizeof vertices / sizeof *vertices);
         gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 4, GL_HALF_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     } else {
@@ -180,7 +178,7 @@ bool bbox::upload() {
     gl::EnableVertexAttribArray(0);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof indices, indices, GL_STATIC_DRAW);
 
     return true;
 }
@@ -214,17 +212,17 @@ bool cube::upload() {
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
     if (gl::has(gl::ARB_half_float_vertex)) {
-        const auto convert = m::convertToHalf(vertices, sizeof(vertices)/sizeof(*vertices));
+        const auto convert = m::convertToHalf(vertices, sizeof vertices / sizeof *vertices);
         gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     } else {
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     }
     gl::EnableVertexAttribArray(0);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof indices, indices, GL_STATIC_DRAW);
 
     return true;
 }

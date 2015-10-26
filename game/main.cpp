@@ -156,7 +156,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     light.diffuse = 1.0f;
     light.ambient = 0.10f;
     light.radius = 30.0f;
-    for (size_t i = 0; i < sizeof(places)/sizeof(*places); i++) {
+    for (size_t i = 0; i < sizeof places / sizeof *places; i++) {
         light.color = { u::randf(), u::randf(), u::randf() };
         light.position = places[i];
         //light.position.y -= 5.0f;

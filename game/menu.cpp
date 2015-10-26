@@ -29,7 +29,7 @@ static u::vector<u::string> gMenuPaths;
 
 #define FMT(N, ...) u::format("%"#N"s..", __VA_ARGS__).c_str()
 
-#define PP_COUNT(X) (sizeof(X)/sizeof(*X))
+#define PP_COUNT(X) (sizeof (X) / sizeof *(X))
 
 static const char *kCreditsEngine[] = {
     "Dale 'graphitemaster' Weiler"

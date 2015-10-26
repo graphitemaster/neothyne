@@ -377,7 +377,7 @@ void colorGrader::update() {
 }
 
 void colorGrader::reset() {
-    memset(m_balance, 0, sizeof(m_balance));
+    memset(m_balance, 0, sizeof m_balance);
 
     for (size_t i = kHuesAll; i < kHuesMax; i++) {
         m_hue[i] = 0.0;

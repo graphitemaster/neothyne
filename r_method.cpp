@@ -407,8 +407,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             header.endianSwap();
 
             // Serialize the data
-            u::vector<unsigned char> serialize;
-            serialize.resize(sizeof header + programBinary.size());
+            u::vector<unsigned char> serialize(sizeof header + programBinary.size());
             memcpy(&serialize[0], &header, sizeof header);
             memcpy(&serialize[sizeof header], &programBinary[0], programBinary.size());
 

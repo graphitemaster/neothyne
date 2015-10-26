@@ -70,7 +70,7 @@ static struct queryOperatingSystem {
 #if !defined(_WIN32) && !defined(_WIN64)
         struct utsname n;
         if (uname(&n) == 0)
-            snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s %s",
+            snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s %s",
                 n.sysname, n.release, n.machine);
 #else
         static const size_t kRegQuerySize = 255;
@@ -118,31 +118,31 @@ failedArchitecture:
             u::moveMemory(name, strip + kStripLen, 1 + strlen(strip + kStripLen));
 #if defined(_WIN32)
         if (!strcmp(architecture, "AMD64")) {
-            snprintf(gOperatingSystem, sizeof(gOperatingSystem),
+            snprintf(gOperatingSystem, sizeof gOperatingSystem,
                 "%s %s (32-bit binary on 64-bit CPU)", name, version);
         } else {
-            snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s (32-bit)",
+            snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s (32-bit)",
                 name, version);
         }
 #elif defined(_WIN64)
-        snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s (64-bit)",
+        snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s (64-bit)",
             name, version);
 #else
-        snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s %s",
+        snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s",
             name, version);
 #endif
         return;
 failedCSDVersion:
 #if defined(_WIN32)
         if (!strcmp(architecture, "AMD64")) {
-            snprintf(gOperatingSystem, sizeof(gOperatingSystem),
+            snprintf(gOperatingSystem, sizeof gOperatingSystem,
                 "%s (32-bit binary on 64-bit CPU)", name);
         } else {
-            snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s (32-bit)",
+            snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s (32-bit)",
                 name);
         }
 #elif defined(_WIN64)
-        snprintf(gOperatingSystem, sizeof(gOperatingSystem), "%s (64-bit)", name);
+        snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s (64-bit)", name);
 #else
         strcpy(gOperatingSystem, name);
 #endif
@@ -446,7 +446,7 @@ bool engine::initContext() {
         flags |= SDL_WINDOW_FULLSCREEN;
 
     char name[1024];
-    snprintf(name, sizeof(name), "Neothyne [%s]", gOperatingSystem);
+    snprintf(name, sizeof name, "Neothyne [%s]", gOperatingSystem);
     ctx->m_window = SDL_CreateWindow(
         name,
         SDL_WINDOWPOS_UNDEFINED,
@@ -683,13 +683,13 @@ void engine::swap() {
                 break;
             }
             keyName = SDL_GetKeyName(e.key.keysym.sym);
-            snprintf(format, sizeof(format), "%sDn", keyName);
+            snprintf(format, sizeof format, "%sDn", keyName);
             callBind(format);
             keyState(keyName, true);
             break;
         case SDL_KEYUP:
             keyName = SDL_GetKeyName(e.key.keysym.sym);
-            snprintf(format, sizeof(format), "%sUp", keyName);
+            snprintf(format, sizeof format, "%sUp", keyName);
             callBind(format);
             keyState(keyName, false, true);
             break;
@@ -759,7 +759,7 @@ void engine::centerMouse() {
 
 void engine::setWindowTitle(const char *title) {
     char name[1024];
-    snprintf(name, sizeof(name), "%s [%s]", title, gOperatingSystem);
+    snprintf(name, sizeof name, "%s [%s]", title, gOperatingSystem);
     SDL_SetWindowTitle(CTX(m_context)->m_window, name);
 }
 
@@ -842,7 +842,7 @@ void engine::screenShot() {
             }
             const size_t size = 8*c*8*3,
                          offset = pixelData.size();
-            pixelData.resize(offset + size);
+            pixelData.resize(size + offset);
             for (size_t i = 0; i < c; i++) {
                 unsigned char *s = &pixelData[8*i*8*3];
                 unsigned char *d = &pixelData[offset]+i*8*3;
@@ -871,7 +871,7 @@ void engine::screenShot() {
         drawString("Extensions");
         for (auto &it : gl::extensions()) {
             char buffer[2048];
-            snprintf(buffer, sizeof(buffer), " %s", gl::extensionString(it));
+            snprintf(buffer, sizeof buffer, " %s", gl::extensionString(it));
             drawString(buffer);
         }
     }

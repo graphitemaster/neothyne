@@ -19,7 +19,7 @@ struct autoComplete {
 private:
     static constexpr char kAlphabet[] = "abcdefghijklmnopqrstuvwxyz_";
     bool m_term;
-    autoComplete *m_array[sizeof(kAlphabet)];
+    autoComplete *m_array[sizeof kAlphabet];
 };
 
 constexpr char autoComplete::kAlphabet[];
@@ -60,7 +60,7 @@ inline void autoComplete::dfs(autoComplete *n, const u::string &item, u::vector<
     if (n) {
         if (n->m_term)
             matches.push_back(item);
-        for (size_t i = 0; i < sizeof(kAlphabet) - 1; i++)
+        for (size_t i = 0; i < sizeof kAlphabet - 1; i++)
             dfs(n->m_array[i], item + kAlphabet[i], matches);
     }
 }
@@ -75,7 +75,7 @@ inline void autoComplete::search(autoComplete *n, const char *s, u::vector<u::st
         if (f != -1 && n->m_array[f])
             search(n->m_array[f], s+1, matches, item + *s);
     } else {
-        for (size_t i = 0; i < sizeof(kAlphabet) - 1; i++)
+        for (size_t i = 0; i < sizeof kAlphabet - 1; i++)
             dfs(n->m_array[i], item + kAlphabet[i], matches);
     }
 }

@@ -44,7 +44,7 @@ namespace detail {
 template <typename T>
 inline size_t hash(const T &value) {
     const size_t rep = size_t(value);
-    return detail::fnv1a((const void *)&rep, sizeof(rep));
+    return detail::fnv1a((const void *)&rep, sizeof rep);
 }
 
 inline size_t hash(const unsigned char *data, size_t size) {

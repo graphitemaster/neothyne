@@ -679,8 +679,7 @@ private:
     // bicubic chroma upsampler
     void upSampleCenteredH(component* c) {
         const size_t xmax = c->width - 3;
-        u::vector<unsigned char> out;
-        out.resize((c->width * c->height) << 1);
+        u::vector<unsigned char> out((c->width * c->height) << 1);
         unsigned char *lin = &c->pixels[0];
         unsigned char *lout = &out[0];
         for (size_t y = c->height; y; --y) {
@@ -707,8 +706,7 @@ private:
         const size_t s1 = c->stride;
         const size_t s2 = s1 + s1;
 
-        u::vector<unsigned char> out;
-        out.resize((c->width * c->height) << 1);
+        u::vector<unsigned char> out((c->width * c->height) << 1);
 
         for (size_t x = 0; x < w; ++x) {
             unsigned char *cin = &c->pixels[x];
@@ -742,8 +740,7 @@ private:
 
     void upSampleCositedH(component *c) {
         const size_t xmax = c->width - 1;
-        u::vector<unsigned char> out;
-        out.resize((c->width * c->height) << 1);
+        u::vector<unsigned char> out((c->width * c->height) << 1);
 
         unsigned char *lin = &c->pixels[0];
         unsigned char *lout = &out[0];
@@ -772,8 +769,7 @@ private:
         const size_t s1 = c->stride;
         const size_t s2 = s1 + s1;
 
-        u::vector<unsigned char> out;
-        out.resize((c->width * c->height) << 1);
+        u::vector<unsigned char> out((c->width * c->height) << 1);
 
         for (size_t x = 0; x < w; ++x) {
             unsigned char *cin = &c->pixels[x];
@@ -809,8 +805,7 @@ private:
         while (c->width < m_width) c->width <<= 1, ++xshift;
         while (c->height < m_height) c->height <<= 1, ++yshift;
 
-        u::vector<unsigned char> out;
-        out.resize(c->width * c->height);
+        u::vector<unsigned char> out(c->width * c->height);
 
         unsigned char *lout = &out[0];
         for (size_t y = 0; y < c->height; ++y) {
@@ -1509,8 +1504,7 @@ private:
             returnResult(kUnsupported);
 
         m_bpp = m_header.colorMapEntrySize / 8;
-        u::vector<unsigned char> colorMap;
-        colorMap.resize(m_bpp * colorMapSize);
+        u::vector<unsigned char> colorMap(m_bpp * colorMapSize);
         read(&colorMap[0], m_bpp * colorMapSize);
 
         if (m_bpp >= 3)
@@ -1549,8 +1543,7 @@ private:
             returnResult(kUnsupported);
 
         m_bpp = m_header.colorMapEntrySize / 8;
-        u::vector<unsigned char> colorMap;
-        colorMap.resize(m_bpp * colorMapSize);
+        u::vector<unsigned char> colorMap(m_bpp * colorMapSize);
         read(&colorMap[0], m_bpp * colorMapSize);
 
         if (m_bpp >= 3)
@@ -1707,7 +1700,7 @@ private:
             returnResult(kInvalid);
 
         surfaceDescriptor surface;
-        read((unsigned char*)&surface, sizeof(surface));
+        read((unsigned char*)&surface, sizeof surface);
 
         m_data.resize(data.end() - m_position);
         read(&m_data[0], m_data.size());
@@ -2096,7 +2089,7 @@ u::optional<u::string> texture::find(const u::string &infile) {
 
     static const char *extensions[] = { "png", "jpg", "tga", "dds" };
     size_t bits = 0;
-    for (size_t i = 0; i < sizeof(extensions)/sizeof(*extensions); i++)
+    for (size_t i = 0; i < sizeof extensions / sizeof *extensions; i++)
         if (u::exists(u::format("%s.%s", file.c_str(), extensions[i])))
             bits |= (1 << i);
     if (bits == 0)
@@ -2192,15 +2185,15 @@ texture &texture::operator=(texture &&other) {
 
 void texture::writeTGA(u::vector<unsigned char> &outData) {
     tga::header hdr;
-    memset(&hdr, 0, sizeof(hdr));
-    outData.resize(sizeof(hdr));
+    memset(&hdr, 0, sizeof hdr);
+    outData.resize(sizeof hdr);
     hdr.pixelSize = m_bpp*8;
     hdr.width[0] = m_width & 0xFF;
     hdr.width[1] = (m_width >> 8) & 0xFF;
     hdr.height[0] = m_height & 0xFF;
     hdr.height[1] = (m_height >> 8) & 0xFF;
     hdr.imageType = tex_tga_compress ? 10 : 2;
-    memcpy(&outData[0], &hdr, sizeof(hdr));
+    memcpy(&outData[0], &hdr, sizeof hdr);
     outData.reserve(outData.size() * m_width*m_height*3);
 
     unsigned char buffer[128*4];
@@ -2299,8 +2292,7 @@ void texture::writeBMP(u::vector<unsigned char> &outData) {
     bmph.biClrImportant = 0;
 
     // line and data buffer
-    u::vector<unsigned char> line;
-    line.resize(bytesPerLine);
+    u::vector<unsigned char> line(bytesPerLine);
     outData.resize(dataSize);
     bmph.bfSize = u::endianSwap(bmph.bfSize);
     bmph.bfReserved = u::endianSwap(bmph.bfReserved);

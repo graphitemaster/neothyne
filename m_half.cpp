@@ -228,7 +228,7 @@ u::vector<float> convertToFloat(const half *const in, size_t length) {
     for (int i = 0; i < blocks; i++) {
         alignas(16) const __m128i value = _mm_set_epi32(in[where+0], in[where+1], in[where+2], in[where+3]);
         const __m128 convert = convertToFloatSSE2(value);
-        memcpy(&result[where], &convert, sizeof(convert));
+        memcpy(&result[where], &convert, sizeof convert);
     }
     for (int i = 0; i < remainder; i++)
         result[where+i] = convertToFloat(in[where+i]);

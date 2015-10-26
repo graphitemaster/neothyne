@@ -627,8 +627,7 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     gl::GetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &compressedHeight);
 
     // Read the compressed image
-    u::vector<unsigned char> compressedData;
-    compressedData.resize(compressedSize);
+    u::vector<unsigned char> compressedData(compressedSize);
     gl::GetCompressedTexImage(GL_TEXTURE_2D, 0, &compressedData[0]);
 
     return writeCacheData(tex.format(), tex.size(), cacheString, &compressedData[0],
@@ -818,7 +817,7 @@ static inline void getTexParams(bool bilinear, bool mipmaps, bool trilinear, GLe
         GL_NEAREST, GL_LINEAR, GL_NEAREST_MIPMAP_LINEAR, GL_LINEAR_MIPMAP_LINEAR
     };
 
-    assert(index < sizeof(kMinLookup)/sizeof(*kMinLookup));
+    assert(index < sizeof kMinLookup / sizeof *kMinLookup);
     min = kMinLookup[index];
 }
 

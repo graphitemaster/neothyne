@@ -420,7 +420,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
         neoFatal("failed to initialize geometry rendering method");
 
     // directional light shader permutations
-    static const size_t lightCount = sizeof(lightPermutations)/sizeof(lightPermutations[0]);
+    static const size_t lightCount = sizeof lightPermutations / sizeof *lightPermutations;
     m_directionalLightMethods.resize(lightCount);
     for (size_t i = 0; i < lightCount; i++) {
         const auto &p = lightPermutations[i];

@@ -208,9 +208,8 @@ bool geomMethods::init() {
         return true;
 
     // geometry shader permutations
-    m_geomMethods = new u::vector<geomMethod>;
-    static const size_t kGeomCount = sizeof(kGeomPermutations)/sizeof(kGeomPermutations[0]);
-    (*m_geomMethods).resize(kGeomCount);
+    static const size_t kGeomCount = sizeof kGeomPermutations / sizeof *kGeomPermutations;
+    m_geomMethods = new u::vector<geomMethod>(kGeomCount);
     for (size_t i = 0; i < kGeomCount; i++) {
         const auto &p = kGeomPermutations[i];
         if (!(*m_geomMethods)[i].init(generatePermutation(kGeomPermutationNames, p)))

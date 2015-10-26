@@ -109,11 +109,11 @@ static inline u::string sizeMetric(size_t size) {
     static const char *kSizes[] = { "B", "kB", "MB", "GB" };
     size_t r = 0;
     size_t i = 0;
-    for (; size >= 1024 && i < sizeof(kSizes)/sizeof(*kSizes); i++) {
+    for (; size >= 1024 && i < sizeof kSizes / sizeof *kSizes; i++) {
         r = size % 1024;
         size /= 1024;
     }
-    assert(i != sizeof(kSizes)/sizeof(*kSizes));
+    assert(i != sizeof kSizes / sizeof *kSizes);
     return u::format("%.2f %s", float(size) + float(r) / 1024.0f, kSizes[i]);
 }
 
