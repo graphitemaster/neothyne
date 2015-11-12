@@ -78,6 +78,12 @@ embodies the following:
 * Build the game
 * Scripting
 
+## Etymology
+- Neo (Old English from Proto-Germanic: *nawiz*, *nawaz*, i.e: *"corpse"*)
+- Thyne (Old English: `thyn`, `þyn`. Cognate to German: `dein`, i.e *"yours"*)
+
+In modern English: *"your corpse"*
+
 ## Screenshots
 An imgur album of screenshots showing the engine and development of it can
 be found [here](http://imgur.com/a/Y3Rfi)
