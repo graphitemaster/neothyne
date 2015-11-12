@@ -41,7 +41,7 @@ static const char *kCreditsDesign[] = {
 
 static const char *kCreditsSpecialThanks[] = {
     "Lee 'eihrul' Salzman",
-    "Wolfgang 'Blub\\w' Bullimer",
+    "Wolfgang 'Blub\\w' Bumiller",
     "Forest 'LordHavoc' Hale"
 };
 
