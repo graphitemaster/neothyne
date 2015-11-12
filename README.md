@@ -79,8 +79,8 @@ embodies the following:
 * Scripting
 
 ## Etymology
-- Neo (Old English from Proto-Germanic: *nawiz*, *nawaz*, i.e: *"corpse"*)
-- Thyne (Old English: `thyn`, `þyn`. Cognate to German: `dein`, i.e *"yours"*)
+- Neo (Old English from Proto-Germanic: `nawiz`, `nawaz`, i.e: *"corpse"*)
+- Thyne (Old English: `thyn`, `þyn`. Cognate to German: `dein`, i.e: *"yours"*)
 
 In modern English: *"your corpse"*
 
