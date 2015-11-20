@@ -46,8 +46,9 @@ struct billboard : geom {
 
 private:
     struct vertex {
-        m::vec3 p;
-        float u, v;
+        m::vec3 position;
+        m::vec2 coordinate;
+        //float u, v;
     };
     u::vector<m::vec3> m_positions;
     u::vector<vertex> m_vertices;

@@ -55,10 +55,11 @@ bool billboard::upload() {
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
 
+    static const vertex *v = nullptr;
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof m_vertices[0], 0, GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(0)); // position
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(3)); // uv
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate); // uv
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint), 0, GL_DYNAMIC_DRAW);
@@ -98,10 +99,10 @@ void billboard::render(const pipeline &pl, float size) {
         const m::vec3 q4 =  x - y + it;
 
         const size_t index = m_vertices.size();
-        m_vertices.push_back({q1, 0.0f, 0.0f});
-        m_vertices.push_back({q2, 1.0f, 0.0f});
-        m_vertices.push_back({q3, 1.0f, 1.0f});
-        m_vertices.push_back({q4, 0.0f, 1.0f});
+        m_vertices.push_back({q1, {0.0f, 0.0f}});
+        m_vertices.push_back({q2, {1.0f, 0.0f}});
+        m_vertices.push_back({q3, {1.0f, 1.0f}});
+        m_vertices.push_back({q4, {0.0f, 1.0f}});
 
         indices.push_back(index + 0);
         indices.push_back(index + 1);
@@ -113,15 +114,16 @@ void billboard::render(const pipeline &pl, float size) {
     if (indices.empty())
         return;
 
-    m_memory = m_vertices.size() * sizeof m_vertices[0];
+    static const vertex *v = nullptr;
+    m_memory = m_vertices.size() * sizeof *v;
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_vertices[0], GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(0)); // position
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(3)); // uv
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate); // uv
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof indices[0] * indices.size(), &indices[0], GL_DYNAMIC_DRAW);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof indices[0], &indices[0], GL_DYNAMIC_DRAW);
     m_memory += indices.size() * sizeof indices[0];
 
     m_method.enable();

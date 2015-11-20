@@ -463,11 +463,12 @@ bool gui::upload() {
     gl::EnableVertexAttribArray(1);
     gl::EnableVertexAttribArray(2);
 
+    static const vertex *v = nullptr;
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof m_vertices[0], 0, GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(0));
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(2));
-    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(4));
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
+    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->position);
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);
+    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof *v, &v->color);
 
     // Rendering methods for GUI
     if (!m_methods[kMethodNormal].init())
@@ -591,12 +592,13 @@ void gui::render(const pipeline &pl) {
         return;
 
     // Blast it all out in one giant shot
+    static const vertex *v = nullptr;
     gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof m_vertices[0], &m_vertices[0], GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(0));
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(2));
-    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(4));
+    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof *v, &m_vertices[0], GL_DYNAMIC_DRAW);
+    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->position);
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);
+    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof *v, &v->color);
 
     bool rebind = true;
     int method = -1;
@@ -669,12 +671,12 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
         const float *v1 = &coords[i*2];
         float dx = v1[0] - v0[0];
         float dy = v1[1] - v0[1];
-        float distance = sqrtf(dx*dx + dy*dy);
+        const float distance = sqrtf(dx*dx + dy*dy);
         if (distance > 0.0f) {
             // Normalize distance
-            distance = 1.0f / distance;
-            dx *= distance;
-            dy *= distance;
+            const float scale = 1.0f / distance;
+            dx *= scale;
+            dy *= scale;
         }
         m_normals[j*2+0] = dy;
         m_normals[j*2+1] = -dx;
@@ -688,11 +690,9 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
         const float dly1 = m_normals[i*2+1];
         float dmx = (dlx0 + dlx1) * 0.5f;
         float dmy = (dly0 + dly1) * 0.5f;
-        float distance = sqrtf(dmx*dmx + dmy*dmy);
+        const float distance = sqrtf(dmx*dmx + dmy*dmy);
         if (distance > m::kEpsilon / 10) { // Smaller epsilon
-            float scale = 1.0f / distance;
-            if (scale > 10.0f)
-                scale = 10.0f;
+            const float scale = 1.0f / distance > 10.0f ? 10.0f : 1.0f / distance;
             dmx *= scale;
             dmy *= scale;
         }
@@ -709,17 +709,17 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
     b.start = m_vertices.size();
     m_vertices.reserve(b.start + numCoords);
     for (size_t i = 0, j = numCoords - 1; i < numCoords; j = i++) {
-        m_vertices.push_back({coords[i*2], coords[i*2+1], 0, 0, R,G,B,A});
-        m_vertices.push_back({coords[j*2], coords[j*2+1], 0, 0, R,G,B,A});
+        m_vertices.push_back({{coords[i*2], coords[i*2+1]}, {0, 0}, {R,G,B,A}});
+        m_vertices.push_back({{coords[j*2], coords[j*2+1]}, {0, 0}, {R,G,B,A}});
         for (size_t k = 0; k < 2; k++)
-            m_vertices.push_back({m_coords[j*2], m_coords[j*2+1], 0, 0, R,G,B,0.0f}); // No alpha
-        m_vertices.push_back({m_coords[i*2], m_coords[i*2+1], 0, 0, R,G,B,0.0f}); // No alpha
-        m_vertices.push_back({coords[i*2], coords[i*2+1], 0, 0, R,G,B,A});
+            m_vertices.push_back({{m_coords[j*2], m_coords[j*2+1]}, {0, 0}, {R,G,B,0.0f}}); // No alpha
+        m_vertices.push_back({{m_coords[i*2], m_coords[i*2+1]}, {0, 0}, {R,G,B,0.0f}}); // No alpha
+        m_vertices.push_back({{coords[i*2], coords[i*2+1]}, {0, 0}, {R,G,B,A}});
     }
     for (size_t i = 2; i < numCoords; ++i) {
-        m_vertices.push_back({coords[0],       coords[1],         0, 0, R,G,B,A});
-        m_vertices.push_back({coords[(i-1)*2], coords[(i-1)*2+1], 0, 0, R,G,B,A});
-        m_vertices.push_back({coords[i*2],     coords[i*2+1],     0, 0, R,G,B,A});
+        m_vertices.push_back({{coords[0],       coords[1]},         {0, 0}, {R,G,B,A}});
+        m_vertices.push_back({{coords[(i-1)*2], coords[(i-1)*2+1]}, {0, 0}, {R,G,B,A}});
+        m_vertices.push_back({{coords[i*2],     coords[i*2+1]},     {0, 0}, {R,G,B,A}});
     }
     b.count = m_vertices.size() - b.start;
     b.method = kMethodNormal;
@@ -792,12 +792,13 @@ u::optional<gui::glyphQuad> gui::getGlyphQuad(int pw, int ph, size_t index, floa
 void gui::drawLine(float x0, float y0, float x1, float y1, float r, float fth, uint32_t color) {
     float dx = x1 - x0;
     float dy = y1 - y0;
-    float distance = sqrtf(dx*dx + dy*dy);
+    const float distance = sqrtf(dx*dx + dy*dy);
 
     if (distance > m::kEpsilon) {
-        distance = 1.0f / distance;
-        dx *= distance;
-        dy *= distance;
+        // Normalize distance
+        const float scale = 1.0f / distance;
+        dx *= scale;
+        dy *= scale;
     }
 
     float nx = dy;
@@ -859,12 +860,12 @@ void gui::drawText(float x, float y, const char *contents, int align, uint32_t c
         if (!quad)
             continue;
         const auto q = *quad;
-        m_vertices.push_back({q.x0, q.y0, q.s0, q.t0, R,G,B,A});
-        m_vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
-        m_vertices.push_back({q.x1, q.y0, q.s1, q.t0, R,G,B,A});
-        m_vertices.push_back({q.x0, q.y0, q.s0, q.t0, R,G,B,A});
-        m_vertices.push_back({q.x0, q.y1, q.s0, q.t1, R,G,B,A});
-        m_vertices.push_back({q.x1, q.y1, q.s1, q.t1, R,G,B,A});
+        m_vertices.push_back({{q.x0, q.y0}, {q.s0, q.t0}, {R,G,B,A}});
+        m_vertices.push_back({{q.x1, q.y1}, {q.s1, q.t1}, {R,G,B,A}});
+        m_vertices.push_back({{q.x1, q.y0}, {q.s1, q.t0}, {R,G,B,A}});
+        m_vertices.push_back({{q.x0, q.y0}, {q.s0, q.t0}, {R,G,B,A}});
+        m_vertices.push_back({{q.x0, q.y1}, {q.s0, q.t1}, {R,G,B,A}});
+        m_vertices.push_back({{q.x1, q.y1}, {q.s1, q.t1}, {R,G,B,A}});
     }
     b.count = m_vertices.size() - b.start;
     b.method = kMethodFont;
@@ -897,12 +898,12 @@ void gui::drawImage(float x, float y, float w, float h, const char *path) {
     b.start = m_vertices.size();
     m_vertices.reserve(m_vertices.size() + 6);
 
-    m_vertices.push_back({x,   y,   x1, y1, 0,0,0,0});
-    m_vertices.push_back({x+w, y+h, x2, y2, 0,0,0,0});
-    m_vertices.push_back({x+w, y,   x2, y1, 0,0,0,0});
-    m_vertices.push_back({x,   y,   x1, y1, 0,0,0,0});
-    m_vertices.push_back({x,   y+h, x1, y2, 0,0,0,0});
-    m_vertices.push_back({x+w, y+h, x2, y2, 0,0,0,0});
+    m_vertices.push_back({{x,   y},   {x1, y1}, {0,0,0,0}});
+    m_vertices.push_back({{x+w, y+h}, {x2, y2}, {0,0,0,0}});
+    m_vertices.push_back({{x+w, y},   {x2, y1}, {0,0,0,0}});
+    m_vertices.push_back({{x,   y},   {x1, y1}, {0,0,0,0}});
+    m_vertices.push_back({{x,   y+h}, {x1, y2}, {0,0,0,0}});
+    m_vertices.push_back({{x+w, y+h}, {x2, y2}, {0,0,0,0}});
 
     b.count = m_vertices.size() - b.start;
 

@@ -116,9 +116,9 @@ private:
     };
 
     struct vertex {
-        float x, y;
-        float s, t;
-        float r, g, b, a;
+        m::vec2 position;
+        m::vec2 coordinate;
+        m::vec4 color;
     };
 
     u::vector<glyph> m_glyphs;
