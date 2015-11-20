@@ -342,7 +342,7 @@ struct is_member_pointer : detail::is_member_pointer<typename remove_cv<T>::type
 /// is_enum
 #if HAS_FEATURE(is_enum)
 template <typename T>
-struct is_enum : integral_constant<bool, __is_union(T)> {};
+struct is_enum : integral_constant<bool, __is_enum(T)> {};
 #else
 template <typename T>
 struct is_enum : integral_constant<bool, !is_void<T>::value &&
