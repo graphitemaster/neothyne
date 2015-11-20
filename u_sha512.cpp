@@ -92,7 +92,7 @@ void sha512::compress(const unsigned char *buf) {
 }
 
 void sha512::process(const unsigned char *in, size_t length) {
-    const size_t block_size = sizeof(m_buffer);
+    const size_t block_size = sizeof m_buffer;
     while (length > 0) {
         if (m_currentLength == 0 && length >= block_size) {
             compress(in);

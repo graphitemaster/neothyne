@@ -135,10 +135,10 @@ struct jpeg : decoder {
         , m_exifLittleEndian(false)
         , m_coSitedChroma(false)
     {
-        memset(m_comp, 0, sizeof(m_comp));
-        memset(m_vlctab, 0, sizeof(m_vlctab));
-        memset(m_qtab, 0, sizeof(m_qtab));
-        memset(m_block, 0, sizeof(m_block));
+        memset(m_comp, 0, sizeof m_comp);
+        memset(m_vlctab, 0, sizeof m_vlctab);
+        memset(m_qtab, 0, sizeof m_qtab);
+        memset(m_block, 0, sizeof m_block);
 
         decode(data, chromaFilter(tex_jpg_chroma.get()));
 
@@ -532,7 +532,7 @@ private:
     void decodeBlock(component* c, unsigned char* out) {
         unsigned char code = 0;
         int coef = 0;
-        memset(m_block, 0, sizeof(m_block));
+        memset(m_block, 0, sizeof m_block);
         c->dcpred += getCoding(&m_vlctab[c->dctabsel][0], NULL);
         m_block[0] = (c->dcpred) * m_qtab[c->qtsel][0];
         do {
@@ -1410,7 +1410,7 @@ struct tga : decoder {
 
         // We've made it here, time for a more involved process
         header h;
-        memcpy(&h, &data[0], sizeof(header));
+        memcpy(&h, &data[0], sizeof h);
         // Color type (0, or 1)
         if (h.colorMapType > 1)
             return false;
@@ -1468,7 +1468,7 @@ private:
 
     result decode(const u::vector<unsigned char> &data) {
         m_position = &data[0];
-        read((unsigned char *)&m_header, sizeof(m_header));
+        read((unsigned char *)&m_header, sizeof m_header);
         seek(m_header.identSize);
 
         if (!memchr("\x8\x18\x20", m_header.pixelSize, 3))
@@ -2246,8 +2246,8 @@ void texture::writeTGA(u::vector<unsigned char> &outData) {
 
 template <typename T>
 static inline void memput(unsigned char *&store, const T &data) {
-    memcpy(store, &data, sizeof(T));
-    store += sizeof(T);
+    memcpy(store, &data, sizeof data);
+    store += sizeof data;
 }
 
 void texture::writeBMP(u::vector<unsigned char> &outData) {

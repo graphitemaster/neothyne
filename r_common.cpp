@@ -10,19 +10,19 @@
 #include "engine.h"
 #include "cvar.h"
 
-#ifndef APIENTRY
-#   ifdef _WIN32
+#if !defined(APIENTRY)
+#   if defined(_WIN32)
 #       define APIENTRY __stdcall
 #   else
 #       define APIENTRY
 #   endif
 #endif
 
-#ifndef APIENTRYP
+#if !defined(APIENTRYP)
 #   define APIENTRYP APIENTRY *
 #endif
 
-#ifdef DEBUG_GL
+#if defined(DEBUG_GL)
 #   define GL_CHECK(SPEC, ...) debugCheck((SPEC), __func__, file, line, __VA_ARGS__)
 #else
 #   define GL_CHECK(...)
@@ -222,7 +222,7 @@ static MYPFNGLPROGRAMPARAMETERIPROC         glProgramParameteri_        = nullpt
 static MYPFNGLGETPROGRAMBINARYPROC          glGetProgramBinary_         = nullptr;
 static MYPFNGLPROGRAMBINARYPROC             glProgramBinary_            = nullptr;
 
-#ifdef DEBUG_GL
+#if defined(DEBUG_GL)
 ///! ARB_debug_output
 typedef void (APIENTRYP MYPFNGLDEBUGMESSAGECALLBACKARBPROC)(
     void (APIENTRYP)(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar *, GLvoid *),
@@ -627,7 +627,7 @@ void init() {
     if (gGLSLVersion == -1)
         neoFatal("Failed to initialize OpenGL\n");
 
-#ifdef DEBUG_GL
+#if defined(DEBUG_GL)
     if (has(gl::ARB_debug_output)) {
         glEnable_(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
         ((MYPFNGLDEBUGMESSAGECALLBACKARBPROC)neoGetProcAddress("glDebugMessageCallbackARB"))(&debugCallback, nullptr);

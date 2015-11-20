@@ -19,15 +19,15 @@ template <typename T>
 inline T endianSwap(T value) {
     union {
         int i;
-        char data[sizeof(int)];
+        char data[sizeof i];
     } x = { 1 };
     if (x.data[0] != 1) {
         union {
             T value;
-            unsigned char data[sizeof(T)];
+            unsigned char data[sizeof value];
         } src = { value }, dst;
-        for (size_t i = 0; i < sizeof(T); i++)
-            dst.data[i] = src.data[sizeof(T) - i - 1];
+        for (size_t i = 0; i < sizeof value; i++)
+            dst.data[i] = src.data[sizeof value - i - 1];
         return dst.value;
     }
     return value;

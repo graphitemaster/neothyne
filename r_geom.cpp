@@ -48,13 +48,13 @@ bool quad::upload() {
 
     if (gl::has(gl::ARB_half_float_vertex)) {
         const auto convert = m::convertToHalf(vertices, sizeof vertices / sizeof *vertices);
-        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(m::half)*5, (const GLvoid *)(0)); // position
-        gl::VertexAttribPointer(1, 2, GL_HALF_FLOAT, GL_FALSE, sizeof(m::half)*5, (const GLvoid *)(sizeof(m::half)*3)); // uvs
+        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof convert[0], &convert[0], GL_STATIC_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof convert[0] * 5, (const GLvoid *)(0)); // position
+        gl::VertexAttribPointer(1, 2, GL_HALF_FLOAT, GL_FALSE, sizeof convert[0] * 5, (const GLvoid *)(sizeof convert[0] * 3)); // uvs
     } else {
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, ATTRIB_OFFSET(0)); // position
-        gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*5, ATTRIB_OFFSET(3)); // uvs
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof vertices[0] * 5, ATTRIB_OFFSET(0)); // position
+        gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof vertices[0] * 5, ATTRIB_OFFSET(3)); // uvs
     }
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
@@ -124,16 +124,16 @@ bool sphere::upload() {
 
     if (gl::has(gl::ARB_half_float_vertex)) {
         const auto convert = m::convertToHalf((const float *const)&vertices[0], numVertices * 3);
-        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
+        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof convert[0], &convert[0], GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     } else {
-        gl::BufferData(GL_ARRAY_BUFFER, numVertices * sizeof(m::vec3), &vertices[0], GL_STATIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(m::vec3), ATTRIB_OFFSET(0)); // position
+        gl::BufferData(GL_ARRAY_BUFFER, numVertices * sizeof vertices[0], &vertices[0], GL_STATIC_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof vertices[0], ATTRIB_OFFSET(0)); // position
     }
     gl::EnableVertexAttribArray(0);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof(GLushort), &indices[0], GL_STATIC_DRAW);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof indices[0], &indices[0], GL_STATIC_DRAW);
 
     return true;
 }
@@ -169,10 +169,10 @@ bool bbox::upload() {
 
     if (gl::has(gl::ARB_half_float_vertex)) {
         const auto convert = m::convertToHalf(vertices, sizeof vertices / sizeof *vertices);
-        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
+        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof convert[0], &convert[0], GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 4, GL_HALF_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     } else {
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     }
     gl::EnableVertexAttribArray(0);
@@ -213,7 +213,7 @@ bool cube::upload() {
 
     if (gl::has(gl::ARB_half_float_vertex)) {
         const auto convert = m::convertToHalf(vertices, sizeof vertices / sizeof *vertices);
-        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
+        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof convert[0], &convert[0], GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     } else {
         gl::BufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
@@ -259,16 +259,16 @@ bool cone::upload() {
 
     if (gl::has(gl::ARB_half_float_vertex)) {
         const auto convert = m::convertToHalf((const float *)&vertices[0], vertices.size() * 3);
-        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof(m::half), &convert[0], GL_STATIC_DRAW);
+        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof convert[0], &convert[0], GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     } else {
-        gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(m::vec3), &vertices[0], GL_STATIC_DRAW);
+        gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof vertices[0], &vertices[0], GL_STATIC_DRAW);
         gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
     }
     gl::EnableVertexAttribArray(0);
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(), &indices[0], GL_STATIC_DRAW);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof indices[0], &indices[0], GL_STATIC_DRAW);
 
     return true;
 }
@@ -278,7 +278,7 @@ void cone::render(bool bottom) {
     if (bottom)
         gl::DrawElements(GL_TRIANGLE_FAN, m_indices.first, GL_UNSIGNED_SHORT, 0);
     gl::DrawElements(GL_TRIANGLE_FAN, m_indices.second, GL_UNSIGNED_SHORT,
-        (const GLvoid *)(sizeof(GLushort) * m_indices.first));
+        (const GLvoid *)(m_indices.first * sizeof(GLushort)));
 }
 
 }

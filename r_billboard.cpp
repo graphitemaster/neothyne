@@ -56,9 +56,9 @@ bool billboard::upload() {
     gl::EnableVertexAttribArray(1);
 
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertex), 0, GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(0)); // position
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(3)); // uv
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof m_vertices[0], 0, GL_DYNAMIC_DRAW);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(0)); // position
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(3)); // uv
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint), 0, GL_DYNAMIC_DRAW);
@@ -113,16 +113,16 @@ void billboard::render(const pipeline &pl, float size) {
     if (indices.empty())
         return;
 
-    m_memory = m_vertices.size() * sizeof(vertex);
+    m_memory = m_vertices.size() * sizeof m_vertices[0];
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_vertices[0], GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(0)); // position
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(3)); // uv
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(0)); // position
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(3)); // uv
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * indices.size(), &indices[0], GL_DYNAMIC_DRAW);
-    m_memory += indices.size() * sizeof(GLuint);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof indices[0] * indices.size(), &indices[0], GL_DYNAMIC_DRAW);
+    m_memory += indices.size() * sizeof indices[0];
 
     m_method.enable();
     m_method.setVP(p.projection() * p.view());

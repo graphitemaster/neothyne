@@ -2,7 +2,7 @@
 #define U_TRAITS_HDR
 #include <stddef.h>
 
-#ifdef __has_feature
+#if defined(__has_feature)
 #   define HAS_FEATURE(X) __has_feature(X)
 #else
 #   define HAS_FEATURE(X) 0

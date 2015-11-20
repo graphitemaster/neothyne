@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <limits.h>
 
-#ifndef NDEBUG
+#if !defined(NDEBUG)
 #include <stdio.h>
 #endif
 
@@ -90,7 +90,7 @@ inline stringMemory::stringMemory()
 }
 
 inline stringMemory::~stringMemory() {
-#ifndef NDEBUG
+#if !defined(NDEBUG)
     print();
 #endif
     neoFree(m_head);
@@ -149,7 +149,7 @@ char *stringMemory::reallocate(char *ptr, size_t size) {
         return ptr;
 
     char *block = allocate(size);
-    memcpy(block, ptr, reg->size() - sizeof(region));
+    memcpy(block, ptr, reg->size() - sizeof reg);
     deallocate(ptr);
 
     return block;

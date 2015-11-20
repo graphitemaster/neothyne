@@ -67,7 +67,7 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
     seek = mapUnserialize(&entEntry, data, seek);
     seek = mapUnserialize(&leafEntry, data, seek);
 
-    if (seek != sizeof(kdBinHeader) + 7*sizeof(kdBinEntry))
+    if (seek != sizeof header + 7*sizeof(kdBinEntry))
         return false;
 
     planeEntry.endianSwap();

@@ -71,19 +71,19 @@ bool particleSystem::upload() {
 
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     if (gl::has(gl::ARB_half_float_vertex)) {
-        halfVertex *v = nullptr;
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof(halfVertex), 0, GL_DYNAMIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(halfVertex), &v->position); // position
-        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(halfVertex), &v->color); // color
+        static const halfVertex *v = nullptr;
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
+        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
     } else {
-        singleVertex *v = nullptr;
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof(singleVertex), 0, GL_DYNAMIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(singleVertex), &v->position); // position
-        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(singleVertex), &v->color); // color
+        static const singleVertex *v = nullptr;
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
+        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
     }
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint), 0, GL_DYNAMIC_DRAW);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof m_indices[0], 0, GL_DYNAMIC_DRAW);
 
     m_method.enable();
     m_method.setColorTextureUnit(0);
@@ -168,23 +168,23 @@ void particleSystem::render(const pipeline &pl) {
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
     if (gl::has(gl::ARB_half_float_vertex)) {
-        halfVertex *v = nullptr;
-        m_memory = m_halfVertices.size() * sizeof(halfVertex);
+        static const halfVertex *v = nullptr;
+        m_memory = m_halfVertices.size() * sizeof *v;
         gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_halfVertices[0], GL_DYNAMIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(halfVertex), &v->position); // position
-        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(halfVertex), &v->color); // color
+        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
+        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
     } else {
-        singleVertex *v = nullptr;
-        m_memory = m_singleVertices.size() * sizeof(singleVertex);
+        static const singleVertex *v = nullptr;
+        m_memory = m_singleVertices.size() * sizeof *v;
         gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_singleVertices[0], GL_DYNAMIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(singleVertex), &v->position); // position
-        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(singleVertex), &v->color); // color
+        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
+        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
     }
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * m_indices.size(),
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof m_indices[0],
         &m_indices[0], GL_DYNAMIC_DRAW);
-    m_memory += m_indices.size() * sizeof(GLuint);
+    m_memory += m_indices.size() * sizeof m_indices[0];
 
     m_method.enable();
     m_method.setVP(p.projection() * p.view());

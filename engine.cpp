@@ -524,7 +524,7 @@ bool engine::initData(int &argc, char **argv) {
             directory = argv[i + 1];
             argc -= 2;
             // Found a game directory, remove it and the directory from argv
-            u::moveMemory(argv+i, argv+i+2, (argc-i) * sizeof(char*));
+            u::moveMemory(argv+i, argv+i+2, (argc-i) * sizeof *argv);
             break;
         }
     }
@@ -1077,7 +1077,7 @@ static int entryPoint(int argc, char **argv) {
 }
 
 // So we don't need to depend on SDL_main we provide our own
-#ifdef _WIN32
+#if defined(_WIN32)
 #include <ctype.h>
 #include "u_vector.h"
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {

@@ -9,7 +9,7 @@ template <typename T>
 struct set;
 }
 
-#ifdef DEBUG_GL
+#if defined(DEBUG_GL)
 #   define GL_INFO const char *file, size_t line
 #   define GL_INFOP , GL_INFO
 #else

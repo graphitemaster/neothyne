@@ -1,10 +1,10 @@
-#ifdef RATIOS
+#if defined(RATIOS)
 RATIOS {
     "3:2", "4:3", "5:3", "5:4", "16:9", "16:10", "17:9"
 };
 #endif
 
-#ifdef RESOLUTIONS
+#if defined(RESOLUTIONS)
 RESOLUTIONS {
     {
         // 3:2

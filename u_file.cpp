@@ -5,7 +5,7 @@
 #include <sys/stat.h>   // S_ISREG, stat
 #include <sys/types.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 #   define _WIN32_LEAN_AND_MEAN
 #   define NOMINMAX
 #   include <windows.h>
@@ -58,7 +58,7 @@ bool exists(const u::string &path, pathType type) {
         return dir::isFile(path);
 
     // type == kDirectory
-#ifndef _WIN32
+#if !defined(_WIN32)
     struct stat info;
     if (stat(path.c_str(), &info) != 0)
         return false; // Couldn't stat directory
@@ -72,7 +72,7 @@ bool exists(const u::string &path, pathType type) {
     struct _stat info;
     if (_stat(strip.c_str(), &info) != 0)
         return false;
-#ifndef S_IFDIR
+#if !defined(S_IFDIR)
 #  define S_IFDIR _S_IFDIR
 #endif
     if (!(info.st_mode & _S_IFDIR))
@@ -87,7 +87,7 @@ bool remove(const u::string &path, pathType type) {
         return ::remove(fix.c_str()) == 0;
 
     // type == kDirectory
-#ifdef _WIN32
+#if defined(_WIN32)
     return ::_rmdir(fix.c_str()) == 0;
 #else
     return ::rmdir(fix.c_str()) == 0;
@@ -97,7 +97,7 @@ bool remove(const u::string &path, pathType type) {
 bool mkdir(const u::string &dir) {
     u::string fix = fixPath(dir);
     const char *path = fix.c_str();
-#ifdef _WIN32
+#if defined(_WIN32)
     return ::_mkdir(path) == 0;
 #else
     return ::mkdir(path, 0775);
@@ -162,7 +162,7 @@ bool write(const u::vector<unsigned char> &data, const u::string &file, const ch
 }
 
 ///! dir
-#ifndef _WIN32
+#if !defined(_WIN32)
 #include <unistd.h>
 #include <dirent.h>
 
@@ -275,7 +275,7 @@ bool dir::isFile(const char *fileName) {
     struct _stat buff;
     if (_stat(fileName, &buff) != 0)
         return false;
-#ifdef S_ISREG
+#if defined(S_ISREG)
     return S_ISREG(buff.st_mode);
 #else
     return _S_ISREG(buff.st_mode);

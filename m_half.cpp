@@ -1,10 +1,10 @@
 #include <assert.h>
 #include <string.h>
 
-#ifdef __SSE2__
+#if defined(__SSE2__)
 #include <emmintrin.h>
 #endif
-#ifdef __SSE4_1__
+#if defined(__SSE4_1__)
 #include <smmintrin.h>
 #endif
 
@@ -115,7 +115,7 @@ float convertToFloat(half in) {
     return out.asFloat;
 }
 
-#ifdef __SSE2__
+#if defined(__SSE2__)
 union vectorShape {
     __m128i asVector;
     alignas(16) uint32_t asInt[4];
@@ -123,7 +123,7 @@ union vectorShape {
 
 template <unsigned int I>
 static inline uint32_t extractScalar(__m128i v) {
-#ifdef __SSE4_1__
+#if defined(__SSE4_1__)
     return _mm_extract_epi32(v, I);
 #else
     // Not pretty
@@ -197,7 +197,7 @@ u::vector<half> convertToHalf(const float *const in, size_t length) {
 
     assert(((uintptr_t)(const void *)in) % 16 == 0);
 
-#ifdef __SSE2__
+#if defined(__SSE2__)
     const int blocks = int(length) / 4;
     const int remainder = int(length) % 4;
     int where = 0;
@@ -221,7 +221,7 @@ u::vector<half> convertToHalf(const float *const in, size_t length) {
 u::vector<float> convertToFloat(const half *const in, size_t length) {
     u::vector<float> result(length);
 
-#ifdef __SSE2__
+#if defined(__SSE2__)
     const int blocks = int(length) / 4;
     const int remainder = int(length) % 4;
     int where = 0;

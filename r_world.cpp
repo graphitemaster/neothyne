@@ -206,7 +206,7 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
             indices.push_back(it);
     }
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*indices.size(),
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof indices[0],
         &indices[0], GL_STATIC_DRAW);
     count = indices.size();
     return true;
@@ -240,12 +240,12 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
         count += sideCounts[side];
     }
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*count, nullptr, GL_STATIC_DRAW);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, count * sizeof indices[0][0], nullptr, GL_STATIC_DRAW);
     size_t offset = 0;
     for (size_t side = 0; side < 6; ++side) {
         if (sideCounts[side] > 0) {
-            gl::BufferSubData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint)*offset,
-                sizeof(GLuint)*sideCounts[side], &indices[side][0]);
+            gl::BufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset * sizeof indices[0][0],
+                sideCounts[side] * sizeof indices[0][0], &indices[side][0]);
         }
         offset += sideCounts[side];
     }
@@ -382,15 +382,16 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     geom::upload();
 
+    static const kdBinVertex *v = nullptr;
     const auto &vertices = m_kdWorld->vertices;
-    m_memory = vertices.size() * sizeof(kdBinVertex);
+    m_memory = vertices.size() * sizeof *v;
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     gl::BufferData(GL_ARRAY_BUFFER, m_memory, &vertices[0], GL_STATIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(0));  // vertex
-    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(3));  // normals
-    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(6));  // texCoord
-    gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), ATTRIB_OFFSET(8));  // tangent
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->vertex);  // vertex
+    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->normal);  // normals
+    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);  // texCoord
+    gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof *v, &v->tangent);  // tangent
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
     gl::EnableVertexAttribArray(2);
@@ -398,8 +399,8 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     // upload data
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), &m_indices[0], GL_STATIC_DRAW);
-    m_memory += m_indices.size() * sizeof(GLuint);
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof m_indices[0], &m_indices[0], GL_STATIC_DRAW);
+    m_memory += m_indices.size() * sizeof m_indices[0];
 
     // composite shader
     if (!m_compositeMethod.init())
@@ -676,7 +677,7 @@ void world::geometryPass(const pipeline &pl) {
     for (auto &it : m_textureBatches) {
         it.mat.bind(p, rw);
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
-            (const GLvoid*)(sizeof(GLuint) * it.start));
+            (const GLvoid*)(it.start * sizeof m_indices[0]));
     }
 
     // Render map models

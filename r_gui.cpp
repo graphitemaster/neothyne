@@ -14,7 +14,7 @@
 
 namespace r {
 
-#ifdef DEBUG_GUI
+#if defined(DEBUG_GUI)
 static void printLine(const ::gui::line &it) {
     u::print("    [0] = { x: %d, y: %d }\n", it.x[0], it.y[0]);
     u::print("    [1] = { x: %d, y: %d }\n", it.x[1], it.y[0]);
@@ -326,7 +326,7 @@ gui::~gui() {
 
     gl::DeleteTextures(1, &m_atlasTexture);
 
-#ifdef DEBUG_GUI
+#if defined(DEBUG_GUI)
     ::texture saveAtlas;
     saveAtlas.from(m_atlasData, kAtlasSize*kAtlasSize*4, kAtlasSize, kAtlasSize,
         false, kTexFormatRGBA);
@@ -464,10 +464,10 @@ bool gui::upload() {
     gl::EnableVertexAttribArray(2);
 
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertex), 0, GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(0));
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
-    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof m_vertices[0], 0, GL_DYNAMIC_DRAW);
+    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(0));
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(2));
+    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(4));
 
     // Rendering methods for GUI
     if (!m_methods[kMethodNormal].init())
@@ -509,7 +509,7 @@ void gui::render(const pipeline &pl) {
 
     for (auto &it : ::gui::commands()()) {
         assert(it.type != -1);
-#ifdef DEBUG_GUI
+#if defined(DEBUG_GUI)
         printCommand(it);
 #endif
         switch (it.type) {
@@ -593,10 +593,10 @@ void gui::render(const pipeline &pl) {
     // Blast it all out in one giant shot
     gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(vertex), &m_vertices[0], GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(0));
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(2));
-    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), ATTRIB_OFFSET(4));
+    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof m_vertices[0], &m_vertices[0], GL_DYNAMIC_DRAW);
+    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(0));
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(2));
+    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], ATTRIB_OFFSET(4));
 
     bool rebind = true;
     int method = -1;
@@ -651,7 +651,7 @@ void gui::render(const pipeline &pl) {
     m_vertices.destroy();
     m_batches.destroy();
 
-#ifdef DEBUG_GUI
+#if defined(DEBUG_GUI)
     u::printf(">> COMPLETE GUI FRAME\n\n");
 #endif
 

@@ -487,13 +487,13 @@ static void kdSerialize(u::vector<unsigned char> &buffer, const T *data, size_t 
 template <typename T>
 static void kdSerializeEntry(u::vector<unsigned char> &buffer, T &data) {
     data.endianSwap();
-    kdSerialize(buffer, &data, sizeof(T));
+    kdSerialize(buffer, &data, sizeof data);
 }
 
 template <typename T>
 inline void kdSerializeLump(u::vector<unsigned char> &buffer, const u::vector<T> &lump) {
     for (auto &it : lump)
-        kdSerialize(buffer, &it, sizeof(T));
+        kdSerialize(buffer, &it, sizeof it);
 }
 
 template <>
@@ -501,10 +501,10 @@ inline void kdSerializeLump<kdBinLeaf>(u::vector<unsigned char> &buffer, const u
     for (auto &it : leafs) {
         const uint32_t triangleCount = it.triangles.size();
         const uint32_t serializeCount = u::endianSwap(triangleCount);
-        kdSerialize(buffer, &serializeCount, sizeof(uint32_t));
+        kdSerialize(buffer, &serializeCount, sizeof serializeCount);
         for (size_t i = 0; i < triangleCount; i++) {
             const uint32_t triangleIndex = u::endianSwap(it.triangles[i]);
-            kdSerialize(buffer, &triangleIndex, sizeof(uint32_t));
+            kdSerialize(buffer, &triangleIndex, sizeof triangleIndex);
         }
     }
 }
@@ -593,7 +593,7 @@ u::vector<unsigned char> kdTree::serialize() {
     kdBinEntry entryLeafs;
     kdBinHeader header;
 
-    entryPlanes.offset = (sizeof(kdBinHeader) + 7*sizeof(kdBinEntry));
+    entryPlanes.offset = sizeof header + 7*sizeof(kdBinEntry);
     entryPlanes.length = compiledPlanes.size() * sizeof(kdBinPlane);
     entryTextures.offset = entryPlanes.length + entryPlanes.offset;
     entryTextures.length = compiledTextures.size() * sizeof(kdBinTexture);
@@ -627,7 +627,7 @@ u::vector<unsigned char> kdTree::serialize() {
     kdSerializeLump(store, compiledLeafs);
 
     const uint32_t end = u::endianSwap(kdBinHeader::kMagic);
-    kdSerialize(store, &end, sizeof(uint32_t));
+    kdSerialize(store, &end, sizeof end);
 
     // compress
     u::vector<unsigned char> compressed;

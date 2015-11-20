@@ -21,7 +21,7 @@ VAR(int, r_trilinear, "trilinear filtering", 0, 1, 1);
 VAR(int, r_mipmaps, "mipmaps", 0, 1, 1);
 VAR(int, r_dxt_optimize, "DXT endpoints optimization", 0, 1, 1);
 
-#ifdef DXT_COMPRESSOR
+#if defined(DXT_COMPRESSOR)
 VAR(int, r_dxt_compressor, "DXT compressor", 0, 1, 1);
 #else
 VAR(int, r_dxt_compressor, "DXT compressor", 0, 0, 0);
@@ -31,12 +31,12 @@ VAR(float, r_texquality, "texture quality", 0.0f, 1.0f, 1.0f);
 
 namespace r {
 
-#ifdef GL_UNSIGNED_INT_8_8_8_8_REV
+#if defined(GL_UNSIGNED_INT_8_8_8_8_REV)
 #   define R_TEX_DATA_RGBA GL_UNSIGNED_INT_8_8_8_8_REV
 #else
 #   define R_TEX_DATA_RGBA GL_UNSINGED_BYTE
 #endif
-#ifdef GL_UNSIGNED_INT_8_8_8_8
+#if defined(GL_UNSIGNED_INT_8_8_8_8)
 #   define R_TEX_DATA_BGRA GL_UNSIGNED_INT_8_8_8_8
 #else
 #   define R_TEX_DATA_BGRA GL_UNSIGNED_BYTE
@@ -157,9 +157,9 @@ static size_t dxtOptimize(unsigned char *data, size_t width, size_t height) {
     return count;
 }
 
-#ifdef DXT_COMPRESSOR
+#if defined(DXT_COMPRESSOR)
 
-#ifdef DXT_HIGHP
+#if defined(DXT_HIGHP)
 typedef double real;
 #else
 typedef float real;
@@ -452,7 +452,7 @@ static bool readCache(texture &tex, GLuint &internal) {
     // Parse header
     auto vec = *load;
     textureCacheHeader head;
-    memcpy(&head, &vec[0], sizeof(head));
+    memcpy(&head, &vec[0], sizeof head);
     if (head.version != kTextureCacheVersion) {
         u::remove(file);
         return false;
@@ -483,8 +483,8 @@ static bool readCache(texture &tex, GLuint &internal) {
         break;
     }
 
-    const unsigned char *data = &vec[0] + sizeof(head);
-    const size_t length = vec.size() - sizeof(head);
+    const unsigned char *data = &vec[0] + sizeof head;
+    const size_t length = vec.size() - sizeof head;
 
     // decompress
     u::vector<unsigned char> decompress;
@@ -557,9 +557,9 @@ static bool writeCacheData(textureFormat format,
     }
 
     // prepare file data
-    u::vector<unsigned char> data(sizeof(head) + toSize);
-    memcpy(&data[0], &head, sizeof(head));
-    memcpy(&data[0] + sizeof(head), toData, toSize);
+    u::vector<unsigned char> data(sizeof head + toSize);
+    memcpy(&data[0], &head, sizeof head);
+    memcpy(&data[0] + sizeof head, toData, toSize);
 
     u::print("[cache] => wrote %.50s... %s (compressed %s to %s with %s compressor)",
         u::fixPath(cacheString),
@@ -907,7 +907,7 @@ bool texture2D::upload() {
                 return false;
             format = *query;
 
-#ifdef DXT_COMPRESSOR
+#if defined(DXT_COMPRESSOR)
             // Use our DXT compressor instead of the driver
             if (r_dxt_compressor &&
                 (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||

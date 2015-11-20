@@ -212,7 +212,7 @@ inline void buffer<T>::shrink_to_fit() {
         capacity = first;
     } else if (capacity != last) {
         const size_t size = size_t(last - first);
-        T *resize = neoMalloc(sizeof(T) * size);
+        T *resize = neoMalloc(sizeof *resize * size);
         move_urange(resize, first, last);
         first = resize;
         last = resize + size;
@@ -225,7 +225,7 @@ inline void buffer<T>::reserve_traits(size_t icapacity, detail::is_pod<T, false>
     if (first + icapacity <= capacity)
         return;
 
-    T *newfirst = neoMalloc(sizeof(T) * icapacity);
+    T *newfirst = neoMalloc(sizeof *newfirst * icapacity);
     const size_t size = size_t(last - first);
     move_urange(newfirst, first, last);
     neoFree(first);
@@ -240,7 +240,7 @@ inline void buffer<T>::reserve_traits(size_t icapacity, detail::is_pod<T, true>)
     if (first + icapacity <= capacity)
         return;
 
-    T *newfirst = neoRealloc(first, sizeof(T) * icapacity);
+    T *newfirst = neoRealloc(first, sizeof *newfirst * icapacity);
     const size_t size = size_t(last - first);
     first = newfirst;
     last = newfirst + size;
