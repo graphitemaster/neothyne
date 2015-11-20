@@ -4,6 +4,8 @@
 #include "u_string.h"
 #include "u_misc.h"
 
+#include "m_plane.h"
+
 namespace r {
 
 ///! particleSystemMethod
@@ -110,6 +112,13 @@ void particleSystem::render(const pipeline &pl) {
     m_indices.destroy();
     m_indices.reserve(m_particles.size() * 6);
 
+    // Kick off a point in view frustum test for every particle (TODO: schedule job for this)
+    m::frustum frustum;
+    for (auto &it : m_particles) {
+        frustum.setup(it.origin, pl.rotation(), pl.perspective());
+        it.visible = frustum.testPoint(pl.position());
+    }
+
     // sort particles by ones closest to camera
     u::sort(m_particles.begin(), m_particles.end(),
         [&pl](const particle &lhs, const particle &rhs) {
@@ -120,7 +129,7 @@ void particleSystem::render(const pipeline &pl) {
     );
 
     for (const auto &it : m_particles) {
-        if (it.lifeTime < 0.0f)
+        if (!it.visible || it.lifeTime < 0.0f)
             continue;
 
         const m::vec3 x = it.size * 0.5f * side;

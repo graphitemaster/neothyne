@@ -106,6 +106,7 @@ struct plane {
 struct frustum {
     void setup(const m::vec3 &origin, const m::quat &orient, const m::perspective &project);
     bool testSphere(const m::vec3 &point, float radius) const;
+    bool testPoint(const m::vec3 &point) const;
 private:
     enum {
         kPlaneNear,
@@ -123,6 +124,13 @@ inline bool frustum::testSphere(const m::vec3 &point, float radius) const {
     radius = -radius;
     for (size_t i = 0; i < 6; i++)
         if (m_planes[i].getDistanceFromPlane(point) < radius)
+            return false;
+    return true;
+}
+
+inline bool frustum::testPoint(const m::vec3 &point) const {
+    for (size_t i = 0; i < 6; i++)
+        if (m_planes[i].getDistanceFromPlane(point) <= 0.0f)
             return false;
     return true;
 }

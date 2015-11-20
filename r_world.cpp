@@ -287,6 +287,7 @@ void dustSystem::initParticle(particle &p, const m::vec3 &ownerPosition) {
     p.velocity = (m_direction + m::vec3::rand(1.5f, 0.0f, 1.5f)).normalized() * 10.0f;
     p.velocity.y = 0.1f;
     p.respawn = true;
+    p.visible = false;
 }
 
 ///! world

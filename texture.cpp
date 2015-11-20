@@ -1439,7 +1439,7 @@ struct tga : decoder {
             m_format = kTexFormatRGBA;
             break;
         default:
-            assert(0);
+            assert(0 && "unsupported bpp");
             break;
         }
 
@@ -2267,6 +2267,22 @@ void texture::writeBMP(u::vector<unsigned char> &outData) {
         int32_t biYPelsPerMeter;
         int32_t biClrUsed;
         int32_t biClrImportant;
+        void endianSwap() {
+            bfSize = u::endianSwap(bfSize);
+            bfReserved = u::endianSwap(bfReserved);
+            bfDataOffset = u::endianSwap(bfDataOffset);
+            biSize = u::endianSwap(biSize);
+            biWidth = u::endianSwap(biWidth);
+            biHeight = u::endianSwap(biHeight);
+            biPlanes = u::endianSwap(biPlanes);
+            biBitCount = u::endianSwap(biBitCount);
+            biCompression = u::endianSwap(biCompression);
+            biSizeImage = u::endianSwap(biSizeImage);
+            biXPelsPerMeter = u::endianSwap(biXPelsPerMeter);
+            biYPelsPerMeter = u::endianSwap(biYPelsPerMeter);
+            biClrUsed = u::endianSwap(biClrUsed);
+            biClrImportant = u::endianSwap(biClrImportant);
+        }
     } bmph;
 
     const size_t bytesPerLine = (3 * (m_width + 1) / 4) * 4;
@@ -2294,20 +2310,7 @@ void texture::writeBMP(u::vector<unsigned char> &outData) {
     // line and data buffer
     u::vector<unsigned char> line(bytesPerLine);
     outData.resize(dataSize);
-    bmph.bfSize = u::endianSwap(bmph.bfSize);
-    bmph.bfReserved = u::endianSwap(bmph.bfReserved);
-    bmph.bfDataOffset = u::endianSwap(bmph.bfDataOffset);
-    bmph.biSize = u::endianSwap(bmph.biSize);
-    bmph.biWidth = u::endianSwap(bmph.biWidth);
-    bmph.biHeight = u::endianSwap(bmph.biHeight);
-    bmph.biPlanes = u::endianSwap(bmph.biPlanes);
-    bmph.biBitCount = u::endianSwap(bmph.biBitCount);
-    bmph.biCompression = u::endianSwap(bmph.biCompression);
-    bmph.biSizeImage = u::endianSwap(bmph.biSizeImage);
-    bmph.biXPelsPerMeter = u::endianSwap(bmph.biXPelsPerMeter);
-    bmph.biYPelsPerMeter = u::endianSwap(bmph.biYPelsPerMeter);
-    bmph.biClrUsed = u::endianSwap(bmph.biClrUsed);
-    bmph.biClrImportant = u::endianSwap(bmph.biClrImportant);
+    bmph.endianSwap();
 
     unsigned char *store = &outData[0];
     memput(store, bmph.bfType);

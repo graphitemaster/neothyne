@@ -26,6 +26,7 @@ struct particle {
     float lifeTime;
     float totalLifeTime;
     bool respawn;
+    bool visible;
 };
 
 struct particleSystemMethod : method {

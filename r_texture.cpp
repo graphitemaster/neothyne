@@ -344,6 +344,8 @@ static inline void dxtCompressAlphaBlock(const unsigned char *const uncompressed
     }
 }
 
+// Note: `uncompressed' is assumed to be a RGB8 data stream when T == kDXT1 and
+// RGBA8 data stream when T == kDXT5
 template <dxtType T>
 static u::vector<unsigned char> dxtCompress(const unsigned char *const uncompressed,
     size_t width, size_t height, size_t channels)
@@ -404,7 +406,15 @@ struct textureCacheHeader {
     uint32_t internal;
     uint16_t format;
     uint8_t compressed;
+    void endianSwap();
 };
+
+void textureCacheHeader::endianSwap() {
+    width = u::endianSwap(width);
+    height = u::endianSwap(height);
+    internal = u::endianSwap(internal);
+    format = u::endianSwap(format);
+}
 
 static const char *cacheFormat(GLuint internal) {
     switch (internal) {
@@ -457,10 +467,7 @@ static bool readCache(texture &tex, GLuint &internal) {
         u::remove(file);
         return false;
     }
-    head.width = u::endianSwap(head.width);
-    head.height = u::endianSwap(head.height);
-    head.internal = u::endianSwap(head.internal);
-    head.format = u::endianSwap(head.format);
+    head.endianSwap();
 
     // Make sure we even support the format before using it
     switch (head.internal) {
@@ -525,12 +532,12 @@ static bool writeCacheData(textureFormat format,
 
     // Note: the explicit casts are needed to match the textureCacheHeader types
     // so that the type-deduction for u::endianSwap actually works.
-    head.width = u::endianSwap(uint16_t(compressedWidth));
-    head.height = u::endianSwap(uint16_t(compressedHeight));
-    head.internal = u::endianSwap(uint32_t(internal));
-    head.format = u::endianSwap(uint16_t(format));
-
+    head.width = compressedWidth;
+    head.height = compressedHeight;
+    head.internal = internal;
+    head.format = format;
     head.compressed = uint8_t(r_tex_compress_cache_zlib);
+    head.endianSwap();
 
     // Apply DXT optimizations if we can
     const bool dxt = internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
