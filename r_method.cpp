@@ -266,11 +266,16 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
                       const u::initializer_list<const char *> &fragData,
                       bool initial)
 {
+    // Check if the system supports any program binary format
+    GLint formats = 0;
+    if (gl::has(gl::ARB_get_program_binary))
+        gl::GetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &formats);
+
     // Before compiling the shaders, concatenate their text and hash their contents.
     // We'll then check if there exists a cached copy of this program and load
     // that instead.
     bool notUsingCache = true;
-    while (gl::has(gl::ARB_get_program_binary)) {
+    while (formats) {
         u::string concatenate;
         // Calculate how much memory we need to concatenate the shaders
         size_t size = 0;
@@ -301,16 +306,24 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             break;
         }
 
-        GLint status = 0;
-        // Use the program Binary
-        gl::ProgramBinary(m_program, header->format, &(*load)[sizeof *header], (*load).size() - sizeof *header);
-        // Verify that this program is valid (linked)
-        gl::GetProgramiv(m_program, GL_LINK_STATUS, &status);
-        if (status) {
-            u::print("[cache] => loaded %.50s...\n", u::fixPath(cacheString));
-            notUsingCache = false;
+        // Check if the format is supported
+        u::vector<GLint> supportedFormats(formats);
+        gl::GetIntegerv(GL_PROGRAM_BINARY_FORMATS, &supportedFormats[0]);
+        if (u::find(supportedFormats.begin(), supportedFormats.end(), GLint(header->format)) != supportedFormats.end()) {
+            GLint status = 0;
+            // Use the program Binary
+            gl::ProgramBinary(m_program, header->format, &(*load)[sizeof *header], (*load).size() - sizeof *header);
+            // Verify that this program is valid (linked)
+            gl::GetProgramiv(m_program, GL_LINK_STATUS, &status);
+            if (status) {
+                u::print("[cache] => loaded %.50s...\n", u::fixPath(cacheString));
+                notUsingCache = false;
+            } else {
+                neoFatal("Loaded a cached shader binary and the driver didn't like it");
+            }
         } else {
-            neoFatal("driver says fuck you");
+            // Not supported, remove it
+            u::remove(file);
         }
         break;
     }
@@ -375,7 +388,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             return false;
         }
 
-        if (gl::has(gl::ARB_get_program_binary)) {
+        if (formats) {
             // On some implementations, the binary is not actually available until the
             // program has been used.
             gl::UseProgram(m_program);
