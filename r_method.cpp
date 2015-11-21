@@ -376,6 +376,10 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
         }
 
         if (gl::has(gl::ARB_get_program_binary)) {
+            // On some implementations, the binary is not actually available until the
+            // program has been used.
+            gl::UseProgram(m_program);
+
             u::string concatenate;
             // Calculate how much memory we need to concatenate the shaders
             size_t size = 0;
