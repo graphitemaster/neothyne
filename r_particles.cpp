@@ -1,3 +1,5 @@
+#include <limits.h>
+
 #include "r_particles.h"
 #include "r_pipeline.h"
 
@@ -6,7 +8,11 @@
 
 #include "m_plane.h"
 
+#include "cvar.h"
+
 namespace r {
+
+VAR(int, r_particle_max_resolution, "maximum particle resolution", 16, 512, 128);
 
 ///! particleSystemMethod
 particleSystemMethod::particleSystemMethod()
@@ -54,8 +60,28 @@ void particleSystemMethod::setPower(float power) {
 }
 
 ///! particleSystem
+particleSystem::~particleSystem() {
+    if (m_buffers[0])
+        gl::DeleteBuffers(sizeof m_buffers / sizeof *m_buffers, m_buffers);
+    if (m_vao)
+        gl::DeleteVertexArrays(1, &m_vao);
+}
+
 bool particleSystem::load(const u::string &file) {
-    return m_texture.load(file);
+    const bool read = m_texture.load(file);
+    if (read) {
+        // Limit the size of loaded particle textures to reduce over draw in blending
+        const size_t w = m_texture.width();
+        const size_t h = m_texture.height();
+        if (w != h) {
+            // Particle textures must be power of two
+            return false;
+        }
+        if (int(w) > r_particle_max_resolution)
+            m_texture.resize(r_particle_max_resolution, r_particle_max_resolution);
+        return true;
+    }
+    return false;
 }
 
 bool particleSystem::upload() {
@@ -65,27 +91,30 @@ bool particleSystem::upload() {
     if (!m_method.init())
         return false;
 
-    geom::upload();
+    gl::GenVertexArrays(1, &m_vao);
+    gl::GenBuffers(sizeof m_buffers / sizeof *m_buffers, m_buffers);
 
-    gl::BindVertexArray(vao);
+    gl::BindVertexArray(m_vao);
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
 
-    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-    if (gl::has(gl::ARB_half_float_vertex)) {
-        static const halfVertex *v = nullptr;
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
-        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
-    } else {
-        static const singleVertex *v = nullptr;
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
-        gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
-    }
+    for (size_t i = 0; i < 2; i++) {
+        gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[i]);
+        if (gl::has(gl::ARB_half_float_vertex)) {
+            static const halfVertex *v = nullptr;
+            gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
+            gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
+            gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
+        } else {
+            static const singleVertex *v = nullptr;
+            gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
+            gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
+            gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
+        }
 
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof m_indices[0], 0, GL_DYNAMIC_DRAW);
+        gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibos[i]);
+        gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof m_indices[0], 0, GL_DYNAMIC_DRAW);
+    }
 
     m_method.enable();
     m_method.setColorTextureUnit(0);
@@ -107,6 +136,21 @@ void particleSystem::render(const pipeline &pl) {
     } else {
         m_singleVertices.destroy();
         m_singleVertices.reserve(m_particles.size() * 4);
+    }
+
+    GLuint &vbo = m_vbos[m_bufferIndex];
+    GLuint &ibo = m_ibos[m_bufferIndex];
+    m_bufferIndex = (m_bufferIndex + 1) % 2;
+
+    // Invalidate next buffer a frame in advance to hint the driver that we're
+    // doing double-buffering
+    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[m_bufferIndex]);
+    gl::BufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
+
+    // We use a smaller index format for particles to reduce upload costs
+    if (m_particles.size() * 6 > SHRT_MAX) {
+        m_particles.resize(SHRT_MAX / 6);
+        m_particles.shrink_to_fit();
     }
 
     m_indices.destroy();
@@ -173,7 +217,7 @@ void particleSystem::render(const pipeline &pl) {
     if (m_indices.empty())
         return;
 
-    gl::BindVertexArray(vao);
+    gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
     if (gl::has(gl::ARB_half_float_vertex)) {
@@ -204,7 +248,7 @@ void particleSystem::render(const pipeline &pl) {
     gl::DepthFunc(GL_LESS);
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, nullptr);
+    gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_SHORT, nullptr);
 
     gl::Enable(GL_CULL_FACE);
 }

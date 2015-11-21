@@ -43,10 +43,10 @@ private:
     uniform *m_power;
 };
 
-struct particleSystem : geom {
+struct particleSystem {
     particleSystem() = default;
     particleSystem(const char *description);
-    virtual ~particleSystem() = default;
+    virtual ~particleSystem();
 
     bool load(const u::string &file);
     bool upload();
@@ -81,9 +81,18 @@ private:
 
     particleSystemMethod m_method;
     texture2D m_texture;
-    u::vector<GLuint> m_indices;
+    u::vector<GLushort> m_indices;
     const char *m_description;
     size_t m_memory;
+    union {
+        struct {
+            GLuint m_vbos[2];
+            GLuint m_ibos[2];
+        };
+        GLuint m_buffers[4];
+    };
+    GLuint m_vao;
+    unsigned char m_bufferIndex;
 };
 
 inline particleSystem::particleSystem(const char *description)
