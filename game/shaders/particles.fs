@@ -12,10 +12,10 @@ uniform float gPower;
 out vec4 fragColor;
 
 float contrast(float d) {
-    bool half = d > 0.5f;
-    float value = clamp(2.0f * (half ? 1.0f - d : d), 0.0f, 1.0f);
+    bool halfRange = d > 0.5f;
+    float value = clamp(2.0f * (halfRange ? 1.0f - d : d), 0.0f, 1.0f);
     float alpha = 0.5f * pow(value, gPower);
-    return half ? 1.0f - alpha : alpha;
+    return halfRange ? 1.0f - alpha : alpha;
 }
 
 void main() {
