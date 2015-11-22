@@ -102,18 +102,18 @@ bool particleSystem::upload() {
         gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[i]);
         if (gl::has(gl::ARB_half_float_vertex)) {
             static const halfVertex *v = nullptr;
-            gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
+            gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_STREAM_DRAW);
             gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
             gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
         } else {
             static const singleVertex *v = nullptr;
-            gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
+            gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_STREAM_DRAW);
             gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
             gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
         }
 
         gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibos[i]);
-        gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof m_indices[0], 0, GL_DYNAMIC_DRAW);
+        gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof m_indices[0], 0, GL_STREAM_DRAW);
     }
 
     m_method.enable();
@@ -145,7 +145,7 @@ void particleSystem::render(const pipeline &pl) {
     // Invalidate next buffer a frame in advance to hint the driver that we're
     // doing double-buffering
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[m_bufferIndex]);
-    gl::BufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
+    gl::BufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_STREAM_DRAW);
 
     // We use a smaller index format for particles to reduce upload costs
     if (m_particles.size() * 6 > SHRT_MAX) {
@@ -223,13 +223,13 @@ void particleSystem::render(const pipeline &pl) {
     if (gl::has(gl::ARB_half_float_vertex)) {
         static const halfVertex *v = nullptr;
         m_memory = m_halfVertices.size() * sizeof *v;
-        gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_halfVertices[0], GL_DYNAMIC_DRAW);
+        gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_halfVertices[0], GL_STREAM_DRAW);
         gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
         gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
     } else {
         static const singleVertex *v = nullptr;
         m_memory = m_singleVertices.size() * sizeof *v;
-        gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_singleVertices[0], GL_DYNAMIC_DRAW);
+        gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_singleVertices[0], GL_STREAM_DRAW);
         gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
         gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof *v, &v->color); // color
     }

@@ -465,7 +465,7 @@ bool gui::upload() {
 
     static const vertex *v = nullptr;
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_STREAM_DRAW);
     gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->position);
     gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);
     gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof *v, &v->color);
@@ -595,7 +595,7 @@ void gui::render(const pipeline &pl) {
     static const vertex *v = nullptr;
     gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof *v, &m_vertices[0], GL_DYNAMIC_DRAW);
+    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof *v, &m_vertices[0], GL_STREAM_DRAW);
     gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->position);
     gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);
     gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof *v, &v->color);
