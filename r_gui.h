@@ -141,8 +141,9 @@ private:
     float m_normals[kCoordCount * 2];
     float m_circleVertices[kCircleVertices * 2];
 
-    GLuint m_vbo;
+    GLuint m_vbos[2];
     GLuint m_vao;
+    unsigned char m_bufferIndex;
 
     u::map<u::string, texture2D*> m_modelTextures;
     u::map<u::string, atlas::node*> m_textures;

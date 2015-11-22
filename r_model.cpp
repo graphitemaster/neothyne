@@ -319,14 +319,14 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
         }
     }
 
-    auto loadTexture = [&](const u::string &ident, texture2D **store) {
+    auto loadTexture = [&](const u::string &ident, texture2D **store, bool preserveQuality) {
         if (ident.empty())
             return;
         if (textures.find(ident) != textures.end()) {
             *store = textures[ident];
         } else {
             u::unique_ptr<texture2D> tex(new texture2D);
-            if (tex->load(ident)) {
+            if (tex->load(ident, preserveQuality)) {
                 auto release = tex.release();
                 textures[ident] = release;
                 *store = release;
@@ -353,10 +353,10 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
         }
     };
 
-    loadTexture(diffuseName, &diffuse);
-    loadTexture(normalName, &normal);
-    loadTexture(specName, &spec);
-    loadTexture(displacementName, &displacement);
+    loadTexture(diffuseName, &diffuse, m_animFrames);
+    loadTexture(normalName, &normal, m_animFrames);
+    loadTexture(specName, &spec, m_animFrames);
+    loadTexture(displacementName, &displacement, m_animFrames);
 
     // Sanitize animated inputs
     auto checkSize = [this, &fileName](texture2D *tex) {

@@ -98,7 +98,7 @@ bool particleSystem::upload() {
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
 
-    for (size_t i = 0; i < 2; i++) {
+    for (size_t i = 0; i < sizeof m_vbos / sizeof *m_vbos; i++) {
         gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[i]);
         if (gl::has(gl::ARB_half_float_vertex)) {
             static const halfVertex *v = nullptr;
@@ -140,7 +140,7 @@ void particleSystem::render(const pipeline &pl) {
 
     GLuint &vbo = m_vbos[m_bufferIndex];
     GLuint &ibo = m_ibos[m_bufferIndex];
-    m_bufferIndex = (m_bufferIndex + 1) % 2;
+    m_bufferIndex = (m_bufferIndex + 1) % (sizeof m_vbos / sizeof *m_vbos);
 
     // Invalidate next buffer a frame in advance to hint the driver that we're
     // doing double-buffering

@@ -20,6 +20,7 @@ struct texture2D {
 
     void colorize(uint32_t color); // must be called before upload
     bool load(const u::string &file);
+    bool load(const u::string &file, bool preserveQuality);
     bool upload();
     bool cache(GLuint internal);
     void bind(GLenum unit);

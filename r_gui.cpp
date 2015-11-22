@@ -293,12 +293,13 @@ size_t gui::atlas::height() const {
 static const size_t kAtlasSize = 1024;
 
 gui::gui()
-    : m_vbo(0)
-    , m_vao(0)
+    : m_bufferIndex(0)
     , m_notex(nullptr)
     , m_atlasData(new unsigned char[kAtlasSize*kAtlasSize*4])
     , m_atlasTexture(0)
 {
+    memset(m_vbos, 0, sizeof m_vbos);
+
     for (size_t i = 0; i < kCircleVertices; ++i) {
         const float a = float(i) / float(kCircleVertices) * m::kTau;
         float s, c;
@@ -317,8 +318,8 @@ gui::gui()
 gui::~gui() {
     if (m_vao)
         gl::DeleteVertexArrays(1, &m_vao);
-    if (m_vbo)
-        gl::DeleteBuffers(1, &m_vbo);
+    if (m_vbos[0])
+        gl::DeleteBuffers(sizeof m_vbos / sizeof *m_vbos, m_vbos);
     for (auto &it : m_models)
         delete it.second;
     for (auto &it : m_modelTextures)
@@ -439,7 +440,7 @@ bool gui::load(const u::string &font) {
     if (!(m_notex = atlasPack("textures/notex")))
         return false;
 
-    return m_font.load("fonts/" + fontMap);
+    return m_font.load("fonts/" + fontMap, true);
 }
 
 bool gui::upload() {
@@ -455,20 +456,21 @@ bool gui::upload() {
     gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, kAtlasSize, kAtlasSize, 0, GL_RGBA,
         GL_UNSIGNED_BYTE, m_atlasData);
 
+    static const vertex *v = nullptr;
     gl::GenVertexArrays(1, &m_vao);
-    gl::GenBuffers(1, &m_vbo);
-
     gl::BindVertexArray(m_vao);
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
     gl::EnableVertexAttribArray(2);
 
-    static const vertex *v = nullptr;
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_STREAM_DRAW);
-    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->position);
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);
-    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof *v, &v->color);
+    gl::GenBuffers(sizeof m_vbos / sizeof *m_vbos, m_vbos);
+    for (auto &vbo : m_vbos) {
+        gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_STREAM_DRAW);
+        gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->position);
+        gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);
+        gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof *v, &v->color);
+    }
 
     // Rendering methods for GUI
     if (!m_methods[kMethodNormal].init())
@@ -591,10 +593,18 @@ void gui::render(const pipeline &pl) {
     if (m_batches.empty())
         return;
 
+    GLuint &vbo = m_vbos[m_bufferIndex];
+    m_bufferIndex = (m_bufferIndex + 1) % (sizeof m_vbos / sizeof *m_vbos);
+
+    // Invalidate next buffer a frame in advance to hint the driver that we're
+    // doing double-buffering
+    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[m_bufferIndex]);
+    gl::BufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_STREAM_DRAW);
+
     // Blast it all out in one giant shot
     static const vertex *v = nullptr;
     gl::BindVertexArray(m_vao);
-    gl::BindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof *v, &m_vertices[0], GL_STREAM_DRAW);
     gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->position);
     gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);

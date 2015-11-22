@@ -846,8 +846,12 @@ bool texture2D::cache(GLuint internal) {
     return writeCache(m_texture, internal, m_textureHandle);
 }
 
+bool texture2D::load(const u::string &file, bool preserveQuality) {
+    return m_texture.load(file, preserveQuality ? 1.0f : r_texquality);
+}
+
 bool texture2D::load(const u::string &file) {
-    return m_texture.load(file, r_texquality);
+    return load(file, false);
 }
 
 bool texture2D::upload() {
