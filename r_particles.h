@@ -44,7 +44,7 @@ private:
 };
 
 struct particleSystem {
-    particleSystem() = default;
+    particleSystem();
     particleSystem(const char *description);
     virtual ~particleSystem();
 

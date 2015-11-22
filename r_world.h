@@ -47,7 +47,7 @@ private:
     void compositePass(const pipeline &pl);
 
     struct lightChunk {
-        lightChunk() = default;
+        lightChunk();
         ~lightChunk();
         size_t hash;
         size_t count;
@@ -58,15 +58,15 @@ private:
     };
 
     struct spotLightChunk : lightChunk {
-        spotLightChunk() = default;
-        spotLightChunk(spotLight *light) : light(light) { }
+        spotLightChunk();
+        spotLightChunk(spotLight *light);
         bool buildMesh(kdMap *map);
         spotLight *light;
     };
 
     struct pointLightChunk : lightChunk {
-        pointLightChunk() = default;
-        pointLightChunk(pointLight *light) : light(light) { }
+        pointLightChunk();
+        pointLightChunk(pointLight *light);
         bool buildMesh(kdMap *map);
         size_t sideCounts[6];
         pointLight *light;

@@ -177,6 +177,14 @@ static uint8_t calcTriangleSideMask(const m::vec3 &p1,
 }
 
 ///! lightChunk
+world::lightChunk::lightChunk()
+    : hash(0)
+    , count(0)
+    , visible(false)
+    , ebo(0)
+{
+}
+
 world::lightChunk::~lightChunk() {
     if (ebo)
         gl::DeleteBuffers(1, &ebo);
@@ -190,6 +198,16 @@ bool world::lightChunk::init() {
 }
 
 ///! spotLightChunk
+world::spotLightChunk::spotLightChunk()
+    : light(nullptr)
+{
+}
+
+world::spotLightChunk::spotLightChunk(spotLight *light)
+    : light(light)
+{
+}
+
 bool world::spotLightChunk::buildMesh(kdMap *map) {
     u::vector<size_t> triangleIndices;
     u::vector<GLuint> indices;
@@ -213,6 +231,18 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
 }
 
 ///! pointLightChunk
+world::pointLightChunk::pointLightChunk()
+    : light(nullptr)
+{
+    memset(sideCounts, 0, sizeof sideCounts);
+}
+
+world::pointLightChunk::pointLightChunk(pointLight *light)
+    : light(light)
+{
+    memset(sideCounts, 0, sizeof sideCounts);
+}
+
 bool world::pointLightChunk::buildMesh(kdMap *map) {
     u::vector<size_t> triangleIndices;
     u::vector<GLuint> indices[6];

@@ -60,6 +60,15 @@ void particleSystemMethod::setPower(float power) {
 }
 
 ///! particleSystem
+particleSystem::particleSystem()
+    : m_description("Particle System")
+    , m_memory(0)
+    , m_vao(0)
+    , m_bufferIndex(0)
+{
+    memset(m_buffers, 0, sizeof m_buffers);
+
+}
 particleSystem::~particleSystem() {
     if (m_buffers[0])
         gl::DeleteBuffers(sizeof m_buffers / sizeof *m_buffers, m_buffers);
