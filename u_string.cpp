@@ -149,7 +149,7 @@ char *stringMemory::reallocate(char *ptr, size_t size) {
         return ptr;
 
     char *block = allocate(size);
-    memcpy(block, ptr, reg->size() - sizeof reg);
+    memcpy(block, ptr, reg->size() - sizeof *reg);
     deallocate(ptr);
 
     return block;
