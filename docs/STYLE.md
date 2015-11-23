@@ -85,6 +85,7 @@ implementation details.
 ## Local Variables
 Place a function's variables in the narrowest scope possible, and initialize
 variables in the declaration.
+
     int i;
     i = f();        // Bad: Initialization separate from declaration
 
@@ -99,14 +100,14 @@ variables in the declaration.
     vector<int> v = {1, 2};
 
 Variables needed for `if`, `while` and `for` statements should normally be
-declared within those statements, so th at such variables are confined to those
+declared within those statements, so that such variables are confined to those
 scopes. E.g.:
 ```
     while (const char *p = strchr(string, '/')) string = p + 1;
 ```
 
 A minor caveat to this rule is when the variable is an object, its constructor
-is invokes everytime it enters scope and is created, and its destructor is
+is invoked every time it enters scope and is created, and its destructor is
 invoked every time it goes out of scope.
 
     // Bad: Lots of object constructions and destructions
