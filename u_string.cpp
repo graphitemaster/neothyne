@@ -176,22 +176,32 @@ stringMemory::region *stringMemory::findAvailable(size_t size) {
         return divideRegion(reg, size);
 
     // Find minimum-sized match within the area of memory available
+    size_t closestSize = 0;
     while (reg < m_tail && buddy < m_tail) {
         // When both the region and buddy are free
         if (reg->free() && buddy->free() && reg->size() == buddy->size()) {
             reg->resize();
-            if (size <= reg->size() && (!closest || reg->size() <= closest->size()))
+            const size_t regSize = reg->size();
+            if (size <= regSize && (!closest || regSize <= closest->size()))
                 closest = reg;
             reg = nextRegion(buddy);
             if (reg < m_tail)
                 buddy = nextRegion(reg);
         } else {
-            if (reg->free() && size <= reg->size() && (!closest || reg->size() <= closest->size()))
+            if (closest)
+                closestSize = closest->size();
+            const size_t regSize = reg->size();
+            if (reg->free() && size <= regSize && (!closest || regSize <= closestSize)) {
                 closest = reg;
-            if (buddy->free() && size <= buddy->size() && (!closest || buddy->size() <= closest->size()))
+                closestSize = regSize;
+            }
+            const size_t buddySize = buddy->size();
+            if (buddy->free() && size <= buddySize && (!closest || buddySize <= closestSize)) {
                 closest = buddy;
+                closestSize = buddySize;
+            }
             // Buddy has been split up into smaller chunks
-            if (reg->size() > buddy->size()) {
+            if (regSize > buddySize) {
                 reg = buddy;
                 buddy = nextRegion(buddy);
             } else {
@@ -204,7 +214,7 @@ stringMemory::region *stringMemory::findAvailable(size_t size) {
     }
 
     if (closest) {
-        if (closest->size() == size)
+        if (closestSize == size)
             return closest;
         return divideRegion(closest, size);
     }
