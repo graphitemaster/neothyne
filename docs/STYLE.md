@@ -1,4 +1,17 @@
 # Header files
+## Pragma Once
+The use of `#pragma once` is forbidden.
+
+### Pros
+* It's less typing than a header guard
+* Does not require anything at the end of the file
+
+### Cons
+* It's non-standard
+* Leaves no flexibility over choosing which parts of the header to protect from
+  multiple inclusion.
+
+### Descision
 All header files should have a header guard in the form of
 
     #ifndef FILENAME_HDR
@@ -6,17 +19,41 @@ All header files should have a header guard in the form of
     ...
     #endif
 
-The use of #pragma once is forbidden.
+## Forward Declarations
 
-A header file should forward declare any class types it may use and try to include
-the least amount of external references as possible.
+Declaration of a class, function or template without an associated defintion.
 
-Every header file should, with just a rename of the file extension, compile as
-is without warning or error.
+### Pros
+* Save on compile time, as `#include` forces the compiler to open more files and
+  process more text.
+* Saves on unnecessary recompilation, for `#include` can force code to be
+  recompiled more often, due to unrelated changes in a header file.
 
-Header files shouldn't contain inline functions unless they're trivial in nature
-and can be expressed in *five-or-fewer* lines.
+### Cons
+* Hides dependencies
+* Difficult to determine if a forward declaration or full `#include` is needed
+* Can be verbose
 
+### Decision
+Faster compilation is preferred, therefor: forward declare as much as possible
+and include the least amount of headers as possible.
+
+## Inline Functions
+Declare functions in a way that allows the compiler to expand them inline rather
+than calling them through a usual function call.
+
+### Pros
+* Can generate more efficient object code
+
+### Cons
+* Misuse can make programs slower
+* Makes larger final binaries
+
+### Decision
+Make use of `inline` when the functions are trivial in nature.
+Beware of object constructors and destructors which tend to be large.
+
+### Templates
 Templated classes and class functions should favor the *implement-after-define*
 approach opposed to inline style. An example is provided below.
 
@@ -44,39 +81,124 @@ class, the class itself is a container. It's much easier to browse the top of
 the header file for a quick synopsis of its functions than it is to look at
 implementation details.
 
-# Namespaces
-The use of namespaces is encouraged provided that the hierarchy does not exceed
-two nesting levels.
+# Scoping
+## Local Variables
+Place a function's variables in the narrowest scope possible, and initialize
+variables in the declaration.
+    int i;
+    i = f();        // Bad: Initialization separate from declaration
 
-Typically most ideas can be categorized into one very vague term, that vague term
-or word would be the name of the namespace; for instance, utilities should go in
-the namespace, appropriately named "utility".
+    int j = g();    // Good: Declaration has initialization
 
-Namespace names should be short, concise, and easy to type repeatedly as the
-use of `using namespace` is discouraged.
+    // Bad: Prefer initialization using brace initialization
+    vector<int> v;
+    v.push_back(1);
+    v.push_back(2);
 
-Don't indent contents of the namespace the same way other scopes are indented,
-everything should stay on the first column in a namespace; however a nested
-namespace's contents should be indented. An example is provided below.
+    // Good: `v' starts initialized
+    vector<int> v = {1, 2};
 
-    namespace foo {
+Variables needed for `if`, `while` and `for` statements should normally be
+declared within those statements, so th at such variables are confined to those
+scopes. E.g.:
+```
+    while (const char *p = strchr(string, '/')) string = p + 1;
+```
 
-    void foo(); // Don't indent the contents
+A minor caveat to this rule is when the variable is an object, its constructor
+is invokes everytime it enters scope and is created, and its destructor is
+invoked every time it goes out of scope.
 
-    // Nested namespaces are never indented
-    namespace detail {
-        void bar(); // However their contents are
+    // Bad: Lots of object constructions and destructions
+    for (int i = 0; i < SHRT_MAX; i++) {
+        foo f;
+        f.doSomething(i);
     }
 
+    // Good: Only one single object construction and destruction pair
+    foo f;
+    for (int i = 0; i < SHRT_MAX; i++) {
+        f.doSomething(i);
     }
+## Static and Global Variables
+Use of variables with static storage duration is a powerful mechanism to doing
+things. It can lead to really hard-to-find bugs due to indeterminate order of
+construction. So use them carefully and question other ways to achieve the
+same thing if you run into the situation.
 
-When working with implementation details that cannot be hid it's often common to
-utilize a namespace, a common theme is to name such namespace "detail". This is
-fine, other names for such namespace are forbidden.
+### Pros
+* Can do neat things
+* No need to extern initialization to main
+* Can do things before main is entered
 
-Unnamed and inline namespaces are forbidden.
+### Cons
+* Indeterminate order of construction and destruction
+* Cause hard-to-find bugs
+
+### Decision
+Use them very carefully
+
+All global variables shall be prefixed with `g`. E.g.:
+    bool gRunning = false;
+
+## Namespaces
+Subdivide global scope into distinct, named scopes, and are useful for preventing
+name collisions in the global scope.
+
+### Pros
+* Method to prevent name conflicts
+* Organizes code
+
+### Cons
+* Can be confusing
+* In some contexts, it's necessary to repeatedly refer to symbols by their
+  fully-qualified names.
+
+### Decision
+* Do not exceed two nesting levels with namespaces.
+* Namespace names should be short, concise and easy to type as the use of
+  `using namespace` is forbidden.
+* Don't indent contents of a namespace the same way other scopes are indented,
+  everything should stay on the first column in a namespace; however a nested
+  namespace's contents should be indented. An example is provided below
+
+        namespace foo {
+
+        void foo(); // Don't indent the contents
+
+        // Nested namespaces are never indented
+        namespace detail {
+            void bar(); // However their contents are
+        }
+
+        }
+* To hide implementation code from the user, use a nested namespace named
+  *detail*
+* Unnamed and inline namespaces are forbidden as they can easily cause violations
+  of the One Definition Rule.
 
 # Classes
+
+## Work in Constructors
+Can initialize everything in a constructor
+
+### Pros
+* No need to worry whether the class has been initialized or not.
+* Objects that are fully initialized by constructor call can be const and may
+  also be easier to use with generic algorithm code.
+
+### Cons
+* Virtual function calls will not get dispatched to subclass implementations.
+  Future modifications can quietly introduce this problem, even if the class isn't
+  subclassed, causing minor headaches.
+* There are no easy ways for constructors to signal errors, short of crashing
+  or using exceptions (which are forbidden.)
+* When a constructor fails, an object is now in an unusual state which may require
+  a call like `isValid()` which is easy to forget to call.
+* Taking the address of a constructor is not possible, so work cannot be handed
+  off to, for example, another thread.
+
+### Decision
 Avoid doing complex initialization in constructors. Constructors can never, and
 should never fail as there is no way to indicate errors, short of using exceptions
 (which are forbidden.) If the object requires non-trivial initialization, consider
@@ -87,15 +209,37 @@ in all class constructors initializers-lists. If the member variable cannot be
 initialized in the initializer-list, then it should be initialized in the body of
 the constructor.
 
+## Implicit conversions
+
 The use of the `explicit` keyword for class constructors is encouraged whenever
 appropriate.
 
+## Delegating and Inheriting Constructors
+
 Use delegating and inheriting constructors when they reduce code duplication.
 
+### Pros
+* Reduce verbosity and boilerplate, which can improve readability.
+* Familiar to people with a Java background.
+
+### Cons
+* Can approximate the behavior using helper functions.
+* May be confusing if a derived class introduces new member variables, since the
+  base class constructor doesn't know about them.
+
+### Decision
+Use delegating and inheriting constructors when they reduce boilerplate and
+improve readability. Be careful about inheriting constructors when your derived
+class has new member variables. Inheriting constructors may still be appropriate
+in that case if you can use in-class member initialization for the derived
+class's member variables.
+
+## Structs vs. Classes
 Never use the `class` keyword, always use `struct`. The former is private by
 default which is wrong as private members should always be at the bottom of
 the class definition.
 
+## Access Qualifiers
 The use of `private:`, `public:` and `protected:` is encouraged but not required,
 if how ever it is used, accessor functions should not be prefixed with "get", but
 mutator functions should. An example is provided below.
@@ -117,6 +261,7 @@ underlying datum they access and mutate is depended upon by other components of
 the class. If the datum is not depended upon internally, then the datum should
 be made public and accessor and mutator functions are discouraged.
 
+## Inheritance
 The use of inheritance is allowed provided that the inheritance is public. Don't
 overuse inheritance, composition is often more appropriate. Try to restrict the
 use of inheritance to the "is-a" case: 'bar' subclasses 'foo' if it can be
@@ -124,13 +269,37 @@ reasonably said that 'bar' "is-a kind of" 'foo'.
 
 Multiple inheritance is forbidden.
 
-The use of `virtual` is forbidden.
+## Operator Overloading
 
+### Pros
+* Can make code more concise
+* Make user-defined types more readable
+* Much more expressive
+
+### Cons
+* Providing a correct, consistent, and unsurprising set of overloads requires
+  a lot of care, failure to do so can lead to confusion and bugs.
+* Overuse of operators can lead to obfuscated code, particularly if the overloads
+  operator's semantics don't follow convention.
+* Can fool intuition into thinking that expensive operations are cheap.
+* Finding call sites for overloaded operators requires something more powerful
+  than `grep`.
+* Getting the argument type for an overloaded operator wrong may get you a
+  different overload rather than a compiler error.
+* Certain overloads are inherently hazardous. Overloading unary `&` can cause
+  the same code to have different meanings depending on whether the overload
+  declaration is visible. Overloads of `&&`, `||` and `,` (comma) cannot match
+  evaluation-order semantics of the builtin operators.
+* Operators tend to be defined outside the class, so there's a risk of different
+  files introducing different definitions of the same operator. This can result
+  in undefined behavior if both get linked into the same binary.
+
+### Decision
 Operator overloading is discouraged for everything except container types that
 are trying to act as if they were built-in types and maths types like vectors,
 matrices, quaternions, etc. The use of user-defined literals is forbidden.
 
-All container classes should have a `swap()` function that does a shallow-swap.
+## Friends
 
 The use of friend classes and functions is allowed within reason. Friends should
 only be used if the encapsulation boundary of the class should be extended to the
@@ -224,13 +393,13 @@ cautious as most things can often be represented with inline functions, enums
 and constant variables.
 
 # Null considered harmful
-The use of anything but nullptr for pointers is forbidden.
+The use of anything but `nullptr` for pointers is forbidden.
 
 For variable argument functions always explicitly use `(void*)0` as a `NULL`
 variable argument instead of `nullptr` or `NULL`.
 
 # Sizeof
-Prefer `sizeof(varname)` to `sizeof(type)`. The result of `sizeof` returns `size_t`,
+Prefer `sizeof varname` to `sizeof(type)`. The result of `sizeof` returns `size_t`,
 assigning it to anything but a `size_t` is forbidden.
 
 # Auto
@@ -284,12 +453,14 @@ track. You can often achieve the same effect with a tagged union.
 
 # Casting
 The use of C++ style casts is forbidden. The one notable exception to this
-is when implementing forward or move which requires the use of `static_cast`.
+is when implementing `forward` or `move` which requires the use of `static_cast`.
 In all other situations, use C style casts.
 
 # Shifting
-Avoid the use of undefined shifts like signed left shifts. Neothyne has a
-utility that allows safely doing this called `u::sls`.
+Avoid the use of undefined shifts like signed left shifts.
+
+# Constness
+Everything and anything that can be made `const` shall be made `const`.
 
 # Vectors
 The use of vector is encouraged for all tasks that are not key, or key-value
@@ -353,7 +524,7 @@ Constants are always prefixed with 'k'.
 
 Macros are all upper-case, macro parameters are too.
 
-All naming makes used of 'camelCase'. This holds true for prefixes as well,
+All naming makes use of 'camelCase'. This holds true for prefixes as well,
 for instance "gThatThing", not "gthatThing". This is not true for members however
 where the correct naming would be "m_thatThing" and not "m_ThatThing".
 
