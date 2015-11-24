@@ -42,7 +42,7 @@ bool shadowMap::init(size_t width, size_t height) {
     gl::DrawBuffer(GL_NONE);
     gl::ReadBuffer(GL_NONE);
 
-    const GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
+    const GLenum status = gl::CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
 
     gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     return status == GL_FRAMEBUFFER_COMPLETE;

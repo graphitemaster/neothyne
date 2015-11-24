@@ -71,7 +71,7 @@ bool grader::init(const m::perspective &p, const unsigned char *const colorGradi
 
     gl::DrawBuffers(sizeof drawBuffers / sizeof *drawBuffers, drawBuffers);
 
-    const GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
+    const GLenum status = gl::CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)
         return false;
 

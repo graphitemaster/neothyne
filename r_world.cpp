@@ -295,6 +295,7 @@ private:
 dustSystem::dustSystem(const m::vec3 &ownerPosition)
     : particleSystem("Dust System")
 {
+#if 0
     static constexpr size_t kParticles = 1024*2;
     m_particles.reserve(kParticles);
     for (size_t i = 0; i < kParticles-1; i++) {
@@ -302,6 +303,7 @@ dustSystem::dustSystem(const m::vec3 &ownerPosition)
         initParticle(p, ownerPosition);
         addParticle(u::move(p));
     }
+#endif
 }
 
 void dustSystem::initParticle(particle &p, const m::vec3 &ownerPosition) {

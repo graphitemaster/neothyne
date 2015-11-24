@@ -144,7 +144,7 @@ bool ssao::init(const m::perspective &p) {
 
     gl::DrawBuffers(1, drawBuffers);
 
-    const GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
+    const GLenum status = gl::CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE)
         return false;
 
