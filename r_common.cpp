@@ -18,6 +18,21 @@
 #   endif
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+#  define _WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+// On systems with NV Optimus. There is the possibility that SDL2 will
+// give us a context for the non-discrete Intel graphics. Opposed to the
+// discrete high-performance NV graphics. The Optimus driver searches the
+// application process space to find this flag as an export and uses it
+// to determine if either the NV or Intel graphics should be used. This
+// is absolutely insane. More information about this can be found here:
+// http://docs.nvidia.com/gameworks/content/technologies/desktop/optimus.htm
+extern "C" {
+    _declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+}
+#endif
+
 #if !defined(APIENTRYP)
 #   define APIENTRYP APIENTRY *
 #endif

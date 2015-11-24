@@ -74,7 +74,7 @@ def genHeader(functionList, extensionList, headerFile):
         struct set;
         }
 
-        #ifdef DEBUG_GL
+        #if defined(DEBUG_GL)
         #   define GL_INFO const char *file, size_t line
         #   define GL_INFOP , GL_INFO
         #else
@@ -141,19 +141,34 @@ def genSource(functionList, extensionList, sourceFile):
         #include "engine.h"
         #include "cvar.h"
 
-        #ifndef APIENTRY
-        #   ifdef _WIN32
+        #if !defined(APIENTRY)
+        #   if defined(_WIN32)
         #       define APIENTRY __stdcall
         #   else
         #       define APIENTRY
         #   endif
         #endif
 
-        #ifndef APIENTRYP
+        #if defined(_WIN32) || defined(_WIN64)
+        #  define _WIN32_LEAN_AND_MEAN
+        #  include <windows.h>
+        // On systems with NV Optimus. There is the possibility that SDL2 will
+        // give us a context for the non-discrete Intel graphics. Opposed to the
+        // discrete high-performance NV graphics. The Optimus driver searches the
+        // application process space to find this flag as an export and uses it
+        // to determine if either the NV or Intel graphics should be used. This
+        // is absolutely insane. More information about this can be found here:
+        // http://docs.nvidia.com/gameworks/content/technologies/desktop/optimus.htm
+        extern "C" {
+            _declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+        }
+        #endif
+
+        #if !defined(APIENTRYP)
         #   define APIENTRYP APIENTRY *
         #endif
 
-        #ifdef DEBUG_GL
+        #if defined(DEBUG_GL)
         #   define GL_CHECK(SPEC, ...) debugCheck((SPEC), __func__, file, line, __VA_ARGS__)
         #else
         #   define GL_CHECK(...)
@@ -179,7 +194,7 @@ def genSource(functionList, extensionList, sourceFile):
         # Begin DEBUG section
         source.write(textwrap.dedent("""\
 
-        #ifdef DEBUG_GL
+        #if defined(DEBUG_GL)
         ///! ARB_debug_output
         typedef void (APIENTRYP MYPFNGLDEBUGMESSAGECALLBACKARBPROC)(
             void (APIENTRYP)(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar *, GLvoid *),
@@ -392,7 +407,7 @@ def genSource(functionList, extensionList, sourceFile):
             if (gGLSLVersion == -1)
                 neoFatal("Failed to initialize OpenGL\\n");
 
-        #ifdef DEBUG_GL
+        #if defined(DEBUG_GL)
             if (has(gl::ARB_debug_output)) {
                 glEnable_(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
                 ((MYPFNGLDEBUGMESSAGECALLBACKARBPROC)neoGetProcAddress("glDebugMessageCallbackARB"))(&debugCallback, nullptr);
