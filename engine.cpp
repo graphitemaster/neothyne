@@ -1027,10 +1027,12 @@ static int entryPoint(int argc, char **argv) {
     signal(SIGINT, neoSignalHandler);
     signal(SIGTERM, neoSignalHandler);
 
+#if !defined(_WIN32)
     // For muxless setups on Linux with combination discrete and non-discrete
     // graphics, we want to utilize the discrete one. By convention, most people
     // use DRI_PRIME=1 for this. This is what we do as well.
     setenv("DRI_PRIME", "1", 1);
+#endif
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0)
         neoFatal("Failed to initialize SDL2");
