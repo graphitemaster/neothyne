@@ -29,7 +29,7 @@
 // is absolutely insane. More information about this can be found here:
 // http://docs.nvidia.com/gameworks/content/technologies/desktop/optimus.htm
 extern "C" {
-    _declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+    __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
 }
 #endif
 
