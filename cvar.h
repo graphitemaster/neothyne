@@ -275,8 +275,6 @@ inline int var<u::string>::flags() const {
 template <typename T>
 var<T> &varGet(const char *name);
 
-u::vector<u::string> varAutoComplete(const u::string &what);
-
 u::optional<u::string> varValue(const u::string &name);
 
 #define VAR(TYPE, NAME, ...) \

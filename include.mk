@@ -38,7 +38,10 @@ UTIL_SOURCES = \
 	u_new.cpp \
 	u_sha512.cpp \
 	u_string.cpp \
-	u_zlib.cpp \
+	u_zlib.cpp
+
+CONSOLE_SOURCES = \
+	c_complete.cpp
 
 ENGINE_SOURCES = \
 	engine.cpp \
@@ -52,6 +55,7 @@ ENGINE_SOURCES = \
 	gui.cpp \
 	grader.cpp \
 	$(UTIL_SOURCES) \
+	$(CONSOLE_SOURCES) \
 	$(MATH_SOURCES) \
 	$(RENDERER_SOURCES)
 

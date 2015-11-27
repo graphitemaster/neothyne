@@ -10,6 +10,8 @@
 #include "engine.h"
 #include "cvar.h"
 
+#include "c_complete.h"
+
 #include "r_common.h"
 #include "r_model.h"
 
@@ -657,7 +659,7 @@ void engine::swap() {
                         input.pop_back();
                 } else if (e.key.keysym.sym == SDLK_TAB) {
                     if (m_autoComplete.empty())
-                        m_autoComplete = varAutoComplete(CTX(m_context)->m_textString);
+                        m_autoComplete = c::complete::find(CTX(m_context)->m_textString);
                     if (m_autoComplete.size()) {
                         if (m_autoComplete.size() <= m_autoCompleteCursor)
                             m_autoCompleteCursor = 0;
