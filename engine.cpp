@@ -518,6 +518,21 @@ bool engine::initTimers() {
     return true;
 }
 
+void engine::deleteConfigRecursive(const u::string &pathName) {
+    if (u::dir::isFile(pathName)) {
+        u::remove(pathName, u::kFile);
+        return;
+    }
+    u::dir directory(pathName);
+    for (const auto &it : directory)
+        deleteConfigRecursive(u::fixPath(u::format("%s/%s", pathName, it)));
+    u::remove(pathName, u::kDirectory);
+}
+
+void engine::deleteConfig() {
+    deleteConfigRecursive(m_userPath);
+}
+
 bool engine::initData(int &argc, char **argv) {
     // Get a path for the game, can come from command line as well
     const char *directory = nullptr;
@@ -533,6 +548,10 @@ bool engine::initData(int &argc, char **argv) {
 
     // Check if the game directory even exists. But fix it to the platforms
     // path separator rules before verifying.
+    // Engine paths
+    static const char *kPaths[] = {
+        "screenshots", "cache", "cache/textures", "cache/shaders"
+    };
     u::string fixedDirectory;
     if (directory) {
         fixedDirectory = u::fixPath(directory);
@@ -563,10 +582,6 @@ bool engine::initData(int &argc, char **argv) {
 
     // Verify all the paths exist for the user directory. If they don't exist
     // create them.
-    static const char *kPaths[] = {
-        "screenshots", "cache", "cache/textures", "cache/shaders"
-    };
-
     for (auto &it : kPaths) {
         u::string path = m_userPath + it;
         if (u::exists(path, u::kDirectory))
@@ -1198,4 +1213,8 @@ void neoSetVSyncOption(int option) {
 
 void neoScreenShot() {
     gEngine.screenShot();
+}
+
+void neoDeleteConfig() {
+    gEngine.deleteConfig();
 }

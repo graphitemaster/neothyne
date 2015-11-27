@@ -101,6 +101,7 @@ struct engine {
     void resize(size_t width, size_t height);
     void setVSyncOption(int option);
     void screenShot();
+    void deleteConfig();
 
     const u::string &userPath() const;
     const u::string &gamePath() const;
@@ -112,6 +113,8 @@ protected:
     bool initContext();
     bool initTimers();
     bool initData(int &argc, char **argv);
+
+    void deleteConfigRecursive(const u::string &pathName);
 
 private:
     u::map<u::string, int> m_keyMap;
@@ -156,5 +159,6 @@ void neoBindSet(const u::string &what, void (*handler)());
 void (*neoBindGet(const u::string &what))();
 void neoSetVSyncOption(int option);
 void neoScreenShot();
+void neoDeleteConfig();
 
 #endif

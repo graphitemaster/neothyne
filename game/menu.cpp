@@ -236,6 +236,8 @@ static void menuDeveloper() {
                 }
                 u::print("[cache] => cleared\n");
             }
+            if (gui::button("Reset configuration"))
+                neoDeleteConfig();
             gui::label("Texture filtering");
             gui::indent();
                 if (gui::check("Mipmaps", mipmaps.get()))
