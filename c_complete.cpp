@@ -10,9 +10,9 @@ struct completer {
     void insert(const char *c);
     static int at(int ch);
     static completer *insert(completer *h, const char *c);
-    static void dfs(completer *n, u::string &&data, u::vector<u::string> &matches);
-    static void search(completer *n, const char *find, u::vector<u::string> &matches, const u::string &item = "");
-    void search(const char *find, u::vector<u::string> &matches);
+    static void dfs(const completer *const n, u::string &&data, u::vector<u::string> &matches);
+    static void search(const completer *const n, const char *find, u::vector<u::string> &matches, const u::string &item = "");
+    void search(const char *find, u::vector<u::string> &matches) const;
 private:
     static constexpr char kAlphabet[] = "abcdefghijklmnopqrstuvwxyz_";
     bool m_term;
@@ -55,7 +55,7 @@ inline completer *completer::insert(const char *c, bool term) {
     return this;
 }
 
-inline void completer::dfs(completer *n, u::string &&item, u::vector<u::string> &matches) {
+inline void completer::dfs(const completer *const n, u::string &&item, u::vector<u::string> &matches) {
     if (n) {
         if (n->m_term)
             matches.push_back(item);
@@ -72,7 +72,7 @@ inline completer *completer::insert(completer *h, const char *c) {
     return (h ? h : new completer)->insert(c, true);
 }
 
-inline void completer::search(completer *n, const char *s, u::vector<u::string> &matches, const u::string &item) {
+inline void completer::search(const completer *const n, const char *s, u::vector<u::string> &matches, const u::string &item) {
     if (*s) {
         const int f = at(*s);
         if (f != -1 && n->m_array[f])
@@ -83,7 +83,7 @@ inline void completer::search(completer *n, const char *s, u::vector<u::string> 
     }
 }
 
-inline void completer::search(const char *s, u::vector<u::string> &matches) {
+inline void completer::search(const char *s, u::vector<u::string> &matches) const {
     completer::search(this, s, matches);
 }
 
