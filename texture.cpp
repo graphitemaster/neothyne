@@ -192,28 +192,41 @@ private:
         return (x < 0) ? 0 : ((x > 0xFF) ? 0xFF : (unsigned char)x);
     }
 
-    static constexpr int kW1 = 2841;
-    static constexpr int kW2 = 2676;
-    static constexpr int kW3 = 2408;
-    static constexpr int kW5 = 1609;
-    static constexpr int kW6 = 1108;
-    static constexpr int kW7 = 565;
+    // 13-bit fixed point representation of trigonometric constants
+    static constexpr int kW1 = 2841; // 2048*sqrt(2)*cos(1*pi/16)
+    static constexpr int kW2 = 2676; // 2048*sqrt(2)*cos(2*pi/16)
+    static constexpr int kW3 = 2408; // 2048*sqrt(2)*cos(3*pi/16)
+    static constexpr int kW5 = 1609; // 2048*sqrt(2)*cos(5*pi/16)
+    static constexpr int kW6 = 1108; // 2048*sqrt(2)*cos(6*pi/16)
+    static constexpr int kW7 = 565;  // 2048*sqrt(2)*cos(7*pi/16)
 
-    // fast integer discrete cosine transform
+    // portable signed left shift
     #define sls(X, Y) (int)((unsigned int)(X) << (Y))
 
+    // Separable 2D integer inverse discrete cosine transform
+    //
+    // Input coefficients are assumed to have been multiplied by the appropriate
+    // quantization table. Fixed point computation is used with the number of
+    // bits for the fractional component varying over the intermediate stages.
+    //
+    // For more information on the algorithm, see Z. Wang, "Fast algorithms for
+    // the discrete W transform and the discrete Fourier transform", IEEE Trans.
+    // ASSP, Vol. ASSP- 32, pp. 803-816, Aug. 1984.
     void rowIDCT(int* blk) {
         int x0, x1, x2, x3, x4, x5, x6, x7, x8;
+        // if all the AC components are zero, the IDCT is trivial.
         if (!((x1 = sls(blk[4], 11))
             | (x2 = blk[6]) | (x3 = blk[2])
             | (x4 = blk[1]) | (x5 = blk[7])
             | (x6 = blk[5]) | (x7 = blk[3])))
         {
+            // short circuit the 1D DCT if the DC component is non-zero
             int value = sls(blk[0], 3);
             for (size_t i = 0; i < 8; i++)
                 blk[i] = value;
             return;
         }
+        // prescale
         x0 = sls(blk[0], 11) + 128;
         x8 = kW7 * (x4 + x5);
         x4 = x8 + (kW1 - kW7) * x4;
@@ -221,6 +234,7 @@ private:
         x8 = kW3 * (x6 + x7);
         x6 = x8 - (kW3 - kW5) * x6;
         x7 = x8 - (kW3 + kW5) * x7;
+        // interleaved stages
         x8 = x0 + x1;
         x0 -= x1;
         x1 = kW6 * (x3 + x2);
@@ -234,8 +248,8 @@ private:
         x8 -= x3;
         x3 = x0 + x2;
         x0 -= x2;
-        x2 = (181 * (x4 + x5) + 128) >> 8;
-        x4 = (181 * (x4 - x5) + 128) >> 8;
+        x2 = (181 * (x4 + x5) + 128) >> 8; // (256/sqrt(2) * <clip>) / 256
+        x4 = (181 * (x4 - x5) + 128) >> 8; // (256/sqrt(2) * <clip>) / 256
         blk[0] = (x7 + x1) >> 8;
         blk[1] = (x3 + x2) >> 8;
         blk[2] = (x0 + x4) >> 8;
@@ -248,18 +262,21 @@ private:
 
     void columnIDCT(const int* blk, unsigned char *out, int stride) {
         int x0, x1, x2, x3, x4, x5, x6, x7, x8;
+        // if all AC components are zero, then IDCT is trival.
         if (!((x1 = sls(blk[8*4], 8))
             | (x2 = blk[8*6]) | (x3 = blk[8*2])
             | (x4 = blk[8*1]) | (x5 = blk[8*7])
             | (x6 = blk[8*5]) | (x7 = blk[8*3])))
         {
-            x1 = clip(((blk[0] + 32) >> 6) + 128);
+            // short circuit the 1D DCT if the DC component is non-zero
+            x1 = clip(((blk[0] + 32) >> 6) + 128); // descale
             for (x0 = 8; x0; --x0) {
                 *out = (unsigned char)x1;
                 out += stride;
             }
             return;
         }
+        // prescale
         x0 = sls(blk[0], 8) + 8192;
         x8 = kW7 * (x4 + x5) + 4;
         x4 = (x8 + (kW1 - kW7) * x4) >> 3;
@@ -267,6 +284,7 @@ private:
         x8 = kW3 * (x6 + x7) + 4;
         x6 = (x8 - (kW3 - kW5) * x6) >> 3;
         x7 = (x8 - (kW3 + kW5) * x7) >> 3;
+        // interleaved stages
         x8 = x0 + x1;
         x0 -= x1;
         x1 = kW6 * (x3 + x2) + 4;
@@ -280,8 +298,8 @@ private:
         x8 -= x3;
         x3 = x0 + x2;
         x0 -= x2;
-        x2 = (181 * (x4 + x5) + 128) >> 8;
-        x4 = (181 * (x4 - x5) + 128) >> 8;
+        x2 = (181 * (x4 + x5) + 128) >> 8; // (256/sqrt(2) * <clip>) / 256
+        x4 = (181 * (x4 - x5) + 128) >> 8; // (256/sqrt(2) * <clip>) / 256
         *out = clip(((x7 + x1) >> 14) + 128); out += stride;
         *out = clip(((x3 + x2) >> 14) + 128); out += stride;
         *out = clip(((x0 + x4) >> 14) + 128); out += stride;
