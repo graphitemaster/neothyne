@@ -627,7 +627,7 @@ private:
         c->dcpred += getCoding(&m_vlctab[c->dctabsel][0], NULL);
         m_block[0] = (c->dcpred) * m_qtab[c->qtsel][0];
         do {
-            int value = getCoding(&m_vlctab[c->actabsel][0], &code);
+            const int value = getCoding(&m_vlctab[c->actabsel][0], &code);
             if (!code)
                 break; // EOB
             if (!(code & 0x0F) && (code != 0xF0))
@@ -1229,30 +1229,22 @@ private:
             }
         } else {
             // adam7 interlaced
-            size_t passw[7] = {
-                (m_width + 7) / 8, (m_width + 3) / 8,
-                (m_width + 3) / 4, (m_width + 1) / 4,
-                (m_width + 1) / 2, (m_width + 0) / 2,
-                (m_width + 0) / 1
-            };
-            size_t passh[7] = {
-                (m_height + 7) / 8,
-                (m_height + 7) / 8, (m_height + 3) / 8,
-                (m_height + 3) / 4, (m_height + 1) / 4,
-                (m_height + 1) / 2, (m_height + 0) / 2
-            };
-
-            size_t passstart[7] = {0};
-
-            for (size_t i = 0; i < 6; i++)
-                passstart[i + 1] = passstart[i] + passh[i] * ((passw[i] ? 1 : 0) + (passw[i] * bpp + 7) / 8);
+            size_t passw[7], *pw = passw;
+            size_t passh[7], *ph = passh;
+            size_t passs[7], *ps = passs;
+            for (const char *x = "\x7\x8\x3\x8\x3\x4\x1\x4\x1\x2\x0\x2\x0\x1"; pw != &passw[7]; x+=2)
+                *pw++ = (m_width + x[0]) / x[1];
+            for (const char *x = "\x7\x8\x7\x8\x3\x8\x3\x4\x1\x4\x1\x2\x0\x2"; ph != &passh[7]; x+=2)
+                *ph++ = (m_height + x[0]) / x[1];
+            for (size_t i = 0; i < 6; i++, ps++)
+                ps[1] = *ps + passh[i] * ((!!passw[i]) + (passw[i] * bpp + 7) / 8);
 
             u::vector<unsigned char> scanlineo((m_width * bpp + 7) / 8);
             u::vector<unsigned char> scanlinen((m_width * bpp + 7) / 8);
 
             for (size_t i = 0; i < 7; i++) {
                 adam7Pass(out_, &scanlinen[0], &scanlineo[0],
-                    &scanlines[passstart[i]], m_width, i, passw[i], passh[i], bpp);
+                    &scanlines[passs[i]], m_width, i, passw[i], passh[i], bpp);
             }
         }
         if (m_colorType == 3 || m_colorType == 4) {
