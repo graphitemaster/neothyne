@@ -203,7 +203,7 @@ private:
     //   Instructions per DCT:
     //    - 11 muls
     //    - 37 adds (if clipping /w branching)
-    //    - 29 adds (ig clipping /w table)
+    //    - 29 adds (if clipping /w table)
     //    - 12 branches (if clipping /w table)
     //    - 28 branches (if clipping /w branching)
 
@@ -306,8 +306,8 @@ private:
     //             7                         pi         1
     // dst[8*k] = sum c[1] * src[8*1] * cos( -- * ( k + - ) * 1 )
     //            1=0                        8          2
-    // where: c[0]     = 1/1024
-    //        c[1...7] = (1/1024)*sqrt(2)
+    // where: c[0]    = 1/1024
+    //        c[1..7] = (1/1024)*sqrt(2)
     template <bool ClippingTable>
     void columnIDCT(const int* blk, unsigned char *out, int stride) {
         int x0, x1, x2, x3, x4, x5, x6, x7, x8;
