@@ -245,9 +245,9 @@ private:
 
     // row (horizontal) IDCT
     //
-    //           7                        pi         1
-    // dst[k] = sum c[1] * src[1] * cos ( -- * ( k + - ) * 1 )
-    //          1=0                       8          2
+    //           7                        pi         i
+    // dst[k] = sum c[i] * src[i] * cos ( -- * ( k + - ) * i )
+    //          i=0                       8          2
     //
     // where: c[0]    = 128
     //        c[1..7] = 128*sqrt(2)
@@ -308,9 +308,9 @@ private:
 
     // column (vertical) IDCT
     //
-    //             7                         pi         1
-    // dst[8*k] = sum c[1] * src[8*1] * cos( -- * ( k + - ) * 1 )
-    //            1=0                        8          2
+    //             7                         pi         i
+    // dst[8*k] = sum c[i] * src[8*i] * cos( -- * ( k + - ) * i )
+    //            i=0                        8          2
     // where: c[0]    = 1/1024
     //        c[1..7] = (1/1024)*sqrt(2)
     template <bool ClippingTable>
