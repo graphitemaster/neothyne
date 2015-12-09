@@ -14,6 +14,7 @@
 #include "m_const.h"
 
 VAR(int, tex_jpg_chroma, "chroma filtering method", 0, 1, 0);
+VAR(int, tex_jpg_cliplut, "clipping lookup table", 0, 1, 1);
 VAR(int, tex_tga_compress, "compress TGA", 0, 1, 1);
 VAR(int, tex_png_compress_quality, "compression quality for PNG", 5, 128, 16);
 
@@ -140,7 +141,7 @@ struct jpeg : decoder {
         memset(m_qtab, 0, sizeof m_qtab);
         memset(m_block, 0, sizeof m_block);
 
-        decode(data, chromaFilter(tex_jpg_chroma.get()));
+        decode(data, chromaFilter(tex_jpg_chroma.get()), !!tex_jpg_cliplut.get());
 
         switch (m_bpp) {
         case 1:
@@ -188,9 +189,42 @@ private:
         u::vector<unsigned char> pixels;
     };
 
+    // Separable 2D integer inverse discrete cosine transform
+    //
+    // Input coefficients are assumed to have been multiplied by the appropriate
+    // quantization table. Fixed point computation is used with the number of
+    // bits for the fractional component varying over the intermediate stages.
+    //
+    // For more information on the algorithm, see Z. Wang, "Fast algorithms for
+    // the discrete W transform and the discrete Fourier transform", IEEE Trans.
+    // ASSP, Vol. ASSP- 32, pp. 803-816, Aug. 1984.
+    //
+    // 32-bit integer arithmetic (8-bit coefficients)
+    //   Instructions per DCT:
+    //    - 11 muls
+    //    - 37 adds (if clipping /w branching)
+    //    - 29 adds (ig clipping /w table)
+    //    - 12 branches (if clipping /w table)
+    //    - 28 branches (if clipping /w branching)
+
     unsigned char clip(const int x) {
         return (x < 0) ? 0 : ((x > 0xFF) ? 0xFF : (unsigned char)x);
     }
+
+    // 2KB clipping table, fits in L1 cache.
+    // operator()(x) is functionally equivalent to clip(x) above
+    static struct IDCTClippingTable {
+        IDCTClippingTable() {
+            memset(table, 0, sizeof table);
+            int16_t *clip = table + 512;
+            for (int i = -512; i < 512; i++)
+                clip[i] = (i < -256) ? -256 : ((i > 255) ? 255 : i);
+        }
+        unsigned char operator()(int index) const {
+            return table[512 + index];
+        }
+        int16_t table[1024];
+    } gIDCTClippingTable;
 
     // 13-bit fixed point representation of trigonometric constants
     static constexpr int kW1 = 2841; // 2048*sqrt(2)*cos(1*pi/16)
@@ -203,15 +237,15 @@ private:
     // portable signed left shift
     #define sls(X, Y) (int)((unsigned int)(X) << (Y))
 
-    // Separable 2D integer inverse discrete cosine transform
+
+    // row (horizontal) IDCT
     //
-    // Input coefficients are assumed to have been multiplied by the appropriate
-    // quantization table. Fixed point computation is used with the number of
-    // bits for the fractional component varying over the intermediate stages.
+    //           7                        pi         1
+    // dst[k] = sum c[1] * src[1] * cos ( -- * ( k + - ) * 1 )
+    //          1=0                       8          2
     //
-    // For more information on the algorithm, see Z. Wang, "Fast algorithms for
-    // the discrete W transform and the discrete Fourier transform", IEEE Trans.
-    // ASSP, Vol. ASSP- 32, pp. 803-816, Aug. 1984.
+    // where: c[0]    = 128
+    //        c[1..7] = 128*sqrt(2)
     void rowIDCT(int* blk) {
         int x0, x1, x2, x3, x4, x5, x6, x7, x8;
         // if all the AC components are zero, the IDCT is trivial.
@@ -226,15 +260,18 @@ private:
                 blk[i] = value;
             return;
         }
-        // prescale
+        // for proper rounding in fourth stage
         x0 = sls(blk[0], 11) + 128;
+
+        // first stage (prescale)
         x8 = kW7 * (x4 + x5);
         x4 = x8 + (kW1 - kW7) * x4;
         x5 = x8 - (kW1 + kW7) * x5;
         x8 = kW3 * (x6 + x7);
         x6 = x8 - (kW3 - kW5) * x6;
         x7 = x8 - (kW3 + kW5) * x7;
-        // interleaved stages
+
+        // second stage
         x8 = x0 + x1;
         x0 -= x1;
         x1 = kW6 * (x3 + x2);
@@ -244,12 +281,16 @@ private:
         x4 -= x6;
         x6 = x5 + x7;
         x5 -= x7;
+
+        // third stage
         x7 = x8 + x3;
         x8 -= x3;
         x3 = x0 + x2;
         x0 -= x2;
         x2 = (181 * (x4 + x5) + 128) >> 8; // (256/sqrt(2) * <clip>) / 256
         x4 = (181 * (x4 - x5) + 128) >> 8; // (256/sqrt(2) * <clip>) / 256
+
+        // fourth stage
         blk[0] = (x7 + x1) >> 8;
         blk[1] = (x3 + x2) >> 8;
         blk[2] = (x0 + x4) >> 8;
@@ -260,6 +301,14 @@ private:
         blk[7] = (x7 - x1) >> 8;
     }
 
+    // column (vertical) IDCT
+    //
+    //             7                         pi         1
+    // dst[8*k] = sum c[1] * src[8*1] * cos( -- * ( k + - ) * 1 )
+    //            1=0                        8          2
+    // where: c[0]     = 1/1024
+    //        c[1...7] = (1/1024)*sqrt(2)
+    template <bool ClippingTable>
     void columnIDCT(const int* blk, unsigned char *out, int stride) {
         int x0, x1, x2, x3, x4, x5, x6, x7, x8;
         // if all AC components are zero, then IDCT is trival.
@@ -276,15 +325,18 @@ private:
             }
             return;
         }
-        // prescale
+        // for proper rounding in fourth stage
         x0 = sls(blk[0], 8) + 8192;
+
+        // first stage (prescale)
         x8 = kW7 * (x4 + x5) + 4;
         x4 = (x8 + (kW1 - kW7) * x4) >> 3;
         x5 = (x8 - (kW1 + kW7) * x5) >> 3;
         x8 = kW3 * (x6 + x7) + 4;
         x6 = (x8 - (kW3 - kW5) * x6) >> 3;
         x7 = (x8 - (kW3 + kW5) * x7) >> 3;
-        // interleaved stages
+
+        // second stage
         x8 = x0 + x1;
         x0 -= x1;
         x1 = kW6 * (x3 + x2) + 4;
@@ -294,20 +346,35 @@ private:
         x4 -= x6;
         x6 = x5 + x7;
         x5 -= x7;
+
+        // third stage
         x7 = x8 + x3;
         x8 -= x3;
         x3 = x0 + x2;
         x0 -= x2;
         x2 = (181 * (x4 + x5) + 128) >> 8; // (256/sqrt(2) * <clip>) / 256
         x4 = (181 * (x4 - x5) + 128) >> 8; // (256/sqrt(2) * <clip>) / 256
-        *out = clip(((x7 + x1) >> 14) + 128); out += stride;
-        *out = clip(((x3 + x2) >> 14) + 128); out += stride;
-        *out = clip(((x0 + x4) >> 14) + 128); out += stride;
-        *out = clip(((x8 + x6) >> 14) + 128); out += stride;
-        *out = clip(((x8 - x6) >> 14) + 128); out += stride;
-        *out = clip(((x0 - x4) >> 14) + 128); out += stride;
-        *out = clip(((x3 - x2) >> 14) + 128); out += stride;
-        *out = clip(((x7 - x1) >> 14) + 128);
+
+        // forth stage
+        if (ClippingTable) {
+            *out = gIDCTClippingTable(((x7 + x1) >> 14) + 128); out += stride;
+            *out = gIDCTClippingTable(((x3 + x2) >> 14) + 128); out += stride;
+            *out = gIDCTClippingTable(((x0 + x4) >> 14) + 128); out += stride;
+            *out = gIDCTClippingTable(((x8 + x6) >> 14) + 128); out += stride;
+            *out = gIDCTClippingTable(((x8 - x6) >> 14) + 128); out += stride;
+            *out = gIDCTClippingTable(((x0 - x4) >> 14) + 128); out += stride;
+            *out = gIDCTClippingTable(((x3 - x2) >> 14) + 128); out += stride;
+            *out = gIDCTClippingTable(((x7 - x1) >> 14) + 128);
+        } else {
+            *out = clip(((x7 + x1) >> 14) + 128); out += stride;
+            *out = clip(((x3 + x2) >> 14) + 128); out += stride;
+            *out = clip(((x0 + x4) >> 14) + 128); out += stride;
+            *out = clip(((x8 + x6) >> 14) + 128); out += stride;
+            *out = clip(((x8 - x6) >> 14) + 128); out += stride;
+            *out = clip(((x0 - x4) >> 14) + 128); out += stride;
+            *out = clip(((x3 - x2) >> 14) + 128); out += stride;
+            *out = clip(((x7 - x1) >> 14) + 128);
+        }
     }
 
     int viewBits(int bits) {
@@ -547,6 +614,7 @@ private:
         return value;
     }
 
+    template <bool ClippingTable>
     void decodeBlock(component* c, unsigned char* out) {
         unsigned char code = 0;
         int coef = 0;
@@ -567,9 +635,10 @@ private:
         for (coef = 0;  coef < 64;  coef += 8)
             rowIDCT(&m_block[coef]);
         for (coef = 0;  coef < 8;  ++coef)
-            columnIDCT(&m_block[coef], &out[coef], c->stride);
+            columnIDCT<ClippingTable>(&m_block[coef], &out[coef], c->stride);
     }
 
+    template <bool ClippingTable>
     void decodeScanlines() {
         size_t i;
         size_t rstcount = m_rstinterval;
@@ -598,7 +667,7 @@ private:
                 for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
                     for (int sby = 0; sby < c->ssy; ++sby) {
                         for (int sbx = 0; sbx < c->ssx; ++sbx) {
-                            decodeBlock(c, &c->pixels[((mby * c->ssy + sby) * c->stride + mbx * c->ssx + sbx) << 3]);
+                            decodeBlock<ClippingTable>(c, &c->pixels[((mby * c->ssy + sby) * c->stride + mbx * c->ssx + sbx) << 3]);
                             if (m_error)
                                 return;
                         }
@@ -901,7 +970,7 @@ private:
         }
     }
 
-    result decode(const u::vector<unsigned char> &data, chromaFilter filter) {
+    result decode(const u::vector<unsigned char> &data, chromaFilter filter, bool clippingTable) {
         m_position = (const unsigned char*)&data[0];
         m_size = data.size() & 0x7FFFFFFF;
 
@@ -909,6 +978,10 @@ private:
             return kInvalid;
         if (memcmp(m_position, kMagic, 3))
             return kInvalid;
+
+        void (jpeg::*scanLineDecoder)() = clippingTable
+            ? &jpeg::decodeScanlines<true>
+            : &jpeg::decodeScanlines<false>;
 
         skip(2);
         while (!m_error) {
@@ -930,7 +1003,7 @@ private:
                 decodeDRI();
                 break;
             case 0xDA:
-                decodeScanlines();
+                (this->*scanLineDecoder)();
                 break;
             case 0xFE:
                 skipMarker();
@@ -981,6 +1054,8 @@ const unsigned char jpeg::m_zz[64] = {
     35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51,
     58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63
 };
+
+jpeg::IDCTClippingTable jpeg::gIDCTClippingTable;
 
 ///
 /// PNG decoder
