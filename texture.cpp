@@ -222,7 +222,7 @@ private:
             memset(table, 0, sizeof table);
             int16_t *clip = table + 512;
             for (int i = -512; i < 512; i++)
-                clip[i] = (i < -256) ? -256 : ((i > 255) ? 255 : i);
+                clip[i] = m::clamp(i, -256, 255);
         }
         unsigned char operator()(int index) const {
             return table[512 + index];
