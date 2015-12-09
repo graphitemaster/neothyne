@@ -218,16 +218,18 @@ private:
     // 2KB clipping table, fits in L1 cache.
     // operator()(x) is functionally equivalent to clip(x) above
     static struct IDCTClippingTable {
-        IDCTClippingTable() {
-            memset(table, 0, sizeof table);
-            int16_t *clip = table + 512;
+        IDCTClippingTable()
+            : read(table + 512)
+        {
             for (int i = -512; i < 512; i++)
-                clip[i] = m::clamp(i, -256, 255);
+                read[i] = m::clamp(i, -256, 255);
+            read += 128;
         }
         unsigned char operator()(int index) const {
-            return table[512 + index];
+            return read[index];
         }
         int16_t table[1024];
+        int16_t *read;
     } gIDCTClippingTable;
 
     // 13-bit fixed point representation of trigonometric constants
@@ -360,14 +362,14 @@ private:
 
         // forth stage
         if (ClippingTable) {
-            *out = gIDCTClippingTable(((x7 + x1) >> 14) + 128); out += stride;
-            *out = gIDCTClippingTable(((x3 + x2) >> 14) + 128); out += stride;
-            *out = gIDCTClippingTable(((x0 + x4) >> 14) + 128); out += stride;
-            *out = gIDCTClippingTable(((x8 + x6) >> 14) + 128); out += stride;
-            *out = gIDCTClippingTable(((x8 - x6) >> 14) + 128); out += stride;
-            *out = gIDCTClippingTable(((x0 - x4) >> 14) + 128); out += stride;
-            *out = gIDCTClippingTable(((x3 - x2) >> 14) + 128); out += stride;
-            *out = gIDCTClippingTable(((x7 - x1) >> 14) + 128);
+            *out = gIDCTClippingTable((x7 + x1) >> 14); out += stride;
+            *out = gIDCTClippingTable((x3 + x2) >> 14); out += stride;
+            *out = gIDCTClippingTable((x0 + x4) >> 14); out += stride;
+            *out = gIDCTClippingTable((x8 + x6) >> 14); out += stride;
+            *out = gIDCTClippingTable((x8 - x6) >> 14); out += stride;
+            *out = gIDCTClippingTable((x0 - x4) >> 14); out += stride;
+            *out = gIDCTClippingTable((x3 - x2) >> 14); out += stride;
+            *out = gIDCTClippingTable((x7 - x1) >> 14);
         } else {
             *out = clip(((x7 + x1) >> 14) + 128); out += stride;
             *out = clip(((x3 + x2) >> 14) + 128); out += stride;
