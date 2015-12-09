@@ -141,7 +141,11 @@ struct jpeg : decoder {
         memset(m_qtab, 0, sizeof m_qtab);
         memset(m_block, 0, sizeof m_block);
 
-        decode(data, chromaFilter(tex_jpg_chroma.get()), !!tex_jpg_cliplut.get());
+        const chromaFilter filter = chromaFilter(tex_jpg_chroma.get());
+        if (tex_jpg_cliplut.get())
+            decode<true>(data, filter);
+        else
+            decode<false>(data, filter);
 
         switch (m_bpp) {
         case 1:
@@ -236,7 +240,6 @@ private:
 
     // portable signed left shift
     #define sls(X, Y) (int)((unsigned int)(X) << (Y))
-
 
     // row (horizontal) IDCT
     //
@@ -970,7 +973,8 @@ private:
         }
     }
 
-    result decode(const u::vector<unsigned char> &data, chromaFilter filter, bool clippingTable) {
+    template <bool ClippingTable>
+    result decode(const u::vector<unsigned char> &data, chromaFilter filter) {
         m_position = (const unsigned char*)&data[0];
         m_size = data.size() & 0x7FFFFFFF;
 
@@ -978,10 +982,6 @@ private:
             return kInvalid;
         if (memcmp(m_position, kMagic, 3))
             return kInvalid;
-
-        void (jpeg::*scanLineDecoder)() = clippingTable
-            ? &jpeg::decodeScanlines<true>
-            : &jpeg::decodeScanlines<false>;
 
         skip(2);
         while (!m_error) {
@@ -1003,7 +1003,7 @@ private:
                 decodeDRI();
                 break;
             case 0xDA:
-                (this->*scanLineDecoder)();
+                decodeScanlines<ClippingTable>();
                 break;
             case 0xFE:
                 skipMarker();
