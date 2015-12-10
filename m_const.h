@@ -116,8 +116,9 @@ static inline int rempio2(float x, double &y) {
     static const double kPIO2T = 1.58932547735281966916e-08;
     const floatShape shape = { x };
     const uint32_t ix = shape.asInt & 0x7FFFFFFF;
+    // 25+53 bit pi is good enough for median size
     if (ix < 0x4DC90FDB) { // |x| ~< 2^28*(pi/2)
-        const f64 fn = x*kInvPio2 + kToInt - kToInt;
+        const f64 fn = (double_t)x*kInvPio2 + kToInt - kToInt;
         const int n = int32_t(fn);
         y = x - fn*kPIO2H - fn*kPIO2T;
         return n;
