@@ -122,7 +122,7 @@ static inline float tandf(double x, bool odd) {
     return odd ? -1.0/v : v;
 }
 
-static inline int rempio2(float x, double &y) {
+static inline int rempio2(float x, uint32_t ix, double &y) {
 #if FLT_EVAL_METHOD == 0 || FLT_EVAL_METHOD == 1
     static const double kToInt = 1.5 / DBL_EPSILON;
 #elif FLT_EVAL_METHOD == 2
@@ -131,8 +131,6 @@ static inline int rempio2(float x, double &y) {
     static const double kInvPio2 = 6.36619772367581382433e-01;
     static const double kPIO2H = 1.57079631090164184570e+00;
     static const double kPIO2T = 1.58932547735281966916e-08;
-    const floatShape shape = { x };
-    const uint32_t ix = shape.asInt & 0x7FFFFFFF;
     // 25+53 bit pi is good enough for median size
     if (ix < 0x4DC90FDB) { // |x| ~< 2^28*(pi/2)
         const f64 fn = (f64)x*kInvPio2 + kToInt - kToInt;
@@ -150,9 +148,8 @@ static inline int rempio2(float x, double &y) {
 
 static inline float cos(float x) {
     const floatShape shape = { x };
-    uint32_t ix = shape.asInt;
-    const uint32_t sign = ix >> 31;
-    ix &= 0x7FFFFFFF;
+    const uint32_t ix = shape.asInt & 0x7FFFFFFF;
+    const uint32_t sign = shape.asInt >> 31;
     if (ix <= 0x3F490FDA) // |x| ~<= pi/4
         return ix < 0x39800000 ? 1.0f : cosdf(x); // |x| < 2**-12
     if (ix <= 0x407B53D1) { // |x| ~<= 5*pi/4
@@ -167,7 +164,7 @@ static inline float cos(float x) {
     }
     assert(ix < 0x7F800000 && "NaN");
     double y;
-    const int n = rempio2(x, y);
+    const int n = rempio2(x, ix, y);
     switch (n&3) {
     case 0: return cosdf(y);
     case 1: return sindf(-y);
@@ -178,9 +175,8 @@ static inline float cos(float x) {
 
 static inline float sin(float x) {
     const floatShape shape = { x };
-    uint32_t ix = shape.asInt;
-    const uint32_t sign = ix >> 31;
-    ix &= 0x7FFFFFFF;
+    const uint32_t ix = shape.asInt & 0x7FFFFFFF;
+    const uint32_t sign = shape.asInt >> 31;
     if (ix <= 0x3F490FDA) // |x| ~<= pi/4
         return ix < 0x39800000 ? x : sindf(x); // |x| < 2**-12
     if (ix <= 0x407B53D1) { // |x| ~<= 5*pi/4
@@ -195,7 +191,7 @@ static inline float sin(float x) {
     }
     assert(ix < 0x7F800000 && "NaN");
     double y;
-    const int n = rempio2(x, y);
+    const int n = rempio2(x, ix, y);
     switch (n&3) {
     case 0: return sindf(y);
     case 1: return cosdf(y);
@@ -206,9 +202,8 @@ static inline float sin(float x) {
 
 static inline float tan(float x) {
     const floatShape shape = { x };
-    uint32_t ix = shape.asInt;
-    const uint32_t sign = ix >> 31;
-    ix &= 0x7FFFFFFF;
+    const uint32_t ix = shape.asInt & 0x7FFFFFFF;
+    const uint32_t sign = shape.asInt >> 31;
     if (ix < 0x3F490FDa) // |x| ~<= pi/4
         return ix < 0x39800000 ? x : tandf(x, 0); // |x| < 2**-12
     if (ix <= 0x407B53D1) { // |x| ~<= 5*pi/4
@@ -223,15 +218,14 @@ static inline float tan(float x) {
     }
     assert(ix < 0x7F800000);
     double y;
-    const int n = rempio2(x, y);
+    const int n = rempio2(x, ix, y);
     return tandf(y, n&1);
 }
 
 static inline void sincos(float x, float &s, float &c) {
     const floatShape shape = { x };
-    uint32_t ix = shape.asInt;
-    const uint32_t sign = ix >> 31;
-    ix &= 0x7FFFFFFF;
+    const uint32_t ix = shape.asInt & 0x7FFFFFFF;
+    const uint32_t sign = shape.asInt >> 31;
     if (ix <= 0x3F490FDA) { // |x| ~<= pi/4
         if (ix < 0x39800000) { // |x| < 2**-12
             s = x;
@@ -267,7 +261,7 @@ static inline void sincos(float x, float &s, float &c) {
     assert(ix < 0x7F800000);
     double y;
     // argument reduction
-    const int n = rempio2(x, y);
+    const int n = rempio2(x, ix, y);
     switch (n&3) {
     // sin = s, cos = c
     case 0:
