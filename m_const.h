@@ -60,11 +60,11 @@ typedef float f32;
 #endif
 
 // |cos(x) - c(x)| < 2**-34.1 (~[-5.37e-11, 5.295e-11])
+static const double kC0 = -0x1FFFFFFD0C5E81.0p-54; // -0.499999997251031003120
+static const double kC1 = 0x155553E1053A42.0p-57; // 0.0416666233237390631894
+static const double kC2 = -0x16C087E80F1E27.0p-62; // -0.00138867637746099294692
+static const double kC3 = 0x199342E0EE5069.0p-68; // 0.0000243904487962774090654
 static inline float cosdf(double x) {
-    static const double kC0 = -0x1FFFFFFD0C5E81.0p-54; // -0.499999997251031003120
-    static const double kC1 = 0x155553E1053A42.0p-57; // 0.0416666233237390631894
-    static const double kC2 = -0x16C087E80F1E27.0p-62; // -0.00138867637746099294692
-    static const double kC3 = 0x199342E0EE5069.0p-68; // 0.0000243904487962774090654
     const f64 z = x*x;
     const f64 w = z*z;
     const f64 r = kC2+z*kC3;
@@ -72,16 +72,33 @@ static inline float cosdf(double x) {
 }
 
 // |sin(x)/x - s(x)| < 2**-37.5 (~[-4.89e-12, 4.824e-12])
+static const double kS1 = -0x15555554CBAC77.0p-55; // -0.166666666416265235595
+static const double kS2 = 0x111110896EFBB2.0p-59; // 0.0083333293858894631756
+static const double kS3 = -0x1A00F9E2CAE774.0p-65; // -0.000198393348360966317347
+static const double kS4 = 0x16CD878C3B46A7.0p-71; // 0.0000027183114939898219064
 static inline float sindf(double x) {
-    static const double kS1 = -0x15555554CBAC77.0p-55; // -0.166666666416265235595
-    static const double kS2 = 0x111110896EFBB2.0p-59; // 0.0083333293858894631756
-    static const double kS3 = -0x1A00F9E2CAE774.0p-65; // -0.000198393348360966317347
-    static const double kS4 = 0x16CD878C3B46A7.0p-71; // 0.0000027183114939898219064
     const f64 z = x*x;
     const f64 w = z*z;
-    const f64 r = kS3 + z*kS4;
+    const f64 r = kS3+z*kS4;
     const f64 s = z*x;
     return (x + s*(kS1 + z*kS2)) + s*w*r;
+}
+
+// |cos(x) - c(x)| < 2**-34.1 (~[-5.37e-11, 5.295e-11])]
+// |sin(x)/x - s(x)| < 2**-37.5 (~[-4.89e-12, 4.824e-12])
+template <int E>
+static inline void sincosdf(double x, float &sin, float &cos) {
+    const f64 z = x*x;
+    // polynomial reduction into independent terms for parallel evaluation
+    const f64 rc = kC2+z*kC3;
+    const f64 rs = kS3+z*kS4;
+    const f64 w = z*z;
+    const f64 s = z*x;
+    const f64 ss = (x + s*(kS1 + z*kS2)) + s*w*rc;
+    const f64 cc = ((1.0+z*kC0) + w*kC1) + (w*z)*rs;
+    // Compiler synthesizes away branches
+    sin = E & 1 ? -ss : ss;
+    cos = E & 2 ? -cc : cc;
 }
 
 // |tan(x)/x - t(x)| < 2**-25.5 (~[-2e-08, 2e-08])
@@ -118,15 +135,14 @@ static inline int rempio2(float x, double &y) {
     const uint32_t ix = shape.asInt & 0x7FFFFFFF;
     // 25+53 bit pi is good enough for median size
     if (ix < 0x4DC90FDB) { // |x| ~< 2^28*(pi/2)
-        const f64 fn = (double_t)x*kInvPio2 + kToInt - kToInt;
+        const f64 fn = (f64)x*kInvPio2 + kToInt - kToInt;
         const int n = int32_t(fn);
         y = x - fn*kPIO2H - fn*kPIO2T;
         return n;
     }
-    if (ix >= 0x7F800000) {
-        y = x-x;
-        return 0;
-    }
+
+    assert(ix < 0x7F800000 && "NaN");
+
     // value is far too large, something is pathologically wrong
     assert(0 && "function called with a huge value");
     return 0;
@@ -137,11 +153,8 @@ static inline float cos(float x) {
     uint32_t ix = shape.asInt;
     const uint32_t sign = ix >> 31;
     ix &= 0x7FFFFFFF;
-    if (ix <= 0x3F490FDA) { // |x| ~<= pi/4
-        if (ix < 0x39800000) // |x| < 2**-12
-            return 1.0f;
-        return cosdf(x);
-    }
+    if (ix <= 0x3F490FDA) // |x| ~<= pi/4
+        return ix < 0x39800000 ? 1.0f : cosdf(x); // |x| < 2**-12
     if (ix <= 0x407B53D1) { // |x| ~<= 5*pi/4
         if (ix > 0x4016CBE3) // |x| ~> 3*pi/4
             return -cosdf(sign ? x+kC2PIO2 : x-kC2PIO2);
@@ -152,8 +165,7 @@ static inline float cos(float x) {
             return cosdf(sign ? x+kC4PIO2 : x-kC4PIO2);
         return sindf(sign ? -x-kC3PIO2 : x-kC3PIO2);
     }
-    if (ix >= 0x7F800000) // NaN
-        return x-x;
+    assert(ix < 0x7F800000 && "NaN");
     double y;
     const int n = rempio2(x, y);
     switch (n&3) {
@@ -169,29 +181,19 @@ static inline float sin(float x) {
     uint32_t ix = shape.asInt;
     const uint32_t sign = ix >> 31;
     ix &= 0x7FFFFFFF;
-    if (ix <= 0x3F490FDA) { // |x| ~<= pi/4
-        if (ix < 0x39800000) // |x| < 2**-12
-            return x;
-        return sindf(x);
-    }
+    if (ix <= 0x3F490FDA) // |x| ~<= pi/4
+        return ix < 0x39800000 ? x : sindf(x); // |x| < 2**-12
     if (ix <= 0x407B53D1) { // |x| ~<= 5*pi/4
-        if (ix <= 0x4016CBE3) { // |x| ~<= 3pi/4
-            if (sign)
-                return -cosdf(x + kC1PIO2);
-            return cosdf(x - kC1PIO2);
-        }
+        if (ix <= 0x4016CBE3) // |x| ~<= 3pi/4
+            return sign ? -cosdf(x + kC1PIO2) : cosdf(x - kC1PIO2);
         return sindf(sign ? -(x + kC2PIO2) : -(x - kC2PIO2));
     }
     if (ix <= 0x40E231D5) { // |x| ~<= 9*pi/4
-        if (ix <= 0x40AFEDDF) { // |x| ~<= 7*pi/4
-            if (sign)
-                return cosdf(x + kC3PIO2);
-            return -cosdf(x - kC3PIO2);
-        }
+        if (ix <= 0x40AFEDDF) // |x| ~<= 7*pi/4
+            return sign ? cosdf(x + kC3PIO2) : -cosdf(x - kC3PIO2);
         return sindf(sign ? x+kC4PIO2 : x-kC4PIO2);
     }
-    if (ix >= 0x7F800000) // NaN
-        return x-x;
+    assert(ix < 0x7F800000 && "NaN");
     double y;
     const int n = rempio2(x, y);
     switch (n&3) {
@@ -207,11 +209,8 @@ static inline float tan(float x) {
     uint32_t ix = shape.asInt;
     const uint32_t sign = ix >> 31;
     ix &= 0x7FFFFFFF;
-    if (ix < 0x3F490FDa) { // |x| ~<= pi/4
-        if (ix < 0x39800000) // |x| < 2**-12
-            return x;
-        return tandf(x, 0);
-    }
+    if (ix < 0x3F490FDa) // |x| ~<= pi/4
+        return ix < 0x39800000 ? x : tandf(x, 0); // |x| < 2**-12
     if (ix <= 0x407B53D1) { // |x| ~<= 5*pi/4
         if (ix <= 0x4016CBE3) // |x| ~<= 3pi/4
             return tandf((sign ? x+kC1PIO2 : x-kC1PIO2), true);
@@ -222,8 +221,7 @@ static inline float tan(float x) {
             return tandf((sign ? x+kC3PIO2 : x-kC3PIO2), true);
         return tandf((sign ? x+kC4PIO2 : x-kC4PIO2), false);
     }
-    if (ix >= 0x7F800000) // NaN
-        return x-x;
+    assert(ix < 0x7F800000);
     double y;
     const int n = rempio2(x, y);
     return tandf(y, n&1);
@@ -240,62 +238,54 @@ static inline void sincos(float x, float &s, float &c) {
             c = 1.0f;
             return;
         }
-        s = sindf(x);
-        c = cosdf(x);
+        sincosdf<0>(x, s, c);
         return;
     }
     if (ix <= 0x407B53D1) { // |x| ~<= 5*pi/4
         if (ix <= 0x4016CBE3) { // |x| ~<= 3*pi/4
-            if (sign) {
-                const double value = x + kC1PIO2;
-                s = -cosdf(value);
-                c = sindf(value);
-            } else {
-                const double value = kC1PIO2 - x;
-                s = cosdf(value);
-                c = sindf(value);
-            }
+            if (sign)
+                sincosdf<2>(x + kC1PIO2, c, s);
+            else
+                sincosdf<0>(kC1PIO2 - x, c, s);
             return;
         }
-        const double value = sign ? x+kC2PIO2 : x-kC2PIO2;
-        s = -sindf(value);
-        c = -cosdf(value);
+        // -sin(x+c) is not correct if x+c could be 0: -0 vs 0
+        sincosdf<3>(sign ? x+kC2PIO2 : x-kC2PIO2, s, c);
         return;
     }
     if (ix <= 0x40E231D5) { // |x| ~<= 9*pi/4
         if (ix <= 0x40AFEDDF) { // |x| ~<= 7*pi/4
-            if (sign) {
-                const double value = x+kC3PIO2;
-                s = cosdf(value);
-                c = -sindf(value);
-            } else {
-                const double value = x-kC3PIO2;
-                s = -cosdf(value);
-                c = sindf(value);
-            }
+            if (sign)
+                sincosdf<1>(x+kC3PIO2, c, s);
+            else
+                sincosdf<2>(x-kC3PIO2, c, s);
             return;
         }
-        const double value = sign ? x+kC4PIO2 : x-kC4PIO2;
-        s = sindf(value);
-        c = cosdf(value);
+        sincosdf<0>(sign ? x+kC4PIO2 : x-kC4PIO2, s, c);
         return;
     }
-    if (ix >= 0x7F800000) { // NaN
-        s = x-x;
-        c = x-x;
-        return;
-    }
+    assert(ix < 0x7F800000);
     double y;
+    // argument reduction
     const int n = rempio2(x, y);
-    const float ss = sindf(y);
-    const float cc = cosdf(y);
     switch (n&3) {
-    case 0: s = ss, c = cc; break;
-    case 1: s = cc, c = -ss; break;
-    case 2: s = -ss, c = -cc; break;
+    // sin = s, cos = c
+    case 0:
+        sincosdf<0>(y, s, c);
+        return;
+    // sin = c, cos = -s
+    case 1:
+        sincosdf<1>(y, c, s);
+        return;
+    // sin = -s, cos = -c
+    case 2:
+        sincosdf<3>(y, s, c);
+        return;
+    // sin = -c, cos = s
+    default:
+        sincosdf<2>(y, c, s);
+        return;
     }
-    s = -cc;
-    c = ss;
 }
 
 static inline float floor(float x) {
