@@ -39,29 +39,22 @@ mat4 mat4::scale(const vec3 &s) {
 }
 
 mat4 mat4::rotate(const vec3 &r) {
-    const float x = toRadian(r.x);
-    const float y = toRadian(r.y);
-    const float z = toRadian(r.z);
+    const m::vec2 x = m::sincos(toRadian(r.x));
+    const m::vec2 y = m::sincos(toRadian(r.y));
+    const m::vec2 z = m::sincos(toRadian(r.z));
 
-    float xsin, xcos;
-    float ysin, ycos;
-    float zsin, zcos;
-    m::sincos(x, xsin, xcos);
-    m::sincos(y, ysin, ycos);
-    m::sincos(z, zsin, zcos);
-
-    const mat4 rx = { { 1.0f, 0.0f, 0.0f, 0.0f },
-                      { 0.0f, xcos, -xsin, 0.0f },
-                      { 0.0f, xsin, xcos, 0.0f },
-                      { 0.0f, 0.0f, 0.0f, 1.0f } },
-               ry = { { ycos, 0.0f, -ysin, 0.0f },
-                      { 0.0f, 1.0f, 0.0f, 0.0f },
-                      { ysin, 0.0f, ycos, 0.0f },
-                      { 0.0f, 0.0f, 0.0f, 1.0f } },
-               rz = { { zcos, -zsin, 0.0f, 0.0f },
-                      { zsin, zcos, 0.0f, 0.0f },
-                      { 0.0f, 0.0f, 1.0f, 0.0f },
-                      { 0.0f, 0.0f, 0.0f, 1.0f } };
+    const m::mat4 rx = { { 1.0f, 0.0f, 0.0f, 0.0f },
+                         { 0.0f, x.y, -x.x, 0.0f },
+                         { 0.0f, x.x, x.y, 0.0f },
+                         { 0.0f, 0.0f, 0.0f, 1.0f } },
+                  ry = { { y.y, 0.0f, -y.x, 0.0f },
+                         { 0.0f, 1.0f, 0.0f, 0.0f },
+                         { y.x, 0.0f, y.y, 0.0f },
+                         { 0.0f, 0.0f, 0.0f, 1.0f } },
+                  rz = { { z.y, -z.x, 0.0f, 0.0f },
+                         { z.x, z.y, 0.0f, 0.0f },
+                         { 0.0f, 0.0f, 1.0f, 0.0f },
+                         { 0.0f, 0.0f, 0.0f, 1.0f } };
 
     return rz * ry * rx;
 }

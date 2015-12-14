@@ -1,6 +1,6 @@
 #include "r_ssao.h"
 
-#include "m_const.h"
+#include "m_trig.h"
 
 #include "u_vector.h"
 #include "u_misc.h"

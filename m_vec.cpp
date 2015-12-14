@@ -13,21 +13,21 @@ void vec2::endianSwap() {
     y = u::endianSwap(y);
 }
 
+vec2 sincos(float x) {
+    float sin = 0.0f;
+    float cos = 0.0f;
+    m::sincos(x, sin, cos);
+    return { sin, cos };
+}
+
 const vec3 vec3::xAxis(1.0f, 0.0f, 0.0f);
 const vec3 vec3::yAxis(0.0f, 1.0f, 0.0f);
 const vec3 vec3::zAxis(0.0f, 0.0f, 1.0f);
 const vec3 vec3::origin(0.0f, 0.0f, 0.0f);
 
 void vec3::rotate(float angle, const vec3 &axe) {
-    const float radian = m::toRadian(angle / 2.0f);
-    float s;
-    float c;
-    m::sincos(radian, s, c);
-    const float rx = axe.x * s;
-    const float ry = axe.y * s;
-    const float rz = axe.z * s;
-    const float rw = c;
-    const quat rotateQ(rx, ry, rz, rw);
+    const vec2 sc = m::sincos(toRadian(angle * 0.5f));
+    const quat rotateQ(axe.x * sc.x, axe.y * sc.x, axe.z * sc.x, sc.y);
     const quat conjugateQ = rotateQ.conjugate();
     const quat W = rotateQ * (*this) * conjugateQ;
     x = W.x;

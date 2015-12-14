@@ -302,10 +302,9 @@ gui::gui()
 
     for (size_t i = 0; i < kCircleVertices; ++i) {
         const float a = float(i) / float(kCircleVertices) * m::kTau;
-        float s, c;
-        m::sincos(a, s, c);
-        m_circleVertices[i*2+0] = c;
-        m_circleVertices[i*2+1] = s;
+        const m::vec2 sc = m::sincos(a);
+        m_circleVertices[i*2+0] = sc.y;
+        m_circleVertices[i*2+1] = sc.x;
     }
 
     m_atlas.m_width = kAtlasSize;

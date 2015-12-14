@@ -3,8 +3,8 @@
 #include "r_geom.h"
 
 #include "m_vec.h"
-#include "m_const.h"
 #include "m_half.h"
+#include "m_trig.h"
 
 #include "u_vector.h"
 
@@ -92,9 +92,8 @@ bool sphere::upload() {
         for (size_t j = 0; j < kSlices + 1; j++) {
             float theta = j==kSlices ? 0 : 2*m::kPi*s;
             auto &v = vertices[i*(kSlices+1) + j];
-            float sv, cv;
-            m::sincos(theta, sv, cv);
-            v = m::vec3(sv*sinrho, cv*sinrho, -cosrho);
+            m::vec2 sc = m::sincos(theta);
+            v = m::vec3(sc.x*sinrho, sc.y*sinrho, -cosrho);
             s += ds;
         }
         t -= dt;
@@ -237,9 +236,8 @@ bool cone::upload() {
     u::vector<m::vec3> vertices;
 
     for (float a = 0.0f; a < m::kTau; a += m::kPi / (kSlices+1) ) {
-        float sin, cos;
-        m::sincos(a, sin, cos);
-        vertices.push_back({sin, 1.0f, cos});
+        const m::vec2 sc = m::sincos(a);
+        vertices.push_back({sc.x, 1.0f, sc.y});
     }
 
     u::vector<GLushort> indices;

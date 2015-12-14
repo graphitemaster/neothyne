@@ -9,7 +9,8 @@ MATH_SOURCES = \
 	m_mat.cpp \
 	m_quat.cpp \
 	m_vec.cpp \
-	m_plane.cpp
+	m_plane.cpp \
+	m_trig.cpp
 
 RENDERER_SOURCES = \
 	r_aa.cpp \

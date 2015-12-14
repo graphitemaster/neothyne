@@ -46,6 +46,8 @@ inline constexpr vec2::vec2(float a)
 {
 }
 
+vec2 sincos(float x);
+
 struct vec3 {
     union {
         struct { float x, y, z; };

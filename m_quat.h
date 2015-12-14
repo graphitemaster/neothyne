@@ -1,6 +1,7 @@
 #ifndef M_QUAT_HDR
 #define M_QUAT_HDR
 #include "m_vec.h"
+#include "m_trig.h"
 
 namespace m {
 
@@ -42,15 +43,12 @@ inline constexpr quat::quat(float x, float y, float z, float w)
 }
 
 inline quat::quat(float angle, const vec3 &vec) {
-    float s;
-    float c;
-    m::sincos(angle / 2.0f, s, c);
-
+    const vec2 sc = m::sincos(angle * 0.5f);
     const vec3 normal = vec.normalized();
-    x = s * normal.x;
-    y = s * normal.y;
-    z = s * normal.z;
-    w = c;
+    x = sc.x * normal.x;
+    y = sc.x * normal.y;
+    z = sc.x * normal.z;
+    w = sc.y;
 }
 
 inline constexpr quat quat::conjugate() const {
