@@ -79,20 +79,21 @@ void billboard::render(const pipeline &pl, float size) {
     rotation.getOrient(nullptr, &up, &side);
 
     m_vertices.destroy();
-    m_vertices.reserve(m_positions.size() * 4);
-    u::vector<GLuint> indices(m_positions.size() * 6);
+    m_vertices.reserve(m_entries.size() * 4);
+    u::vector<GLuint> indices(m_entries.size() * 6);
 
-    u::sort(m_positions.begin(), m_positions.end(),
-        [&pl](const m::vec3 &lhs, const m::vec3 &rhs) {
-            const float d1 = (lhs - pl.position()).abs();
-            const float d2 = (rhs - pl.position()).abs();
+    u::sort(m_entries.begin(), m_entries.end(),
+        [&pl](const entry &lhs, const entry &rhs) {
+            const float d1 = (lhs.position - pl.position()).abs();
+            const float d2 = (rhs.position - pl.position()).abs();
             return d1 > d2;
         }
     );
 
-    for (const auto &it : m_positions) {
-        const m::vec3 x = size * 0.5f * side;
-        const m::vec3 y = size * 0.5f * up;
+    for (const auto &e : m_entries) {
+        const auto &it = e.position;
+        const m::vec3 x = size * 0.5f * ((e.flags & kSide) ? side : e.side);
+        const m::vec3 y = size * 0.5f * ((e.flags & kUp) ? up : e.up);
         const m::vec3 q1 =  x + y + it;
         const m::vec3 q2 = -x + y + it;
         const m::vec3 q3 = -x - y + it;
@@ -130,11 +131,15 @@ void billboard::render(const pipeline &pl, float size) {
     m_method.setVP(p.projection() * p.view());
     m_texture.bind(GL_TEXTURE0);
     gl::DrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
-    m_positions.clear();
+    m_entries.clear();
 }
 
-void billboard::add(const m::vec3 &position) {
-    m_positions.push_back(position);
+void billboard::add(const m::vec3 &position,
+                    int flags,
+                    const m::vec3 &optionalSide,
+                    const m::vec3 &optionalUp)
+{
+    m_entries.push_back({ position, flags, optionalSide, optionalUp });
 }
 
 }

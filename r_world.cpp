@@ -911,7 +911,7 @@ void world::forwardPass(const pipeline &pl) {
 
             const auto &board = m_billboards[it.name];
             for (const auto &jt : it.boards)
-                board->add(jt.position);
+                board->add(jt.position, billboard::kSide, m::vec3::origin, m::vec3::yAxis);
             board->render(pl, it.size);
         }
         gl::Enable(GL_CULL_FACE);

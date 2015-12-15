@@ -64,11 +64,11 @@ inline constexpr mat4::mat4(const vec4 &a, const vec4 &b, const vec4 &c, const v
 
 
 inline float *mat4::ptr() {
-    return &a.x;
+    return &a[0];
 }
 
 inline const float *mat4::ptr() const {
-    return &a.x;
+    return &a[0];
 }
 
 ///! mat3x3

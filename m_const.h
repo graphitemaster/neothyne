@@ -1,8 +1,6 @@
 #ifndef M_CONST_HDR
 #define M_CONST_HDR
 #include <stdint.h>
-#include <assert.h>
-#include <float.h>
 
 namespace m {
 

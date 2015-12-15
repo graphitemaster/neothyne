@@ -38,8 +38,16 @@ struct billboard : geom {
 
     void render(const pipeline &pl, float size);
 
+    enum {
+        kSide = 1 << 1,
+        kUp = 1 << 2
+    };
+
     // you must add all positions for this billboard before calling `upload'
-    void add(const m::vec3 &position);
+    void add(const m::vec3 &position,
+             int flags = kSide | kUp,
+             const m::vec3 &optionalSide = m::vec3::origin,
+             const m::vec3 &optionalUp = m::vec3::origin);
 
     const char *description() const;
     size_t memory() const;
@@ -48,9 +56,17 @@ private:
     struct vertex {
         m::vec3 position;
         m::vec2 coordinate;
-        //float u, v;
     };
-    u::vector<m::vec3> m_positions;
+
+    struct entry {
+        entry() = default;
+        m::vec3 position;
+        int flags;
+        m::vec3 side;
+        m::vec3 up;
+    };
+
+    u::vector<entry> m_entries;
     u::vector<vertex> m_vertices;
     texture2D m_texture;
     billboardMethod m_method;

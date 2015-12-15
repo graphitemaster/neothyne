@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <float.h>
+
 #include "m_trig.h"
 #include "m_const.h"
 
