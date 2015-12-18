@@ -214,6 +214,7 @@ inline void buffer<T>::shrink_to_fit() {
         const size_t size = size_t(last - first);
         T *resize = neoMalloc(sizeof *resize * size);
         move_urange(resize, first, last);
+        neoFree(first);
         first = resize;
         last = resize + size;
         capacity = last;
