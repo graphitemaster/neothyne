@@ -259,7 +259,7 @@ namespace detail {
         h.size = 0;
         h.chunks = nullptr;
         h.unused = nullptr;
-        h.buckets.resize(n, nullptr);
+        h.buckets.resize(n);
     }
 
     template <typename N>
@@ -353,7 +353,7 @@ namespace detail {
     inline void hash_rehash(hash_base<N> &h, size_t n) {
         buffer<hash_node<N> *> &och = h.buckets;
         buffer<hash_node<N> *> nch;
-        nch.resize(n, nullptr);
+        nch.resize(n);
 
         hash_node<N> *p = *och.first;
         while (p) {
