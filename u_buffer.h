@@ -73,6 +73,8 @@ struct buffer {
     void insert(T *where, const I *ifirst, const I *ilast);
     void swap(buffer &other);
     void shrink_to_fit();
+    template <typename P>
+    void append(const P *param);
 
     T *erase(T *ifirst, T*ilast);
 
@@ -218,6 +220,17 @@ inline void buffer<T>::shrink_to_fit() {
         first = resize;
         last = resize + size;
         capacity = last;
+    }
+}
+
+template <typename T>
+template <typename P>
+inline void buffer<T>::append(const P *param) {
+    if (capacity != last) {
+        new (last) T(*param);
+        ++last;
+    } else {
+        insert(last, param, param + 1);
     }
 }
 

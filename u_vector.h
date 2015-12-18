@@ -259,7 +259,7 @@ inline void vector<T>::reserve(size_t capacity) {
 
 template <typename T>
 inline void vector<T>::push_back(const T &value) {
-    m_buffer.insert(m_buffer.last, &value, &value + 1);
+    m_buffer.append(&value);
 }
 
 template <typename T>
