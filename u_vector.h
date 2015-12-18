@@ -107,6 +107,7 @@ struct vector {
     void reserve(size_t capacity);
 
     void push_back(const T &t);
+
     void pop_back();
 
     void swap(vector& other);
@@ -151,7 +152,7 @@ inline vector<T>::vector(vector &&other)
 
 template <typename T>
 inline vector<T>::vector(size_t size) {
-    m_buffer.resize(size, T());
+    m_buffer.resize(size);
 }
 
 template <typename T>
@@ -239,7 +240,7 @@ inline T &vector<T>::back() {
 
 template <typename T>
 inline void vector<T>::resize(size_t size) {
-    m_buffer.resize(size, T());
+    m_buffer.resize(size);
 }
 
 template <typename T>
