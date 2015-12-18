@@ -134,5 +134,7 @@ void *moveMemory(void *dest, const void *src, size_t n);
 uint32_t randu(); //[0, UINT32_MAX]
 float randf(); // [0, 1]
 
+unsigned char log2(uint32_t v);
+
 }
 #endif

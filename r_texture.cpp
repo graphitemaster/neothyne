@@ -971,8 +971,15 @@ bool texture2D::upload() {
             }
         }
 
-        if (r_mipmaps)
-            gl::GenerateMipmap(GL_TEXTURE_2D);
+        if (r_mipmaps) {
+            // Calculate the amount of levels required before texture gets to a
+            // size 1x1
+            const auto levels = u::log2(u::max(m_texture.width(), m_texture.height()));
+            if (levels != 0) {
+                gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, levels);
+                gl::GenerateMipmap(GL_TEXTURE_2D);
+            }
+        }
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         applyFilter();
