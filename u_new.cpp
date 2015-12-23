@@ -121,4 +121,3 @@ extern "C" void __cxa_pure_virtual() {
     assert(0 && "pure virtual function call");
     abort();
 }
-

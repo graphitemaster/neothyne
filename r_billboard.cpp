@@ -55,11 +55,10 @@ bool billboard::upload() {
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
 
-    static const vertex *v = nullptr;
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate); // uv
+    gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertex), 0, GL_DYNAMIC_DRAW);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::position));
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::coordinate));
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint), 0, GL_DYNAMIC_DRAW);
@@ -115,13 +114,12 @@ void billboard::render(const pipeline &pl, float size) {
     if (indices.empty())
         return;
 
-    static const vertex *v = nullptr;
-    m_memory = m_vertices.size() * sizeof *v;
+    m_memory = m_vertices.size() * sizeof(vertex);
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_vertices[0], GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->position); // position
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate); // uv
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::position));
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::coordinate));
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof indices[0], &indices[0], GL_DYNAMIC_DRAW);

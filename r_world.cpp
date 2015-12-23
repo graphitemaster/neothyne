@@ -415,16 +415,15 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     geom::upload();
 
-    static const kdBinVertex *v = nullptr;
     const auto &vertices = m_kdWorld->vertices;
-    m_memory = vertices.size() * sizeof *v;
+    m_memory = vertices.size() * sizeof(kdBinVertex);
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
     gl::BufferData(GL_ARRAY_BUFFER, m_memory, &vertices[0], GL_STATIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->vertex);  // vertex
-    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof *v, &v->normal);  // normals
-    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);  // texCoord
-    gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof *v, &v->tangent);  // tangent
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), u::offset_of(&kdBinVertex::vertex));  // vertex
+    gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), u::offset_of(&kdBinVertex::normal));  // normals
+    gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), u::offset_of(&kdBinVertex::coordinate));  // texCoord
+    gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), u::offset_of(&kdBinVertex::tangent));  // tangent
     gl::EnableVertexAttribArray(0);
     gl::EnableVertexAttribArray(1);
     gl::EnableVertexAttribArray(2);

@@ -520,6 +520,26 @@ struct add_rvalue_reference<const volatile void> {
 template <typename T>
 typename add_rvalue_reference<T>::type declval();
 
+/// offset_of
+namespace detail {
+    template <typename T1, typename T2>
+    struct offset_of {
+        static T2 object;
+        static constexpr size_t offset(T1 T2::*member) {
+            return size_t(&(detail::offset_of<T1, T2>::object.*member)) -
+                   size_t(&detail::offset_of<T1, T2>::object);
+        }
+    };
+    template <typename T1, typename T2>
+    T2 offset_of<T1, T2>::object;
+}
+
+template <typename T1, typename T2>
+inline constexpr void *offset_of(T1 T2::*member) {
+    return (void *)detail::offset_of<T1, T2>::offset(member);
+}
+
+
 }
 
 #undef HAS_FEATURE

@@ -455,7 +455,6 @@ bool gui::upload() {
     gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, kAtlasSize, kAtlasSize, 0, GL_RGBA,
         GL_UNSIGNED_BYTE, m_atlasData);
 
-    static const vertex *v = nullptr;
     gl::GenVertexArrays(1, &m_vao);
     gl::BindVertexArray(m_vao);
     gl::EnableVertexAttribArray(0);
@@ -465,10 +464,10 @@ bool gui::upload() {
     gl::GenBuffers(sizeof m_vbos / sizeof *m_vbos, m_vbos);
     for (auto &vbo : m_vbos) {
         gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof *v, 0, GL_STREAM_DRAW);
-        gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->position);
-        gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);
-        gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof *v, &v->color);
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertex), 0, GL_STREAM_DRAW);
+        gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::position));
+        gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::coordinate));
+        gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::color));
     }
 
     // Rendering methods for GUI
@@ -601,13 +600,12 @@ void gui::render(const pipeline &pl) {
     gl::BufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_STREAM_DRAW);
 
     // Blast it all out in one giant shot
-    static const vertex *v = nullptr;
     gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof *v, &m_vertices[0], GL_STREAM_DRAW);
-    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->position);
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof *v, &v->coordinate);
-    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof *v, &v->color);
+    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(vertex), &m_vertices[0], GL_STREAM_DRAW);
+    gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::position));
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::coordinate));
+    gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::color));
 
     bool rebind = true;
     int method = -1;

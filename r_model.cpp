@@ -607,25 +607,23 @@ bool model::upload() {
         state = "animated";
         if (useHalf) {
             const auto &vertices = m_model.animHalfVertices();
-            static const mesh::animHalfVertex *vert = nullptr;
-            gl::BufferData(GL_ARRAY_BUFFER, sizeof *vert * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-            gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT,    GL_FALSE, sizeof *vert, &vert->position); // vertex
-            gl::VertexAttribPointer(1, 3, GL_HALF_FLOAT,    GL_FALSE, sizeof *vert, &vert->normal); // normals
-            gl::VertexAttribPointer(2, 2, GL_HALF_FLOAT,    GL_FALSE, sizeof *vert, &vert->coordinate); // texCoord
-            gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT,    GL_FALSE, sizeof *vert, &vert->tangent); // tangent
-            gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof *vert, &vert->blendWeight); // blend weight
-            gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof *vert, &vert->blendIndex); // blend index
+            gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::animHalfVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+            gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT,    GL_FALSE, sizeof(mesh::animHalfVertex), u::offset_of(&mesh::animHalfVertex::position)); // vertex
+            gl::VertexAttribPointer(1, 3, GL_HALF_FLOAT,    GL_FALSE, sizeof(mesh::animHalfVertex), u::offset_of(&mesh::animHalfVertex::normal)); // normals
+            gl::VertexAttribPointer(2, 2, GL_HALF_FLOAT,    GL_FALSE, sizeof(mesh::animHalfVertex), u::offset_of(&mesh::animHalfVertex::coordinate)); // texCoord
+            gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT,    GL_FALSE, sizeof(mesh::animHalfVertex), u::offset_of(&mesh::animHalfVertex::tangent)); // tangent
+            gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animHalfVertex), u::offset_of(&mesh::animHalfVertex::blendWeight)); // blend weight
+            gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animHalfVertex), u::offset_of(&mesh::animHalfVertex::blendIndex)); // blend index
             precision = "half";
         } else {
             const auto &vertices = m_model.animVertices();
-            static const mesh::animVertex *vert = nullptr;
-            gl::BufferData(GL_ARRAY_BUFFER, sizeof *vert * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-            gl::VertexAttribPointer(0, 3, GL_FLOAT,         GL_FALSE, sizeof *vert, &vert->position); // vertex
-            gl::VertexAttribPointer(1, 3, GL_FLOAT,         GL_FALSE, sizeof *vert, &vert->normal); // normals
-            gl::VertexAttribPointer(2, 2, GL_FLOAT,         GL_FALSE, sizeof *vert, &vert->coordinate); // texCoord
-            gl::VertexAttribPointer(3, 4, GL_FLOAT,         GL_FALSE, sizeof *vert, &vert->tangent); // tangent
-            gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof *vert, &vert->blendWeight); // blend weight
-            gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof *vert, &vert->blendIndex); // blend index
+            gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::animVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+            gl::VertexAttribPointer(0, 3, GL_FLOAT,         GL_FALSE, sizeof(mesh::animVertex), u::offset_of(&mesh::animVertex::position)); // vertex
+            gl::VertexAttribPointer(1, 3, GL_FLOAT,         GL_FALSE, sizeof(mesh::animVertex), u::offset_of(&mesh::animVertex::normal)); // normals
+            gl::VertexAttribPointer(2, 2, GL_FLOAT,         GL_FALSE, sizeof(mesh::animVertex), u::offset_of(&mesh::animVertex::coordinate)); // texCoord
+            gl::VertexAttribPointer(3, 4, GL_FLOAT,         GL_FALSE, sizeof(mesh::animVertex), u::offset_of(&mesh::animVertex::tangent)); // tangent
+            gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animVertex), u::offset_of(&mesh::animVertex::blendWeight)); // blend weight
+            gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animVertex), u::offset_of(&mesh::animVertex::blendIndex)); // blend index
             precision = "single";
         }
         gl::EnableVertexAttribArray(0);
@@ -638,21 +636,19 @@ bool model::upload() {
         state = "static";
         if (useHalf) {
             const auto &vertices = m_model.basicHalfVertices();
-            static const mesh::basicHalfVertex *vert = nullptr;
-            gl::BufferData(GL_ARRAY_BUFFER, sizeof *vert * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-            gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof *vert, &vert->position);
-            gl::VertexAttribPointer(1, 3, GL_HALF_FLOAT, GL_FALSE, sizeof *vert, &vert->normal);
-            gl::VertexAttribPointer(2, 2, GL_HALF_FLOAT, GL_FALSE, sizeof *vert, &vert->coordinate);
-            gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT, GL_FALSE, sizeof *vert, &vert->tangent);
+            gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::basicHalfVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+            gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), u::offset_of(&mesh::basicHalfVertex::position));
+            gl::VertexAttribPointer(1, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), u::offset_of(&mesh::basicHalfVertex::normal));
+            gl::VertexAttribPointer(2, 2, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), u::offset_of(&mesh::basicHalfVertex::coordinate));
+            gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), u::offset_of(&mesh::basicHalfVertex::tangent));
             precision = "half";
         } else {
             const auto &vertices = m_model.basicVertices();
-            static const mesh::basicVertex *vert = nullptr;
-            gl::BufferData(GL_ARRAY_BUFFER, sizeof *vert * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-            gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof *vert, &vert->position);
-            gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof *vert, &vert->normal);
-            gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof *vert, &vert->coordinate);
-            gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof *vert, &vert->tangent);
+            gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::basicVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+            gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), u::offset_of(&mesh::basicVertex::position));
+            gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), u::offset_of(&mesh::basicVertex::normal));
+            gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), u::offset_of(&mesh::basicVertex::coordinate));
+            gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), u::offset_of(&mesh::basicVertex::tangent));
             precision = "single";
         }
         gl::EnableVertexAttribArray(0);
