@@ -414,7 +414,7 @@ struct deferred_data {
     T *operator()();
     void free();
 private:
-    unsigned char m_data[sizeof(T)];
+    alignas(alignof(T)) unsigned char m_data[sizeof(T)];
 };
 
 template <typename T, bool F>
