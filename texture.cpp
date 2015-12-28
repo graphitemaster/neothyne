@@ -929,18 +929,16 @@ private:
                         if (h) upSampleCenteredV(c);
                     }
                 }
-                if (w || h)
+                if (c->width < m_width || c->height < m_height)
                     returnResult(kInternalError);
             }
         } else if (filter == kPixelRepetition) {
             for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
                 if (c->width < m_width || c->height < m_height)
                     upSampleFast(c);
-                if (m_error)
-                    return;
+                if (c->width < m_width || c->height < m_height)
+                    returnResult(kInternalError);
             }
-            if (c->width < m_width || c->height < m_height)
-                returnResult(kInternalError);
         } else {
             assert(0 && "unknown chroma filter");
         }
