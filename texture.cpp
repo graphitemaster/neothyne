@@ -914,7 +914,8 @@ private:
     void convert(chromaFilter filter) {
         size_t i;
         component *c;
-        if (filter == kBicubic) {
+        switch (filter) {
+        case kBicubic:
             for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
                 const bool w = c->width < m_width;
                 const bool h = c->height < m_height;
@@ -932,15 +933,18 @@ private:
                 if (c->width < m_width || c->height < m_height)
                     returnResult(kInternalError);
             }
-        } else if (filter == kPixelRepetition) {
+            break;
+        case kPixelRepetition:
             for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
                 if (c->width < m_width || c->height < m_height)
                     upSampleFast(c);
                 if (c->width < m_width || c->height < m_height)
                     returnResult(kInternalError);
             }
-        } else {
+            break;
+        default:
             assert(0 && "unknown chroma filter");
+            break;
         }
 
         if (m_bpp == 3) {
