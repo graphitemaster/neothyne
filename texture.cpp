@@ -769,7 +769,7 @@ private:
     }
 
     // bicubic chroma upsampler
-    void upSampleCenteredH(component* c) {
+    void upSampleCenteredH(component *c) {
         const size_t xmax = c->width - 3;
         u::vector<unsigned char> out((c->width * c->height) << 1);
         unsigned char *lin = &c->pixels[0];
@@ -793,7 +793,7 @@ private:
         c->pixels = u::move(out);
     }
 
-    void upSampleCenteredV(component* c) {
+    void upSampleCenteredV(component *c) {
         const size_t w = c->width;
         const size_t s1 = c->stride;
         const size_t s2 = s1 + s1;
@@ -913,28 +913,27 @@ private:
 
     void convert(chromaFilter filter) {
         size_t i;
-        component* c;
-        for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
-            if (filter == kBicubic) {
-                while (c->width < m_width || c->height < m_height) {
-                    if (c->width < m_width) {
-                        if (m_coSitedChroma)
-                            upSampleCositedH(c);
-                        else
-                            upSampleCenteredH(c);
+        component *c;
+        if (filter == kBicubic) {
+            for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
+                const bool w = c->width < m_width;
+                const bool h = c->height < m_height;
+                if (m_coSitedChroma) {
+                    while (w || h) {
+                        if (w) upSampleCositedH(c);
+                        if (h) upSampleCositedV(c);
                     }
-                    if (m_error)
-                        return;
-                    if (c->height < m_height) {
-                        if (m_coSitedChroma)
-                            upSampleCositedV(c);
-                        else
-                            upSampleCenteredV(c);
+                } else {
+                    while (w || h) {
+                        if (w) upSampleCenteredH(c);
+                        if (h) upSampleCenteredV(c);
                     }
-                    if (m_error)
-                        return;
                 }
-            } else if (filter == kPixelRepetition) {
+                if (w || h)
+                    returnResult(kInternalError);
+            }
+        } else if (filter == kPixelRepetition) {
+            for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
                 if (c->width < m_width || c->height < m_height)
                     upSampleFast(c);
                 if (m_error)
@@ -942,7 +941,10 @@ private:
             }
             if (c->width < m_width || c->height < m_height)
                 returnResult(kInternalError);
+        } else {
+            assert(0 && "unknown chroma filter");
         }
+
         if (m_bpp == 3) {
             // convert to RGB24
             unsigned char *prgb = &m_rgb[0];
