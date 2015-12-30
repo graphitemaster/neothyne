@@ -2,13 +2,15 @@
 #define U_STRING_HDR
 #include <string.h>
 
+#include "u_traits.h"
+
 namespace u {
 
 struct string {
     typedef char *iterator;
     typedef const char *const_iterator;
 
-    static constexpr size_t npos = size_t(-1);
+    static constexpr size_t npos = -1_z;
 
     // constructors
     string();

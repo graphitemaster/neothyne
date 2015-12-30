@@ -900,8 +900,8 @@ bool texture2D::upload() {
             const size_t mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * blockSize;
             gl::CompressedTexImage2D(GL_TEXTURE_2D, i, format.internal, mipWidth,
                 mipHeight, 0, mipSize, m_texture.data() + offset);
-            mipWidth = u::max(mipWidth >> 1, size_t(1));
-            mipHeight = u::max(mipHeight >> 1, size_t(1));
+            mipWidth = u::max(mipWidth >> 1, 1_z);
+            mipHeight = u::max(mipHeight >> 1, 1_z);
             offset += mipSize;
             m_memory += mipSize;
         }

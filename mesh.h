@@ -1,6 +1,7 @@
 #ifndef MESH_HDR
 #define MESH_HDR
 #include "u_vector.h"
+#include "u_misc.h"
 
 #include "m_bbox.h"
 #include "m_half.h"
@@ -91,6 +92,7 @@ struct vertexCacheOptimizer {
 private:
     u::vector<vertexCacheData> m_vertices;
     u::vector<triangleCacheData> m_triangles;
+
     u::vector<size_t> m_indices;
     u::vector<size_t> m_drawList;
     vertexCache m_vertexCache;
@@ -115,9 +117,9 @@ struct face {
 };
 
 inline face::face()
-    : vertex(size_t(-1))
-    , normal(size_t(-1))
-    , coordinate(size_t(-1))
+    : vertex(-1_z)
+    , normal(-1_z)
+    , coordinate(-1_z)
 {
 }
 
@@ -131,9 +133,9 @@ inline bool operator==(const face &lhs, const face &rhs) {
 namespace u {
 
 inline size_t hash(const ::face &f) {
-    static constexpr size_t kPrime1 = 73856093u;
-    static constexpr size_t kPrime2 = 19349663u;
-    static constexpr size_t kPrime3 = 83492791u;
+    static constexpr size_t kPrime1 = 73856093_z;
+    static constexpr size_t kPrime2 = 19349663_z;
+    static constexpr size_t kPrime3 = 83492791_z;
     return (f.vertex * kPrime1) ^ (f.normal * kPrime2) ^ (f.coordinate * kPrime3);
 }
 
