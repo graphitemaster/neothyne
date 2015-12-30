@@ -2416,7 +2416,7 @@ bool texture::load(const u::string &file, float quality) {
     auto load = u::read(fileName, "rb");
     if (!load)
         return false;
-    u::vector<unsigned char> data = *load;
+    u::vector<unsigned char> &data = *load;
     if (jpeg::test(data))
         return decode<jpeg>(data, fileName, quality);
     else if (png::test(data))
