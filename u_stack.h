@@ -108,7 +108,7 @@ inline void stack<T, E>::shift(size_t elements) {
 template <typename T, size_t E>
 inline void stack<T, E>::shift_traits(size_t count, detail::is_pod<T, false>) {
      for (size_t i = 0; i < count; i++)
-        m_data[i] = m_data[m_size - count + i];
+        m_data[i] = u::move(m_data[m_size - count + i]);
 }
 
 template <typename T, size_t E>

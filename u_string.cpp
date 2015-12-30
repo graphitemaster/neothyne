@@ -67,9 +67,7 @@ inline void stringMemory::region::setFree(bool free) {
 }
 
 inline uint32_t stringMemory::region::size() const {
-    // Remove sign bit
-    const uint32_t mask = m_store >> ((sizeof(uint32_t) * CHAR_BIT) - 1);
-    return (m_store + mask) ^ mask;
+    return abs(m_store);
 }
 
 inline bool stringMemory::region::free() const {
