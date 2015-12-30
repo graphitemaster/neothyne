@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 
 #include "engine.h"
 #include "texture.h"
@@ -1849,6 +1850,216 @@ private:
 };
 
 ///
+/// NetPBM
+///
+/// Supports all of PBM except P7 (PAM)
+///
+struct pnm : decoder {
+    static bool test(const u::vector<unsigned char> &data) {
+        return data[0] == 'P' && data[1] >= '1' && data[1] <= '6' && isspace(data[2]);
+    }
+
+    pnm(const u::vector<unsigned char> &data) {
+        decode(data);
+    }
+
+    u::vector<unsigned char> data() {
+        return u::move(m_data);
+    }
+
+protected:
+    void decode(const u::vector<unsigned char> &data) {
+        // No line can be longer than 70 characters in PBM files
+        unsigned char buffer[70];
+        const char *string = (const char *)buffer;
+        m_buffer = &data[3]; // Skip "P[1...6]"
+        m_end = &data[data.size()];
+
+        #define checkRange() \
+            do { \
+                if (ptr > &m_data[m_data.size()]) \
+                    returnResult(kMalformatted); \
+            } while (0)
+
+        // Read size
+        if (!next(buffer, sizeof buffer))
+            returnResult(kMalformatted);
+        m_width = strtol(string, nullptr, 10);
+        if (!next(buffer, sizeof buffer))
+            returnResult(kMalformatted);
+        m_height = strtol(string, nullptr, 10);
+
+        // Don't allow files larger than 4096*4096
+        if (m_width > 4096)
+            returnResult(kUnsupported);
+        if (m_height > 4096)
+            returnResult(kUnsupported);
+
+        // Calculate scaling factor
+        int max = 0;
+        float scale = 0.0f;
+        if (data[1] != '1' && data[1] != '4') {
+            if (!next(buffer, sizeof buffer))
+                returnResult(kMalformatted);
+            max = strtol(string, nullptr, 10);
+            if (max < 1 || max > 65535)
+                returnResult(kMalformatted);
+            scale = 255.0f / float(max);
+        }
+
+        auto readBigEndian16 = [](unsigned char *data) {
+            return size_t(data[1]) | size_t(data[0]) << 8;
+        };
+
+        const size_t size = m_width * m_height;
+        m_bpp = (data[1] == '3' || data[1] == '6') ? 3 : 1;
+        m_data.resize(size * m_bpp);
+        unsigned char *ptr = &m_data[0];
+        switch (data[1]) {
+        case '1':
+            for (size_t j = 0; j < size; ++j) {
+                if (!next(buffer, sizeof buffer))
+                    returnResult(kMalformatted);
+                *ptr++ = buffer[0] == '1' ? 255 : 0;
+                checkRange();
+            }
+            break;
+        case '2':
+            for (size_t j = 0; j < size; ++j) {
+                if (!next(buffer, sizeof buffer))
+                    returnResult(kMalformatted);
+                *ptr++ = strtol(string, nullptr, 10) * scale;
+                checkRange();
+            }
+            break;
+        case '3':
+            for (size_t j = 0; j < size; ++j) {
+                for (size_t c = 0; c < 3; c++) {
+                    if (!next(buffer, sizeof buffer))
+                        returnResult(kMalformatted);
+                    *ptr++ = strtol(string, nullptr, 10) * scale;
+                    checkRange();
+                }
+            }
+            break;
+        case '4':
+            for (size_t j = 0; j < size; ++j) {
+                if (read(buffer, 1) != 1)
+                    returnResult(kMalformatted);
+                for (size_t i = 0; i < 8 && j < size; ++i, ++j) {
+                    *ptr++ = (*buffer & (1<<(7-i))) ? 255 : 0;
+                    checkRange();
+                }
+            }
+            break;
+        case '5':
+            if (max > 255) {
+                for (size_t j = 0; j < size; ++j) {
+                    if (read(buffer, 2) != 2)
+                        returnResult(kMalformatted);
+                    *ptr++ = readBigEndian16(buffer) * scale;
+                    checkRange();
+                }
+            } else {
+                if (!read(ptr, size))
+                    returnResult(kMalformatted);
+                for (size_t j = 0; j < size; ++j) {
+                    *ptr++ *= scale;
+                    checkRange();
+                }
+            }
+            break;
+        case '6':
+            if (max > 255) {
+                for (size_t j = 0; j < size; ++j) {
+                    for (size_t c = 0; c < 3; c++) {
+                        if (read(buffer, 2) != 2)
+                            returnResult(kMalformatted);
+                        *ptr++ = readBigEndian16(buffer) * scale;
+                        checkRange();
+                    }
+                }
+            } else {
+                if (read(ptr, size*3) != int(size*3))
+                    returnResult(kMalformatted);
+                for (size_t j = 0; j < size*3; ++j) {
+                    *ptr++ *= scale;
+                    checkRange();
+                }
+            }
+            break;
+        default:
+            returnResult(kUnsupported);
+            break;
+        }
+
+        // The pointer should be at the end of memory if everything decoded
+        // successfully
+        if (ptr != &m_data[m_data.size()])
+            returnResult(kMalformatted);
+
+        // Figure out the appropriate format
+        switch (m_bpp) {
+        case 1:
+            m_format = kTexFormatLuminance;
+            break;
+        case 3:
+            m_format = kTexFormatRGB;
+            break;
+        default:
+            assert(0 && "unsupported bpp");
+            break;
+        }
+
+        m_pitch = m_bpp * m_width;
+
+        returnResult(kSuccess);
+    }
+
+    int read(unsigned char *buffer, size_t count) {
+        if (m_buffer >= m_end)
+            return EOF;
+        if (m_buffer + count >= m_end)
+            count = m_end - m_buffer;
+        memcpy(buffer, m_buffer, count);
+        m_buffer += count;
+        return int(count);
+    }
+
+    bool next(unsigned char *store, size_t size) {
+        for (int c=0;;) {
+            // Skip space characters
+            while ((c = read(store, 1)) != EOF && isspace(*store)) {
+                if (c != 1)
+                    return false;
+            }
+            // Skip comment line
+            if (c == '#') {
+                while ((c = read(store, 1)) != EOF && strchr("\r\n", *store)) {
+                    if (c != 1)
+                        return false;
+                }
+            } else {
+                // Read characters until we hit a space
+                size_t i;
+                for (i = 1; i < size && (c = read(store+i, 1)) != EOF && !isspace(store[i]); ++i) {
+                    if (c != 1)
+                        return false;
+                }
+                store[i < size ? i : size - 1] = '\0';
+                return true;
+            }
+        }
+        return false;
+    }
+private:
+    u::vector<unsigned char> m_data;
+    const unsigned char *m_buffer;
+    const unsigned char *m_end;
+};
+
+
+///
 /// Texture utilities:
 ///   halve (useful for generating mipmaps), shift, scale and reorient.
 ///
@@ -2178,7 +2389,7 @@ u::optional<u::string> texture::find(const u::string &infile) {
         file.erase(beg, end+1);
     }
 
-    static const char *extensions[] = { "png", "jpg", "tga", "dds" };
+    static const char *extensions[] = { "png", "jpg", "tga", "dds", "pbm", "ppm", "pgm", "pnm" };
     size_t bits = 0;
     for (size_t i = 0; i < sizeof extensions / sizeof *extensions; i++)
         if (u::exists(u::format("%s.%s", file.c_str(), extensions[i])))
@@ -2212,6 +2423,8 @@ bool texture::load(const u::string &file, float quality) {
         return decode<tga>(data, fileName, quality);
     else if (dds::test(data))
         return decode<dds>(data, fileName, quality);
+    else if (pnm::test(data))
+        return decode<pnm>(data, fileName, quality);
     u::print("no decoder found for `%s'\n", fileName);
     return false;
 }

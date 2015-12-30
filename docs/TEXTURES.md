@@ -26,6 +26,11 @@ below:
   * Supports RLE compressed color (paletted)
   * Supports RLE compressed (BGRA)
 
+* PNM (fully supported)
+  * Supports ASCII (P1) and binary (P4) PBM (Portable BitMap)
+  * Supports ASCII (P2) and binary (P5) PGM (Portable GrayMap)
+  * Supports ASCII (P3) and binary (P6) PPM (Portable PixMap)
+
 * DDS
   * Supports the following block-compressed formats only
     * DXT1
