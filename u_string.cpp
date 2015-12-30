@@ -485,7 +485,7 @@ char string::pop_back() {
     if (m_last == m_first)
         return *m_first;
     m_last--;
-    char last = *m_last;
+    const char last = *m_last;
     *m_last = '\0';
     return last;
 }
@@ -526,8 +526,8 @@ size_t string::find(char ch) const {
 }
 
 void string::erase(size_t beg, size_t end) {
-    char *mbeg = m_first + beg;
-    char *mend = m_first + end;
+    char *const mbeg = m_first + beg;
+    char *const mend = m_first + end;
     const size_t len = m_last - mend;
     moveMemory(mbeg, mend, len);
     m_last = &mbeg[len];

@@ -813,9 +813,9 @@ void engine::setVSyncOption(int option) {
 
 void engine::screenShot() {
     // Generate a unique filename from the time
-    time_t t = time(nullptr);
-    struct tm tm = *localtime(&t);
-    u::string file = u::format("%sscreenshots/%d-%d-%d-%d%d%d",
+    const time_t t = time(nullptr);
+    const struct tm tm = *localtime(&t);
+    const u::string file = u::format("%sscreenshots/%d-%d-%d-%d%d%d",
         neoUserPath(), tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
         tm.tm_hour, tm.tm_min, tm.tm_sec);
 
@@ -1085,7 +1085,7 @@ static int entryPoint(int argc, char **argv) {
     u::print("OS: %s\nVendor: %s\nRenderer: %s\nDriver: %s\nShading: %s (using %s)\nExtensions:\n",
         gOperatingSystem, vendor, renderer, version, shader, gl::glslVersionString());
 
-    for (auto &it : gl::extensions())
+    for (const auto &it : gl::extensions())
         u::print(" %s\n", gl::extensionString(it));
 
     u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
@@ -1111,7 +1111,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
     (void)sw;
 
     auto parseCommandLine = [](const char *src, u::vector<char *> &args) {
-        char *buf = new char[strlen(src) + 1];
+        char *const buf = new char[strlen(src) + 1];
         char *dst = buf;
         for (;;) {
             while (isspace(*src))
@@ -1133,9 +1133,9 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
         return buf;
     };
     u::vector<char *> args;
-    const char *buf = parseCommandLine(GetCommandLine(), args);
+    const char *const buf = parseCommandLine(GetCommandLine(), args);
     SDL_SetMainReady();
-    int status = entryPoint(args.size() - 1, &args[0]);
+    const int status = entryPoint(args.size() - 1, &args[0]);
     delete[] buf;
     exit(status);
     return 0;

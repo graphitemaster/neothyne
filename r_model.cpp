@@ -285,11 +285,11 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
     int32_t colorized = -1;
 
     for (u::string get; u::getline(fp, get); ) {
-        auto split = u::split(get);
+        const auto split = u::split(get);
         if (split.size() < 2)
             continue;
-        auto key = split[0];
-        auto value = split[1];
+        const auto &key = split[0];
+        const auto &value = split[1];
         if (key == "diffuse")
             diffuseName = basePath + value;
         else if (key == "normal")
@@ -677,7 +677,7 @@ void model::render(const r::pipeline &pl, const m::mat4 &w) {
 
     if (animated()) { // Hoisted invariant out of loop because the compiler fails too
         for (const auto &it : m_batches) {
-            auto *method = m_materials[it.material].bind(pl, w, true);
+            auto *const method = m_materials[it.material].bind(pl, w, true);
             method->setBoneMats(m_model.joints(), m_model.bones());
             gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT, it.offset);
         }

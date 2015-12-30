@@ -141,15 +141,15 @@ static __m128i convertToHalfSSE2(__m128 f) {
     alignas(16) static const uint32_t kMax[4] = { (127 + 16) << 23, (127 + 16) << 23, (127 + 16) << 23, (127 + 16) << 23 };
     alignas(16) static const uint32_t kMagic[4] = { 15 << 23, 15 << 23, 15 << 23, 15 << 23 };
 
-    const __m128  maskAbsolute = *(const __m128 *)&kMaskAbsolute;
+    const __m128  maskAbsolute = *(const __m128 *const)&kMaskAbsolute;
     const __m128  absolute     = _mm_and_ps(maskAbsolute, f);
     const __m128  justSign     = _mm_xor_ps(f, absolute);
-    const __m128  max          = *(const __m128 *)&kMax;
-    const __m128  expInf       = *(const __m128 *)&kExpInf;
+    const __m128  max          = *(const __m128 *const)&kMax;
+    const __m128  expInf       = *(const __m128 *const)&kExpInf;
     const __m128  infNanCase   = _mm_xor_ps(expInf, absolute);
     const __m128  clamped      = _mm_min_ps(max, absolute);
-    const __m128  notNormal    = _mm_cmpnlt_ps(absolute, *(const __m128 *)&kInf32);
-    const __m128  scaled       = _mm_mul_ps(clamped, *(const __m128 *)&kMagic);
+    const __m128  notNormal    = _mm_cmpnlt_ps(absolute, *(const __m128 *const)&kInf32);
+    const __m128  scaled       = _mm_mul_ps(clamped, *(const __m128 *const)&kMagic);
     const __m128  merge1       = _mm_and_ps(infNanCase, notNormal);
     const __m128  merge2       = _mm_andnot_ps(notNormal, scaled);
     const __m128  merged       = _mm_or_ps(merge1, merge2);
@@ -168,10 +168,10 @@ static __m128 convertToFloatSSE2(__m128i h) {
     alignas(16) static const uint32_t kExpAdjustNormal[4] = { (127 - 15) << 23, (127 - 15) << 23, (127 - 15) << 23, (127 - 15) << 23, };
     alignas(16) static const uint32_t kMagicDenormal[4] = { 113 << 23, 113 << 23, 113 << 23, 113 << 23 };
 
-    const __m128i noSign         = *(const __m128i *)&kMaskNoSign;
-    const __m128i exponentAdjust = *(const __m128i *)&kExpAdjustNormal;
-    const __m128i smallest       = *(const __m128i *)&kSmallestNormal;
-    const __m128i infinity       = *(const __m128i *)&kInfinity;
+    const __m128i noSign         = *(const __m128i *const)&kMaskNoSign;
+    const __m128i exponentAdjust = *(const __m128i *const)&kExpAdjustNormal;
+    const __m128i smallest       = *(const __m128i *const)&kSmallestNormal;
+    const __m128i infinity       = *(const __m128i *const)&kInfinity;
     const __m128i expAnd         = _mm_and_si128(noSign, h);
     const __m128i justSign       = _mm_xor_si128(h, expAnd);
     const __m128i notInfNan      = _mm_cmpgt_epi32(infinity, expAnd);
@@ -179,9 +179,9 @@ static __m128 convertToFloatSSE2(__m128i h) {
     const __m128i shifted        = _mm_slli_epi32(expAnd, 13);
     const __m128i adjustInfNan   = _mm_andnot_si128(notInfNan, exponentAdjust);
     const __m128i adjusted       = _mm_add_epi32(exponentAdjust, shifted);
-    const __m128i denormal1      = _mm_add_epi32(shifted, *(const __m128i *)&kMagicDenormal);
+    const __m128i denormal1      = _mm_add_epi32(shifted, *(const __m128i *const)&kMagicDenormal);
     const __m128i adjusted2      = _mm_add_epi32(adjusted, adjustInfNan);
-    const __m128  denormal2      = _mm_sub_ps(_mm_castsi128_ps(denormal1), *(const __m128 *)&kMagicDenormal);
+    const __m128  denormal2      = _mm_sub_ps(_mm_castsi128_ps(denormal1), *(const __m128 *const)&kMagicDenormal);
     const __m128  adjusted3      = _mm_and_ps(denormal2, _mm_castsi128_ps(isDenormal));
     const __m128  adjusted4      = _mm_andnot_ps(_mm_castsi128_ps(isDenormal), _mm_castsi128_ps(adjusted2));
     const __m128  adjusted5      = _mm_or_ps(adjusted3, adjusted4);

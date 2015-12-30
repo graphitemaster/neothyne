@@ -190,14 +190,14 @@ u::optional<u::string> method::preprocess(const u::string &file, bool initial) {
     for (u::string line; u::getline(fp, line); ) {
         while (line[0] && strchr(" \t", line[0])) line.pop_front();
         if (line[0] == '#') {
-            auto split = u::split(&line[1]);
+            const auto split = u::split(&line[1]);
             if (split.size() == 2 && split[0] == "include") {
                 auto thing = split[1];
                 const auto front = thing.pop_front(); // '"' or '<'
                 const auto back = thing.pop_back(); // '"' or '>'
                 if ((front == '<' && back != '>') && (front != back))
                     return u::format("#error invalid use of include directive on line %zu\n", lineno);
-                u::optional<u::string> include = preprocess(thing, false);
+                const u::optional<u::string> include = preprocess(thing, false);
                 if (!include)
                     return u::format("#error failed to include %s\n", thing);
                 result += u::format("#line %zu\n%s\n", lineno++, *include);
@@ -233,7 +233,7 @@ u::optional<u::string> method::preprocess(const u::string &file, bool initial) {
 }
 
 bool method::addShader(GLenum type, const char *shaderFile) {
-    auto pp = preprocess(shaderFile);
+    const auto pp = preprocess(shaderFile);
     if (!pp)
         neoFatal("failed preprocessing `%s'", shaderFile);
 
@@ -279,11 +279,11 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
         u::string concatenate;
         // Calculate how much memory we need to concatenate the shaders
         size_t size = 0;
-        for (auto &it : m_shaders)
+        for (const auto &it : m_shaders)
             size += it.second.shaderText.size();
         concatenate.reserve(size);
         // Concatenate the shaders
-        for (auto &it : m_shaders)
+        for (const auto &it : m_shaders)
             concatenate += it.second.shaderText;
         // Hash the result of the concatenation
         auto hash = u::sha512((const unsigned char *)&concatenate[0],
@@ -454,7 +454,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             contents += ", ";
     }
 
-    const char *whence = initial ? "loaded" : "reloaded";
+    const char *const whence = initial ? "loaded" : "reloaded";
     if (contents.empty())
         u::print("[method] => %s `%s' program\n", whence, m_description);
     else

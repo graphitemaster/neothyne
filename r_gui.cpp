@@ -222,7 +222,7 @@ gui::atlas::node *gui::atlas::insert(gui::atlas::node *n, int width, int height)
     // Try both leaves for possible space
     if (n->l || n->r) {
         if (n->l) {
-            node *newNode = insert(n->l, width, height);
+            node *const newNode = insert(n->l, width, height);
             if (newNode)
                 return newNode;
         }
@@ -347,7 +347,7 @@ gui::atlas::node *gui::atlasPack(const u::string &file) {
     if (!tex.load(file))
         return nullptr;
 
-    auto node = m_atlas.insert(tex.width(), tex.height());
+    const auto node = m_atlas.insert(tex.width(), tex.height());
     if (!node)
         return nullptr;
 
@@ -508,7 +508,7 @@ void gui::render(const pipeline &pl) {
     m_methods[kMethodImage].enable();
     m_methods[kMethodImage].setPerspective(perspective);
 
-    for (auto &it : ::gui::commands()()) {
+    for (const auto &it : ::gui::commands()()) {
         assert(it.type != -1);
 #if defined(DEBUG_GUI)
         printCommand(it);

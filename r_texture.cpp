@@ -235,7 +235,7 @@ static inline void dxtLSEMasterColorsClamp(uint16_t (&colors)[2],
     float sumx2[] = { 0.0f, 0.0f, 0.0f };
     dxtComputeColorLine<C>(uncompressed, sumx1, sumx2);
 
-    float length = 1.0f / (0.00001f + sumx2[0]*sumx2[0] + sumx2[1]*sumx2[1] + sumx2[2]*sumx2[2]);
+    const float length = 1.0f / (0.00001f + sumx2[0]*sumx2[0] + sumx2[1]*sumx2[1] + sumx2[2]*sumx2[2]);
     // Calcualte range for vector values
     float dotMax = sumx2[0] * uncompressed[0] +
                    sumx2[1] * uncompressed[1] +
@@ -252,7 +252,7 @@ static inline void dxtLSEMasterColorsClamp(uint16_t (&colors)[2],
     }
 
     // Calculate offset from the average location
-    float dot = sumx2[0]*sumx1[0] + sumx2[1]*sumx1[1] + sumx2[2]*sumx1[2];
+    const float dot = sumx2[0]*sumx1[0] + sumx2[1]*sumx1[1] + sumx2[2]*sumx1[2];
     dotMin -= dot;
     dotMax -= dot;
     dotMin *= length;
@@ -309,11 +309,11 @@ static inline void dxtCompressColorBlock(const unsigned char *const uncompressed
     for (size_t i = 0; i < 16; ++i) {
         // Find the dot product for this color, to place it on the line with
         // A range of [-1, 1]
-        float dotProduct = colorLine[0] * uncompressed[i*C+0] +
-                           colorLine[1] * uncompressed[i*C+1] +
-                           colorLine[2] * uncompressed[i*C+2] - dotOffset;
+        const float dotProduct = colorLine[0] * uncompressed[i*C+0] +
+                                 colorLine[1] * uncompressed[i*C+1] +
+                                 colorLine[2] * uncompressed[i*C+2] - dotOffset;
         // Map to [0, 3]
-        int nextValue = m::clamp(int(dotProduct * 3.0f + 0.5f), 0, 3);
+        const int nextValue = m::clamp(int(dotProduct * 3.0f + 0.5f), 0, 3);
         compressed[nextBit >> 3] |= "\x0\x2\x3\x1"[nextValue] << (nextBit & 7);
         nextBit += 2;
     }
@@ -460,7 +460,7 @@ static bool readCache(texture &tex, GLuint &internal) {
         return false;
 
     // Parse header
-    auto vec = *load;
+    const auto &vec = *load;
     textureCacheHeader head;
     memcpy(&head, &vec[0], sizeof head);
     if (head.version != kTextureCacheVersion) {
@@ -490,7 +490,7 @@ static bool readCache(texture &tex, GLuint &internal) {
         break;
     }
 
-    const unsigned char *data = &vec[0] + sizeof head;
+    const unsigned char *const data = &vec[0] + sizeof head;
     const size_t length = vec.size() - sizeof head;
 
     // decompress
@@ -1069,7 +1069,7 @@ bool texture3D::upload() {
         auto query = getBestFormat(m_textures[i]);
         if (!query)
             return false;
-        const auto format = *query;
+        const auto &format = *query;
         gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_textures[i]));
         gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_textures[i].pitch() / m_textures[i].bpp());
         gl::TexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,

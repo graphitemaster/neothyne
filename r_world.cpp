@@ -145,9 +145,9 @@ static uint8_t calcTriangleSideMask(const m::vec3 &p1,
             | (dn2 < 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
             | (dn3 < 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
 
-    dp1 = p1.y + p1.z, dn1 = p1.y - p1.z, ap1 = fabs(dp1), an1 = fabs(dn1),
-    dp2 = p2.y + p2.z, dn2 = p2.y - p2.z, ap2 = fabs(dp2), an2 = fabs(dn2),
-    dp3 = p3.y + p3.z, dn3 = p3.y - p3.z, ap3 = fabs(dp3), an3 = fabs(dn3);
+    dp1 = p1.y + p1.z, dn1 = p1.y - p1.z, ap1 = m::abs(dp1), an1 = m::abs(dn1),
+    dp2 = p2.y + p2.z, dn2 = p2.y - p2.z, ap2 = m::abs(dp2), an2 = m::abs(dn2),
+    dp3 = p3.y + p3.z, dn3 = p3.y - p3.z, ap3 = m::abs(dp3), an3 = m::abs(dn3);
     if (ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
         mask &= (3<<0)
             | (dp1 < 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
@@ -159,9 +159,9 @@ static uint8_t calcTriangleSideMask(const m::vec3 &p1,
             | (dn2 < 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
             | (dn3 < 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
 
-    dp1 = p1.z + p1.x, dn1 = p1.z - p1.x, ap1 = fabs(dp1), an1 = fabs(dn1),
-    dp2 = p2.z + p2.x, dn2 = p2.z - p2.x, ap2 = fabs(dp2), an2 = fabs(dn2),
-    dp3 = p3.z + p3.x, dn3 = p3.z - p3.x, ap3 = fabs(dp3), an3 = fabs(dn3);
+    dp1 = p1.z + p1.x, dn1 = p1.z - p1.x, ap1 = m::abs(dp1), an1 = m::abs(dn1),
+    dp2 = p2.z + p2.x, dn2 = p2.z - p2.x, ap2 = m::abs(dp2), an2 = m::abs(dn2),
+    dp3 = p3.z + p3.x, dn3 = p3.z - p3.x, ap3 = m::abs(dp3), an3 = m::abs(dn3);
     if (ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
         mask &= (3<<2)
             | (dp1 < 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
@@ -713,7 +713,7 @@ void world::geometryPass(const pipeline &pl) {
     }
 
     // Render map models
-    for (auto &it : m_map->m_mapModels) {
+    for (const auto &it : m_map->m_mapModels) {
         // Load map models on demand
         if (m_models.find(it->name) == m_models.end()) {
             u::unique_ptr<model> next(new model);
@@ -723,7 +723,7 @@ void world::geometryPass(const pipeline &pl) {
                 neoFatal("failed to upload model '%s'\n", it->name);
             m_models[it->name] = next.release();
         } else {
-            auto &mdl = m_models[it->name];
+            const auto &mdl = m_models[it->name];
 
             pipeline pm = p;
             pm.setWorld(it->position);
@@ -916,8 +916,8 @@ void world::forwardPass(const pipeline &pl) {
         gl::Enable(GL_CULL_FACE);
 
         // Map models
-        for (auto &it : m_map->m_mapModels) {
-            auto &mdl = m_models[it->name];
+        for (const auto &it : m_map->m_mapModels) {
+            const auto &mdl = m_models[it->name];
 
             pipeline p = pl;
             p.setWorld(it->position);
@@ -982,7 +982,7 @@ void world::forwardPass(const pipeline &pl) {
     }
 
     // Particles
-    for (auto *it : m_particleSystems) {
+    for (auto *const it : m_particleSystems) {
         it->update(pl);
 
         // Bind the depth buffer for soft particles
@@ -1027,7 +1027,7 @@ void world::forwardPass(const pipeline &pl) {
         if (m_particleSystems.size()) {
             gui::drawText(10, y, gui::kAlignLeft, "PARTICLE", gui::RGBA(255, 255, 255));
             y -= 20;
-            for (auto *it : m_particleSystems) {
+            for (auto *const it : m_particleSystems) {
                 if (it->memory() == 0)
                     continue;
                 const auto format = u::format("%s: %s", it->description(), u::sizeMetric(it->memory()));
@@ -1185,10 +1185,10 @@ void world::pointLightPass(const pipeline &pl) {
 
     gl::DepthMask(GL_FALSE);
 
-    for (auto &plc : m_culledPointLights) {
+    for (const auto &plc : m_culledPointLights) {
         if (!plc.visible)
             continue;
-        auto &it = plc.light;
+        const auto &it = plc.light;
         float scale = it->radius * kLightRadiusTweak;
 
         pointLightMethod *method = &m_pointLightMethods[0];
@@ -1322,10 +1322,10 @@ void world::spotLightPass(const pipeline &pl) {
 
     gl::DepthMask(GL_FALSE);
 
-    for (auto &slc : m_culledSpotLights) {
+    for (const auto &slc : m_culledSpotLights) {
         if (!slc.visible)
             continue;
-        auto &sl = slc.light;
+        const auto &sl = slc.light;
         float scale = sl->radius * kLightRadiusTweak;
 
         spotLightMethod *method = &m_spotLightMethods[0];

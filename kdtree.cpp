@@ -44,9 +44,9 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth)
     u::vector<int> fx, fy, fz; // front
     u::vector<int> bx, by, bz; // back
     u::vector<int> sx, sy, sz; // split
-    u::vector<int>* frontList[3] = { &fx, &fy, &fz };
-    u::vector<int>* backList[3] = { &bx, &by, &bz };
-    u::vector<int>* splitList[3] = { &sx, &sy, &sz };
+    u::vector<int> *const frontList[3] = { &fx, &fy, &fz };
+    u::vector<int> *const backList[3] = { &bx, &by, &bz };
+    u::vector<int> *const splitList[3] = { &sx, &sy, &sz };
 
     m::plane plane[3];
     float ratio[3];
@@ -337,7 +337,7 @@ bool kdTree::load(const u::string &file) {
 
 static uint32_t kdBinAddTexture(u::vector<kdBinTexture> &textures, const u::string &texturePath) {
     uint32_t index = 0;
-    for (auto &it : textures) {
+    for (const auto &it : textures) {
         if (it.name == texturePath)
             return index;
         index++;
@@ -498,7 +498,7 @@ inline void kdSerializeLump(u::vector<unsigned char> &buffer, const u::vector<T>
 
 template <>
 inline void kdSerializeLump<kdBinLeaf>(u::vector<unsigned char> &buffer, const u::vector<kdBinLeaf> &leafs) {
-    for (auto &it : leafs) {
+    for (const auto &it : leafs) {
         const uint32_t triangleCount = it.triangles.size();
         const uint32_t serializeCount = u::endianSwap(triangleCount);
         kdSerialize(buffer, &serializeCount, sizeof serializeCount);
@@ -553,7 +553,7 @@ u::vector<unsigned char> kdTree::serialize() {
     kdBinGetNodes(*this, root, compiledPlanes, compiledNodes, compiledLeafs);
 
     // Get entities
-    for (auto &it : entities) {
+    for (const auto &it : entities) {
         kdBinEnt ent;
         ent.id = it.id;
         ent.origin = it.origin;

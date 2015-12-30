@@ -579,9 +579,9 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
     auto read = u::read(neoGamePath() + file + ".iqm", "rb");
     if (!read)
         return false;
-    auto data = *read;
+    auto &data = *read;
 
-    iqmHeader *hdr = (iqmHeader*)&data[0];
+    iqmHeader *const hdr = (iqmHeader*)&data[0];
     if (memcmp(hdr->magic, (const void *)iqmHeader::kMagic, sizeof hdr->magic))
         return false;
 
@@ -595,8 +595,8 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
 
     // batches
     model::batch b;
-    const char *str = hdr->ofsText ? (char *)&data[hdr->ofsText] : nullptr;
-    const iqmMesh *meshes = (iqmMesh*)&data[hdr->ofsMeshes];
+    const char *const str = hdr->ofsText ? (char *)&data[hdr->ofsText] : nullptr;
+    const iqmMesh *const meshes = (iqmMesh*)&data[hdr->ofsMeshes];
     for (uint32_t i = 0; i < hdr->numMeshes; i++) {
         const iqmMesh &m = meshes[i];
         iqmTriangle *tri = nullptr;
@@ -609,13 +609,13 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
     // load optional animation files
     for (const auto &it : anims) {
         const auto fileName = u::format("%s/%s.iqm", neoGamePath(), it);
-        auto readAnim = u::read(fileName, "rb");
+        const auto readAnim = u::read(fileName, "rb");
         // this silently ignores animation files which are not valid or correct
         // version IQM files or cannot be opened (permission, non existent, etc.)
         if (!readAnim)
             continue;
-        auto animData = *read;
-        iqmHeader *animHdr = (iqmHeader*)&animData[0];
+        auto &animData = *read;
+        iqmHeader *const animHdr = (iqmHeader*)&animData[0];
         if (memcmp(animHdr->magic, (const void *)iqmHeader::kMagic, sizeof animHdr->magic))
             continue;
         animHdr->endianSwap();

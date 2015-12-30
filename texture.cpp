@@ -467,7 +467,7 @@ private:
     void decodeSOF() {
         int ssxmax = 0;
         int ssymax = 0;
-        component* c;
+        component *c;
 
         decodeLength();
 
@@ -602,7 +602,7 @@ private:
         skip(m_length);
     }
 
-    int getCoding(vlcCode* vlc, unsigned char* code) {
+    int getCoding(const vlcCode *const vlc, unsigned char *const code) {
         int value = viewBits(16);
         int bits = vlc[value].bits;
         if (!bits) {
@@ -621,7 +621,7 @@ private:
     }
 
     template <bool ClippingTable>
-    void decodeBlock(component* c, unsigned char* out) {
+    void decodeBlock(component *const c, unsigned char *const out) {
         unsigned char code = 0;
         int coef = 0;
         memset(m_block, 0, sizeof m_block);
@@ -649,7 +649,7 @@ private:
         size_t i;
         size_t rstcount = m_rstinterval;
         size_t nextrst = 0;
-        component* c;
+        component *c;
         decodeLength();
         if (m_length < int(4 + 2 * m_bpp))
             returnResult(kMalformatted);
@@ -695,13 +695,13 @@ private:
     }
 
     // http://www.media.mit.edu/pia/Research/deepview/exif.html
-    uint16_t exifRead16(const unsigned char *data) {
+    uint16_t exifRead16(const unsigned char *const data) {
         if (m_exifLittleEndian)
             return data[0] | (data[1] << 8);
         return (data[0] << 8) | data[1];
     }
 
-    uint32_t exifRead32(const unsigned char *data) {
+    uint32_t exifRead32(const unsigned char *const data) {
         if (m_exifLittleEndian)
             return data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
         return (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
@@ -770,7 +770,7 @@ private:
     }
 
     // bicubic chroma upsampler
-    void upSampleCenteredH(component *c) {
+    void upSampleCenteredH(component *const c) {
         const size_t xmax = c->width - 3;
         u::vector<unsigned char> out((c->width * c->height) << 1);
         unsigned char *lin = &c->pixels[0];
@@ -794,7 +794,7 @@ private:
         c->pixels = u::move(out);
     }
 
-    void upSampleCenteredV(component *c) {
+    void upSampleCenteredV(component *const c) {
         const size_t w = c->width;
         const size_t s1 = c->stride;
         const size_t s2 = s1 + s1;
@@ -831,7 +831,7 @@ private:
         c->pixels = u::move(out);
     }
 
-    void upSampleCositedH(component *c) {
+    void upSampleCositedH(component *const c) {
         const size_t xmax = c->width - 1;
         u::vector<unsigned char> out((c->width * c->height) << 1);
 
@@ -857,7 +857,7 @@ private:
         c->pixels = u::move(out);
     }
 
-    void upSampleCositedV(component *c) {
+    void upSampleCositedV(component *const c) {
         const size_t w = c->width;
         const size_t s1 = c->stride;
         const size_t s2 = s1 + s1;
@@ -891,7 +891,7 @@ private:
     }
 
     // fast pixel repetition upsampler
-    void upSampleFast(component *c) {
+    void upSampleFast(component *const c) {
         size_t xshift = 0;
         size_t yshift = 0;
 
@@ -969,7 +969,7 @@ private:
             }
         } else if (m_comp[0].width != m_comp[0].stride) {
             // grayscale -> only remove stride
-            unsigned char *pin = &m_comp[0].pixels[0] + m_comp[0].stride;
+            const unsigned char *pin = &m_comp[0].pixels[0] + m_comp[0].stride;
             unsigned char *pout = &m_comp[0].pixels[0] + m_comp[0].width;
             for (int y = m_comp[0].height - 1; y; --y) {
                 memcpy(pout, pin, m_comp[0].width);
@@ -1253,7 +1253,7 @@ private:
             }
         }
         if (m_colorType == 3 || m_colorType == 4) {
-            u::vector<unsigned char> data = out; // Make a copy to work with
+            const u::vector<unsigned char> data = out; // Make a copy to work with
             if (!convert(out, &data[0]))
                 returnResult(kInternalError);
         }
@@ -1314,8 +1314,8 @@ private:
         m_error = validateColor(m_colorType, m_bitDepth);
     }
 
-    void unfilterScanline(unsigned char *recon, const unsigned char *scanline,
-        const unsigned char *precon, size_t bytewidth, size_t filterType, size_t length)
+    void unfilterScanline(unsigned char *const recon, const unsigned char *const scanline,
+        const unsigned char *const precon, size_t bytewidth, size_t filterType, size_t length)
     {
         switch (filterType) {
         case 0:
@@ -1368,7 +1368,7 @@ private:
 
 
     void adam7Pass(unsigned char *out, unsigned char *linen, unsigned char *lineo,
-        const unsigned char *in, size_t w, size_t i, size_t passw, size_t passh, size_t bpp)
+        const unsigned char *const in, size_t w, size_t i, size_t passw, size_t passh, size_t bpp)
     {
         if (passw == 0)
             return;
@@ -1409,26 +1409,26 @@ private:
         }
     }
 
-    size_t readBitReverse(size_t& bitp, const unsigned char* bits) {
+    size_t readBitReverse(size_t& bitp, const unsigned char *const bits) {
         const size_t r = (bits[bitp >> 3] >> (7 - (bitp & 0x7))) & 1;
         bitp++;
         return r;
     }
 
-    size_t readBitsReverse(size_t &bitp, const unsigned char *bits, size_t nbits) {
+    size_t readBitsReverse(size_t &bitp, const unsigned char *const bits, size_t nbits) {
         size_t r = 0;
         for (size_t i = nbits - 1; i < nbits; i--)
             r += ((readBitReverse(bitp, bits)) << i);
         return r;
     }
 
-    void setBitReversed(size_t &bitp, unsigned char *bits, size_t bit) {
+    void setBitReversed(size_t &bitp, unsigned char *const bits, size_t bit) {
         assert(bits);
         bits[bitp >> 3] |=  (bit << (7 - (bitp & 0x7)));
         bitp++;
     }
 
-    uint32_t readWord(const unsigned char* buffer) {
+    uint32_t readWord(const unsigned char *const buffer) {
         return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
     }
 
@@ -1498,9 +1498,9 @@ struct tga : decoder {
         // section which could contain kMagic. It's always the last 26 bytes of
         // the file. We test for that as an early optimization, otherwise we have
         // to do a more involved test.
-        const unsigned char *trailer = &data[data.size() - 26];
-        trailer += 4; // Skip `extensions offset' field
-        trailer += 4; // Skip `developer area offset' field
+        const unsigned char *const trailer = &data[data.size() - 26]
+            + 4  // Skip `extensions offset' field
+            + 4; // Skip `developer area offset' field
         if (!memcmp(trailer, kMagic, 16))
             return true;
 
@@ -1658,7 +1658,7 @@ private:
 
                 while (c > 0 && dst >= &m_data[0]) {
                     const int n = u::min(c, int(end - dst));
-                    for (unsigned char *run = dst + n; dst < run; dst += m_bpp)
+                    for (const unsigned char *const run = dst + n; dst < run; dst += m_bpp)
                         memcpy(dst, column, m_bpp);
                     c -= n;
                     if (dst >= end) {
@@ -1671,7 +1671,7 @@ private:
                 while (c > 0 && dst >= &m_data[0]) {
                     const int n = u::min(c, int(end - dst) / int(m_bpp));
                     read(buffer, n);
-                    for (unsigned char *src = buffer; src <= &buffer[n]; dst += m_bpp)
+                    for (const unsigned char *src = buffer; src <= &buffer[n]; dst += m_bpp)
                         memcpy(dst, &colorMap[*src++ * m_bpp], m_bpp);
                     c -= n;
                     if (dst >= end) {
@@ -1697,7 +1697,7 @@ private:
 
                 while (c > 0) {
                     const int n = u::min(c, int(end - dst));
-                    for (unsigned char *run = dst + n; dst < run; dst += m_bpp)
+                    for (const unsigned char *const run = dst + n; dst < run; dst += m_bpp)
                         memcpy(dst, buffer, m_bpp);
                     c -= n;
                     if (dst >= end) {
@@ -1729,7 +1729,7 @@ private:
     }
 
     void convert(unsigned char *data, size_t length, size_t m_bpp) {
-        for (unsigned char *end = &data[length]; data < end; data += m_bpp)
+        for (const unsigned char *const end = &data[length]; data < end; data += m_bpp)
             u::swap(data[0], data[2]);
     }
 
@@ -2019,7 +2019,7 @@ protected:
         returnResult(kSuccess);
     }
 
-    int read(unsigned char *buffer, size_t count) {
+    int read(unsigned char *const buffer, size_t count) {
         if (m_buffer >= m_end)
             return EOF;
         if (m_buffer + count >= m_end)
@@ -2029,7 +2029,7 @@ protected:
         return int(count);
     }
 
-    bool next(unsigned char *store, size_t size) {
+    bool next(unsigned char *const store, size_t size) {
         for (int c=0;;) {
             // Skip space characters
             while ((c = read(store, 1)) != EOF && isspace(*store))
@@ -2525,7 +2525,7 @@ void texture::writeTGA(u::vector<unsigned char> &outData) {
                     if (remaining <= 0)
                         break;
                 }
-                for (unsigned char *scan = src; raw < u::min(remaining, 128); raw++) {
+                for (const unsigned char *scan = src; raw < u::min(remaining, 128); raw++) {
                     scan += m_bpp;
                     if (src[0] == scan[0] || src[1] == scan[1] || src[2] == scan[2] || (m_bpp != 4 && src[3] == scan[3]))
                         break;
@@ -2662,7 +2662,7 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
             for (int k = p ? best : 0; k < 5; ++k) {
                 const int type = map[k];
                 int estimate = 0;
-                unsigned char *z = &m_data[0] + m_pitch*j;
+                const unsigned char *const z = &m_data[0] + m_pitch*j;
                 for (size_t i = 0; i < m_bpp; i++) {
                     switch (type) {
                     case 0: lineBuffer[i] = z[i]; break;
@@ -2721,7 +2721,7 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
         *store++ = data[3];
     };
 
-    auto crc32 = [](unsigned char *buffer, size_t length) {
+    auto crc32 = [](const unsigned char *const buffer, size_t length) {
         unsigned int crc = ~0u;
         static unsigned int table[256];
         if (table[0] == 0)

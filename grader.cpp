@@ -130,7 +130,7 @@ void colorGrader::RGB2HSL(int &red, int &green, int &blue) {
     double s = 0.0;
     const double l = (max + min) / 2.0;
     if (max != min) {
-        int delta = max - min;
+        const int delta = max - min;
         if (l < 128.0)
             s = 255.0 * double(delta) / double(max + min);
         else
@@ -189,7 +189,7 @@ void colorGrader::HSL2RGB(int &hue, int &saturation, int &lightness) {
             m2 = (l * (255 + s)) / 65025.0;
         else
             m2 = (l + s - (l * s) / 255.0) / 255.0;
-        double m1 = (l / 127.5) - m2;
+        const double m1 = (l / 127.5) - m2;
         hue = HSLINT(m1, m2, h + 85);
         saturation = HSLINT(m1, m2, h);
         lightness = HSLINT(m1, m2, h - 85);
@@ -261,7 +261,7 @@ void colorGrader::applyHueSaturation() {
     float pintensity = 0.0f;
     float sintensity = 0.0f;
     bool useSecondaryHue = false;
-    float overlapHue = (m_hueOverlap / 100.0) * 21.0;
+    const float overlapHue = (m_hueOverlap / 100.0) * 21.0;
 
     for (size_t h = 0; h < kHeight; h++) {
         unsigned char *s = src;
