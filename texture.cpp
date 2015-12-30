@@ -956,9 +956,9 @@ private:
             const unsigned char *pcr = &m_comp[2].pixels[0];
             for (size_t yy = m_height; yy; --yy) {
                 for (size_t x = 0; x < m_width; ++x) {
-                    int y = py[x] << 8;
-                    int cb = pcb[x] - 128;
-                    int cr = pcr[x] - 128;
+                    const int y = py[x] << 8;
+                    const int cb = pcb[x] - 128;
+                    const int cr = pcr[x] - 128;
                     *prgb++ = clip((y            + 359 * cr + 128) >> 8);
                     *prgb++ = clip((y -  88 * cb - 183 * cr + 128) >> 8);
                     *prgb++ = clip((y + 454 * cb            + 128) >> 8);
@@ -1490,6 +1490,10 @@ struct tga : decoder {
     static constexpr const char *kMagic = "TRUEVISION-XFILE";
 
     static bool test(const u::vector<unsigned char> &data) {
+        // Not pretty but required to prevent more involved test from reading
+        // past the end of the buffer.
+        if (data.size() <= sizeof(header) || data.size() <= 26)
+            return false;
         // The TGA file format has no magic number. It has an `optional' trailer
         // section which could contain kMagic. It's always the last 26 bytes of
         // the file. We test for that as an early optimization, otherwise we have
@@ -1915,82 +1919,81 @@ protected:
         m_bpp = (data[1] == '3' || data[1] == '6') ? 3 : 1;
         m_data.resize(size * m_bpp);
         unsigned char *ptr = &m_data[0];
-        switch (data[1]) {
-        case '1':
+        if (data[1] >= '1' && data[1] <= '4') {
             for (size_t j = 0; j < size; ++j) {
-                if (!next(buffer, sizeof buffer))
-                    returnResult(kMalformatted);
-                *ptr++ = buffer[0] == '1' ? 255 : 0;
-                checkRange();
-            }
-            break;
-        case '2':
-            for (size_t j = 0; j < size; ++j) {
-                if (!next(buffer, sizeof buffer))
-                    returnResult(kMalformatted);
-                *ptr++ = strtol(string, nullptr, 10) * scale;
-                checkRange();
-            }
-            break;
-        case '3':
-            for (size_t j = 0; j < size; ++j) {
-                for (size_t c = 0; c < 3; c++) {
+                switch (data[1]) {
+                case '1':
+                    if (!next(buffer, sizeof buffer))
+                        returnResult(kMalformatted);
+                    *ptr++ = buffer[0] == '1' ? 255 : 0;
+                    checkRange();
+                    break;
+                case '2':
                     if (!next(buffer, sizeof buffer))
                         returnResult(kMalformatted);
                     *ptr++ = strtol(string, nullptr, 10) * scale;
                     checkRange();
-                }
-            }
-            break;
-        case '4':
-            for (size_t j = 0; j < size; ++j) {
-                if (read(buffer, 1) != 1)
-                    returnResult(kMalformatted);
-                for (size_t i = 0; i < 8 && j < size; ++i, ++j) {
-                    *ptr++ = (*buffer & (1<<(7-i))) ? 255 : 0;
-                    checkRange();
-                }
-            }
-            break;
-        case '5':
-            if (max > 255) {
-                for (size_t j = 0; j < size; ++j) {
-                    if (read(buffer, 2) != 2)
-                        returnResult(kMalformatted);
-                    *ptr++ = readBigEndian16(buffer) * scale;
-                    checkRange();
-                }
-            } else {
-                if (!read(ptr, size))
-                    returnResult(kMalformatted);
-                for (size_t j = 0; j < size; ++j) {
-                    *ptr++ *= scale;
-                    checkRange();
-                }
-            }
-            break;
-        case '6':
-            if (max > 255) {
-                for (size_t j = 0; j < size; ++j) {
+                    break;
+                case '3':
                     for (size_t c = 0; c < 3; c++) {
+                        if (!next(buffer, sizeof buffer))
+                            returnResult(kMalformatted);
+                        *ptr++ = strtol(string, nullptr, 10) * scale;
+                        checkRange();
+                    }
+                    break;
+                case '4':
+                    if (read(buffer, 1) != 1)
+                        returnResult(kMalformatted);
+                    for (size_t i = 0; i < 8 && j < size; ++i, ++j) {
+                        *ptr++ = (*buffer & (1<<(7-i))) ? 255 : 0;
+                        checkRange();
+                    }
+                    break;
+                }
+            }
+        } else {
+            switch (data[1]) {
+            case '5':
+                if (max > 255) {
+                    for (size_t j = 0; j < size; ++j) {
                         if (read(buffer, 2) != 2)
                             returnResult(kMalformatted);
                         *ptr++ = readBigEndian16(buffer) * scale;
                         checkRange();
                     }
+                } else {
+                    if (!read(ptr, size))
+                        returnResult(kMalformatted);
+                    for (size_t j = 0; j < size; ++j) {
+                        *ptr++ *= scale;
+                        checkRange();
+                    }
                 }
-            } else {
-                if (read(ptr, size*3) != int(size*3))
-                    returnResult(kMalformatted);
-                for (size_t j = 0; j < size*3; ++j) {
-                    *ptr++ *= scale;
-                    checkRange();
+                break;
+            case '6':
+                if (max > 255) {
+                    for (size_t j = 0; j < size; ++j) {
+                        for (size_t c = 0; c < 3; c++) {
+                            if (read(buffer, 2) != 2)
+                                returnResult(kMalformatted);
+                            *ptr++ = readBigEndian16(buffer) * scale;
+                            checkRange();
+                        }
+                    }
+                } else {
+                    if (read(ptr, size*3) != int(size*3))
+                        returnResult(kMalformatted);
+                    for (size_t j = 0; j < size*3; ++j) {
+                        *ptr++ *= scale;
+                        checkRange();
+                    }
                 }
+                break;
+            default:
+                returnResult(kUnsupported);
+                break;
             }
-            break;
-        default:
-            returnResult(kUnsupported);
-            break;
         }
 
         // The pointer should be at the end of memory if everything decoded
@@ -2029,23 +2032,20 @@ protected:
     bool next(unsigned char *store, size_t size) {
         for (int c=0;;) {
             // Skip space characters
-            while ((c = read(store, 1)) != EOF && isspace(*store)) {
+            while ((c = read(store, 1)) != EOF && isspace(*store))
                 if (c != 1)
                     return false;
-            }
             // Skip comment line
             if (c == '#') {
-                while ((c = read(store, 1)) != EOF && strchr("\r\n", *store)) {
+                while ((c = read(store, 1)) != EOF && strchr("\r\n", *store))
                     if (c != 1)
                         return false;
-                }
             } else {
                 // Read characters until we hit a space
                 size_t i;
-                for (i = 1; i < size && (c = read(store+i, 1)) != EOF && !isspace(store[i]); ++i) {
+                for (i = 1; i < size && (c = read(store+i, 1)) != EOF && !isspace(store[i]); ++i)
                     if (c != 1)
                         return false;
-                }
                 store[i < size ? i : size - 1] = '\0';
                 return true;
             }
@@ -2389,10 +2389,12 @@ u::optional<u::string> texture::find(const u::string &infile) {
         file.erase(beg, end+1);
     }
 
-    static const char *extensions[] = { "png", "jpg", "tga", "dds", "pbm", "ppm", "pgm", "pnm" };
+    static const char *kExtensions[] = {
+        "png", "jpg", "tga", "dds", "pbm", "ppm", "pgm", "pnm"
+    };
     size_t bits = 0;
-    for (size_t i = 0; i < sizeof extensions / sizeof *extensions; i++)
-        if (u::exists(u::format("%s.%s", file.c_str(), extensions[i])))
+    for (size_t i = 0; i < sizeof kExtensions / sizeof *kExtensions; i++)
+        if (u::exists(u::format("%s.%s", file, kExtensions[i])))
             bits |= (1 << i);
     if (bits == 0)
         return u::none;
@@ -2401,7 +2403,7 @@ u::optional<u::string> texture::find(const u::string &infile) {
         bits >>= 1;
         ++index;
     }
-    return u::format("%s.%s", file.c_str(), extensions[index]);
+    return u::format("%s.%s", file, kExtensions[index]);
 }
 
 bool texture::load(const u::string &file, float quality) {
