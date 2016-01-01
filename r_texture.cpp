@@ -430,6 +430,14 @@ static const char *cacheFormat(GLuint internal) {
         return "RED_GREEN_RGTC2";
     case GL_COMPRESSED_RED_RGTC1_EXT:
         return "RED_RGTC1";
+    case GL_COMPRESSED_RGB8_ETC2:
+        return "RGB8_ETC2";
+    case GL_COMPRESSED_RGBA8_ETC2_EAC:
+        return "RGBA8_ETC2_EAC";
+    case GL_COMPRESSED_R11_EAC:
+        return "R11_EAC";
+    case GL_COMPRESSED_RG11_EAC:
+        return "RG11_EAC";
     }
     return "";
 }
@@ -486,6 +494,14 @@ static bool readCache(texture &tex, GLuint &internal) {
     case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
     case GL_COMPRESSED_RED_RGTC1_EXT:
         if (!gl::has(gl::EXT_texture_compression_rgtc))
+            return false;
+        break;
+
+    case GL_COMPRESSED_RGB8_ETC2:
+    case GL_COMPRESSED_RGBA8_ETC2_EAC:
+    case GL_COMPRESSED_R11_EAC:
+    case GL_COMPRESSED_RG11_EAC:
+        if (!gl::has(gl::ARB_ES3_compatibility))
             return false;
         break;
     }
@@ -604,6 +620,10 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
     case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
     case GL_COMPRESSED_RED_RGTC1_EXT:
+    case GL_COMPRESSED_RGB8_ETC2:
+    case GL_COMPRESSED_RGBA8_ETC2_EAC:
+    case GL_COMPRESSED_R11_EAC:
+    case GL_COMPRESSED_RG11_EAC:
         break;
     default:
         return false;
@@ -686,25 +706,25 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
         switch (tex.format()) {
         case kTexFormatDXT1:
             checkSupport(gl::EXT_texture_compression_s3tc);
-            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
+            return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT };
         case kTexFormatDXT3:
             checkSupport(gl::EXT_texture_compression_s3tc);
-            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT);
+            return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT };
         case kTexFormatDXT5:
             checkSupport(gl::EXT_texture_compression_s3tc);
-            return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
+            return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT };
         case kTexFormatBC4U:
             checkSupport(gl::EXT_texture_compression_rgtc);
-            return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
+            return queryFormat { GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT };
         case kTexFormatBC4S:
             checkSupport(gl::EXT_texture_compression_rgtc);
-            return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_SIGNED_RED_RGTC1_EXT);
+            return queryFormat { GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_SIGNED_RED_RGTC1_EXT };
         case kTexFormatBC5U:
             checkSupport(gl::EXT_texture_compression_rgtc);
-            return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
+            return queryFormat { GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT };
         case kTexFormatBC5S:
             checkSupport(gl::EXT_texture_compression_rgtc);
-            return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT);
+            return queryFormat { GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT };
         default:
             break;
         }
@@ -721,35 +741,32 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
         const bool bptc = gl::has(gl::ARB_texture_compression_bptc);
         const bool s3tc = gl::has(gl::EXT_texture_compression_s3tc);
         const bool rgtc = gl::has(gl::EXT_texture_compression_rgtc);
+        const bool es3c = gl::has(gl::ARB_ES3_compatibility);
         // Deal with conversion from BGR[A] space to RGB[A] space for compression
         // While falling through to the correct internal format for the compression
-        if (bptc || s3tc || rgtc) {
+        if (bptc || s3tc || rgtc || es3c) {
             switch (tex.format()) {
             case kTexFormatBGRA:
                 tex.convert<kTexFormatRGBA>();
             case kTexFormatRGBA:
-                if (bptc || s3tc) {
-                    return queryFormat(GL_RGBA, R_TEX_DATA_RGBA, bptc
-                        ? GL_COMPRESSED_RGBA_BPTC_UNORM_ARB
-                        : GL_COMPRESSED_RGBA_S3TC_DXT5_EXT);
-                }
-                break;
+                if (bptc) return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_BPTC_UNORM_ARB };
+                if (s3tc) return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT };
+                if (es3c) return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA8_ETC2_EAC };
+            break;
             case kTexFormatBGR:
                 tex.convert<kTexFormatRGB>();
             case kTexFormatRGB:
-                if (bptc || s3tc) {
-                    return queryFormat(GL_RGB, R_TEX_DATA_RGB, bptc
-                        ? GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB
-                        : GL_COMPRESSED_RGBA_S3TC_DXT1_EXT);
-                }
+                if (bptc) return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB };
+                if (s3tc) return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT };
+                if (es3c) return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_COMPRESSED_RGB8_ETC2 };
                 break;
             case kTexFormatRG:
-                if (rgtc)
-                    return queryFormat(GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT);
+                if (es3c) return queryFormat { GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RG11_EAC };
+                if (rgtc) return queryFormat { GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT };
                 break;
             case kTexFormatLuminance:
-                if (rgtc)
-                    return queryFormat(GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT);
+                if (es3c) return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_COMPRESSED_R11_EAC };
+                if (rgtc) return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT };
                 break;
             default:
                 break;
@@ -761,17 +778,17 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     // format.
     switch (tex.format()) {
     case kTexFormatRGBA:
-        return queryFormat(GL_RGBA, R_TEX_DATA_RGBA,      GL_RGBA);
+        return queryFormat { GL_RGBA, R_TEX_DATA_RGBA,GL_RGBA };
     case kTexFormatRGB:
-        return queryFormat(GL_RGB,  R_TEX_DATA_RGB,       GL_RGBA);
+        return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_RGBA };
     case kTexFormatBGRA:
-        return queryFormat(GL_BGRA, R_TEX_DATA_BGRA,      GL_RGBA);
+        return queryFormat { GL_BGRA, R_TEX_DATA_BGRA,GL_RGBA };
     case kTexFormatBGR:
-        return queryFormat(GL_BGR,  R_TEX_DATA_BGR,       GL_RGBA);
+        return queryFormat { GL_BGR,R_TEX_DATA_BGR, GL_RGBA };
     case kTexFormatRG:
-        return queryFormat(GL_RG,   R_TEX_DATA_RG,        GL_RG8);
+        return queryFormat { GL_RG, R_TEX_DATA_RG,GL_RG8 };
     case kTexFormatLuminance:
-        return queryFormat(GL_RED,  R_TEX_DATA_LUMINANCE, GL_RED);
+        return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_RED };
     default:
         assert(0);
         break;
