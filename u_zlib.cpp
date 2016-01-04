@@ -53,8 +53,8 @@ size_t zlib::readBitsFromStream(size_t &bitp, const unsigned char *bits, size_t 
 }
 
 bool zlib::huffmanTree::make(const u::vector<size_t> &bitlen, size_t maxbitlen) {
-    //make tree given the lengths
-    size_t numcodes = (size_t)(bitlen.size());
+    // make tree given the lengths
+    const size_t numcodes = bitlen.size();
     size_t treepos = 0;
     size_t nodefilled = 0;
 
@@ -63,9 +63,9 @@ bool zlib::huffmanTree::make(const u::vector<size_t> &bitlen, size_t maxbitlen) 
     u::vector<size_t> nextcode(maxbitlen + 1, 0);
 
     // count number of instances of each code length
-    for(size_t bits = 0; bits < numcodes; bits++)
+    for (size_t bits = 0; bits < numcodes; bits++)
         blcount[bitlen[bits]]++;
-    for(size_t bits = 1; bits <= maxbitlen; bits++)
+    for (size_t bits = 1; bits <= maxbitlen; bits++)
         nextcode[bits] = (nextcode[bits - 1] + blcount[bits - 1]) << 1;
     for (size_t n = 0; n < numcodes; n++)
         if (bitlen[n] != 0)
@@ -76,7 +76,7 @@ bool zlib::huffmanTree::make(const u::vector<size_t> &bitlen, size_t maxbitlen) 
 
     for (size_t n = 0; n < numcodes; n++) {
         for (size_t i = 0; i < bitlen[n]; i++) {
-            size_t bit = (tree1D[n] >> (bitlen[n] - i - 1)) & 1;
+            const size_t bit = (tree1D[n] >> (bitlen[n] - i - 1)) & 1;
             if (treepos > numcodes - 2)
                 return false;
             if (m_tree2D[2 * treepos + bit] == 32767) {
@@ -97,7 +97,7 @@ bool zlib::huffmanTree::make(const u::vector<size_t> &bitlen, size_t maxbitlen) 
 
 // Decodes a symbol from the tree
 bool zlib::huffmanTree::decode(bool &decoded, size_t &r, size_t &treepos, size_t bit) const {
-    size_t numcodes = m_tree2D.size() / 2;
+    const size_t numcodes = m_tree2D.size() / 2;
     if (treepos >= numcodes)
         return false;
 
@@ -112,19 +112,23 @@ bool zlib::inflator::inflate(u::vector<unsigned char> &out, const unsigned char 
     size_t pos = 0;
     size_t bfinal = 0;
     while (!bfinal && !m_error) {
-        if (bp >> 3 >= length)
+        if ((bp >> 3) >= length)
             return false;
 
         bfinal = readBitFromStream(bp, &in[inpos]);
         size_t btype = readBitFromStream(bp, &in[inpos]);
         btype += 2 * readBitFromStream(bp, &in[inpos]);
 
-        if (btype == 3)
-            return false;
-        else if (btype == 0)
+        switch (btype) {
+        case 0:
             inflateNoCompression(out, &in[inpos], bp, pos, length);
-        else
+            break;
+        case 3:
+            return false;
+        default:
             inflateHuffmanBlock(out, &in[inpos], bp, pos, length, btype);
+            break;
+        }
     }
     if (m_error)
         return false;
@@ -148,8 +152,7 @@ void zlib::inflator::generateFixedTrees(huffmanTree& tree, huffmanTree& treeD) {
 
 size_t zlib::inflator::huffmanDecodeSymbol(const unsigned char *in, size_t &bp, const huffmanTree &m_codeTree, size_t inlength) {
     bool decoded;
-    size_t ct;
-    for (size_t treepos = 0;;) {
+    for (size_t treepos = 0, ct = 0;;) {
         // error: end reached without endcode
         if ((bp & 0x07) == 0 && (bp >> 3) > inlength) {
             m_error = true;
@@ -225,7 +228,7 @@ void zlib::inflator::getTreeInflateDynamic(huffmanTree &tree, huffmanTree &treeD
         }
 
         // repeat "0" 3-10 times
-        else if(code == 17) {
+        else if (code == 17) {
             if (bp >> 3 >= inlength)
                 returnError();
             replength = 3 + readBitsFromStream(bp, in, 3);
@@ -273,15 +276,19 @@ void zlib::inflator::getTreeInflateDynamic(huffmanTree &tree, huffmanTree &treeD
 void zlib::inflator::inflateHuffmanBlock(u::vector<unsigned char> &out, const unsigned char *in,
     size_t &bp, size_t &pos, size_t inlength, size_t btype)
 {
-    if(btype == 1)
+    switch (btype) {
+    case 1:
         generateFixedTrees(m_codeTree, m_codeTreeDistance);
-    else if(btype == 2) {
+        break;
+    case 2:
         getTreeInflateDynamic(m_codeTree, m_codeTreeDistance, in, bp, inlength);
-        if (m_error)
-            return;
+        break;
     }
+    if (m_error)
+        return;
+
     for (;;) {
-        size_t code = huffmanDecodeSymbol(in, bp, m_codeTree, inlength);
+        const size_t code = huffmanDecodeSymbol(in, bp, m_codeTree, inlength);
         if (m_error)
             return;
 
@@ -299,13 +306,13 @@ void zlib::inflator::inflateHuffmanBlock(u::vector<unsigned char> &out, const un
         // length code
         else if (code >= 257 && code <= 285) {
             size_t length = kLengthBases[code - 257];
-            size_t numextrabits = kLengthExtras[code - 257];
+            const size_t numextrabits = kLengthExtras[code - 257];
 
             if ((bp >> 3) >= inlength)
                 returnError();
 
             length += readBitsFromStream(bp, in, numextrabits);
-            size_t codeD = huffmanDecodeSymbol(in, bp, m_codeTreeDistance, inlength);
+            const size_t codeD = huffmanDecodeSymbol(in, bp, m_codeTreeDistance, inlength);
             if (m_error)
                 return;
 
@@ -313,13 +320,13 @@ void zlib::inflator::inflateHuffmanBlock(u::vector<unsigned char> &out, const un
                 returnError();
 
             size_t dist = kDistanceBases[codeD];
-            size_t numextrabitsD = kDistanceExtras[codeD];
+            const size_t numextrabitsD = kDistanceExtras[codeD];
 
             if ((bp >> 3) >= inlength)
                 returnError();
 
             dist += readBitsFromStream(bp, in, numextrabitsD);
-            size_t start = pos;
+            const size_t start = pos;
             size_t back = start - dist; // backwards
 
             if (pos + length >= out.size())

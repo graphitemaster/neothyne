@@ -64,6 +64,11 @@ private:
         fill_urange_traits(first, last, value, detail::is_pod<T>());
     }
 
+    template <typename I>
+    static inline void store_range_traits(T *dest, I *first, I *last) {
+        store_range_traits(dest, first, last, detail::is_pod<T>());
+    }
+
     static inline T *reserve_traits(T *first, T *last, size_t capacity, detail::is_pod<T, false>) {
         T *memory = neoMalloc(sizeof *memory * capacity);
         move_urange(memory, first, last);
@@ -132,6 +137,18 @@ private:
         dest += (last - first);
         for (T *it = last; it != first; --it, --dest)
             *(dest - 1) = *(it - 1);
+    }
+
+    template <typename I>
+    static inline void store_range_traits(T *dest, I *first, I *last, detail::is_pod<T, true>) {
+        for (; first != last; ++first, ++dest)
+            *dest = *first;
+    }
+
+    template <typename I>
+    static inline void store_range_traits(T *dest, I *first, I *last, detail::is_pod<T, false>) {
+        for (; first != last; ++first, ++dest)
+            new (dest) T(*first);
     }
 };
 
@@ -232,23 +249,32 @@ inline T *buffer<T>::insert_common(T *where, size_t count) {
 template <typename T>
 template <typename I>
 inline void buffer<T>::insert(T *where, const I *ifirst, const I *ilast) {
-    // Allow insertion ifirst/ilast to potentially overlap in memory
-    using P = unsigned char *;
-    const bool from = ((P)first <= (P)ifirst && (P)last >= (P)ilast);
-    const size_t count = ilast - ifirst;
-    size_t offset;
-    if (from) {
-        offset = (P)ifirst - (P)first;
-        if ((P)where <= (P)ifirst)
-            offset += count * sizeof(T);
+    // This is not especially nice looking, however it produces much more optimal
+    // code compared to the obvious solution.
+    //
+    // Generally speaking, we allow ifirst/ilast to potentially alias first/last.
+    // That is, we can insert into the buffer, objects which are in the buffer
+    // we are inserting objects into. This is effectively a "type-safe" memmove.
+    const unsigned char *const mfirst = (const unsigned char *const)first;
+    const unsigned char *const mlast = (const unsigned char *const)last;
+    const unsigned char *const tfirst = (const unsigned char *const)ifirst;
+    const unsigned char *const tlast = (const unsigned char *const)ilast;
+    const unsigned char *const twhere = (const unsigned char *const)where;
+    const bool fromBuffer = mfirst <= tfirst && mlast >= tlast;
+    const size_t fromCount = ilast - ifirst;
+    const size_t fromOffset =
+        u::unlikely(fromBuffer && twhere <= tfirst)
+            ? tfirst - mfirst + fromCount * sizeof(T)
+            : tfirst - mfirst;
+
+    where = insert_common(where, fromCount);
+
+    if (u::unlikely(fromBuffer)) {
+        const I *begin = (const I *)(tfirst + fromOffset);
+        store_range_traits(where, begin, begin + fromCount);
+    } else {
+        store_range_traits(where, ifirst, ilast);
     }
-    where = insert_common(where, count);
-    if (from) {
-        ifirst = (I*)((P)first + offset);
-        ilast = ifirst + count;
-    }
-    for (; ifirst != ilast; ++ifirst, ++where)
-        new (where) T(*ifirst);
 }
 
 template <typename T>

@@ -539,6 +539,25 @@ inline constexpr void *offset_of(T1 T2::*member) {
     return (void *)detail::offset_of<T1, T2>::offset(member);
 }
 
+/// Convenience likely/unlikely "traits".
+template <typename T>
+inline bool likely(const T &value) {
+#if defined(__GNUC__)
+    return __builtin_expect(!!value, 1);
+#else
+    return !!value == 1;
+#endif
+}
+
+template <typename T>
+inline bool unlikely(const T &value) {
+#if defined(__GNUC__)
+    return __builtin_expect(!!value, 0);
+#else
+    return !!value == 0;
+#endif
+}
+
 }
 
 #undef HAS_FEATURE
