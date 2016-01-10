@@ -293,7 +293,8 @@ size_t gui::atlas::height() const {
 static const size_t kAtlasSize = 1024;
 
 gui::gui()
-    : m_bufferIndex(0)
+    : m_vao(0)
+    , m_bufferIndex(0)
     , m_notex(nullptr)
     , m_atlasData(new unsigned char[kAtlasSize*kAtlasSize*4])
     , m_atlasTexture(0)

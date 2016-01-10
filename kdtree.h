@@ -18,6 +18,7 @@ struct kdEnt {
 };
 
 struct kdTriangle {
+    kdTriangle();
     m::vec3 getNormal(const kdTree *const tree);
     void generatePlane(const kdTree *const tree);
 
@@ -30,6 +31,10 @@ private:
     m::plane plane;
     const u::string *textureReference;
 };
+
+inline kdTriangle::kdTriangle() {
+    memset(this, 0, sizeof *this);
+}
 
 enum polyPlane : size_t {
     kPolyPlaneSplit,

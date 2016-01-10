@@ -123,6 +123,7 @@ enum class entity {
 };
 
 struct world {
+    world();
     ~world();
 
     bool load(const u::string &map);
@@ -220,5 +221,10 @@ private:
     colorGrader m_colorGrader;
     bool m_needSync;
 };
+
+inline world::world()
+    : m_needSync(true)
+{
+}
 
 #endif

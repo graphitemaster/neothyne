@@ -329,6 +329,7 @@ world::world()
     : m_geomMethods(&geomMethods::instance())
     , m_map(nullptr)
     , m_kdWorld(nullptr)
+    , m_memory(0)
     , m_uploaded(false)
 {
 }
