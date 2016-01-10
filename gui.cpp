@@ -420,7 +420,9 @@ void areaFinish(int inc, bool autoScroll) {
         if (autoScroll) {
             *S.value = m::clamp(*S.value + inc, 0, sh - h);
         } else {
-            const float barY = m::clamp(float(y - sbot) / float(sh), 0.0f, 1.0f);
+            const float barScale = y - sbot;
+            const float barUpScale = sh ? barScale / float(sh) : barScale;
+            const float barY = m::clamp(barUpScale, 0.0f, 1.0f);
             const auto id = S.id;
             const int hx = x;
             const int hy = y + int(barY * h);
