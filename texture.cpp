@@ -918,17 +918,21 @@ private:
         switch (filter) {
         case kBicubic:
             for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
-                const bool w = c->width < m_width;
-                const bool h = c->height < m_height;
+                bool w = c->width < m_width;
+                bool h = c->height < m_height;
                 if (m_coSitedChroma) {
                     while (w || h) {
                         if (w) upSampleCositedH(c);
                         if (h) upSampleCositedV(c);
+                        w = c->width < m_width;
+                        h = c->height < m_height;
                     }
                 } else {
                     while (w || h) {
                         if (w) upSampleCenteredH(c);
                         if (h) upSampleCenteredV(c);
+                        w = c->width < m_width;
+                        h = c->height < m_height;
                     }
                 }
                 if (c->width < m_width || c->height < m_height)
