@@ -1,5 +1,4 @@
 #include <math.h> // powf
-#include <assert.h>
 
 #include "mesh.h"
 #include "engine.h"
@@ -17,7 +16,7 @@ size_t vertexCacheData::findTriangle(size_t triangle) {
 
 void vertexCacheData::moveTriangle(size_t triangle) {
     const size_t index = findTriangle(triangle);
-    assert(index != -1_z);
+    u::assert(index != -1_z);
 
     // Erase the index and add it to the end
     indices.erase(indices.begin() + index,

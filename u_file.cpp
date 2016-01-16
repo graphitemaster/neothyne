@@ -209,8 +209,6 @@ bool dir::isFile(const char *fileName) {
 }
 
 #else
-#include <assert.h>
-
 #define IS_IGNORE(X) (!strcmp((X).cFileName, ".") || !strcmp((X).cFileName, ".."))
 
 struct findContext {
@@ -225,7 +223,7 @@ inline findContext::findContext(const char *where)
 {
     static constexpr const char kPathExtra[] = "\\*";
     const size_t length = strlen(where);
-    assert(length + sizeof kPathExtra < MAX_PATH);
+    u::assert(length + sizeof kPathExtra < MAX_PATH);
     char path[MAX_PATH];
     memcpy((void *)path, (const void *)where, length);
     memcpy((void *)&path[length], (const void *)kPathExtra, sizeof kPathExtra);

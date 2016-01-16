@@ -87,22 +87,29 @@ inline const char *formatNormalize(const u::string &argument) {
     return argument.c_str();
 }
 
-static inline u::string formatProcess(const char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    int len = detail::c99vsnprintf(nullptr, 0, fmt, ap);
-    va_end(ap);
+static inline u::string formatProcess(const char *fmt, va_list va) {
+    const int len = detail::c99vsnprintf(nullptr, 0, fmt, va);
     u::string data;
     data.resize(len);
-    va_start(ap, fmt);
-    detail::c99vsnprintf(&data[0], len + 1, fmt, ap);
-    va_end(ap);
+    detail::c99vsnprintf(&data[0], len + 1, fmt, va);
     return move(data);
+}
+
+static inline u::string formatProcess(const char *fmt, ...) {
+    va_list va;
+    va_start(va, fmt);
+    u::string value = u::formatProcess(fmt, va);
+    va_end(va);
+    return u::move(value);
 }
 
 template <typename... Ts>
 inline u::string format(const char *fmt, const Ts&... ts) {
     return formatProcess(fmt, formatNormalize(ts)...);
+}
+
+inline u::string format(const char *fmt, va_list va) {
+    return formatProcess(fmt, va);
 }
 
 static inline u::string sizeMetric(size_t size) {
@@ -113,7 +120,7 @@ static inline u::string sizeMetric(size_t size) {
         r = size % 1024;
         size /= 1024;
     }
-    assert(i != sizeof kSizes / sizeof *kSizes);
+    u::assert(i != sizeof kSizes / sizeof *kSizes);
     return u::format("%.2f %s", float(size) + float(r) / 1024.0f, kSizes[i]);
 }
 
@@ -135,6 +142,12 @@ uint32_t randu(); //[0, UINT32_MAX]
 float randf(); // [0, 1]
 
 unsigned char log2(uint32_t v);
+
+// We don't use <ctype.h> as it's locale dependent and the engine operates on
+// the assumption that everything is the C locale.
+static inline bool isspace(int ch) {
+    return ch == ' ' || (unsigned)ch-'\t' < 5;
+}
 
 }
 #endif

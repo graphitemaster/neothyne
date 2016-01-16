@@ -1,5 +1,4 @@
 #include <math.h> // sqrtf
-#include <assert.h>
 
 #include "engine.h"
 #include "gui.h"
@@ -398,7 +397,7 @@ gui::atlas::node *gui::atlasPack(const u::string &file) {
                 *beg++ = *data++;
                 break;
             default:
-                assert(0 && "invalid texture format for UI atlas");
+                u::assert(0 && "invalid texture format for UI atlas");
                 break;
             }
         }
@@ -510,7 +509,7 @@ void gui::render(const pipeline &pl) {
     m_methods[kMethodImage].setPerspective(perspective);
 
     for (const auto &it : ::gui::commands()()) {
-        assert(it.type != -1);
+        u::assert(it.type != -1);
 #if defined(DEBUG_GUI)
         printCommand(it);
 #endif

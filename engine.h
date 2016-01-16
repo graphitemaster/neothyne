@@ -132,11 +132,11 @@ private:
     void *m_context; ///< pimpl for context
 };
 
-void neoFatalError(const char *error);
+[[noreturn]] void neoFatalError(const char *error);
 void *neoGetProcAddress(const char *proc);
 
 template <typename... Ts>
-inline void neoFatal(const char *fmt, const Ts&... ts) {
+[[noreturn]] inline void neoFatal(const char *fmt, const Ts&... ts) {
     neoFatalError(u::format(fmt, ts...).c_str());
 }
 

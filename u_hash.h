@@ -2,7 +2,6 @@
 #define U_HASH_HDR
 #include <stddef.h>
 #include <string.h>
-#include <assert.h>
 
 #include "u_new.h"
 #include "u_buffer.h"

@@ -14,51 +14,51 @@ uniform::uniform() {
 }
 
 void uniform::set(int value) {
-    assert(m_type == kInt);
+    u::assert(m_type == kInt);
     asInt = value;
     post();
 }
 
 void uniform::set(int x, int y) {
-    assert(m_type == kInt2);
+    u::assert(m_type == kInt2);
     asInt2[0] = x;
     asInt2[1] = y;
     post();
 }
 
 void uniform::set(float value) {
-    assert(m_type == kFloat);
+    u::assert(m_type == kFloat);
     asFloat = value;
     post();
 }
 
 void uniform::set(const m::vec2 &value) {
-    assert(m_type == kVec2);
+    u::assert(m_type == kVec2);
     asVec2 = value;
     post();
 }
 
 void uniform::set(const m::vec3 &value) {
-    assert(m_type == kVec3);
+    u::assert(m_type == kVec3);
     asVec3 = value;
     post();
 }
 
 void uniform::set(const m::vec4 &value) {
-    assert(m_type == kVec4);
+    u::assert(m_type == kVec4);
     asVec4 = value;
     post();
 }
 
 void uniform::set(const m::mat4 &value) {
-    assert(m_type == kMat4);
+    u::assert(m_type == kMat4);
     asMat4 = value;
     post();
 }
 
 void uniform::set(size_t count, const float *mats) {
-    assert(m_type == kMat3x4Array);
-    assert(count <= method::kMat3x4Space);
+    u::assert(m_type == kMat3x4Array);
+    u::assert(count <= method::kMat3x4Space);
 
     memcpy(asMat3x4Array.data, mats, sizeof(m::mat3x4) * count);
     asMat3x4Array.count = count;

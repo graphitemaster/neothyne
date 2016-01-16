@@ -1,6 +1,3 @@
-#include <assert.h>
-#include <ctype.h>
-
 #include "engine.h"
 #include "texture.h"
 #include "cvar.h"
@@ -159,7 +156,7 @@ struct jpeg : decoder {
             m_format = kTexFormatRGBA;
             break;
         default:
-            assert(0);
+            u::assert(0);
             break;
         }
 
@@ -511,12 +508,12 @@ private:
             if (c->ssy > ssymax)
                 ssymax = c->ssy;
         }
-        assert(ssxmax);
-        assert(ssymax);
+        u::assert(ssxmax);
+        u::assert(ssymax);
         m_mbsizex = ssxmax << 3;
         m_mbsizey = ssymax << 3;
-        assert(m_mbsizex);
-        assert(m_mbsizey);
+        u::assert(m_mbsizex);
+        u::assert(m_mbsizey);
         m_mbwidth = (m_width + m_mbsizex - 1) / m_mbsizex;
         m_mbheight = (m_height + m_mbsizey - 1) / m_mbsizey;
         for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
@@ -948,7 +945,7 @@ private:
             }
             break;
         default:
-            assert(0 && "unknown chroma filter");
+            u::assert(0 && "unknown chroma filter");
             break;
         }
 
@@ -1105,7 +1102,7 @@ struct png : decoder {
             m_format = kTexFormatRGBA;
             break;
         default:
-            assert(0);
+            u::assert(0);
             break;
         }
 
@@ -1427,7 +1424,7 @@ private:
     }
 
     void setBitReversed(size_t &bitp, unsigned char *const bits, size_t bit) {
-        assert(bits);
+        u::assert(bits);
         bits[bitp >> 3] |=  (bit << (7 - (bitp & 0x7)));
         bitp++;
     }
@@ -1539,7 +1536,7 @@ struct tga : decoder {
             m_format = kTexFormatRGBA;
             break;
         default:
-            assert(0 && "unsupported bpp");
+            u::assert(0 && "unsupported bpp");
             break;
         }
 
@@ -1864,7 +1861,7 @@ private:
 ///
 struct pnm : decoder {
     static bool test(const u::vector<unsigned char> &data) {
-        return data[0] == 'P' && data[1] >= '1' && data[1] <= '6' && isspace(data[2]);
+        return data[0] == 'P' && data[1] >= '1' && data[1] <= '6' && u::isspace(data[2]);
     }
 
     pnm(const u::vector<unsigned char> &data) {
@@ -2014,7 +2011,7 @@ protected:
             m_format = kTexFormatRGB;
             break;
         default:
-            assert(0 && "unsupported bpp");
+            u::assert(0 && "unsupported bpp");
             break;
         }
 
@@ -2036,7 +2033,7 @@ protected:
     bool next(unsigned char *const store, size_t size) {
         for (int c=0;;) {
             // Skip space characters
-            while ((c = read(store, 1)) != EOF && isspace(*store))
+            while ((c = read(store, 1)) != EOF && u::isspace(*store))
                 if (c != 1)
                     return false;
             // Skip comment line
@@ -2047,7 +2044,7 @@ protected:
             } else {
                 // Read characters until we hit a space
                 size_t i;
-                for (i = 1; i < size && (c = read(store+i, 1)) != EOF && !isspace(store[i]); ++i)
+                for (i = 1; i < size && (c = read(store+i, 1)) != EOF && !u::isspace(store[i]); ++i)
                     if (c != 1)
                         return false;
                 store[i < size ? i : size - 1] = '\0';
@@ -2340,8 +2337,8 @@ void texture::colorize(uint32_t color) {
         return ((rb1 | rb2) & 0xFF00FF) + ((g1 | g2) & 0x00FF00);
     };
 
-    assert(m_format == kTexFormatBGR || m_format == kTexFormatBGRA ||
-           m_format == kTexFormatRGB || m_format == kTexFormatRGBA);
+    u::assert(m_format == kTexFormatBGR || m_format == kTexFormatBGRA ||
+              m_format == kTexFormatRGB || m_format == kTexFormatRGBA);
 
     for (size_t i = 0; i < m_data.size(); i += m_bpp) {
         uint8_t *R = nullptr;
@@ -2461,7 +2458,7 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
         m_bpp = 1;
         break;
     default:
-        assert(0);
+        u::assert(0);
         break;
     }
     m_pitch = m_width * m_bpp;

@@ -1,10 +1,10 @@
 #ifndef U_BUFFER_HDR
 #define U_BUFFER_HDR
-#include <assert.h>
 #include <stdlib.h>
 
 #include "u_new.h"
 #include "u_algorithm.h"
+#include "u_assert.h"
 
 namespace u {
 
@@ -178,7 +178,7 @@ inline buffer<T>::buffer(buffer<T> &&other) {
 
 template <typename T>
 inline buffer<T> &buffer<T>::operator=(buffer<T> &&other) {
-    assert(this != &other);
+    u::assert(this != &other);
     destroy_range(first, last);
     neoFree(first);
     first = other.first;

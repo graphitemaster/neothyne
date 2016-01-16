@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <string.h>
 
 #include "u_zlib.h"
@@ -528,9 +527,9 @@ void zlib::deflator::deflate(u::vector<unsigned char> &out, const unsigned char 
 
         if (bestLocation) {
             // distance back
-            int distance = int(&in[0]+i-bestLocation);
-            assert(distance <= 32767);
-            assert(best <= 258);
+            const int distance = int(&in[0]+i-bestLocation);
+            u::assert(distance <= 32767);
+            u::assert(best <= 258);
             int j;
             for (j = 0; best > kLengthBases[j+1]-1; ++j);
             huff(j+257);

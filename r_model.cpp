@@ -1,5 +1,3 @@
-#include <assert.h>
-
 #include "r_model.h"
 #include "r_texture.h"
 #include "r_pipeline.h"

@@ -1,5 +1,3 @@
-#include <assert.h>
-
 #include "engine.h"
 #include "cvar.h"
 
@@ -728,7 +726,7 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
         default:
             break;
         }
-        assert(0);
+        u::assert(0);
     }
 
     if (tex.flags() & kTexFlagNormal)
@@ -790,7 +788,7 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     case kTexFormatLuminance:
         return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_RED };
     default:
-        assert(0);
+        u::assert(0);
         break;
     }
     return u::none;
@@ -841,7 +839,7 @@ static inline void getTexParams(bool bilinear, bool mipmaps, bool trilinear, GLe
         GL_NEAREST, GL_LINEAR, GL_NEAREST_MIPMAP_LINEAR, GL_LINEAR_MIPMAP_LINEAR
     };
 
-    assert(index < sizeof kMinLookup / sizeof *kMinLookup);
+    u::assert(index < sizeof kMinLookup / sizeof *kMinLookup);
     min = kMinLookup[index];
 }
 

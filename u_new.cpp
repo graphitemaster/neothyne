@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
 
 #include "u_new.h"
+#include "u_assert.h"
 
 static constexpr size_t kMemoryAlignment = 16u;
 
@@ -118,6 +118,5 @@ void operator delete[](void *ptr) noexcept {
 }
 
 extern "C" void __cxa_pure_virtual() {
-    assert(0 && "pure virtual function call");
-    abort();
+    u::assert(0 && "pure virtual function call");
 }

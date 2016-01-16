@@ -135,7 +135,7 @@ inline void lru<K>::insert_front(node *n) {
 
 template <typename K>
 inline void lru<K>::remove_back() {
-    assert(m_tail);
+    u::assert(m_tail);
     node *temp = m_tail;
     m_tail = m_tail->prev;
     if (m_tail) {

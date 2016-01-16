@@ -490,7 +490,7 @@ const char *glslVersionString() {
     case 150: return "3.2";
     case 330: return "3.3";
     }
-    assert(0);
+    u::assert(0);
 }
 
 const char *extensionString(size_t what) {

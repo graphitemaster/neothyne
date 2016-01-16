@@ -3,7 +3,6 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <limits.h>
 
 #if !defined(NDEBUG)
@@ -56,7 +55,7 @@ private:
 };
 
 inline void stringMemory::region::setSize(uint32_t size) {
-    assert(size < INT32_MAX);
+    u::assert(size < INT32_MAX);
     const bool used = free();
     m_store = int32_t(size);
     setFree(used);
@@ -95,7 +94,7 @@ inline stringMemory::~stringMemory() {
 }
 
 char *stringMemory::allocate(size_t size) {
-    assert(m_head);
+    u::assert(m_head);
     if (size == 0)
         return allocate(1);
     const size_t totalSize = getSize(size);
@@ -123,8 +122,8 @@ inline void stringMemory::deallocate(char *ptr) {
         return;
     // Mark the block as free
     region *freeRegion = ((region *)ptr) - 1;
-    assert(freeRegion >= m_head);
-    assert(freeRegion <= (m_tail - 1));
+    u::assert(freeRegion >= m_head);
+    u::assert(freeRegion <= (m_tail - 1));
     freeRegion->setFree(true);
 }
 
@@ -134,8 +133,8 @@ char *stringMemory::reallocate(char *ptr, size_t size) {
 
     region *reg = ((region *)ptr) - 1;
 
-    assert(reg >= m_head);
-    assert(reg <= (m_tail - 1));
+    u::assert(reg >= m_head);
+    u::assert(reg <= (m_tail - 1));
 
     if (size == 0) {
         deallocate(ptr);
@@ -164,7 +163,7 @@ inline stringMemory::region *stringMemory::nextRegion(region *reg) {
 //
 // Merges adjacent free blocks as it searches the list.
 stringMemory::region *stringMemory::findAvailable(size_t size) {
-    assert(m_head);
+    u::assert(m_head);
 
     region *reg = m_head;
     region *buddy = nextRegion(reg);
@@ -221,7 +220,7 @@ stringMemory::region *stringMemory::findAvailable(size_t size) {
 
 // Single level merge of adjacent free blocks
 bool stringMemory::mergeFree() {
-    assert(m_head);
+    u::assert(m_head);
 
     region *reg = m_head;
     region *buddy = nextRegion(reg);
@@ -252,7 +251,7 @@ bool stringMemory::mergeFree() {
 // Given a region of free memory and a size, split it in half repeatedly until the
 // desired size is reached and return a pointer to that new free region.
 inline stringMemory::region *stringMemory::divideRegion(region *reg, size_t size) {
-    assert(reg);
+    u::assert(reg);
 
     while (reg->size() > size) {
         const size_t regionSize = reg->size() / 2;
@@ -388,7 +387,7 @@ string &string::operator=(const string &other) {
 }
 
 string &string::operator=(string &&other) {
-    assert(this != &other);
+    u::assert(this != &other);
     m_first = other.m_first;
     m_last = other.m_last;
     m_capacity = other.m_capacity;
@@ -443,8 +442,8 @@ string &string::append(const char *first, const char *last) {
     if (m_first + newsize > m_capacity)
         reserve((newsize * 3) / 2);
 
-    assert(m_first);
-    assert(m_last);
+    u::assert(m_first);
+    u::assert(m_last);
 
     for (; first != last; ++m_last, ++first)
         *m_last = *first;

@@ -46,7 +46,7 @@ inline completer *completer::insert(const char *c, bool term) {
     completer *p = this;
     for (const char *it = c; *it; ++it) {
         const int i = at(*it);
-        assert(i != -1);
+        u::assert(i != -1);
         if (!p->m_array[i])
             p->m_array[i] = new completer;
         p = p->m_array[i];

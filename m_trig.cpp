@@ -1,8 +1,9 @@
-#include <assert.h>
 #include <float.h>
 
 #include "m_trig.h"
 #include "m_const.h"
+
+#include "u_assert.h"
 
 namespace m {
 
@@ -104,10 +105,10 @@ static inline int rempio2(float x, uint32_t ix, double &y) {
         return n;
     }
 
-    assert(ix < 0x7F800000 && "NaN");
+    u::assert(ix < 0x7F800000 && "NaN");
 
     // value is far too large, something is pathologically wrong
-    assert(0 && "function called with a huge value");
+    u::assert(0 && "function called with a huge value");
     return 0;
 }
 
@@ -127,8 +128,8 @@ float cos(float x) {
             return cosdf(sign ? x+kC4PIO2 : x-kC4PIO2);
         return sindf(sign ? -x-kC3PIO2 : x-kC3PIO2);
     }
-    assert(ix < 0x7F800000 && "NaN");
-    double y;
+    u::assert(ix < 0x7F800000 && "NaN");
+    double y = 0.0;
     const int n = rempio2(x, ix, y);
     switch (n&3) {
     case 0: return cosdf(y);
@@ -154,8 +155,8 @@ float sin(float x) {
             return sign ? cosdf(x + kC3PIO2) : -cosdf(x - kC3PIO2);
         return sindf(sign ? x+kC4PIO2 : x-kC4PIO2);
     }
-    assert(ix < 0x7F800000 && "NaN");
-    double y;
+    u::assert(ix < 0x7F800000 && "NaN");
+    double y = 0.0;
     const int n = rempio2(x, ix, y);
     switch (n&3) {
     case 0: return sindf(y);
@@ -181,8 +182,8 @@ float tan(float x) {
             return tandf((sign ? x+kC3PIO2 : x-kC3PIO2), true);
         return tandf((sign ? x+kC4PIO2 : x-kC4PIO2), false);
     }
-    assert(ix < 0x7F800000);
-    double y;
+    u::assert(ix < 0x7F800000);
+    double y = 0.0;
     const int n = rempio2(x, ix, y);
     return tandf(y, n&1);
 }
@@ -223,8 +224,8 @@ void sincos(float x, float &s, float &c) {
         sincosdf<0>(sign ? x+kC4PIO2 : x-kC4PIO2, s, c);
         return;
     }
-    assert(ix < 0x7F800000);
-    double y;
+    u::assert(ix < 0x7F800000);
+    double y = 0.0;
     // argument reduction
     const int n = rempio2(x, ix, y);
     switch (n&3) {
@@ -335,6 +336,63 @@ float log2(float x) {
     hi = shape.asFloat;
     const f32 lo = f - hi - hfsq + s*(hfsq+R);
     return (lo+hi)*kIvLn2Lo + lo*kIvLn2Hi + hi*kIvLn2Hi + k;
+}
+
+float fmod(float x, float y) {
+    floatShape ux = { x };
+    floatShape uy = { y };
+    int ex = ux.asInt >> 23 & 0xFF;
+    int ey = uy.asInt >> 23 & 0xFF;
+    const uint32_t sx = ux.asInt & 0x80000000;
+    uint32_t uxi = ux.asInt;
+    uint32_t uyi = uy.asInt;
+
+    if (uxi << 1 <= uyi << 1)
+        return x;
+
+    // normalize x and y
+    auto normalize = [](int &c, uint32_t &v) {
+        if (c == 0) {
+            for (uint32_t i = v << 9; i >> 31 == 0; c--, i <<= 1)
+                ;
+            v <<= -c + 1;
+        } else {
+            v &= -1u >> 9;
+            v |= 1u << 23;
+        }
+    };
+    normalize(ex, uxi);
+    normalize(ey, uyi);
+
+    // x mod y
+    for (; ex > ey; ex--) {
+        uint32_t i = uxi - uyi;
+        if (i >> 31 == 0) {
+            if (i == 0)
+                return 0.0f;
+            uxi = i;
+        }
+        uxi <<= 1;
+    }
+    uint32_t i = uxi - uyi;
+    if (i >> 31 == 0) {
+        if (i == 0)
+            return 0.0f;
+        uxi = i;
+    }
+    for (; uxi >> 23 == 0; uxi <<= 1, ex--)
+        ;
+
+    // scale result
+    if (ex > 0) {
+        uxi -= 1u << 23;
+        uxi |= uint32_t(ex) << 23;
+    } else {
+        uxi >>= -ex + 1;
+    }
+    uxi |= sx;
+    ux.asInt = uxi;
+    return ux.asFloat;
 }
 
 }

@@ -85,7 +85,7 @@ map<K, V> &map<K, V>::operator=(const map<K, V> &other) {
 template <typename K, typename V>
 map<K, V> &map<K, V>::operator=(map<K, V> &&other) {
     using base = detail::hash_base<hash_elem<K, V>>;
-    assert(this != &other);
+    u::assert(this != &other);
     detail::hash_free(m_base);
     m_base.~base();
     new (&m_base) base(u::move(other));
@@ -199,12 +199,12 @@ inline void map<K, V>::erase(const_iterator where) {
 
 template <typename K, typename V>
 inline V &map<K, V>::operator[](const K &key) {
-    return insert(u::move(make_pair(key, u::move(V())))).first->second;
+    return insert(u::move(u::make_pair(key, u::move(V())))).first->second;
 }
 
 template <typename K, typename V>
 inline V &map<K, V>::operator[](K &&key) {
-    return insert(u::move(make_pair(u::forward<K>(key), u::move(V())))).first->second;
+    return insert(u::move(u::make_pair(u::forward<K>(key), u::move(V())))).first->second;
 }
 
 template <typename K, typename V>

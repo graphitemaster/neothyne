@@ -1022,7 +1022,7 @@ uint32_t frameTimer::ticks() const {
 }
 
 // Global functions
-void neoFatalError(const char *error) {
+[[noreturn]] void neoFatalError(const char *error) {
     writeConfig(gEngine.userPath());
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error", error, nullptr);
     abort();
@@ -1102,7 +1102,6 @@ static int entryPoint(int argc, char **argv) {
 
 // So we don't need to depend on SDL_main we provide our own
 #if defined(_WIN32)
-#include <ctype.h>
 #include "u_vector.h"
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
     (void)hInst;
@@ -1114,12 +1113,12 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
         char *const buf = new char[strlen(src) + 1];
         char *dst = buf;
         for (;;) {
-            while (isspace(*src))
+            while (u::isspace(*src))
                 src++;
             if (!*src)
                 break;
             args.push_back(dst);
-            for (bool quoted = false; *src && (quoted || !isspace(*src)); src++) {
+            for (bool quoted = false; *src && (quoted || !u::isspace(*src)); src++) {
                 if (*src != '"')
                     *dst++ = *src;
                 else if (dst > buf && src[-1] == '\\')
