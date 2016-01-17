@@ -1,4 +1,3 @@
-#include <math.h> // sqrtf
 #include "u_misc.h"
 
 #include "m_quat.h"
@@ -46,7 +45,7 @@ quat operator*(const quat &l, float k) {
 }
 
 void quat::getMatrix(mat4 *mat) const {
-    const float n = 1.0f / sqrtf(x*x + y*y + z*z + w*w);
+    const float n = 1.0f / m::sqrt(x*x + y*y + z*z + w*w);
     const float qx = x*n;
     const float qy = y*n;
     const float qz = z*n;

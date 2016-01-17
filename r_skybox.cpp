@@ -82,9 +82,9 @@ bool skybox::load(const u::string &skyboxName) {
     for (size_t i = 0; i < 3; i++)
         reduce[i] = totals[i] / (tex.width() * tex.height());
 
-    m_skyColor = m::vec3(reduce[0] / 255.0f,
-                         reduce[1] / 255.0f,
-                         reduce[2] / 255.0f);
+    m_skyColor = { reduce[0] / 255.0f,
+                   reduce[1] / 255.0f,
+                   reduce[2] / 255.0f };
 
     return true;
 }

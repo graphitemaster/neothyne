@@ -117,6 +117,16 @@ void operator delete[](void *ptr) noexcept {
     neoFree(ptr);
 }
 
+// These are part of the C++ ABI on all systems except MSVC.
+#if !defined(_MSC_VER)
 extern "C" void __cxa_pure_virtual() {
     u::assert(0 && "pure virtual function call");
 }
+
+extern "C" void __cxa_guard_acquire(...) {
+    // We don't require thread-safe initialization of globals
+}
+extern "C" void __cxa_guard_release(...) {
+    // We don't require thread-safe initialization of globals
+}
+#endif

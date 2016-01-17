@@ -28,6 +28,19 @@ inline T clamp(const T& current, const T &min, const T &max) {
 }
 
 union floatShape {
+    floatShape(floatShape&) = delete;
+    floatShape(floatShape&&) = delete;
+
+    constexpr floatShape(float value)
+        : asFloat(value)
+    {
+    }
+
+    constexpr floatShape(uint32_t value)
+        : asInt(value)
+    {
+    }
+
     float asFloat;
     uint32_t asInt;
 };

@@ -82,18 +82,17 @@ halfData::halfData() {
 }
 
 half convertToHalf(float in) {
-    floatShape shape;
-    shape.asFloat = in;
+    const floatShape shape = { in };
     return gHalf.baseTable[(shape.asInt >> 23) & 0x1FF] +
         ((shape.asInt & 0x007FFFFF) >> gHalf.shiftTable[(shape.asInt >> 23) & 0x1FF]);
 }
 
 float convertToFloat(half in) {
-    static constexpr size_t kMagic = 113 << 23;
-    static constexpr size_t kShiftedExp = 0x7C00 << 13; // exponent mask after shift
+    static constexpr uint32_t kMagic = 113 << 23;
+    static constexpr uint32_t kShiftedExp = 0x7C00 << 13; // exponent mask after shift
+    static constexpr floatShape kMagicShape = { kMagic };
 
-    floatShape out;
-    out.asInt = (in & 0x7FFF) << 13; // exponent/mantissa bits
+    floatShape out = { uint32_t(in & 0x7FFF) << 13 }; // exponent/mantissa bits
     const size_t exp = kShiftedExp & out.asInt; // exponent
     out.asInt += (127 - 15) << 23; // adjust exponent
 
@@ -104,9 +103,7 @@ float convertToFloat(half in) {
         // extra adjustment of exponent for Zero/Denormal?
         out.asInt += 1 << 23;
         // renormalize
-        floatShape magic;
-        magic.asInt = kMagic;
-        out.asFloat -= magic.asFloat;
+        out.asFloat -= kMagicShape.asFloat;
     }
 
     // sign bit

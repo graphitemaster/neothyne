@@ -1,5 +1,3 @@
-#include <math.h>
-
 #include "engine.h"
 #include "world.h"
 #include "cvar.h"
@@ -662,7 +660,7 @@ void world::cullPass(const pipeline &pl) {
             if (light->castShadows) {
                 it.transform = m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
                                m::mat4::scale({widthScale, heightScale, 0.5f}) *
-                               m::mat4::project(light->cutOff, 1.0f / light->radius, sqrtf(3.0f), r_smbias / light->radius) *
+                               m::mat4::project(light->cutOff, 1.0f / light->radius, m::sqrt(3.0f), r_smbias / light->radius) *
                                m::mat4::lookat(light->direction, m::vec3::yAxis) *
                                m::mat4::scale(1.0f / light->radius) *
                                m::mat4::translate(-light->position);
@@ -682,7 +680,7 @@ void world::cullPass(const pipeline &pl) {
             if (light->castShadows) {
                 it.transform = m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
                                m::mat4::scale({widthScale, heightScale, 0.5f}) *
-                               m::mat4::project(90.0f, 1.0f / light->radius, sqrtf(3.0f), r_smbias / light->radius) *
+                               m::mat4::project(90.0f, 1.0f / light->radius, m::sqrt(3.0f), r_smbias / light->radius) *
                                m::mat4::scale(1.0f / light->radius);
             }
         }
@@ -1290,7 +1288,7 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 
         const auto &view = kSideViews[side];
         m_shadowMapMethod.setWVP(m::mat4::scale({borderScale, borderScale, 1.0f}) *
-                                 m::mat4::project(90.0f, 1.0f / pl->radius, sqrtf(3.0f)) *
+                                 m::mat4::project(90.0f, 1.0f / pl->radius, m::sqrt(3.0f)) *
                                  view.view *
                                  m::mat4::scale(1.0f /  pl->radius) *
                                  m::mat4::translate(-pl->position));
@@ -1396,7 +1394,7 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
     const float borderScale = float(r_smsize - r_smborder) / r_smsize;
     m_shadowMapMethod.enable();
     m_shadowMapMethod.setWVP(m::mat4::scale({borderScale, borderScale, 1.0f}) *
-                             m::mat4::project(sl->cutOff, 1.0f / sl->radius, sqrtf(3.0f)) *
+                             m::mat4::project(sl->cutOff, 1.0f / sl->radius, m::sqrt(3.0f)) *
                              m::mat4::lookat(sl->direction, m::vec3::yAxis) *
                              m::mat4::scale(1.0f / sl->radius) *
                              m::mat4::translate(-sl->position));

@@ -1,4 +1,5 @@
 #include <float.h>
+#include <math.h>
 
 #include "m_trig.h"
 #include "m_const.h"
@@ -11,6 +12,19 @@ static const double kC1PIO2 = 1*kPiHalf;
 static const double kC2PIO2 = 2*kPiHalf;
 static const double kC3PIO2 = 3*kPiHalf;
 static const double kC4PIO2 = 4*kPiHalf;
+
+// R(x^2): a rational approximation of (asin(x)-x)/x^3
+// Remez error is bounded by:
+//  |(asin(x)-x)/x^3 - R(x^2)| < 2^(-58.75)
+static float R(float z) {
+    static const float kPS0 =  1.6666586697e-01;
+    static const float kPS1 = -4.2743422091e-02;
+    static const float kPS2 = -8.6563630030e-03;
+    static const float kQS1 = -7.0662963390e-01;
+    const float p = z*(kPS0+z*(kPS1+z*kPS2));
+    const float q = 1.0f+z*kQS1;
+    return p/q;
+}
 
 // On i386 the x87 FPU does everything in 80 bits of precision. Using a double
 // for the reduced range approximations would cause the compiler to generate
@@ -139,6 +153,37 @@ float cos(float x) {
     return sindf(y);
 }
 
+float acos(float x) {
+    static const float kPIO2Hi = 1.5707962513e+00; // 0x3FC90FDA
+    static const float kPIO2Lo = 7.5497894159e-08; // 0x33A22168
+    const floatShape shape = { x };
+    const uint32_t hx = shape.asInt;
+    const uint32_t ix = hx & 0x7FFFFFFF;
+    if (ix >= 0x3F800000) { // |x| >= 1 or NaN
+        if (ix == 0x3F800000)
+            return hx >> 31 ? kPIO2Hi + 0x1p-120f : 0;
+        u::assert(0 && "NaN");
+    }
+    if (ix < 0x3F000000) { // |x| < 0.5
+        return ix <= 0x32800000
+            ? kPIO2Hi + 0x1p-120f // |x| < 2**-26
+            : kPIO2Hi - (x - (kPIO2Lo-x*R(x*x)));
+    }
+    if (hx >> 31) { // x < -0.5
+        const float z = (1.0f+x)*0.5f;
+        const float s = m::sqrt(z);
+        const float w = R(z)*s-kPIO2Lo;
+        return 2*(kPIO2Hi - (s+w));
+    }
+    // x > 0.5
+    const float z = (1-x)*0.5f;
+    const float s = m::sqrt(z);
+    const float f = (floatShape { (floatShape { s }).asInt & 0xFFFFF000 }).asFloat;
+    const float c = (z-f*f)/(s+f);
+    const float w = R(z)*s+c;
+    return 2*(f+w);
+}
+
 float sin(float x) {
     const floatShape shape = { x };
     const uint32_t ix = shape.asInt & 0x7FFFFFFF;
@@ -166,6 +211,29 @@ float sin(float x) {
     return -cosdf(y);
 }
 
+float asin(float x) {
+    static const double kPIO2 = 1.570796326794896558e+00;
+    const floatShape shape = { x };
+    const uint32_t hx = shape.asInt;
+    const uint32_t ix = hx & 0x7FFFFFFF;
+    if (ix >= 0x3F800000) { // |x| >= 1
+        if (ix == 0x3F800000)
+            return x*kPIO2 + 0x1p-120f; // asin(+-1) = +-pi/2 with inexact
+        u::assert(0 && "NaN"); // asin(|x|>1) is NaN
+    }
+    if (ix < 0x3F000000) { // |x| < 0.5
+        // if 0x1p-126 <= |x| < 0x1p-12
+        if (ix < 0x39800000 && ix >= 0x00800000)
+            return x;
+        return x + x*R(x*x);
+    }
+    // 1 > |x| >= 0.5
+    const float z = (1 - m::abs(x)) * 0.5f;
+    const float s = m::sqrt(z);
+    const float m = kPIO2 - 2*(s+s*R(z));
+    return hx >> 31 ? -m : m;
+}
+
 float tan(float x) {
     const floatShape shape = { x };
     const uint32_t ix = shape.asInt & 0x7FFFFFFF;
@@ -187,6 +255,78 @@ float tan(float x) {
     const int n = rempio2(x, ix, y);
     return tandf(y, n&1);
 }
+
+float atan(float x) {
+    static const float kATanHi[] = {
+        4.6364760399e-01, // atan(0.5)hi 0x3EED6338
+        7.8539812565e-01, // atan(1.0)hi 0x3F490FDA
+        9.8279368877e-01, // atan(1.5)hi 0x3F7b985E
+        1.5707962513e+00, // atan(inf)hi 0x3FC90FDA
+    };
+
+    static const float kATanLo[] = {
+        5.0121582440e-09, // atan(0.5)lo 0x31AC3769
+        3.7748947079e-08, // atan(1.0)lo 0x33222168
+        3.4473217170e-08, // atan(1.5)lo 0x33140FB4
+        7.5497894159e-08, // atan(inf)lo 0x33A22168
+    };
+
+    static const float kAT[] = {
+         3.3333328366e-01,
+        -1.9999158382e-01,
+         1.4253635705e-01,
+        -1.0648017377e-01,
+         6.1687607318e-02,
+    };
+
+    const floatShape shape = { x };
+    const uint32_t ix = shape.asInt & 0x7FFFFFFF;
+    const uint32_t sign = shape.asInt >> 31;
+
+    int i;
+    if (ix >= 0x4c800000) { // if |x| >= 2**26
+        if (isnan(x))
+            return x;
+        const float z = kATanHi[3] + 0x1p-120f;
+        return sign ? -z : z;
+    }
+    if (ix < 0x3ee00000) { // |x| < 0.4375
+        if (ix < 0x39800000) // |x| < 2**-12
+            return x;
+        i = -1;
+    } else {
+        x = m::abs(x);
+        if (ix < 0x3f980000) { // |x| < 1.1875
+            if (ix < 0x3f300000) { // 7/16 <= |x| < 11/16
+                i = 0;
+                x = (2.0f*x - 1.0f)/(2.0f + x);
+            } else { // 11/16 <= |x| < 19/16
+                i = 1;
+                x = (x - 1.0f)/(x + 1.0f);
+            }
+        } else {
+            if (ix < 0x401c0000) { // |x| < 2.4375
+                i = 2;
+                x = (x - 1.5f)/(1.0f + 1.5f*x);
+            } else { // 2.4375 <= |x| < 2**26
+                i = 3;
+                x = -1.0f/x;
+            }
+        }
+    }
+    const float z = x*x;
+    const float w = z*z;
+
+    // break sum from i=0..10 kAT[i]z**(i+1) into odd and even polynomials
+    const float s1 = z*(kAT[0]+w*(kAT[2]+w*kAT[4]));
+    const float s2 = w*(kAT[1]+w*kAT[3]);
+    if (i < 0)
+        return x - x*(s1+s2);
+
+    const float m = kATanHi[i] - ((x*(s1+s2) - kATanLo[i]) - x);
+    return sign ? -m : m;
+}
+
 
 void sincos(float x, float &s, float &c) {
     const floatShape shape = { x };
@@ -393,6 +533,12 @@ float fmod(float x, float y) {
     uxi |= sx;
     ux.asInt = uxi;
     return ux.asFloat;
+}
+
+float sqrt(float x) {
+    // Nothing can beat math.h's sqrt performance. Mostly because all native
+    // instruction sets have an instruction for it. So just use math.h.
+    return sqrtf(x);
 }
 
 }

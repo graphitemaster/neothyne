@@ -1,5 +1,3 @@
-#include <math.h> // sqrtf
-
 #include "engine.h"
 #include "gui.h"
 
@@ -678,7 +676,7 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
         const float *v1 = &coords[i*2];
         float dx = v1[0] - v0[0];
         float dy = v1[1] - v0[1];
-        const float distance = sqrtf(dx*dx + dy*dy);
+        const float distance = m::sqrt(dx*dx + dy*dy);
         if (distance > 0.0f) {
             // Normalize distance
             const float scale = 1.0f / distance;
@@ -697,7 +695,7 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
         const float dly1 = m_normals[i*2+1];
         float dmx = (dlx0 + dlx1) * 0.5f;
         float dmy = (dly0 + dly1) * 0.5f;
-        const float distance = sqrtf(dmx*dmx + dmy*dmy);
+        const float distance = m::sqrt(dmx*dmx + dmy*dmy);
         if (distance > m::kEpsilon / 10) { // Smaller epsilon
             const float scale = 1.0f / distance > 10.0f ? 10.0f : 1.0f / distance;
             dmx *= scale;
@@ -799,7 +797,7 @@ u::optional<gui::glyphQuad> gui::getGlyphQuad(int pw, int ph, size_t index, floa
 void gui::drawLine(float x0, float y0, float x1, float y1, float r, float fth, uint32_t color) {
     float dx = x1 - x0;
     float dy = y1 - y0;
-    const float distance = sqrtf(dx*dx + dy*dy);
+    const float distance = m::sqrt(dx*dx + dy*dy);
 
     if (distance > m::kEpsilon) {
         // Normalize distance

@@ -1,5 +1,3 @@
-#include <math.h> // sqrtf
-
 #include "u_misc.h"
 #include "u_algorithm.h"
 
@@ -36,7 +34,7 @@ void vec3::rotate(float angle, const vec3 &axe) {
 }
 
 float vec3::abs() const {
-    return sqrtf(*this * *this);
+    return m::sqrt(*this * *this);
 }
 
 void vec3::endianSwap() {
@@ -66,7 +64,7 @@ bool vec3::rayCylinderIntersect(const vec3 &start, const vec3 &direction,
     const float distance = b*b - a*c;
     if (distance < 0.0f || a == 0.0f)
         return false;
-    *fraction = (-b - sqrtf(distance)) / a;
+    *fraction = (-b - m::sqrt(distance)) / a;
     const float collide = (start + *fraction * direction - edgeStart) * pa;
     return collide >= 0.0f && collide <= paSquared;
 }
@@ -83,7 +81,7 @@ bool vec3::raySphereIntersect(const vec3 &start, const vec3 &direction,
     const float t = b * b - a * c;
     if (t <= 0.0f)
         return false;
-    *fraction = -(b + m::abs(sqrtf(t))) / a;
+    *fraction = -(b + m::abs(m::sqrt(t))) / a;
     return true;
 }
 
@@ -94,7 +92,7 @@ vec3 vec3::rand(float mx, float my, float mz) {
 }
 
 float vec4::abs() const {
-    return sqrtf(*this * *this);
+    return m::sqrt(*this * *this);
 }
 
 void vec4::endianSwap() {
