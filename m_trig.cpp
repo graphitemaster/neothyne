@@ -157,11 +157,11 @@ float acos(float x) {
     static const float kPIO2Hi = 1.5707962513e+00; // 0x3FC90FDA
     static const float kPIO2Lo = 7.5497894159e-08; // 0x33A22168
     const floatShape shape = { x };
-    const uint32_t hx = shape.asInt;
-    const uint32_t ix = hx & 0x7FFFFFFF;
+    const uint32_t ix = shape.asInt & 0x7FFFFFFF;
+    const uint32_t sign = shape.asInt >> 31;
     if (ix >= 0x3F800000) { // |x| >= 1 or NaN
         if (ix == 0x3F800000)
-            return hx >> 31 ? kPIO2Hi + 0x1p-120f : 0;
+            return sign ? 2*kPIO2Hi + 0x1p-120f : 0.0f;
         u::assert(0 && "NaN");
     }
     if (ix < 0x3F000000) { // |x| < 0.5
@@ -169,7 +169,7 @@ float acos(float x) {
             ? kPIO2Hi + 0x1p-120f // |x| < 2**-26
             : kPIO2Hi - (x - (kPIO2Lo-x*R(x*x)));
     }
-    if (hx >> 31) { // x < -0.5
+    if (sign) { // x < -0.5
         const float z = (1.0f+x)*0.5f;
         const float s = m::sqrt(z);
         const float w = R(z)*s-kPIO2Lo;
@@ -214,8 +214,8 @@ float sin(float x) {
 float asin(float x) {
     static const double kPIO2 = 1.570796326794896558e+00;
     const floatShape shape = { x };
-    const uint32_t hx = shape.asInt;
-    const uint32_t ix = hx & 0x7FFFFFFF;
+    const uint32_t ix = shape.asInt & 0x7FFFFFFF;
+    const uint32_t sign = shape.asInt >> 31;
     if (ix >= 0x3F800000) { // |x| >= 1
         if (ix == 0x3F800000)
             return x*kPIO2 + 0x1p-120f; // asin(+-1) = +-pi/2 with inexact
@@ -231,7 +231,7 @@ float asin(float x) {
     const float z = (1 - m::abs(x)) * 0.5f;
     const float s = m::sqrt(z);
     const float m = kPIO2 - 2*(s+s*R(z));
-    return hx >> 31 ? -m : m;
+    return sign ? -m : m;
 }
 
 float tan(float x) {
