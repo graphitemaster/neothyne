@@ -318,13 +318,12 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             if (status) {
                 u::print("[cache] => loaded %.50s...\n", u::fixPath(cacheString));
                 notUsingCache = false;
-            } else {
-                neoFatal("Loaded a cached shader binary and the driver didn't like it");
             }
-        } else {
-            // Not supported, remove it
-            u::remove(file);
+            break;
         }
+        // Not supported, remove it
+        u::print("[cache] => failed loading `%s'\n", u::fixPath(cacheString));
+        u::remove(file);
         break;
     }
 
