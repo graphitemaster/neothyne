@@ -1,5 +1,13 @@
 include include.mk
 
+# Dependency management
+DEP_DIR = .deps
+DEP_FLAGS = -MT $@ -MMD -MP -MF $(DEP_DIR)/$*.p
+DEP_COPY = @mv -f $(DEP_DIR)/$*.p $(DEP_DIR)/$*.d
+
+# Ensure dependency directory exists
+$(shell mkdir -p $(DEP_DIR)/$(GAME_DIR) >/dev/null)
+
 CC ?= clang
 CXX = $(CC)
 
@@ -37,15 +45,19 @@ $(GAME_BIN): $(GAME_OBJECTS)
 	$(CXX) $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@
 	$(STRIP) $@
 
-.cpp.o:
-	$(CXX) -MD -c $(ENGINE_CXXFLAGS) $< -o $@
-	@cp $*.d $*.P; \
-		sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
-			-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
-		rm -f $*.d
+.cpp.o: $(DEP_DIR)/%.d
+	$(CXX) $(DEP_FLAGS) $(ENGINE_CXXFLAGS) -c $< -o $@
+	$(DEP_COPY)
+
+# Some rules to prevent Make from deleting these
+$(DEP_DIR)/*.d: ;
+$(DEP_DIR)/$(GAME_DIR)*.d: ;
+.PRECIOUS: $(DEP_DIR)/%.d $(DEP_DIR)/$(GAME_DIR)%.d
 
 clean:
-	rm -f $(GAME_OBJECTS) $(GAME_OBJECTS:.o=.P)
+	rm -f $(GAME_OBJECTS)
+	rm -rf $(DEP_DIR)
 	rm -f $(GAME_BIN)
 
--include *.P
+# Include dependencies
+-include $(pathsubst %,$(DEP_DIR)/%.d,$(basename $(GAME_OBJECTS)))
