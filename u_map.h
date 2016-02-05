@@ -7,8 +7,7 @@
 namespace u {
 
 template <typename K, typename V>
-class map {
-public:
+struct map {
     map();
     map(const map &other);
     map(map &&other);
@@ -140,16 +139,12 @@ inline void map<K, V>::clear() {
 
 template <typename K, typename V>
 inline typename map<K, V>::iterator map<K, V>::lookup(const K &key, size_t h) {
-    iterator result;
-    result.node = detail::hash_find(m_base, key, h);
-    return result;
+    return iterator { detail::hash_find(m_base, key, h) };
 }
 
 template <typename K, typename V>
 inline typename map<K, V>::const_iterator map<K, V>::lookup(const K &key, size_t h) const {
-    const_iterator result;
-    result.node = detail::hash_find(m_base, key, h);
-    return result;
+    return const_iterator { detail::hash_find(m_base, key, h) };
 }
 
 template <typename K, typename V>

@@ -6,6 +6,44 @@
 #include "u_new.h"
 #include "u_buffer.h"
 
+// A cache friendly chunk-allocated hash table for creating key, key-value
+// and other associative containers.
+//
+// Optimizations:
+//  - Chunked allocation strategy to avoid memory fragmentation and improve
+//    cache locality (linked list nodes in a chunk are contiguous in memory.)
+//
+//  - Hash nodes appropriately sized for L1 cache size to reduce false-sharing
+//    and cache-line bouncing when used in a multi-threaded context. Currently
+//    not the case but improves performance for instruction-level-parallelism
+//    as multiple pipelines don't touch the same cache-line.
+//
+//  - Empty base class optimization reduces node sizes when only a key is
+//    chosen, thus an empty value type is not included. This is useful as
+//    it means map<K, void> nodes only consume the space of the key and
+//    set<K> can be implemented in terms of map<K, void>.
+//
+//  - Small iterator model (it's just a pointer). Compiles down to efficient
+//    pointer arithmetic within chunk-boundaries (with cache-friendly
+//    characteristics due to nodes being contiguous in memory.) Outside
+//    chunk-boundaries involve a pointer reload into the next chunk, each
+//    chunk-boundary becomes immediately hot during iteration (each chunk
+//    is padded to cache-line alignment.) Results are blazing fast iteration
+//    comparable to that of iterating a vector. This makes it reasonable
+//    for storing entities with a name rather than an index.
+//
+//  - Memory management handled entirely by u::buffer, a type-aware
+//    "buffer of objects" allocator that optimizes operations based on
+//    type. Takes advantage of raw memory operations like `memcpy' when
+//    type satisfies constraints.
+//
+// Note: specializes search functionality on `const char *' for key to
+//       utilize string comparison and different hashing mechanism;
+//       this decision largely has to do with that being the common case
+//       of using `const char *' for key. If you intended to compare pointer
+//       values (and hash their representation) instead, consider using a
+//       different pointer type or a proxy type.
+
 namespace u {
 
 namespace detail {
@@ -38,12 +76,27 @@ namespace detail {
         }
         return hash;
     }
+
+    template <typename T>
+    struct hasher {
+        static size_t hash(const T &value) {
+            const size_t rep = size_t(value);
+            return detail::fnv1a((const void *)&rep, sizeof rep);
+        }
+    };
+    // Specialization for string literals
+    template <>
+    struct hasher<const char *> {
+        static size_t hash(const char *value) {
+            const size_t length = strlen(value);
+            return detail::fnv1a((const void *)value, length);
+        }
+    };
 }
 
 template <typename T>
 inline size_t hash(const T &value) {
-    const size_t rep = size_t(value);
-    return detail::fnv1a((const void *)&rep, sizeof rep);
+    return detail::hasher<T>::hash(value);
 }
 
 inline size_t hash(const unsigned char *data, size_t size) {
@@ -340,12 +393,30 @@ namespace detail {
     }
 
     template <typename N, typename K>
+    struct hash_find_specialized {
+        static hash_node<N> *find(const hash_base<N> &h, const K &key, size_t value) {
+            const size_t hh = value & (h.buckets.last - h.buckets.first - 2);
+            for (hash_node<N> *c = h.buckets.first[hh], *end = h.buckets.first[hh + 1]; c != end; c = c->next)
+                if (c->first.first == key)
+                    return c;
+            return nullptr;
+        }
+    };
+
+    template <typename N>
+    struct hash_find_specialized<N, const char *> {
+        static hash_node<N> *find(const hash_base<N> &h, const char *key, size_t value) {
+            const size_t hh = value & (h.buckets.last - h.buckets.first - 2);
+            for (hash_node<N> *c = h.buckets.first[hh], *end = h.buckets.first[hh + 1]; c != end; c = c->next)
+                if (!strcmp(c->first.first, key))
+                    return c;
+            return nullptr;
+        }
+    };
+
+    template <typename N, typename K>
     inline hash_node<N> *hash_find(const hash_base<N> &h, const K &key, size_t value) {
-        const size_t hh = value & (h.buckets.last - h.buckets.first - 2);
-        for (hash_node<N> *c = h.buckets.first[hh], *end = h.buckets.first[hh + 1]; c != end; c = c->next)
-            if (c->first.first == key)
-                return c;
-        return nullptr;
+        return hash_find_specialized<N, K>::find(h, key, value);
     }
 
     template <typename N>
@@ -395,6 +466,8 @@ namespace detail {
 
 template <typename N>
 struct hash_iterator {
+    hash_iterator();
+    hash_iterator(detail::hash_node<N> *node);
     N *operator->() const;
     N &operator*() const;
     detail::hash_node<N> *node;
@@ -402,14 +475,28 @@ struct hash_iterator {
 
 template <typename N>
 struct hash_iterator<const N> {
-
     hash_iterator();
+    hash_iterator(detail::hash_node<N> *node);
     hash_iterator(hash_iterator<N> other);
     const N *operator->() const;
     const N &operator*() const;
 
     detail::hash_node<N> *node;
 };
+
+
+template <typename N>
+hash_iterator<N>::hash_iterator()
+    : node(nullptr)
+{
+}
+
+
+template <typename N>
+hash_iterator<N>::hash_iterator(detail::hash_node<N> *node)
+    : node(node)
+{
+}
 
 template <typename N>
 hash_iterator<const N>::hash_iterator()
@@ -420,6 +507,12 @@ hash_iterator<const N>::hash_iterator()
 template <typename N>
 hash_iterator<const N>::hash_iterator(hash_iterator<N> other)
     : node(other.node)
+{
+}
+
+template <typename N>
+hash_iterator<const N>::hash_iterator(detail::hash_node<N> *node)
+    : node(node)
 {
 }
 

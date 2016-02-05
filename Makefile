@@ -60,4 +60,4 @@ clean:
 	rm -f $(GAME_BIN)
 
 # Include dependencies
--include $(pathsubst %,$(DEP_DIR)/%.d,$(basename $(GAME_OBJECTS)))
+-include $(patsubst %,$(DEP_DIR)/%.d,$(basename $(GAME_OBJECTS)))

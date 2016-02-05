@@ -3,6 +3,8 @@
 #include <stddef.h>
 
 #include "u_traits.h"
+#include "u_misc.h"
+
 namespace u {
 
 template <typename T, size_t E>

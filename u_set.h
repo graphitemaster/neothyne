@@ -116,18 +116,15 @@ inline void set<K>::clear() {
 }
 
 template <typename K>
-typename set<K>::const_iterator set<K>::lookup(const K &key, size_t h) const {
-    iterator result;
-    result.node = detail::hash_find(m_base, key, h);
-    return result;
+typename set<K>::iterator set<K>::lookup(const K &key, size_t h) {
+    return { detail::hash_find(m_base, key, h) };
 }
 
 template <typename K>
-typename set<K>::iterator set<K>::lookup(const K &key, size_t h) {
-    iterator result;
-    result.node = detail::hash_find(m_base, key, h);
-    return result;
+typename set<K>::const_iterator set<K>::lookup(const K &key, size_t h) const {
+    return { detail::hash_find(m_base, key, h) };
 }
+
 
 template <typename K>
 typename set<K>::const_iterator set<K>::find(const K &key) const {
