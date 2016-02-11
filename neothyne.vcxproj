@@ -74,25 +74,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <GenerateManifest>false</GenerateManifest>
     <OutDir>$(SolutionDir).build\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\.build\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir).build\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <GenerateManifest>false</GenerateManifest>
     <OutDir>$(SolutionDir).build\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\.build\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir).build\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <GenerateManifest>false</GenerateManifest>
     <OutDir>$(SolutionDir).build\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\.build\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir).build\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <GenerateManifest>false</GenerateManifest>
     <OutDir>$(SolutionDir).build\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\.build\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir).build\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -116,6 +116,7 @@
       <CompileAs>CompileAsCpp</CompileAs>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ObjectFileName>$(IntDir)%(RelativeDir)\%(Filename)</ObjectFileName>
     </ClCompile>
     <Link>
       <AllowIsolation>false</AllowIsolation>
@@ -127,7 +128,8 @@
       <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"
+rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s /q</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -151,6 +153,7 @@
       <CompileAs>CompileAsCpp</CompileAs>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ObjectFileName>$(IntDir)%(RelativeDir)\%(Filename)</ObjectFileName>
     </ClCompile>
     <Link>
       <AllowIsolation>false</AllowIsolation>
@@ -162,7 +165,8 @@
       <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"
+rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s /q</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -189,6 +193,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ObjectFileName>$(IntDir)%(RelativeDir)\%(Filename)</ObjectFileName>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -200,7 +205,8 @@
       <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"
+rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s /q</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -227,6 +233,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ObjectFileName>$(IntDir)%(RelativeDir)\%(Filename)</ObjectFileName>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -238,7 +245,8 @@
       <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"</Command>
+      <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"
+rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s /q</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
