@@ -260,7 +260,7 @@ unsigned char log2(uint32_t v) {
 #endif
 
 const char *CPUDesc() {
-    static char desc[48];
+    static char desc[1024];
     if (desc[0])
         return desc;
     int i = 0;
@@ -275,16 +275,25 @@ const char *CPUDesc() {
             for (int j = 0; j < 4; j++) { desc[i++] = (char)(d & 0xFF); d >>= 8; }
         }
     }
-    if (desc[0])
+    if (desc[0]) {
+        char format[1024];
+        int count = SDL_GetCPUCount();
+        int wrote = snprintf(format, sizeof format, "%s (%d %s)",
+            desc, count, count > 1 ? "cores" : "core");
+        if (wrote == -1)
+            return desc;
+        memcpy(desc, format, wrote + 1);
         return desc;
+    }
     snprintf(desc, sizeof desc, "Unknown");
     return desc;
 }
 
 const char *RAMDesc() {
-    static char desc[48];
+    static char desc[128];
     if (desc[0])
         return desc;
+    // SDL reports MB, sizeMetric expects bytes
     snprintf(desc, sizeof desc, "%s", u::sizeMetric(size_t(SDL_GetSystemRAM()) * (1u << 20)).c_str());
     return desc;
 }
