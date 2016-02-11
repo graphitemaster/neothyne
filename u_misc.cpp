@@ -14,14 +14,14 @@ namespace detail {
     // by MSVCRT.
     u::string fixFormatString(const char *format) {
         u::string replace(format);
-        struct { const char *find, *replace; } replacements[] = {
+        static const struct { const char *find, *replace; } kReplacements[] = {
             { "%zd", "%Id" },
             { "%zi", "%Ii" },
             { "%zo", "%Io" },
             { "%zu", "%Iu" },
             { "%zx", "%Ix" }
         };
-        for (const auto &it : replacements)
+        for (const auto &it : kReplacements)
             replace.replace_all(it.find, it.replace);
         return replace;
     }
