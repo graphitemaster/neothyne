@@ -22,6 +22,11 @@ Windows users have a couple methods for building Neothyne.
 The preferred method for binaries is to use the included Visual Studio
 solution with Visual Studio 2015 or higher.
 
+In Visual Studio launch the NuGet package manager and run
+```
+PM> Install-Package sdl2
+```
+
 Visual Studio 2015 project files are setup to produce binaries
 using a relatively new C run time. If you need binaries on older versions
 of Windows, change the runtime library or use the alternative method.
