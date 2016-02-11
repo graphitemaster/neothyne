@@ -1,0 +1,354 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Engine">
+      <UniqueIdentifier>{f017198f-2602-4d57-bbfd-44b29d3da49d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game">
+      <UniqueIdentifier>{f4e8a00c-91ef-4a20-98cb-bc6ac209eccb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Source">
+      <UniqueIdentifier>{4ff07c31-4dd8-4097-a8d9-1e84e5f28939}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Header">
+      <UniqueIdentifier>{9aade339-9a38-41bb-99a0-ba13d3d5b9cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Source">
+      <UniqueIdentifier>{5423fccc-b75b-44e9-9c32-04e729237c7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Header">
+      <UniqueIdentifier>{621998c4-983b-4082-928c-0e11b0315e09}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="c_complete.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="cvar.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="engine.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="grader.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="gui.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="kdmap.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="kdtree.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="m_bbox.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="m_const.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="m_half.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="m_mat.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="m_plane.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="m_quat.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="m_trig.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="m_vec.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="mesh.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="model.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_aa.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_billboard.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_common.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_composite.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_gbuffer.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_geom.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_grader.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_gui.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_light.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_method.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_model.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_particles.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_pipeline.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_shadow.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_skybox.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_ssao.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_texture.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_vignette.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_world.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="texture.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_algorithm.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_assert.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_buffer.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_file.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_hash.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_lru.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_map.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_memory.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_misc.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_new.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_optional.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_pair.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_set.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_sha512.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_stack.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_string.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_traits.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_vector.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_zlib.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="world.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="game\client.h">
+      <Filter>Game\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="game\edit.h">
+      <Filter>Game\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="game\menu.h">
+      <Filter>Game\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="game\res.h">
+      <Filter>Game\Header</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="c_complete.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="cvar.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="engine.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="grader.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="gui.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="kdmap.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="kdtree.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="m_half.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="m_mat.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="m_plane.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="m_quat.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="m_trig.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="m_vec.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="mesh.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="model.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_aa.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_billboard.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_common.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_composite.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_gbuffer.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_geom.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_grader.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_gui.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_light.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_method.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_model.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_particles.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_pipeline.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_shadow.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_skybox.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_ssao.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_texture.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_vignette.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_world.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="texture.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="u_assert.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="u_file.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="u_misc.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="u_new.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="u_sha512.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="u_string.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="u_zlib.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="world.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="game\client.cpp">
+      <Filter>Game\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="game\edit.cpp">
+      <Filter>Game\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="game\main.cpp">
+      <Filter>Game\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="game\menu.cpp">
+      <Filter>Game\Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="neothyne.rc" />
+  </ItemGroup>
+</Project>
