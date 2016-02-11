@@ -124,6 +124,9 @@ static inline u::string sizeMetric(size_t size) {
     return u::format("%.2f %s", float(size) + float(r) / 1024.0f, kSizes[i]);
 }
 
+const char *CPUDesc();
+const char *RAMDesc();
+
 template <typename... Ts>
 inline void fprint(FILE *fp, const char *fmt, const Ts&... ts) {
     fprintf(fp, "%s", format(fmt, ts...).c_str());

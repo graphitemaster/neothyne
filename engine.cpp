@@ -82,7 +82,7 @@ static struct queryOperatingSystem {
         ULONG type = REG_SZ;
         ULONG size = kRegQuerySize;
         HKEY key = nullptr;
-		bool inWine = false;
+        bool inWine = false;
         // Find the CPU architecture using the registry
         LONG n = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
             TEXT("SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"),
@@ -898,6 +898,8 @@ void engine::screenShot() {
         auto shader = (const char *)gl::GetString(GL_SHADING_LANGUAGE_VERSION);
 
         drawString(gOperatingSystem);
+        drawString(u::CPUDesc());
+        drawString(u::RAMDesc());
         drawString(vendor);
         drawString(renderer);
         drawString(version);
@@ -1100,8 +1102,8 @@ static int entryPoint(int argc, char **argv) {
         dxtCompressor.set(1);
     }
 
-    u::print("OS: %s\nVendor: %s\nRenderer: %s\nDriver: %s\nShading: %s (using %s)\nExtensions:\n",
-        gOperatingSystem, vendor, renderer, version, shader, gl::glslVersionString());
+    u::print("OS: %s\nCPU: %s\nRAM: %s\nVendor: %s\nRenderer: %s\nDriver: %s\nShading: %s (using %s)\nExtensions:\n",
+        gOperatingSystem, u::CPUDesc(), u::RAMDesc(), vendor, renderer, version, shader, gl::glslVersionString());
 
     for (const auto &it : gl::extensions())
         u::print(" %s\n", gl::extensionString(it));

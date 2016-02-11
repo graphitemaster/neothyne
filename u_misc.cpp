@@ -1,3 +1,5 @@
+#include <SDL2/SDL_cpuinfo.h>
+
 #include <time.h> // time_t, time
 #include <float.h>
 #include <limits.h>
@@ -236,6 +238,48 @@ unsigned char log2(uint32_t v) {
       31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
     };
     return kMultiplyDeBruijnBitPosition[(uint32_t)(v * 0x077CB531U) >> 27];
+}
+
+#if defined(__GNUC__)
+#   include <cpuid.h>
+#   define CPUID(FUNC, A, B, C, D) \
+        __get_cpuid((FUNC), &A, &B, &C, &D)
+#elif defined(__MSC_VER)
+#   define CPUID(FUNC, A, B, C, D) \
+        __cpuid((FUNC), A, B, C, D)
+#else
+#   define CPUID(FUNC, A, B, C, D) \
+        ([]() { static_assert(0, "no suitable implementation of CPUID found"); })()
+#endif
+
+const char *CPUDesc() {
+    static char desc[48];
+    if (desc[0])
+        return desc;
+    int i = 0;
+    unsigned int a = 0, b = 0, c = 0, d = 0;
+    CPUID(0x80000000, a, b, c, d);
+    if (a >= 0x80000004) {
+        for (int k = 0; k < 3; k++) {
+            CPUID(0x80000002 + k, a, b, c, d);
+            for (int j = 0; j < 4; j++) { desc[i++] = (char)(a & 0xFF); a >>= 8; }
+            for (int j = 0; j < 4; j++) { desc[i++] = (char)(b & 0xFF); b >>= 8; }
+            for (int j = 0; j < 4; j++) { desc[i++] = (char)(c & 0xFF); c >>= 8; }
+            for (int j = 0; j < 4; j++) { desc[i++] = (char)(d & 0xFF); d >>= 8; }
+        }
+    }
+    if (desc[0])
+        return desc;
+    snprintf(desc, sizeof desc, "Unknown");
+    return desc;
+}
+
+const char *RAMDesc() {
+    static char desc[48];
+    if (desc[0])
+        return desc;
+    snprintf(desc, sizeof desc, "%s", u::sizeMetric(size_t(SDL_GetSystemRAM()) * (1u << 20)).c_str());
+    return desc;
 }
 
 }
