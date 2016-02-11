@@ -4,7 +4,7 @@
 #include <string.h>
 #include <time.h>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #include "texture.h"
 #include "engine.h"

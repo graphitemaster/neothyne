@@ -1,4 +1,4 @@
-#include <SDL2/SDL_cpuinfo.h>
+#include <SDL_cpuinfo.h>
 
 #include <time.h> // time_t, time
 #include <float.h>
