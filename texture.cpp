@@ -2059,6 +2059,124 @@ private:
     const unsigned char *m_end;
 };
 
+/// Trivial PCX image loader (only supports 8-bit indexed or 24-bit RLE RGB)
+/// (The only sane formats of PCX for this day and age.)
+struct pcx : decoder {
+    pcx(const u::vector<unsigned char> &data)
+        : m_uncompressed(true)
+        , m_planes(0)
+        , m_bpl(0)
+    {
+        decode(data);
+    }
+
+    static bool test(const u::vector<unsigned char> &data) {
+        if (data[0] != 0xA) // PCX ID Byte: 0xA
+            return false;
+        if (data[1] > 5)    // Only supports version <= 5
+            return false;
+        if (data[2] > 1)    // RLE (0 or 1)
+            return false;
+        // Supported Bytes Per Pixel
+        if (!strchr("\x1\x2\x4\x8", data[3]))
+            return false;
+        return true;
+    }
+
+    void decode(const u::vector<unsigned char> &data) {
+        // Read the header
+        m_uncompressed = !data[2];
+        m_bpp = data[3];
+
+        // We only support 8-bit indexed and 24-bit RGB
+        if (m_bpp != 8)
+            returnResult(kUnsupported);
+        // We only know about RLE compressed PCX
+        if (m_uncompressed)
+            returnResult(kUnsupported);
+
+        // Read image window
+        uint16_t x1, y1;
+        uint16_t x2, y2;
+        memcpy(&x1, &data[4], sizeof x1);
+        memcpy(&y1, &data[6], sizeof y1);
+        memcpy(&x2, &data[8], sizeof x2);
+        memcpy(&y2, &data[10], sizeof y2);
+
+        const int w = (x2 - x1) + 1;
+        const int h = (y2 - y1) + 1;
+
+        if (w < 1 || h < 1)
+            returnResult(kMalformatted);
+        // Sanity check
+        if (w > 4096 || h > 4096)
+            returnResult(kInvalid);
+
+        m_width = w;
+        m_height = h;
+        m_planes = data[65];
+        if (!strchr("\x1\x3", m_planes))
+            returnResult(kUnsupported);
+
+        // Bits per line
+        memcpy(&m_bpl, &data[66], 2);
+
+        if (!loadRLE(&data[128]))
+            returnResult(kMalformatted);
+    }
+
+    u::vector<unsigned char> data() {
+        return u::move(m_data);
+    }
+protected:
+    bool loadRLE(const unsigned char *const data) {
+        const unsigned char *current = data;
+        int bufferLineLength = m_bpl*m_planes;
+        int imageLineLength = m_width*m_planes;
+        u::vector<unsigned char> line(bufferLineLength);
+
+        m_data.resize((imageLineLength * m_height)+1);
+        for (int lineCount = 0; lineCount < m_height; ++lineCount) {
+            int linePosition = 0;
+            while (linePosition < bufferLineLength) {
+                // First 2 bits indicate run of next byte value
+                if (*current > 0xC0) {
+                    // Remaining 6 bits indicate run length
+                    int runLength = *current++ & 0x3F;
+                    for (; runLength != 0; runLength--)
+                        line[linePosition++] = *current;
+                    ++current;
+                } else {
+                    line[linePosition++] = *current++;
+                }
+            }
+            if (m_planes == 1) {
+                memcpy(&m_data[lineCount*imageLineLength], &line[0], imageLineLength);
+                m_bpp = 1;
+                m_format = kTexFormatLuminance;
+            } else if (m_planes == 3) {
+                unsigned char *interleave = &m_data[lineCount * imageLineLength];
+                for (linePosition = 0; linePosition != m_width; ++linePosition, interleave += 3) {
+                    interleave[0] = line[linePosition];
+                    interleave[1] = line[linePosition + m_width];
+                    interleave[2] = line[linePosition + m_width*2];
+                }
+                m_bpp = 3;
+                m_format = kTexFormatRGB;
+            } else {
+                return false;
+            }
+        }
+        m_pitch = m_bpp*m_width;
+        return true;
+    }
+private:
+    u::vector<unsigned char> m_data;
+    bool m_uncompressed;
+    unsigned char m_planes; // 1 = Indexes, 3 = RGB
+    uint16_t m_bpl;
+};
+
 
 ///
 /// Texture utilities:
@@ -2391,7 +2509,7 @@ u::optional<u::string> texture::find(const u::string &infile) {
     }
 
     static const char *kExtensions[] = {
-        "png", "jpg", "tga", "dds", "pbm", "ppm", "pgm", "pnm"
+        "png", "jpg", "tga", "dds", "pbm", "ppm", "pgm", "pnm", "pcx"
     };
     size_t bits = 0;
     for (size_t i = 0; i < sizeof kExtensions / sizeof *kExtensions; i++)
@@ -2428,6 +2546,8 @@ bool texture::load(const u::string &file, float quality) {
         return decode<dds>(data, fileName, quality);
     else if (pnm::test(data))
         return decode<pnm>(data, fileName, quality);
+    else if (pcx::test(data))
+        return decode<pcx>(data, fileName, quality);
     u::print("no decoder found for `%s'\n", fileName);
     return false;
 }

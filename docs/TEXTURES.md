@@ -31,6 +31,10 @@ below:
   * Supports ASCII (P2) and binary (P5) PGM (Portable GrayMap)
   * Supports ASCII (P3) and binary (P6) PPM (Portable PixMap)
 
+* PCX (8-bit indexed or 24-bit RGB (RLE only))
+  * Supports 8-bit indexed
+  * Supports 24-bit RGB
+
 * DDS
   * Supports the following block-compressed formats only
     * DXT1
