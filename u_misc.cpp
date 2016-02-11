@@ -25,7 +25,7 @@ namespace detail {
     }
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER < 1900
+#if defined(_MSC_VER)
     int c99vsnprintf(char *out, size_t size, const char *string, va_list ap) {
         u::string format = fixFormatString(string);
         int count = -1;
@@ -34,12 +34,6 @@ namespace detail {
         if (count == -1)
             count = _vscprintf(&format[0], ap);
         return count;
-    }
-#elif defined(_MSC_VER)
-    int c99vsnprintf(char *out, size_t size, const char *string, va_list ap) {
-        // Visual Studio 2015 fixes _vsnprintf_s
-        u::string format = fixFormatString(string);
-        return _vsnprintf_s(out, size, &format[0], ap);
     }
 #else
     int c99vsnprintf(char *out, size_t size, const char *string, va_list ap) {
@@ -88,7 +82,7 @@ namespace detail {
 
 #if defined(_WIN32)
     int c99vsscanf(const char *out, const char *string, va_list ap) {
-        u::string format = fixFormatString(format);
+        u::string format = fixFormatString(string);
         return vsscanf(out, &format[0], ap);
     }
 #else
