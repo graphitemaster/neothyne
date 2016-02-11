@@ -11,6 +11,10 @@
 
 #if defined(__has_feature)
 #   define HAS_FEATURE(X) __has_feature(X)
+#elif defined(_MSC_VER) && _MSC_VER >= 1900
+// Visual Studio 2015 supports our usage so just expand the feature
+// tests to evaluate true
+#   define HAS_FEATURE(X) 1
 #else
 #   define HAS_FEATURE(X) 0
 #endif
@@ -552,6 +556,14 @@ inline bool unlikely(const T &value) {
     return __builtin_expect(!!value, 0);
 #else
     return !!value;
+#endif
+}
+
+[[noreturn]] inline void unreachable() {
+#if defined(_MSC_VER)
+    __assume(0);
+#else
+    __builtin_unreachable();
 #endif
 }
 

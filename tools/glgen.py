@@ -151,6 +151,7 @@ def genSource(functionList, extensionList, sourceFile):
         #include "u_string.h"
         #include "u_set.h"
         #include "u_misc.h"
+        #include "u_traits.h"
 
         #include "engine.h"
         #include "cvar.h"
@@ -358,7 +359,7 @@ def genSource(functionList, extensionList, sourceFile):
             case 150: return "3.2";
             case 330: return "3.3";
             }
-            assert(0);
+            u::unreachable();
         }
 
         const char *extensionString(size_t what) {

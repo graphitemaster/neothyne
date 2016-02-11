@@ -6,6 +6,7 @@
 #include "u_string.h"
 #include "u_set.h"
 #include "u_misc.h"
+#include "u_traits.h"
 
 #include "engine.h"
 #include "cvar.h"
@@ -490,7 +491,7 @@ const char *glslVersionString() {
     case 150: return "3.2";
     case 330: return "3.3";
     }
-    u::assert(0);
+    u::unreachable();
 }
 
 const char *extensionString(size_t what) {
