@@ -4,6 +4,7 @@
 
 #include "u_new.h"
 #include "u_assert.h"
+#include "u_traits.h"
 
 static constexpr size_t kMemoryAlignment = 16u;
 

@@ -22,12 +22,14 @@ struct initializer_list {
 
     // Non standard operator []
     const T &operator[](size_t index) const;
-
+#if defined(_MSC_VER)
+	// Visual studio proxy uses a pair of pointers
+    initializer_list(const T *first, const T *last);
+#endif
 private:
     const T *m_first;
 #if defined(_MSC_VER)
     // Visual Studio proxy uses a pair of pointers
-    initializer_list(const T *first, const T *last);
     const T *m_last;
 #else
     // Other compilers use pointer and size

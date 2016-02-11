@@ -2,6 +2,13 @@
 #define U_TRAITS_HDR
 #include <stddef.h>
 
+#if defined(_MSC_VER)
+#   pragma warning(disable : 4146) // unary minus operator applied to unsigned type, result still unsigned
+#   pragma warning(disable : 4244) // convestion from X to Y, possible loss of data
+#   pragma warning(disable : 4577) // 'noexcept' used with no exception handling mode specified
+#   pragma warning(disable : 4805) // unsafe mix of bitwise operations on boolean
+#endif
+
 #if defined(__has_feature)
 #   define HAS_FEATURE(X) __has_feature(X)
 #else

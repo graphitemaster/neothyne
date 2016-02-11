@@ -4,5 +4,11 @@
 *~
 *.dll
 *.exe
+*.sdf
+*.vcxproj.user
+*.opendb
+*.vs
+*.log
 .deps/
+.build/
 tools/__pycache__/

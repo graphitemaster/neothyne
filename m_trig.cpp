@@ -5,6 +5,7 @@
 #include "m_const.h"
 
 #include "u_assert.h"
+#include "u_traits.h"
 
 namespace m {
 
@@ -107,7 +108,7 @@ static inline float tandf(double x, bool odd) {
 static inline int rempio2(float x, uint32_t ix, double &y) {
 #if FLT_EVAL_METHOD == 0 || FLT_EVAL_METHOD == 1
     static const double kToInt = 1.5 / DBL_EPSILON;
-#elif FLT_EVAL_METHOD == 2
+#elif FLT_EVAL_METHOD == 2 || defined(_MSC_VER)
     static const double kToInt = 1.5 / LDBL_EPSILON;
 #endif
     static const double kInvPio2 = 6.36619772367581382433e-01;
