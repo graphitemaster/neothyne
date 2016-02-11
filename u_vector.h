@@ -17,50 +17,79 @@ struct initializer_list {
     initializer_list();
 
     size_t size() const;
-    const T* begin() const;
-    const T* end() const;
+    const T *begin() const;
+    const T *end() const;
 
+    // Non standard operator []
     const T &operator[](size_t index) const;
 
 private:
-    initializer_list(const T* data, size_t size);
-    const T *m_begin;
+    const T *m_first;
+#if defined(_MSC_VER)
+    // Visual Studio proxy uses a pair of pointers
+    initializer_list(const T *first, const T *last);
+    const T *m_last;
+#else
+    // Other compilers use pointer and size
+    initializer_list(const T *data, size_t size);
     size_t m_size;
+#endif
 };
 
 template <typename T>
 inline initializer_list<T>::initializer_list()
-    : m_begin(nullptr)
+    : m_first(nullptr)
+#if defined(_MSC_VER)
+    , m_last(nullptr)
+#else
     , m_size(0)
+#endif
 {
 }
 
 template <typename T>
 inline size_t initializer_list<T>::size() const {
+#if defined(_MSC_VER)
+    return size_t(m_last - m_first);
+#else
     return m_size;
+#endif
 }
 
 template <typename T>
 inline const T *initializer_list<T>::begin() const {
-    return m_begin;
+    return m_first;
 }
 
 template <typename T>
 inline const T *initializer_list<T>::end() const {
-    return m_begin + m_size;
+#if defined(_MSC_VER)
+    return m_last;
+#else
+    return m_first + m_size;
+#endif
 }
 
 template <typename T>
 inline const T &initializer_list<T>::operator[](size_t index) const {
-    return *(m_begin + index);
+    return *(m_first + index);
 }
 
+#if defined(_MSC_VER)
 template <typename T>
-inline initializer_list<T>::initializer_list(const T* data, size_t size)
-    : m_begin(data)
+inline initializer_list<T>::initializer_list(const T *first, const T *last)
+    : m_first(first)
+    , m_last(last)
+{
+}
+#else
+template <typename T>
+inline initializer_list<T>::initializer_list(const T *first, size_t size)
+    : m_first(first)
     , m_size(size)
 {
 }
+#endif
 
 }
 

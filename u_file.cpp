@@ -211,6 +211,15 @@ bool dir::isFile(const char *fileName) {
 #else
 #define IS_IGNORE(X) (!strcmp((X).cFileName, ".") || !strcmp((X).cFileName, ".."))
 
+#if !defined(S_ISREG) && defined(S_IFMT) && defined(S_IFREG)
+#define S_ISREG(M) (((M) & S_IFMT) == S_IFREG)
+#elif defined(_S_ISREG)
+#define S_ISREG(M) _S_ISREG(M)
+#else
+#define S_ISREG(M) \
+    ([]() { static_assert(0, "no suitable implementation of S_ISREG"); return false; })()
+#endif
+
 struct findContext {
     findContext(const char *where);
     ~findContext();

@@ -40,10 +40,11 @@ typedef float f32;
 #endif
 
 // |cos(x) - c(x)| < 2**-34.1 (~[-5.37e-11, 5.295e-11])
-static const double kC0 = -0x1FFFFFFD0C5E81.0p-54; // -0.499999997251031003120
-static const double kC1 = 0x155553E1053A42.0p-57; // 0.0416666233237390631894
-static const double kC2 = -0x16C087E80F1E27.0p-62; // -0.00138867637746099294692
-static const double kC3 = 0x199342E0EE5069.0p-68; // 0.0000243904487962774090654
+static const double kC0 = -4.99999997251031003e-01;
+static const double kC1 = 4.16666233237390632e-02;
+static const double kC2 = -1.38867637746099295e-03;
+static const double kC3 = 2.43904487962774091e-05;
+
 static inline float cosdf(double x) {
     const f64 z = x*x;
     const f64 w = z*z;
@@ -52,10 +53,11 @@ static inline float cosdf(double x) {
 }
 
 // |sin(x)/x - s(x)| < 2**-37.5 (~[-4.89e-12, 4.824e-12])
-static const double kS1 = -0x15555554CBAC77.0p-55; // -0.166666666416265235595
-static const double kS2 = 0x111110896EFBB2.0p-59; // 0.0083333293858894631756
-static const double kS3 = -0x1A00F9E2CAE774.0p-65; // -0.000198393348360966317347
-static const double kS4 = 0x16CD878C3B46A7.0p-71; // 0.0000027183114939898219064
+static const double kS1 = -1.66666666416265236e-01;
+static const double kS2 = 8.33332938588946318e-03;
+static const double kS3 = -1.98393348360966317e-04;
+static const double kS4 = 2.71831149398982191e-06;
+
 static inline float sindf(double x) {
     const f64 z = x*x;
     const f64 w = z*z;
@@ -83,12 +85,12 @@ static inline void sincosdf(double x, float &sin, float &cos) {
 
 // |tan(x)/x - t(x)| < 2**-25.5 (~[-2e-08, 2e-08])
 static inline float tandf(double x, bool odd) {
-    static const double kT0 = 0x15554D3418C99F.0p-54; // 0.333331395030791399758
-    static const double kT1 = 0x1112FD38999F72.0p-55; // 0.133392002712976742718
-    static const double kT2 = 0x1B54C91D865AFE.0p-57; // 0.0533812378445670393523
-    static const double kT3 = 0x191DF3908C33CE.0p-58; // 0.0245283181166547278873
-    static const double kT4 = 0x185DADFCECF44E.0p-61; // 0.00297435743359967304927
-    static const double kT5 = 0x1362B9BF971BCD.0p-59; // 0.00946564784943673166728
+    static const double kT0 = 3.33331395030791400e-01;
+    static const double kT1 = 1.33392002712976743e-01;
+    static const double kT2 = 5.33812378445670394e-02;
+    static const double kT3 = 2.45283181166547279e-02;
+    static const double kT4 = 2.97435743359967305e-03;
+    static const double kT5 = 9.46564784943673167e-03;
     const f64 z = x*x;
     // polynomial reduction into independent terms for parallel evaluation
     const f64 r = kT4 + z*kT5;
@@ -161,12 +163,12 @@ float acos(float x) {
     const uint32_t sign = shape.asInt >> 31;
     if (ix >= 0x3F800000) { // |x| >= 1 or NaN
         if (ix == 0x3F800000)
-            return sign ? 2*kPIO2Hi + 0x1p-120f : 0.0f;
+            return sign ? 2*kPIO2Hi + 7.52316384526264005e-37f : 0.0f;
         u::assert(0 && "NaN");
     }
     if (ix < 0x3F000000) { // |x| < 0.5
         return ix <= 0x32800000
-            ? kPIO2Hi + 0x1p-120f // |x| < 2**-26
+            ? kPIO2Hi + 7.52316384526264005e-37f // |x| < 2**-26
             : kPIO2Hi - (x - (kPIO2Lo-x*R(x*x)));
     }
     if (sign) { // x < -0.5
@@ -218,11 +220,11 @@ float asin(float x) {
     const uint32_t sign = shape.asInt >> 31;
     if (ix >= 0x3F800000) { // |x| >= 1
         if (ix == 0x3F800000)
-            return x*kPIO2 + 0x1p-120f; // asin(+-1) = +-pi/2 with inexact
+            return x*kPIO2 + 7.52316384526264005e-37f; // asin(+-1) = +-pi/2 with inexact
         u::assert(0 && "NaN"); // asin(|x|>1) is NaN
     }
     if (ix < 0x3F000000) { // |x| < 0.5
-        // if 0x1p-126 <= |x| < 0x1p-12
+        // if 0x1p-126 <= |x| < 0x1p-120
         if (ix < 0x39800000 && ix >= 0x00800000)
             return x;
         return x + x*R(x*x);
@@ -287,7 +289,7 @@ float atan(float x) {
     if (ix >= 0x4c800000) { // if |x| >= 2**26
         if (isnan(x))
             return x;
-        const float z = kATanHi[3] + 0x1p-120f;
+        const float z = kATanHi[3] + 7.52316384526264005e-37f;
         return sign ? -z : z;
     }
     if (ix < 0x3ee00000) { // |x| < 0.4375
@@ -434,10 +436,11 @@ float ceil(float x) {
 float log2(float x) {
     static const float kIvLn2Hi = 1.4428710938e+00; // 0x3fb8b000
     static const float kIvLn2Lo = -1.7605285393e-04; // 0xb9389ad4
-    static const float kLg1 = 0xAAAAAA.0p-24; // 0.66666662693
-    static const float kLg2 = 0xcCCE13.0p-25; // 0.40000972152
-    static const float kLg3 = 0x91E9EE.0p-25; // 0.28498786688
-    static const float kLg4 = 0xF89E26.0p-26; // 0.24279078841
+    static const float kLg1 = 6.66666626930236816e-01;
+    static const float kLg2 = 4.00009721517562866e-01;
+    static const float kLg3 = 2.84987866878509521e-01;
+    static const float kLg4 = 2.42790788412094116e-01;
+
     floatShape shape = { x };
     uint32_t ix = shape.asInt;
     int k = 0;
@@ -448,7 +451,7 @@ float log2(float x) {
             return (x-x)/0.0f; // log(-#) = NaN
         // scale up subnormal number
         k -= 25;
-        x *= 0x1p25f;
+        x *= 3.35544320000000000e+07f;
         shape.asFloat = x;
         ix = shape.asInt;
     } else if (ix >= 0x7F800000) {

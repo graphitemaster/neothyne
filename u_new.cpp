@@ -87,7 +87,15 @@ voidptr alignedAllocator<true>::neoRealloc(voidptr what, size_t size) {
     return neoMalloc(size);
 }
 
-using allocator = alignedAllocator<alignof(max_align_t) < kMemoryAlignment>;
+struct max_alignment {
+    struct data {
+        long long x;
+        long double y;
+    };
+    enum { value = alignof(data) };
+};
+
+using allocator = alignedAllocator<max_alignment::value < kMemoryAlignment>;
 
 voidptr neoMalloc(size_t size) {
     return allocator::neoMalloc(size);

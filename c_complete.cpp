@@ -3,6 +3,8 @@
 
 namespace c {
 
+static constexpr char kAlphabet[] = "abcdefghijklmnopqrstuvwxyz_";
+
 struct completer {
     completer();
     ~completer();
@@ -14,12 +16,9 @@ struct completer {
     static void search(const completer *const n, const char *find, u::vector<u::string> &matches, const u::string &item = "");
     void search(const char *find, u::vector<u::string> &matches) const;
 private:
-    static constexpr char kAlphabet[] = "abcdefghijklmnopqrstuvwxyz_";
     bool m_term;
     completer *m_array[sizeof kAlphabet];
 };
-
-constexpr char completer::kAlphabet[];
 
 static u::deferred_data<completer> gAutoComplete;
 

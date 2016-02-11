@@ -521,22 +521,12 @@ template <typename T>
 typename add_rvalue_reference<T>::type declval();
 
 /// offset_of
-namespace detail {
-    template <typename T1, typename T2>
-    struct offset_of {
-        static T2 object;
-        static constexpr size_t offset(T1 T2::*member) {
-            return size_t(&(detail::offset_of<T1, T2>::object.*member)) -
-                   size_t(&detail::offset_of<T1, T2>::object);
-        }
-    };
-    template <typename T1, typename T2>
-    T2 offset_of<T1, T2>::object;
-}
-
 template <typename T1, typename T2>
 inline constexpr void *offset_of(T1 T2::*member) {
-    return (void *)detail::offset_of<T1, T2>::offset(member);
+    // Note: intentionally invokes undefined behavior. There is no suitable
+    // way to implement this otherwise. Other techniques won't yield constant
+    // expressions or don't work on all compilers.
+    return (void *)&(((T2*)nullptr)->*member);
 }
 
 /// Convenience likely/unlikely "traits".
@@ -545,7 +535,7 @@ inline bool likely(const T &value) {
 #if defined(__GNUC__)
     return __builtin_expect(!!value, 1);
 #else
-    return !!value == 1;
+    return !!value;
 #endif
 }
 
@@ -554,7 +544,7 @@ inline bool unlikely(const T &value) {
 #if defined(__GNUC__)
     return __builtin_expect(!!value, 0);
 #else
-    return !!value == 0;
+    return !!value;
 #endif
 }
 

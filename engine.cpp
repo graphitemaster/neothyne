@@ -114,8 +114,8 @@ failedArchitecture:
             goto failedCSDVersion;
         }
         RegCloseKey(key);
-        static constexpr const char *kStripBuf = "Microsoft ";
-        static constexpr size_t kStripLen = strlen(kStripBuf);
+        static constexpr const char kStripBuf[] = "Microsoft ";
+        static constexpr size_t kStripLen = sizeof kStripBuf - 1;
         if (char *strip = strstr(name, kStripBuf))
             u::moveMemory(name, strip + kStripLen, 1 + strlen(strip + kStripLen));
 #if defined(_WIN32)
@@ -1025,6 +1025,7 @@ uint32_t frameTimer::ticks() const {
 [[noreturn]] void neoFatalError(const char *error) {
     writeConfig(gEngine.userPath());
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error", error, nullptr);
+    fflush(nullptr);
     abort();
 }
 
@@ -1108,6 +1109,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
     (void)hPrev;
     (void)szCmdLine;
     (void)sw;
+
+#if defined(_MSC_VER)
+    freopen(u::fixPath(neoGamePath() + "/stdout.txt").c_str(), "w", stdout);
+    freopen(u::fixPath(neoGamePath() + "/stderr.txt").c_str(), "w", stderr);
+#endif
 
     auto parseCommandLine = [](const char *src, u::vector<char *> &args) {
         char *const buf = new char[strlen(src) + 1];
