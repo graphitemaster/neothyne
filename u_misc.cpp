@@ -244,9 +244,16 @@ unsigned char log2(uint32_t v) {
 #   include <cpuid.h>
 #   define CPUID(FUNC, A, B, C, D) \
         __get_cpuid((FUNC), &A, &B, &C, &D)
-#elif defined(__MSC_VER)
+#elif defined(_MSC_VER)
 #   define CPUID(FUNC, A, B, C, D) \
-        __cpuid((FUNC), A, B, C, D)
+        do { \
+            int info[4]; \
+            __cpuid(info, (FUNC)); \
+			A = info[0]; \
+            B = info[1]; \
+            C = info[2]; \
+            D = info[3]; \
+        } while (0)
 #else
 #   define CPUID(FUNC, A, B, C, D) \
         ([]() { static_assert(0, "no suitable implementation of CPUID found"); })()
