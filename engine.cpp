@@ -82,6 +82,7 @@ static struct queryOperatingSystem {
         ULONG type = REG_SZ;
         ULONG size = kRegQuerySize;
         HKEY key = nullptr;
+		bool inWine = false;
         // Find the CPU architecture using the registry
         LONG n = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
             TEXT("SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"),
@@ -119,7 +120,6 @@ failedArchitecture:
         if (char *strip = strstr(name, kStripBuf))
             u::moveMemory(name, strip + kStripLen, 1 + strlen(strip + kStripLen));
         // Check if we're running in Wine
-        bool inWine = false;
         n = RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Wine"), 0, KEY_QUERY_VALUE, &key);
         if (n == ERROR_SUCCESS) {
             inWine = true;
@@ -129,7 +129,7 @@ failedArchitecture:
         if (!strcmp(architecture, "AMD64")) {
             snprintf(gOperatingSystem, sizeof gOperatingSystem,
                 "%s %s %s (32-bit binary on 64-bit CPU)", name, version,
-                (inWine ? "(in Wine)" : "");
+                (inWine ? "(in Wine)" : ""));
         } else {
             snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s (32-bit)",
                 name, version);
@@ -1128,8 +1128,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
     (void)sw;
 
 #if defined(_MSC_VER)
-    freopen(u::fixPath(neoGamePath() + "/stdout.txt").c_str(), "w", stdout);
-    freopen(u::fixPath(neoGamePath() + "/stderr.txt").c_str(), "w", stderr);
+    freopen(u::fixPath(gEngine.userPath() + "/stdout.txt").c_str(), "w", stdout);
+    freopen(u::fixPath(gEngine.userPath() + "/stderr.txt").c_str(), "w", stderr);
 #endif
 
     auto parseCommandLine = [](const char *src, u::vector<char *> &args) {
