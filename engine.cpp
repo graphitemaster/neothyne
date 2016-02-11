@@ -118,47 +118,64 @@ failedArchitecture:
         static constexpr size_t kStripLen = sizeof kStripBuf - 1;
         if (char *strip = strstr(name, kStripBuf))
             u::moveMemory(name, strip + kStripLen, 1 + strlen(strip + kStripLen));
+        // Check if we're running in Wine
+        bool inWine = false;
+        n = RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Wine"), 0, KEY_QUERY_VALUE, &key);
+        if (n == ERROR_SUCCESS) {
+            inWine = true;
+            RegCloseKey(key);
+        }
 #if defined(_WIN32)
         if (!strcmp(architecture, "AMD64")) {
             snprintf(gOperatingSystem, sizeof gOperatingSystem,
-                "%s %s (32-bit binary on 64-bit CPU)", name, version);
+                "%s %s %s (32-bit binary on 64-bit CPU)", name, version,
+                (inWine ? "(in Wine)" : "");
         } else {
             snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s (32-bit)",
                 name, version);
         }
 #elif defined(_WIN64)
-        snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s (64-bit)",
-            name, version);
+        snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s %s (64-bit)",
+            name, version, (inWine ? "(in Wine)" : ""));
 #else
-        snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s",
-            name, version);
+        snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s %s",
+            name, version, (inWine ? "(in Wine)" : "");
 #endif
         return;
 failedCSDVersion:
 #if defined(_WIN32)
         if (!strcmp(architecture, "AMD64")) {
             snprintf(gOperatingSystem, sizeof gOperatingSystem,
-                "%s (32-bit binary on 64-bit CPU)", name);
+                "%s %s (32-bit binary on 64-bit CPU)", name,
+                (inWine ? "(in Wine)" : ""));
         } else {
-            snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s (32-bit)",
-                name);
+            snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s (32-bit)",
+                name, (inWine ? "(in Wine)" : ""));
         }
 #elif defined(_WIN64)
-        snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s (64-bit)", name);
+        snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s (64-bit)",
+            name, (inWine ? "(in Wine)" : "");
 #else
-        strcpy(gOperatingSystem, name);
+        snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s",
+            name, (inWine ? "(in Wine)" : ""));
 #endif
         return;
 failedProductName:
 #if defined(_WIN32)
-        if (!strcmp(architecture, "AMD64"))
-            strcpy(gOperatingSystem, "Windows (32-bit binary on 64-bit CPU)");
-        else
-            strcpy(gOperatingSystem, "Windows (32-bit)");
+        if (!strcmp(architecture, "AMD64")) {
+            snprintf(gOperatingSystem, sizeof gOperatingSystem,
+                "Windows %s (32-bit binary on 64-bit CPU)",
+                (inWine ? "(in Wine)" : ""));
+        } else {
+            snprintf(gOperatingSystem, sizeof gOperatingSystem,
+                "Windows %s (32-bit)", (inWine ? "(in Wine)" : ""));
+        }
 #elif defined(_WIN64)
-        strcpy(gOperatingSystem, "Windows (64-bit)");
+        snprintf(gOperatingSystem, sizeof gOperatingSystem,
+            "Windows %s (64-bit)", (inWine ? "(in Wine)" : ""));
 #else
-        strcpy(gOperatingSystem, "Windows");
+        snprintf(gOperatingSystem, sizeof gOperatingSystem,
+            "Windows %s", (inWine ? "(in Wine)" : ""));
 #endif
 #endif
     }
