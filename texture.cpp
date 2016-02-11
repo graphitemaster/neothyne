@@ -156,7 +156,7 @@ struct jpeg : decoder {
             m_format = kTexFormatRGBA;
             break;
         default:
-            u::assert(0);
+            u::unreachable();
             break;
         }
 
@@ -1102,7 +1102,7 @@ struct png : decoder {
             m_format = kTexFormatRGBA;
             break;
         default:
-            u::assert(0);
+            u::unreachable();
             break;
         }
 
@@ -2458,7 +2458,7 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
         m_bpp = 1;
         break;
     default:
-        u::assert(0);
+        u::unreachable();
         break;
     }
     m_pitch = m_width * m_bpp;

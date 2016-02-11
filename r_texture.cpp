@@ -726,7 +726,7 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
         default:
             break;
         }
-        u::assert(0);
+        u::unreachable();
     }
 
     if (tex.flags() & kTexFlagNormal)
@@ -788,7 +788,7 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     case kTexFormatLuminance:
         return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_RED };
     default:
-        u::assert(0);
+        u::unreachable();
         break;
     }
     return u::none;
