@@ -249,7 +249,7 @@ unsigned char log2(uint32_t v) {
         do { \
             int info[4]; \
             __cpuid(info, (FUNC)); \
-			A = info[0]; \
+            A = info[0]; \
             B = info[1]; \
             C = info[2]; \
             D = info[3]; \
