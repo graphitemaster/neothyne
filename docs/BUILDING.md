@@ -22,9 +22,9 @@ Windows users have a couple methods for building Neothyne.
 The preferred method for binaries is to use the included Visual Studio
 solution with Visual Studio 2015 or higher.
 
-Note: Visual Studio 2015 project files are setup to produce binaries
+Visual Studio 2015 project files are setup to produce binaries
 using a relatively new C run time. If you need binaries on older versions
-of Windows, change the runtime library or use the alternative method
+of Windows, change the runtime library or use the alternative method.
 
 ### MingW
 The alternative method is to use a MingW toolchain with a version of gcc >= 4.9.2
