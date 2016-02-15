@@ -2131,13 +2131,13 @@ struct pcx : decoder {
 protected:
     bool loadRLE(const unsigned char *const data) {
         const unsigned char *current = data;
-        int bufferLineLength = m_bpl*m_planes;
-        int imageLineLength = m_width*m_planes;
+        size_t bufferLineLength = m_bpl*m_planes;
+        size_t imageLineLength = m_width*m_planes;
         u::vector<unsigned char> line(bufferLineLength);
 
         m_data.resize((imageLineLength * m_height)+1);
-        for (int lineCount = 0; lineCount < m_height; ++lineCount) {
-            int linePosition = 0;
+        for (size_t lineCount = 0; lineCount < m_height; ++lineCount) {
+            size_t linePosition = 0;
             while (linePosition < bufferLineLength) {
                 // First 2 bits indicate run of next byte value
                 if (*current > 0xC0) {

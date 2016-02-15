@@ -276,6 +276,11 @@ const char *CPUDesc() {
         }
     }
     if (desc[0]) {
+        const size_t size = strlen(desc);
+        char *end = desc + size - 1;
+        while (end >= desc && u::isspace(*end))
+            end--;
+        *(end + 1) = '\0';
         char format[1024];
         int count = SDL_GetCPUCount();
         int wrote = snprintf(format, sizeof format, "%s (%d %s)",
