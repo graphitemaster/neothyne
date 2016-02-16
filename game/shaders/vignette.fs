@@ -10,7 +10,7 @@ out vec4 fragColor;
 const vec2 kCenter = vec2(0.5f);
 
 void main() {
-    vec2 texCoord = calcTexCoord();
+    vec2 texCoord = calcScreenTexCoord();
     vec4 texColor = neoTexture2D(gColorMap, texCoord);
 
 #ifdef HAS_TEXTURE_RECTANGLE

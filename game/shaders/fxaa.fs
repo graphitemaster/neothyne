@@ -6,7 +6,7 @@ uniform neoSampler2D gColorMap;
 out vec4 fragColor;
 
 void main() {
-    vec2 texCoord = calcTexCoord();
+    vec2 texCoord = calcScreenTexCoord();
 
     const float FXAA_SPAN_MAX = 8.0; // TODO: make console variable?
     const float FXAA_REDUCE_MUL = 1.0/FXAA_SPAN_MAX;

@@ -463,8 +463,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
 
 ///! defaultMethod
 defaultMethod::defaultMethod()
-    : m_WVP(nullptr)
-    , m_screenSize(nullptr)
+    : m_screenSize(nullptr)
     , m_colorTextureUnit(nullptr)
 {
 }
@@ -483,7 +482,6 @@ bool defaultMethod::init() {
     if (!finalize({ "position" }))
         return false;
 
-    m_WVP = getUniform("gWVP", uniform::kMat4);
     m_screenSize = getUniform("gScreenSize", uniform::kVec2);
     m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
 
@@ -493,10 +491,6 @@ bool defaultMethod::init() {
 
 void defaultMethod::setColorTextureUnit(int unit) {
     m_colorTextureUnit->set(unit);
-}
-
-void defaultMethod::setWVP(const m::mat4 &wvp) {
-    m_WVP->set(wvp);
 }
 
 void defaultMethod::setPerspective(const m::perspective &p) {

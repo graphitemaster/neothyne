@@ -19,28 +19,24 @@ geom::geom()
 
 geom::~geom() {
     if (buffers[0])
-        gl::DeleteBuffers(2, buffers);
+        gl::DeleteBuffers(buffers[1] ? 2 : 1, buffers);
     if (vao)
         gl::DeleteVertexArrays(1, &vao);
 }
 
-void geom::upload() {
+void geom::upload(bool index) {
     gl::GenVertexArrays(1, &vao);
-    gl::GenBuffers(2, buffers);
+    gl::GenBuffers(index ? 2 : 1, buffers);
 }
 
 bool quad::upload() {
-    geom::upload();
+    geom::upload(false);
 
     alignas(16) static const GLfloat vertices[] = {
-        -1.0f,-1.0f, 0.0f, 0.0f,  0.0f,
-        -1.0f, 1.0f, 0.0f, 0.0f, -1.0f,
-         1.0f, 1.0f, 0.0f, 1.0f, -1.0f,
-         1.0f,-1.0f, 0.0f, 1.0f,  0.0f,
-    };
-
-    static const GLubyte indices[] = {
-        0, 1, 2, 0, 2, 3
+        -1.0f, -1.0f,
+        -1.0f, 1.0f,
+        1.0f, -1.0f,
+        1.0f, 1.0f
     };
 
     gl::BindVertexArray(vao);
@@ -49,25 +45,19 @@ bool quad::upload() {
     if (gl::has(gl::ARB_half_float_vertex)) {
         const auto convert = m::convertToHalf(vertices, sizeof vertices / sizeof *vertices);
         gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof convert[0], &convert[0], GL_STATIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof convert[0] * 5, (const GLvoid *)(0)); // position
-        gl::VertexAttribPointer(1, 2, GL_HALF_FLOAT, GL_FALSE, sizeof convert[0] * 5, (const GLvoid *)(sizeof convert[0] * 3)); // uvs
+        gl::VertexAttribPointer(0, 2, GL_HALF_FLOAT, GL_FALSE, sizeof convert[0] * 2, (const GLvoid *)(0)); // position
     } else {
         gl::BufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof vertices[0] * 5, ATTRIB_OFFSET(0)); // position
-        gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof vertices[0] * 5, ATTRIB_OFFSET(3)); // uvs
+        gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof vertices[0] * 2, ATTRIB_OFFSET(0)); // position
     }
     gl::EnableVertexAttribArray(0);
-    gl::EnableVertexAttribArray(1);
-
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof indices, indices, GL_STATIC_DRAW);
 
     return true;
 }
 
 void quad::render() {
     gl::BindVertexArray(vao);
-    gl::DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
+    gl::DrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
 sphere::sphere()

@@ -508,7 +508,6 @@ bool world::upload(const m::perspective &p, ::world *map) {
         neoFatal("failed to initialize default rendering method");
     m_defaultMethod.enable();
     m_defaultMethod.setColorTextureUnit(0);
-    m_defaultMethod.setWVP(m_identity);
 
     // ssao method
     if (!m_ssaoMethod.init())

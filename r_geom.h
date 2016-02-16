@@ -14,7 +14,7 @@ namespace r {
 struct geom {
     geom();
     ~geom();
-    void upload();
+    void upload(bool index = true);
 
     union {
         struct {
