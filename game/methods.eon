@@ -9,3 +9,15 @@ method:
     gColorMap: sampler
     gScreenSize: vec2
     gProperties: vec3
+
+method:
+  name: "bounding box"
+  vertex: shaders/bbox.vs
+  fragment: shaders/bbox.fs
+  attributes:
+    position
+  fragdata:
+    diffuseOut
+  uniforms:
+    gWVP: mat4
+    gColor: vec3

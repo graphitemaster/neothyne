@@ -85,7 +85,6 @@ private:
     pointLightMethod m_pointLightMethods[2]; // no shadow, shadow
     spotLightMethod m_spotLightMethods[2]; // no shadow, shadow
     ssaoMethod m_ssaoMethod;
-    bboxMethod m_bboxMethod;
     aaMethod m_aaMethod;
     defaultMethod m_defaultMethod;
 

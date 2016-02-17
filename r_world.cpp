@@ -497,11 +497,10 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_spotLightMethods[1].setDepthTextureUnit(lightMethod::kDepth);
     m_spotLightMethods[1].setShadowMapTextureUnit(lightMethod::kShadowMap);
 
-    // bbox method
-    if (!m_bboxMethod.init())
-        neoFatal("failed to initialize bounding box rendering method");
-    m_bboxMethod.enable();
-    m_bboxMethod.setColor({1.0f, 1.0f, 1.0f}); // White by default
+
+    method &m = r::methods::instance()["bounding box"];
+    m.enable();
+    m.getUniform("gColor")->set(m::vec3(1.0f, 1.0f, 1.0f)); // White by default
 
     // default method
     if (!m_defaultMethod.init())
@@ -624,7 +623,7 @@ void world::render(const pipeline &pl) {
         for (auto &it : m_spotLightMethods)
             it.reload();
         m_ssaoMethod.reload();
-        m_bboxMethod.reload();
+        r::methods::instance().reload();
         m_aaMethod.reload();
         m_defaultMethod.reload();
         r_reload.set(0);
@@ -894,9 +893,12 @@ void world::forwardPass(const pipeline &pl) {
                     pipeline bp;
                     bp.setWorld(jt.position);
                     bp.setScale(it.size);
-                    m_bboxMethod.enable();
-                    m_bboxMethod.setColor(kOutline);
-                    m_bboxMethod.setWVP((p.projection() * p.view() * p.world()) * bp.world());
+
+                    method &m = r::methods::instance()["bounding box"];
+                    m.enable();
+                    m.getUniform("gColor")->set(kOutline);
+                    m.getUniform("gWVP")->set((p.projection() * p.view() * p.world()) * bp.world());
+
                     m_bbox.render();
                 }
             }
@@ -927,9 +929,12 @@ void world::forwardPass(const pipeline &pl) {
             pipeline bp;
             bp.setWorld(mdl->bounds().center());
             bp.setScale(mdl->bounds().size());
-            m_bboxMethod.enable();
-            m_bboxMethod.setColor(it->highlight ? kHighlighted : kOutline);
-            m_bboxMethod.setWVP((p.projection() * p.view() * p.world()) * bp.world());
+
+            method &m = r::methods::instance()["bounding box"];
+            m.enable();
+            m.getUniform("gColor")->set(it->highlight ? kHighlighted : kOutline);
+            m.getUniform("gWVP")->set((p.projection() * p.view() * p.world()) * bp.world());
+
             m_bbox.render();
         }
 
@@ -937,8 +942,9 @@ void world::forwardPass(const pipeline &pl) {
         gl::Disable(GL_CULL_FACE);
         gl::PolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        m_bboxMethod.enable();
-        m_bboxMethod.setColor(kHighlighted);
+        method &m = r::methods::instance()["bounding box"];
+        m.enable();
+        m.getUniform("gColor")->set(kHighlighted);
         for (const auto &it : m_map->m_pointLights) {
             if (!it->highlight)
                 continue;
@@ -946,7 +952,7 @@ void world::forwardPass(const pipeline &pl) {
             pipeline p = pl;
             p.setWorld(it->position);
             p.setScale({scale, scale, scale});
-            m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
+            m.getUniform("gWVP")->set(p.projection() * p.view() * p.world());
             m_sphere.render();
         }
 
@@ -966,7 +972,7 @@ void world::forwardPass(const pipeline &pl) {
             (rz * ry * rx).getMatrix(&rotate);
             p.setRotate(rotate);
 
-            m_bboxMethod.setWVP(p.projection() * p.view() * p.world());
+            m.getUniform("gWVP")->set(p.projection() * p.view() * p.world());
             m_cone.render(false);
         }
 

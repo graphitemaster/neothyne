@@ -23,22 +23,16 @@ static u::string readToken(const char **d, const char *end) {
     return value;
 }
 
-// TODO: make more efficient
 static u::string readString(const char **d, const char *end) {
     const char *data = *d;
-    char quote = *data;
-    int more = 0;
-    u::string value(&quote, 1);
-    for (++data; data != end && (more || *data != quote); ++data) {
-        if (more)
-            --more;
+    for (int m = 0, q = *data++; data != end && (m || *data != q); ++data) {
+        if (m)
+            --m;
         if (*data == '\\')
-            more = 1;
-        value += *data;
+            m = 1;
     }
-    if (data != end)
-        value += *data++;
-    *d = data;
+    u::string value { *d + 1, size_t(data - *d - 1) };
+    *d = data != end ? data + 1 : data;
     return u::move(value);
 }
 
@@ -158,6 +152,7 @@ handleComma:
                 state |= kNoBadIndent;
 handleValue:
                 current->value = value.copy();
+                value.clear();
                 current = forward;
                 forward = nullptr;
                 continue;
