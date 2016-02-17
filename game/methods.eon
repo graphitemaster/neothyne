@@ -54,3 +54,17 @@ method:
   uniforms:
     gVP: mat4
     gColorMap: sampler
+
+method:
+  name: "particle system"
+  vertex: shaders/particles.vs
+  fragment: shaders/particles.fs
+  attributes:
+    position
+    color
+    power
+  uniforms:
+    gVP: mat4
+    gColorMap: sampler
+    gDepthMap: sampler
+    gPower: float

@@ -14,54 +14,10 @@ namespace r {
 
 VAR(int, r_particle_max_resolution, "maximum particle resolution", 16, 512, 128);
 
-///! particleSystemMethod
-particleSystemMethod::particleSystemMethod()
-    : m_VP(nullptr)
-    , m_colorTextureUnit(nullptr)
-    , m_depthTextureUnit(nullptr)
-    , m_power(nullptr)
-{
-}
-
-bool particleSystemMethod::init() {
-    if (!method::init("particle system"))
-        return false;
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/particles.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/particles.fs"))
-        return false;
-    if (!finalize({ "position", "color", "power" }))
-        return false;
-
-    m_VP = getUniform("gVP", uniform::kMat4);
-    m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
-    m_depthTextureUnit = getUniform("gDepthMap", uniform::kSampler);
-    m_power = getUniform("gPower", uniform::kFloat);
-
-    post();
-    return true;
-}
-
-void particleSystemMethod::setVP(const m::mat4 &vp) {
-    m_VP->set(vp);
-}
-
-void particleSystemMethod::setColorTextureUnit(int unit) {
-    m_colorTextureUnit->set(unit);
-}
-
-void particleSystemMethod::setDepthTextureUnit(int unit) {
-    m_depthTextureUnit->set(unit);
-}
-
-void particleSystemMethod::setPower(float power) {
-    m_power->set(power);
-}
-
 ///! particleSystem
 particleSystem::particleSystem()
-    : m_description("Particle System")
+    : m_method(nullptr)
+    , m_description("Particle System")
     , m_memory(0)
     , m_vao(0)
     , m_bufferIndex(0)
@@ -97,8 +53,7 @@ bool particleSystem::upload() {
     if (!m_texture.upload())
         return false;
 
-    if (!m_method.init())
-        return false;
+    m_method = &r::methods::instance()["particle system"];
 
     gl::GenVertexArrays(1, &m_vao);
     gl::GenBuffers(sizeof m_buffers / sizeof *m_buffers, m_buffers);
@@ -123,9 +78,9 @@ bool particleSystem::upload() {
         gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof m_indices[0], 0, GL_STREAM_DRAW);
     }
 
-    m_method.enable();
-    m_method.setColorTextureUnit(0);
-    m_method.setDepthTextureUnit(1);
+    m_method->enable();
+    m_method->getUniform("gColorMap")->set(0);
+    m_method->getUniform("gDepthMap")->set(1);
 
     return true;
 }
@@ -244,9 +199,9 @@ void particleSystem::render(const pipeline &pl) {
         &m_indices[0], GL_DYNAMIC_DRAW);
     m_memory += m_indices.size() * sizeof m_indices[0];
 
-    m_method.enable();
-    m_method.setVP(p.projection() * p.view());
-    m_method.setPower(power());
+    m_method->enable();
+    m_method->getUniform("gVP")->set(p.projection() * p.view());
+    m_method->getUniform("gPower")->set(power());
     m_texture.bind(GL_TEXTURE0);
 
     gl::Disable(GL_CULL_FACE);
