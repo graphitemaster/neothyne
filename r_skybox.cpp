@@ -9,54 +9,14 @@
 #include "u_misc.h"
 
 namespace r {
-///! method
-bool skyboxMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init("skybox"))
-        return false;
-
-    for (auto &it : defines)
-        method::define(it);
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/skybox.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/skybox.fs"))
-        return false;
-    if (!finalize({ "position" }))
-        return false;
-
-    m_WVP = getUniform("gWVP", uniform::kMat4);
-    m_world = getUniform("gWorld", uniform::kMat4);
-    m_cubeMap = getUniform("gCubemap", uniform::kSampler);
-    m_skyColor = getUniform("gSkyColor", uniform::kVec3);
-    m_fog.color = getUniform("gFog.color", uniform::kVec3);
-    m_fog.density = getUniform("gFog.density", uniform::kFloat);
-
-    post();
-    return true;
-}
-
-void skyboxMethod::setWVP(const m::mat4 &wvp) {
-    m_WVP->set(wvp);
-}
-
-void skyboxMethod::setTextureUnit(int unit) {
-    m_cubeMap->set(unit);
-}
-
-void skyboxMethod::setWorld(const m::mat4 &worldInverse) {
-    m_world->set(worldInverse);
-}
-
-void skyboxMethod::setFog(const fog &f) {
-    m_fog.color->set(f.color);
-    m_fog.density->set(f.density);
-}
-
-void skyboxMethod::setSkyColor(const m::vec3 &skyColor) {
-    m_skyColor->set(skyColor);
-}
 
 ///! renderer
+skybox::skybox()
+    : m_skyboxMethod(nullptr)
+    , m_foggedSkyboxMethod(nullptr)
+{
+}
+
 bool skybox::load(const u::string &skyboxName) {
     if (!m_cubemap.load(skyboxName + "_ft", skyboxName + "_bk", skyboxName + "_up",
                         skyboxName + "_dn", skyboxName + "_rt", skyboxName + "_lf"))
@@ -94,15 +54,16 @@ bool skybox::upload() {
         return false;
     if (!m_cubemap.upload())
         return false;
-    if (!m_methods[0].init())
-        return false;
-    if (!m_methods[1].init({"USE_FOG"}))
-        return false;
-    for (auto &it : m_methods) {
-        it.enable();
-        it.setTextureUnit(0);
-        it.setSkyColor(m_skyColor);
-    }
+
+    m_skyboxMethod = &r::methods::instance()["skybox"];
+    m_skyboxMethod->enable();
+    m_skyboxMethod->getUniform("gCubemap")->set(0);
+    m_skyboxMethod->getUniform("gSkyColor")->set(m_skyColor);
+
+    m_foggedSkyboxMethod = &r::methods::instance()["fogged skybox"];
+    m_foggedSkyboxMethod->enable();
+    m_foggedSkyboxMethod->getUniform("gCubemap")->set(0);
+    m_foggedSkyboxMethod->getUniform("gSkyColor")->set(m_skyColor);
     return true;
 }
 
@@ -115,18 +76,19 @@ void skybox::render(const pipeline &pl, const fog &f) {
     p.setRotation(pl.rotation());
     p.setPerspective(pl.perspective());
 
-    skyboxMethod *renderMethod = nullptr;
+    method *renderMethod = nullptr;
     if (varGet<int>("r_fog")) {
-        renderMethod = &m_methods[1];
+        renderMethod = m_foggedSkyboxMethod;
         renderMethod->enable();
-        renderMethod->setFog(f);
+        renderMethod->getUniform("gFog.color")->set(f.color);
+        renderMethod->getUniform("gFog.density")->set(f.density);
     } else {
-        renderMethod = &m_methods[0];
+        renderMethod = m_skyboxMethod;
         renderMethod->enable();
     }
 
-    renderMethod->setWVP(p.projection() * p.view() * p.world());
-    renderMethod->setWorld(wpl.world());
+    renderMethod->getUniform("gWVP")->set(p.projection() * p.view() * p.world());
+    renderMethod->getUniform("gWorld")->set(wpl.world());
 
     // render skybox cube
     gl::DepthRange(1, 1);

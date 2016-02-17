@@ -142,3 +142,31 @@ method:
     gWorld: mat4
     gEyeWorldPosition: vec3
     gColorMap: sampler
+
+# Skybox Rendering Technique
+method:
+  name: skybox
+  vertex: shaders/skybox.vs
+  fragment: shaders/skybox.fs
+  attributes: position
+  uniforms:
+    gWVP: mat4
+    gWorld: mat4
+    gCubemap: sampler
+    gSkyColor: vec3
+
+method:
+  name: "fogged skybox"
+  vertex: shaders/skybox.vs
+  fragment: shaders/skybox.fs
+  defines: USE_FOG
+  attributes: position
+  uniforms:
+    gWVP: mat4
+    gWorld: mat4
+    gCubemap: sampler
+    gSkyColor: vec3
+    gFog.color: vec3
+    gFog.density: float
+
+

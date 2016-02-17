@@ -40,14 +40,16 @@ private:
 };
 
 struct skybox {
+    skybox();
     bool load(const u::string &skyboxName);
     bool upload();
 
     void render(const pipeline &pl, const fog &f);
 
 private:
-    texture3D m_cubemap; // skybox cubemap
-    skyboxMethod m_methods[2];
+    texture3D m_cubemap;
+    method *m_skyboxMethod;
+    method *m_foggedSkyboxMethod;
     cube m_cube;
     m::vec3 m_skyColor;
 };
