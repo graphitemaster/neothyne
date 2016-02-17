@@ -5,6 +5,7 @@
 #include "u_file.h"
 #include "u_misc.h"
 #include "u_sha512.h"
+#include "u_eon.h"
 
 namespace r {
 
@@ -254,6 +255,10 @@ void method::post() {
         it.second.m_handle = gl::GetUniformLocation(m_program, it.first.c_str());
 }
 
+uniform *method::getUniform(const u::string &name) {
+    return &m_uniforms[name];
+}
+
 uniform *method::getUniform(const u::string &name, uniform::type type) {
     auto *const value = &m_uniforms[name];
     value->m_type = type;
@@ -262,8 +267,8 @@ uniform *method::getUniform(const u::string &name, uniform::type type) {
     return value;
 }
 
-bool method::finalize(const u::initializer_list<const char *> &attributes,
-                      const u::initializer_list<const char *> &fragData,
+bool method::finalize(const u::vector<const char *> &attributes,
+                      const u::vector<const char *> &fragData,
                       bool initial)
 {
     // Check if the system supports any program binary format
@@ -460,6 +465,184 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
         u::print("[method] => %s `%s' program using [%s]\n", whence, m_description, contents);
     return true;
 }
+
+///! Singleton representing all the possible rendering methods
+methods::methods()
+    : m_methods(nullptr)
+    , m_initialized(false)
+{
+}
+
+void methods::release() {
+    delete m_methods;
+}
+
+bool methods::init() {
+    if (m_initialized)
+        return true;
+    m_methods = new u::map<u::string, method>;
+    const auto file = u::fixPath(neoGamePath() + "methods.eon");
+    auto read = u::read(file, "r");
+    if (!read) {
+        u::print("[eon] => `%s' failed to read method description\n", file);
+        return false;
+    }
+
+    // Read the EON
+    const auto &data = *read;
+    u::eon eon;
+    if (!eon.load((const char *)&data[0], (const char *)&data[0] + data.size()))
+        return false;
+
+    auto readMethod = [&](const u::eon::entry *e) {
+        const u::eon::entry *head = e;
+        // Find the method
+        const char *name = nullptr;
+        for (; e; e = e->next) {
+            if (strcmp(e->name, "name"))
+                continue;
+            name = e->head->name;
+            break;
+        }
+        if (name) {
+            u::print("[eon] => loading `%s' rendering method\n", name);
+            method *m = &(*m_methods)[name];
+            bool hasVertex = false;
+            bool hasFragment = false;
+            if (!m->init(name))
+                return false;
+            if (gl::has(gl::ARB_texture_rectangle))
+                m->define("HAS_TEXTURE_RECTANGLE");
+            for (e = head; e; e = e->next) {
+                if (!strcmp(e->name, "name")
+                ||  !strcmp(e->name, "attributes")
+                ||  !strcmp(e->name, "fragdata")
+                ||  !strcmp(e->name, "uniforms"))
+                {
+                    // Attributes and fragment data are expected to be done
+                    // during the finalizer stage, so we skip those and
+                    // intend to pick them up later.
+                    // The name field is required to be first when finding
+                    // the method. So it's already been processed. We skip
+                    // that here too.
+                    // Uniforms must be fetched after finalizing
+                    continue;
+                } else if (!strcmp(e->name, "vertex")) {
+                    if (hasVertex) {
+                        u::print("[eon] => method `%s' already has vertex shader\n", name);
+                        return false;
+                    }
+                    if (!m->addShader(GL_VERTEX_SHADER, e->head->name))
+                        return false;
+                    hasVertex = true;
+                } else if (!strcmp(e->name, "fragment")) {
+                    if (hasFragment) {
+                        u::print("[eon] => method `%s' already has fragment shader\n", name);
+                        return false;
+                    }
+                    if (!m->addShader(GL_FRAGMENT_SHADER, e->head->name))
+                        return false;
+                    hasFragment = true;
+                } else {
+                    u::print("[eon] => method `%s' contains invalid field `%s'\n",
+                        name, e->name);
+                    return false;
+                }
+            }
+            u::vector<const char *> attributes;
+            u::vector<const char *> fragData;
+            for (e = head; e; e = e->next) {
+                if (!strcmp(e->name, "attributes")) {
+                    for (const u::eon::entry *a = e->head; a; a = a->next)
+                        attributes.push_back(u::string(a->name).copy());
+                } else if (!strcmp(e->name, "fragdata")) {
+                    for (const u::eon::entry *f = e->head; f; f = f->next)
+                        fragData.push_back(u::string(f->name).copy());
+                }
+            }
+            if (!m->finalize(attributes, fragData))
+                return false;
+            // Now fetch the uniforms
+            for (e = head; e; e = e->next) {
+                if (strcmp(e->name, "uniforms"))
+                    continue;
+                auto uniformType = [](const char *type) -> int {
+                    if (!strcmp(type, "sampler"))
+                        return uniform::kSampler;
+                    else if (!strcmp(type, "float"))
+                        return uniform::kFloat;
+                    else if (!strcmp(type, "vec2"))
+                        return uniform::kVec2;
+                    else if (!strcmp(type, "vec3"))
+                        return uniform::kVec3;
+                    else if (!strcmp(type, "mat3x4[]"))
+                        return uniform::kMat3x4Array;
+                    else if (!strcmp(type, "int2"))
+                        return uniform::kInt2;
+                    else if (!strcmp(type, "mat4"))
+                        return uniform::kMat4;
+                    return -1;
+                };
+                for (const u::eon::entry *uniform = e->head; uniform; uniform = uniform->next) {
+                    if (uniform->head->name) {
+                        int type = uniformType(uniform->head->name);
+                        if (type == -1) {
+                            u::print("[eon] => method `%s' defines uniform `%s' with invalid type `%s'\n",
+                                name, uniform->name, uniform->head->name);
+                            return false;
+                        }
+                        m->getUniform(uniform->name, uniform::type(uniformType(uniform->head->name)));
+                        continue;
+                    }
+                    u::print("[eon] => method `%s' defines uniform `%s' with no type\n",
+                        name, uniform->name);
+                    return false;
+                }
+            }
+            // Post the uniforms
+            m->post();
+            return true;
+        }
+        u::print("[eon] => invalid method description\n");
+        return false;
+    };
+
+    auto readRoot = [&readMethod](const u::eon::entry *e) {
+        if (e->type != u::eon::kSection)
+            return false;
+        if (!strcmp(e->name, "method")) {
+            if (!readMethod(e->head))
+                return false;
+            return true;
+        }
+        return false;
+    };
+
+    for (u::eon::entry *current = eon.root()->head; current; current = current->next)
+        if (!readRoot(current))
+            return false;
+
+    return m_initialized = true;
+}
+
+const method &methods::operator[](const u::string &name) const {
+    return (*m_methods)[name];
+}
+
+method &methods::operator[](const u::string &name) {
+    return (*m_methods)[name];
+}
+
+bool methods::reload() {
+    for (auto &it : *m_methods) {
+        if (it.second.reload())
+            continue;
+        return false;
+    }
+    return true;
+}
+
+methods methods::m_instance;
 
 ///! defaultMethod
 defaultMethod::defaultMethod()

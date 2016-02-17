@@ -88,7 +88,6 @@ private:
     bboxMethod m_bboxMethod;
     aaMethod m_aaMethod;
     defaultMethod m_defaultMethod;
-    vignetteMethod m_vignetteMethod;
 
     // Other things in the world to render
     skybox m_skybox;

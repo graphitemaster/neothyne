@@ -152,5 +152,9 @@ static inline bool isspace(int ch) {
     return ch == ' ' || (unsigned)ch-'\t' < 5;
 }
 
+static inline bool isalpha(int ch) {
+    return (((unsigned)ch|32)-'a') < 26;
+}
+
 }
 #endif

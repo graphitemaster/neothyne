@@ -2,49 +2,6 @@
 
 namespace r {
 
-///! vignetteMethod
-bool vignetteMethod::init(const u::initializer_list<const char *> &defines) {
-    if (!method::init("vignette"))
-        return false;
-
-    for (const auto &it : defines)
-        method::define(it);
-
-    if (gl::has(gl::ARB_texture_rectangle))
-        method::define("HAS_TEXTURE_RECTANGLE");
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/vignette.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/vignette.fs"))
-        return false;
-    if (!finalize({ "position" }))
-        return false;
-
-    m_WVP = getUniform("gWVP", uniform::kMat4);
-    m_colorMap = getUniform("gColorMap", uniform::kSampler);
-    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
-    m_properties = getUniform("gProperties", uniform::kVec3);
-
-    post();
-    return true;
-}
-
-void vignetteMethod::setWVP(const m::mat4 &wvp) {
-    m_WVP->set(wvp);
-}
-
-void vignetteMethod::setColorTextureUnit(int unit) {
-    m_colorMap->set(unit);
-}
-
-void vignetteMethod::setPerspective(const m::perspective &p) {
-    m_screenSize->set(m::vec2(p.width, p.height));
-}
-
-void vignetteMethod::setProperties(float radius, float softness, float opacity) {
-    m_properties->set(m::vec3(radius, softness, opacity));
-}
-
 ///! vignette
 vignette::vignette()
     : m_fbo(0)

@@ -13,7 +13,7 @@ namespace r {
 struct aaMethod : method {
     aaMethod();
 
-    bool init(const u::initializer_list<const char *> &defines = { });
+    bool init(const u::vector<const char *> &defines = { });
 
     void setWVP(const m::mat4 &wvp);
     void setColorTextureUnit(int unit);

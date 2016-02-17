@@ -5,7 +5,7 @@
 namespace r {
 
 ///! aaMethod
-bool aaMethod::init(const u::initializer_list<const char *> &defines) {
+bool aaMethod::init(const u::vector<const char *> &defines) {
     if (!method::init("anti-aliasing"))
         return false;
 

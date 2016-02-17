@@ -1,0 +1,11 @@
+method:
+  name: vignette
+  vertex: shaders/vignette.vs
+  fragment: shaders/vignette.fs
+  attributes:
+    position
+  uniforms:
+    gWVP: mat4
+    gColorMap: sampler
+    gScreenSize: vec2
+    gProperties: vec3

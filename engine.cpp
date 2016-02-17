@@ -1110,12 +1110,17 @@ static int entryPoint(int argc, char **argv) {
 
     u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
 
+    if (!r::methods::instance().init()) {
+        neoFatal("failed to generate rendering methods");
+    }
+
     // Launch the game
     const int status = neoMain(gEngine.m_frameTimer, argc, argv, (bool &)gShutdown);
     writeConfig(gEngine.userPath());
 
     // Instance must be released before OpenGL context is lost
     r::geomMethods::instance().release();
+    r::methods::instance().release();
 
     return status;
 }

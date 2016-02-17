@@ -523,14 +523,10 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_ssaoMethod.setDepthTextureUnit(ssaoMethod::kDepth);
     m_ssaoMethod.setRandomTextureUnit(ssaoMethod::kRandom);
 
-    // vignette method
-    if (!m_vignetteMethod.init())
-        neoFatal("failed to initialize vignette rendering method");
-
-    // Setup default uniforms for vignette
-    m_vignetteMethod.enable();
-    m_vignetteMethod.setWVP(m_identity);
-    m_vignetteMethod.setColorTextureUnit(0);
+    method &vignette = r::methods::instance()["vignette"];
+    vignette.enable();
+    vignette.getUniform("gWVP")->set(m_identity);
+    vignette.getUniform("gColorMap")->set(0);
 
     // render buffers
     if (!m_gBuffer.init(p))
@@ -1118,12 +1114,14 @@ void world::compositePass(const pipeline &pl) {
         gl::ActiveTexture(GL_TEXTURE0);
         gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
 
-        // render vignette
-        m_vignetteMethod.enable();
-        m_vignetteMethod.setPerspective(pl.perspective());
-        m_vignetteMethod.setProperties(r_vignette_radius,
-                                       r_vignette_softness,
-                                       r_vignette_opacity);
+        method &m = r::methods::instance()["vignette"];
+        m.enable();
+        m.getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
+                                                  pl.perspective().height));
+        m.getUniform("gProperties")->set(m::vec3(r_vignette_radius,
+                                                 r_vignette_softness,
+                                                 r_vignette_opacity));
+
         m_quad.render();
     }
 

@@ -35,6 +35,7 @@ RENDERER_SOURCES = \
 
 UTIL_SOURCES = \
 	u_assert.cpp \
+	u_eon.cpp \
 	u_file.cpp \
 	u_misc.cpp \
 	u_new.cpp \
