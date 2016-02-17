@@ -15,35 +15,6 @@ namespace r {
 struct model;
 struct pipeline;
 
-struct guiMethod : method {
-    guiMethod();
-
-    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
-
-    void setPerspective(const m::perspective &p);
-    void setColorTextureUnit(int unit);
-
-private:
-    uniform *m_screenSize;
-    uniform *m_colorMap;
-};
-
-struct guiModelMethod : method {
-    guiModelMethod();
-
-    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
-    void setWVP(const m::mat4 &wvp);
-    void setWorld(const m::mat4 &world);
-    void setColorTextureUnit(int unit);
-    void setEyeWorldPos(const m::vec3 &pos);
-
-private:
-    uniform *m_WVP;
-    uniform *m_world;
-    uniform *m_colorTextureUnit;
-    uniform *m_eyeWorldPosition;
-};
-
 struct gui {
     gui();
     ~gui();
@@ -127,7 +98,7 @@ private:
     struct batch {
         size_t start;
         size_t count;
-        int method;
+        method *technique;
         atlas::node *texture;
     };
 
@@ -151,8 +122,11 @@ private:
 
     texture2D m_font;
     atlas::node *m_notex;
-    guiMethod m_methods[3];
-    guiModelMethod m_modelMethod;
+
+    method *m_modelMethod;
+    method *m_normalMethod;
+    method *m_fontMethod;
+    method *m_imageMethod;
 
     atlas::node *atlasPack(const u::string &file);
     atlas m_atlas;

@@ -95,91 +95,6 @@ static void printCommand(const ::gui::command &it) {
 }
 #endif
 
-///! guiMethod
-guiMethod::guiMethod()
-    : m_screenSize(nullptr)
-    , m_colorMap(nullptr)
-{
-}
-
-bool guiMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init("user interface"))
-        return false;
-
-    for (const auto &it : defines)
-        method::define(it);
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/gui.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/gui.fs"))
-        return false;
-
-    if (!finalize({ "position", "texCoord", "color" }))
-        return false;
-
-    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
-    m_colorMap = getUniform("gColorMap", uniform::kSampler);
-
-    post();
-    return true;
-}
-
-void guiMethod::setPerspective(const m::perspective &p) {
-    m_screenSize->set(m::vec2(p.width, p.height));
-}
-
-void guiMethod::setColorTextureUnit(int unit) {
-    m_colorMap->set(unit);
-}
-
-///! guiModelMethod
-guiModelMethod::guiModelMethod()
-    : m_WVP(nullptr)
-    , m_world(nullptr)
-    , m_colorTextureUnit(nullptr)
-    , m_eyeWorldPosition(nullptr)
-{
-}
-
-bool guiModelMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init("user interface model rendering"))
-        return false;
-
-    for (const auto &it : defines)
-        method::define(it);
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/guimodel.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/guimodel.fs"))
-        return false;
-    if (!finalize({ "position", "normal", "texCoord", "tangent", "w" }))
-        return false;
-
-    m_WVP = getUniform("gWVP", uniform::kMat4);
-    m_world = getUniform("gWorld", uniform::kMat4);
-    m_eyeWorldPosition = getUniform("gEyeWorldPosition", uniform::kVec3);
-    m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
-
-    post();
-    return true;
-}
-
-void guiModelMethod::setWVP(const m::mat4 &wvp) {
-    m_WVP->set(wvp);
-}
-
-void guiModelMethod::setWorld(const m::mat4 &world) {
-    m_world->set(world);
-}
-
-void guiModelMethod::setColorTextureUnit(int unit) {
-    m_colorTextureUnit->set(unit);
-}
-
-void guiModelMethod::setEyeWorldPos(const m::vec3 &pos) {
-    m_eyeWorldPosition->set(pos);
-}
-
 ///! gui::atlas
 gui::atlas::atlas()
     : m_width(0)
@@ -293,6 +208,10 @@ gui::gui()
     : m_vao(0)
     , m_bufferIndex(0)
     , m_notex(nullptr)
+    , m_modelMethod(nullptr)
+    , m_normalMethod(nullptr)
+    , m_fontMethod(nullptr)
+    , m_imageMethod(nullptr)
     , m_atlasData(new unsigned char[kAtlasSize*kAtlasSize*4])
     , m_atlasTexture(0)
 {
@@ -468,25 +387,20 @@ bool gui::upload() {
         gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::color));
     }
 
-    // Rendering methods for GUI
-    if (!m_methods[kMethodNormal].init())
-        return false;
-    if (!m_methods[kMethodFont].init({"HAS_FONT"}))
-        return false;
-    if (!m_methods[kMethodImage].init({"HAS_IMAGE"}))
-        return false;
-    if (!m_modelMethod.init())
-        return false;
+    m_normalMethod = &r::methods::instance()["gui normal"];
+    m_fontMethod = &r::methods::instance()["gui font"];
+    m_imageMethod = &r::methods::instance()["gui image"];
+    m_modelMethod = &r::methods::instance()["gui model"];
 
-    m_methods[kMethodFont].enable();
-    m_methods[kMethodFont].setColorTextureUnit(0);
+    m_fontMethod->enable();
+    m_fontMethod->getUniform("gColorMap")->set(0);
 
-    m_methods[kMethodImage].enable();
-    m_methods[kMethodImage].setColorTextureUnit(0);
+    m_imageMethod->enable();
+    m_imageMethod->getUniform("gColorMap")->set(0);
 
-    m_modelMethod.enable();
-    m_modelMethod.setColorTextureUnit(0);
-    m_modelMethod.setEyeWorldPos(m::vec3::origin);
+    m_modelMethod->enable();
+    m_modelMethod->getUniform("gColorMap")->set(0);
+    m_modelMethod->getUniform("gEyeWorldPosition")->set(m::vec3::origin);
 
     return true;
 }
@@ -499,12 +413,15 @@ void gui::render(const pipeline &pl) {
     gl::Enable(GL_BLEND);
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    m_methods[kMethodNormal].enable();
-    m_methods[kMethodNormal].setPerspective(perspective);
-    m_methods[kMethodFont].enable();
-    m_methods[kMethodFont].setPerspective(perspective);
-    m_methods[kMethodImage].enable();
-    m_methods[kMethodImage].setPerspective(perspective);
+    const m::vec2 screenSize = { perspective.width, perspective.height };
+    m_normalMethod->enable();
+    m_normalMethod->getUniform("gScreenSize")->set(screenSize);
+
+    m_fontMethod->enable();
+    m_fontMethod->getUniform("gScreenSize")->set(screenSize);
+
+    m_imageMethod->enable();
+    m_imageMethod->getUniform("gScreenSize")->set(screenSize);
 
     for (const auto &it : ::gui::commands()()) {
         u::assert(it.type != -1);
@@ -563,13 +480,11 @@ void gui::render(const pipeline &pl) {
             }
             break;
         case ::gui::kCommandText:
-            m_methods[kMethodFont].enable();
-            m_methods[kMethodFont].setPerspective(perspective);
+            m_fontMethod->enable();
             drawText(it.asText.x, it.asText.y, it.asText.contents, it.asText.align, it.color);
             break;
         case ::gui::kCommandImage:
-            m_methods[kMethodImage].enable();
-            m_methods[kMethodImage].setPerspective(perspective);
+            m_imageMethod->enable();
             drawImage(it.asImage.x,
                       it.asImage.y,
                       it.asImage.w,
@@ -606,7 +521,7 @@ void gui::render(const pipeline &pl) {
     gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::color));
 
     bool rebind = true;
-    int method = -1;
+    method *technique = nullptr;
     batch *b = &m_batches[0];
     gl::Disable(GL_SCISSOR_TEST);
     for (auto &it : ::gui::commands()()) {
@@ -618,9 +533,9 @@ void gui::render(const pipeline &pl) {
                 gl::Disable(GL_SCISSOR_TEST);
             }
         } else if (it.type != ::gui::kCommandModel) {
-            if (b->method != method) {
-                method = b->method;
-                m_methods[method].enable();
+            if (b->technique != technique) {
+                technique = b->technique;
+                technique->enable();
             }
             if (it.type == ::gui::kCommandText) {
                 m_font.bind(GL_TEXTURE0);
@@ -636,7 +551,7 @@ void gui::render(const pipeline &pl) {
             rebind = true;
             gl::Enable(GL_DEPTH_TEST);
             gl::Clear(GL_DEPTH_BUFFER_BIT);
-            m_modelMethod.enable();
+            m_modelMethod->enable();
             if (m_models.find(it.asModel.path) == m_models.end()) {
                 gl::Disable(GL_DEPTH_TEST);
                 gl::Viewport(0, 0, neoWidth(), neoHeight());
@@ -645,8 +560,8 @@ void gui::render(const pipeline &pl) {
             const auto &mdl = m_models[it.asModel.path];
             auto p = it.asModel.pipeline;
             gl::Viewport(it.asModel.x, it.asModel.y, it.asModel.w, it.asModel.h);
-            m_modelMethod.setWorld(p.world());
-            m_modelMethod.setWVP(p.projection() * p.view() * p.world());
+            m_modelMethod->getUniform("gWorld")->set(p.world());
+            m_modelMethod->getUniform("gWVP")->set(p.projection() * p.view() * p.world());
             mdl->render();
             gl::Disable(GL_DEPTH_TEST);
             gl::Viewport(0, 0, neoWidth(), neoHeight());
@@ -727,7 +642,7 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
         m_vertices.push_back({{coords[i*2],     coords[i*2+1]},     {0, 0}, {R,G,B,A}});
     }
     b.count = m_vertices.size() - b.start;
-    b.method = kMethodNormal;
+    b.technique = m_normalMethod;
     b.texture = nullptr;
     m_batches.push_back(b);
 }
@@ -873,7 +788,7 @@ void gui::drawText(float x, float y, const char *contents, int align, uint32_t c
         m_vertices.push_back({{q.x1, q.y1}, {q.s1, q.t1}, {R,G,B,A}});
     }
     b.count = m_vertices.size() - b.start;
-    b.method = kMethodFont;
+    b.technique = m_fontMethod;
     m_batches.push_back(b);
 }
 
@@ -913,7 +828,7 @@ void gui::drawImage(float x, float y, float w, float h, const char *path) {
     b.count = m_vertices.size() - b.start;
 
     b.texture = tex;
-    b.method = kMethodImage;
+    b.technique = m_imageMethod;
     m_batches.push_back(b);
 }
 

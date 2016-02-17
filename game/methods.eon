@@ -100,3 +100,45 @@ method:
     gDepthMap: sampler
     gRandomMap: sampler
     gKernel[4]: vec2
+
+# GUI Rendering Techniques
+method:
+  name: "gui normal"
+  vertex: shaders/gui.vs
+  fragment: shaders/gui.fs
+  attributes: position, texCoord, color
+  uniforms:
+    gScreenSize: vec2
+    gColorMap: sampler
+
+method:
+  name: "gui font"
+  defines: HAS_FONT
+  vertex: shaders/gui.vs
+  fragment: shaders/gui.fs
+  attributes: position, texCoord, color
+  uniforms:
+    gScreenSize: vec2
+    gColorMap: sampler
+
+method:
+  name: "gui image"
+  defines: HAS_IMAGE
+  vertex: shaders/gui.vs
+  fragment: shaders/gui.fs
+  attributes: position, texCoord, color
+  uniforms:
+    gScreenSize: vec2
+    gColorMap: sampler
+
+# 3D Model Rendering Technique (for use of 3D models in the UI)
+method:
+  name: "gui model"
+  vertex: shaders/guimodel.vs
+  fragment: shaders/guimodel.fs
+  attributes: position, normal, tangent
+  uniforms:
+    gWVP: mat4
+    gWorld: mat4
+    gEyeWorldPosition: vec3
+    gColorMap: sampler
