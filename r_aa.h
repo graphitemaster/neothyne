@@ -10,28 +10,6 @@ namespace m {
 
 namespace r {
 
-struct aaMethod : method {
-    aaMethod();
-
-    bool init(const u::vector<const char *> &defines = { });
-
-    void setWVP(const m::mat4 &wvp);
-    void setColorTextureUnit(int unit);
-    void setPerspective(const m::perspective &perspective);
-
-private:
-    uniform *m_WVP;
-    uniform *m_colorMap;
-    uniform *m_screenSize;
-};
-
-inline aaMethod::aaMethod()
-    : m_WVP(nullptr)
-    , m_colorMap(nullptr)
-    , m_screenSize(nullptr)
-{
-}
-
 struct aa {
     aa();
     ~aa();

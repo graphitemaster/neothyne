@@ -43,7 +43,6 @@ method:
   attributes:
     position
   uniforms:
-    gWVP: mat4
     gColorMap: sampler
     gColorGradingMap: sampler
     gScreenSize: vec2
@@ -69,3 +68,13 @@ method:
     gColorMap: sampler
     gDepthMap: sampler
     gPower: float
+
+# Fast Approximate Anti-aliasing Rendering Technique
+method:
+  name: fxaa
+  vertex: shaders/fxaa.vs
+  fragment: shaders/fxaa.fs
+  attributes: position
+  uniforms:
+    gColorMap: sampler
+    gScreenSize: vec2

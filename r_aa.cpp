@@ -4,44 +4,6 @@
 
 namespace r {
 
-///! aaMethod
-bool aaMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init("anti-aliasing"))
-        return false;
-
-    for (const auto &it : defines)
-        method::define(it);
-
-    if (gl::has(gl::ARB_texture_rectangle))
-        method::define("HAS_TEXTURE_RECTANGLE");
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/fxaa.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/fxaa.fs"))
-        return false;
-    if (!finalize({ "position" }))
-        return false;
-
-    m_WVP = getUniform("gWVP", uniform::kMat4);
-    m_colorMap = getUniform("gColorMap", uniform::kSampler);
-    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
-
-    post();
-    return true;
-}
-
-void aaMethod::setWVP(const m::mat4 &wvp) {
-    m_WVP->set(wvp);
-}
-
-void aaMethod::setColorTextureUnit(int unit) {
-    m_colorMap->set(unit);
-}
-
-void aaMethod::setPerspective(const m::perspective &p) {
-    m_screenSize->set(m::vec2(p.width, p.height));
-}
-
 ///! aa
 aa::aa()
     : m_fbo(0)

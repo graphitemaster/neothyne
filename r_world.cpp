@@ -439,11 +439,9 @@ bool world::upload(const m::perspective &p, ::world *map) {
     compositeMethod.getUniform("gColorGradingMap")->set(1);
 
     // aa shader
-    if (!m_aaMethod.init())
-        neoFatal("failed to initialize aa rendering method");
-    m_aaMethod.enable();
-    m_aaMethod.setColorTextureUnit(0);
-    m_aaMethod.setWVP(m_identity);
+    method &aaMethod = r::methods::instance()["fxaa"];
+    aaMethod.enable();
+    aaMethod.getUniform("gColorMap")->set(0);
 
     if (!m_geomMethods->init())
         neoFatal("failed to initialize geometry rendering method");
@@ -617,7 +615,6 @@ void world::render(const pipeline &pl) {
         for (auto &it : m_spotLightMethods)
             it.reload();
         m_ssaoMethod.reload();
-        m_aaMethod.reload();
         r::methods::instance().reload();
         r_reload.set(0);
     }
@@ -1140,8 +1137,10 @@ void world::compositePass(const pipeline &pl) {
         }
 
         // render aa buffer
-        m_aaMethod.enable();
-        m_aaMethod.setPerspective(pl.perspective());
+        method &aaMethod = r::methods::instance()["fxaa"];
+        aaMethod.enable();
+        aaMethod.getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
+                                                        pl.perspective().height));
         m_quad.render();
 
         // write to window buffer
