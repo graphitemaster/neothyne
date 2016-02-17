@@ -154,18 +154,6 @@ inline method::shader::shader()
 {
 }
 
-struct defaultMethod : method {
-    defaultMethod();
-    bool init();
-    void setColorTextureUnit(int unit);
-    void setWVP(const m::mat4 &wvp);
-    void setPerspective(const m::perspective &p);
-private:
-    uniform *m_WVP;
-    uniform *m_screenSize;
-    uniform *m_colorTextureUnit;
-};
-
 }
 
 #endif

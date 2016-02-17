@@ -586,7 +586,7 @@ bool methods::init() {
                     return -1;
                 };
                 for (const u::eon::entry *uniform = e->head; uniform; uniform = uniform->next) {
-                    if (uniform->head->name) {
+                    if (uniform->head && uniform->head->name) {
                         int type = uniformType(uniform->head->name);
                         if (type == -1) {
                             u::print("[eon] => method `%s' defines uniform `%s' with invalid type `%s'\n",
@@ -646,41 +646,5 @@ bool methods::reload() {
 }
 
 methods methods::m_instance;
-
-///! defaultMethod
-defaultMethod::defaultMethod()
-    : m_screenSize(nullptr)
-    , m_colorTextureUnit(nullptr)
-{
-}
-
-bool defaultMethod::init() {
-    if (!method::init("default"))
-        return false;
-
-    if (gl::has(gl::ARB_texture_rectangle))
-        method::define("HAS_TEXTURE_RECTANGLE");
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/default.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/default.fs"))
-        return false;
-    if (!finalize({ "position" }))
-        return false;
-
-    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
-    m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
-
-    post();
-    return true;
-}
-
-void defaultMethod::setColorTextureUnit(int unit) {
-    m_colorTextureUnit->set(unit);
-}
-
-void defaultMethod::setPerspective(const m::perspective &p) {
-    m_screenSize->set(m::vec2(p.width, p.height));
-}
 
 }

@@ -497,16 +497,18 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_spotLightMethods[1].setDepthTextureUnit(lightMethod::kDepth);
     m_spotLightMethods[1].setShadowMapTextureUnit(lightMethod::kShadowMap);
 
+    method &bboxMethod = r::methods::instance()["bounding box"];
+    bboxMethod.enable();
+    bboxMethod.getUniform("gColor")->set(m::vec3(1.0f, 1.0f, 1.0f)); // White by default
 
-    method &m = r::methods::instance()["bounding box"];
-    m.enable();
-    m.getUniform("gColor")->set(m::vec3(1.0f, 1.0f, 1.0f)); // White by default
+    method &screenSpaceMethod = r::methods::instance()["screen space"];
+    screenSpaceMethod.enable();
+    screenSpaceMethod.getUniform("gColorMap")->set(0);
 
-    // default method
-    if (!m_defaultMethod.init())
-        neoFatal("failed to initialize default rendering method");
-    m_defaultMethod.enable();
-    m_defaultMethod.setColorTextureUnit(0);
+    method &vignetteMethod = r::methods::instance()["vignette"];
+    vignetteMethod.enable();
+    vignetteMethod.getUniform("gWVP")->set(m_identity);
+    vignetteMethod.getUniform("gColorMap")->set(0);
 
     // ssao method
     if (!m_ssaoMethod.init())
@@ -521,11 +523,6 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_ssaoMethod.setNormalTextureUnit(ssaoMethod::kNormal);
     m_ssaoMethod.setDepthTextureUnit(ssaoMethod::kDepth);
     m_ssaoMethod.setRandomTextureUnit(ssaoMethod::kRandom);
-
-    method &vignette = r::methods::instance()["vignette"];
-    vignette.enable();
-    vignette.getUniform("gWVP")->set(m_identity);
-    vignette.getUniform("gColorMap")->set(0);
 
     // render buffers
     if (!m_gBuffer.init(p))
@@ -623,9 +620,8 @@ void world::render(const pipeline &pl) {
         for (auto &it : m_spotLightMethods)
             it.reload();
         m_ssaoMethod.reload();
-        r::methods::instance().reload();
         m_aaMethod.reload();
-        m_defaultMethod.reload();
+        r::methods::instance().reload();
         r_reload.set(0);
     }
 
@@ -1157,10 +1153,11 @@ void world::compositePass(const pipeline &pl) {
         gl::BindTexture(format, m_aa.texture());
 
         // render window buffer
-        m_defaultMethod.enable();
-        m_defaultMethod.setPerspective(pl.perspective());
+        method &screenSpaceMethod = r::methods::instance()["screen space"];
+        screenSpaceMethod.enable();
+        screenSpaceMethod.getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
+                                                                 pl.perspective().height));
         m_quad.render();
-
     } else {
         // write to window buffer
         gl::BindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -1175,8 +1172,10 @@ void world::compositePass(const pipeline &pl) {
         }
 
         // render window buffer
-        m_defaultMethod.enable();
-        m_defaultMethod.setPerspective(pl.perspective());
+        method &screenSpaceMethod = r::methods::instance()["screen space"];
+        screenSpaceMethod.enable();
+        screenSpaceMethod.getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
+                                                                 pl.perspective().height));
         m_quad.render();
     }
 }

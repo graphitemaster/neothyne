@@ -86,7 +86,6 @@ private:
     spotLightMethod m_spotLightMethods[2]; // no shadow, shadow
     ssaoMethod m_ssaoMethod;
     aaMethod m_aaMethod;
-    defaultMethod m_defaultMethod;
 
     // Other things in the world to render
     skybox m_skybox;
