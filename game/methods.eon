@@ -48,9 +48,7 @@ method:
   name: billboarding
   vertex: shaders/billboard.vs
   fragment: shaders/billboard.fs
-  attributes:
-    position
-    texCoord
+  attributes: position, texCoord
   uniforms:
     gVP: mat4
     gColorMap: sampler
@@ -59,10 +57,7 @@ method:
   name: "particle system"
   vertex: shaders/particles.vs
   fragment: shaders/particles.fs
-  attributes:
-    position
-    color
-    power
+  attributes: position, color, power
   uniforms:
     gVP: mat4
     gColorMap: sampler
