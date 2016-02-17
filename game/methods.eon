@@ -24,7 +24,7 @@ method:
     gWVP: mat4
     gColor: vec3
 
-# Screen Space Rendering Technique:
+# Screen Space Rendering Technique
 method:
   name: "screen space"
   vertex: shaders/screenspace.vs
