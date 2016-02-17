@@ -81,7 +81,6 @@ private:
     // world shading methods and permutations
     geomMethods *m_geomMethods;
     u::vector<directionalLightMethod> m_directionalLightMethods;
-    compositeMethod m_compositeMethod;
     pointLightMethod m_pointLightMethods[2]; // no shadow, shadow
     spotLightMethod m_spotLightMethods[2]; // no shadow, shadow
     ssaoMethod m_ssaoMethod;

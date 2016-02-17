@@ -11,29 +11,6 @@ struct perspective;
 
 namespace r {
 
-struct compositeMethod : method {
-    compositeMethod();
-    bool init(const u::vector<const char *> &defines = u::vector<const char *>());
-    void setWVP(const m::mat4 &wvp);
-    void setColorTextureUnit(int unit);
-    void setColorGradingTextureUnit(int unit);
-    void setPerspective(const m::perspective &perspective);
-
-private:
-    uniform *m_WVP;
-    uniform *m_colorMap;
-    uniform *m_colorGradingMap;
-    uniform *m_screenSize;
-};
-
-inline compositeMethod::compositeMethod()
-    : m_WVP(nullptr)
-    , m_colorMap(nullptr)
-    , m_colorGradingMap(nullptr)
-    , m_screenSize(nullptr)
-{
-}
-
 struct composite {
     composite();
     ~composite();

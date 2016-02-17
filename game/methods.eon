@@ -31,3 +31,15 @@ method:
   uniforms:
     gColorMap: sampler
     gScreenSize: vec2
+
+method:
+  name: final
+  vertex: shaders/final.vs
+  fragment: shaders/final.fs
+  attributes:
+    position
+  uniforms:
+    gWVP: mat4
+    gColorMap: sampler
+    gColorGradingMap: sampler
+    gScreenSize: vec2

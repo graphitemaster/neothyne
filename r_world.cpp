@@ -433,12 +433,10 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_memory += m_indices.size() * sizeof m_indices[0];
 
     // composite shader
-    if (!m_compositeMethod.init())
-        neoFatal("failed to initialize composite rendering method");
-    m_compositeMethod.enable();
-    m_compositeMethod.setColorTextureUnit(0);
-    m_compositeMethod.setColorGradingTextureUnit(1);
-    m_compositeMethod.setWVP(m_identity);
+    method &compositeMethod = r::methods::instance()["final"];
+    compositeMethod.enable();
+    compositeMethod.getUniform("gColorMap")->set(0);
+    compositeMethod.getUniform("gColorGradingMap")->set(1);
 
     // aa shader
     if (!m_aaMethod.init())
@@ -614,7 +612,6 @@ void world::render(const pipeline &pl) {
         m_geomMethods->reload();
         for (auto &it : m_directionalLightMethods)
             it.reload();
-        m_compositeMethod.reload();
         for (auto &it : m_pointLightMethods)
             it.reload();
         for (auto &it : m_spotLightMethods)
@@ -1104,8 +1101,10 @@ void world::compositePass(const pipeline &pl) {
     gl::BindTexture(GL_TEXTURE_3D, m_colorGrader.texture(grader::kColorGrading));
 
     // render to color grading buffer
-    m_compositeMethod.enable();
-    m_compositeMethod.setPerspective(pl.perspective());
+    method &compositeMethod = r::methods::instance()["final"];
+    compositeMethod.enable();
+    compositeMethod.getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
+                                                           pl.perspective().height));
     m_quad.render();
 
     // apply vignette now

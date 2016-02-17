@@ -2,49 +2,6 @@
 
 namespace r {
 
-///! compositeMethod
-bool compositeMethod::init(const u::vector<const char *> &defines) {
-    if (!method::init("composite"))
-        return false;
-
-    for (const auto &it : defines)
-        method::define(it);
-
-    if (gl::has(gl::ARB_texture_rectangle))
-        method::define("HAS_TEXTURE_RECTANGLE");
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/final.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/final.fs"))
-        return false;
-    if (!finalize({ "position" }))
-        return false;
-
-    m_WVP = getUniform("gWVP", uniform::kMat4);
-    m_colorMap = getUniform("gColorMap", uniform::kSampler);
-    m_colorGradingMap = getUniform("gColorGradingMap", uniform::kSampler);
-    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
-
-    post();
-    return true;
-}
-
-void compositeMethod::setWVP(const m::mat4 &wvp) {
-    m_WVP->set(wvp);
-}
-
-void compositeMethod::setColorTextureUnit(int unit) {
-    m_colorMap->set(unit);
-}
-
-void compositeMethod::setColorGradingTextureUnit(int unit) {
-    m_colorGradingMap->set(unit);
-}
-
-void compositeMethod::setPerspective(const m::perspective &p) {
-    m_screenSize->set(m::vec2(p.width, p.height));
-}
-
 composite::composite()
     : m_fbo(0)
     , m_texture(0)
