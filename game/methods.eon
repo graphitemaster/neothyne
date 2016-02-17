@@ -78,3 +78,25 @@ method:
   uniforms:
     gColorMap: sampler
     gScreenSize: vec2
+
+# Screen Space Ambient Occlusion Rendering Technique
+method:
+  name: ssao
+  vertex: shaders/ssao.vs
+  fragment: shaders/ssao.fs
+  attributes: position
+  defines:
+    kKernelSize: 4
+    kKernelFactor: "sin(M_PI / 4.0f)"
+    kKernelOffset: "1.0f / 4.0f"
+  uniforms:
+    gOccluderBias: float
+    gSamplingRadius: float
+    gAttenuation: vec2
+    gInverse: mat4
+    gScreenFrustum: vec2
+    gScreenSize: vec2
+    gNormalMap: sampler
+    gDepthMap: sampler
+    gRandomMap: sampler
+    gKernel[4]: vec2

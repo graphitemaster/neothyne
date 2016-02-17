@@ -83,7 +83,6 @@ private:
     u::vector<directionalLightMethod> m_directionalLightMethods;
     pointLightMethod m_pointLightMethods[2]; // no shadow, shadow
     spotLightMethod m_spotLightMethods[2]; // no shadow, shadow
-    ssaoMethod m_ssaoMethod;
 
     // Other things in the world to render
     skybox m_skybox;

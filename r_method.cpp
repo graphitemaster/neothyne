@@ -514,22 +514,36 @@ bool methods::readMethod(const u::eon::entry *e) {
     bool hasFragment = false;
     if (!m->init(name))
         return false;
+
+    // Defines must come before shader code
     if (gl::has(gl::ARB_texture_rectangle))
         m->define("HAS_TEXTURE_RECTANGLE");
     for (e = head; e; e = e->next) {
-        if (!strcmp(e->name, "name")
-        ||  !strcmp(e->name, "attributes")
-        ||  !strcmp(e->name, "fragdata")
-        ||  !strcmp(e->name, "uniforms"))
-        {
-            // Name was searched for first. We no longer need it
-            //
-            // Attributes and Fragment Data must occur after the shaders
-            // have been specified.
-            //
-            // Uniforms must come absolute last prior to post.
+        if (strcmp(e->name, "defines"))
             continue;
-        } else if (!strcmp(e->name, "vertex")) {
+        for (const u::eon::entry *define = e->head; define; define = define->next) {
+            if (define->head && define->head->name)
+                m->define(u::format("%s %s", define->name, define->head->name).c_str());
+            else
+                m->define(define->name);
+        }
+    }
+
+    static const char *kSkipFields[] = {
+        "name", "attributes", "fragdata", "uniforms", "defines"
+    };
+
+    for (e = head; e; e = e->next) {
+        bool hitSkippable = false;
+        for (const auto *it : kSkipFields) {
+            if (strcmp(e->name, it))
+                continue;
+            hitSkippable = true;
+            break;
+        }
+        if (hitSkippable)
+            continue;
+        else if (!strcmp(e->name, "vertex")) {
             if (hasVertex) {
                 u::print("[eon] => method `%s' already has vertex shader\n", name);
                 return false;
@@ -574,14 +588,33 @@ bool methods::readMethod(const u::eon::entry *e) {
                     name, uniform->name);
                 return false;
             }
+
+            // Check to make sure this is a valid uniform type
             const auto get = uniform::typeFromString(uniform->head->name);
-            if (get) {
-                m->getUniform(uniform->name, *get);
-                continue;
+            if (!get) {
+                u::print("[eon] => method `%s' defines uniform `%s' with invalid type `%s'\n",
+                    name, uniform->name, uniform->head->name);
+                return false;
             }
-            u::print("[eon] => method `%s' defines uniform `%s' with invalid type `%s'\n",
-                name, uniform->name, uniform->head->name);
-            return false;
+
+            // Check if uniform is an array
+            char *tok = strchr(uniform->name, '[');
+            if (tok) {
+                // We support one dimensional arrays only.
+                size_t length = 0;
+                int count = sscanf(tok, "[%zu]", &length);
+                if (count <= 0) {
+                    u::print("[eon] => method `%s' defines invalid uniform name `%s'\n",
+                        name, uniform->name);
+                    return false;
+                }
+                // Fetch all the uniforms from [0, length)
+                *tok = '\0';
+                for (size_t i = 0; i < length; i++)
+                    m->getUniform(u::format("%s[%zu]", uniform->name, i).c_str(), *get);
+            } else {
+                m->getUniform(uniform->name, *get);
+            }
         }
     }
     // Post the uniforms

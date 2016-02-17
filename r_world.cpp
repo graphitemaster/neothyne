@@ -506,19 +506,23 @@ bool world::upload(const m::perspective &p, ::world *map) {
     vignetteMethod.getUniform("gWVP")->set(m_identity);
     vignetteMethod.getUniform("gColorMap")->set(0);
 
-    // ssao method
-    if (!m_ssaoMethod.init())
-        neoFatal("failed to initialize ambient-occlusion rendering method");
-
-    // Setup default uniforms for ssao
-    m_ssaoMethod.enable();
-    m_ssaoMethod.setWVP(m_identity);
-    m_ssaoMethod.setOccluderBias(0.05f);
-    m_ssaoMethod.setSamplingRadius(15.0f);
-    m_ssaoMethod.setAttenuation(1.5f, 0.0000005f);
-    m_ssaoMethod.setNormalTextureUnit(ssaoMethod::kNormal);
-    m_ssaoMethod.setDepthTextureUnit(ssaoMethod::kDepth);
-    m_ssaoMethod.setRandomTextureUnit(ssaoMethod::kRandom);
+    method &ssaoMethod = r::methods::instance()["ssao"];
+    ssaoMethod.enable();
+    ssaoMethod.getUniform("gOccluderBias")->set(0.05f);
+    ssaoMethod.getUniform("gSamplingRadius")->set(15.0f);
+    ssaoMethod.getUniform("gAttenuation")->set(m::vec2(1.5f, 0.0000005f));
+    ssaoMethod.getUniform("gNormalMap")->set(0);
+    ssaoMethod.getUniform("gDepthMap")->set(1);
+    ssaoMethod.getUniform("gRandomMap")->set(2);
+    // Setup kernel
+    static const m::vec2 kKernel[] = {
+        {  0.0f,  1.0f, },
+        {  1.0f,  0.0f, },
+        {  0.0f, -1.0f, },
+        { -1.0f,  0.0f  }
+    };
+    for (const auto &it : kKernel)
+        ssaoMethod.getUniform(u::format("gKernel[%zu]", &it - kKernel).c_str())->set(it);
 
     // render buffers
     if (!m_gBuffer.init(p))
@@ -614,7 +618,6 @@ void world::render(const pipeline &pl) {
             it.reload();
         for (auto &it : m_spotLightMethods)
             it.reload();
-        m_ssaoMethod.reload();
         r::methods::instance().reload();
         r_reload.set(0);
     }
@@ -742,16 +745,20 @@ void world::geometryPass(const pipeline &pl) {
             ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
         // Bind normal/depth/random
-        gl::ActiveTexture(GL_TEXTURE0 + ssaoMethod::kNormal);
+        gl::ActiveTexture(GL_TEXTURE0);
         gl::BindTexture(format, m_gBuffer.texture(gBuffer::kNormal));
-        gl::ActiveTexture(GL_TEXTURE0 + ssaoMethod::kDepth);
+        gl::ActiveTexture(GL_TEXTURE1);
         gl::BindTexture(format, m_gBuffer.texture(gBuffer::kDepth));
-        gl::ActiveTexture(GL_TEXTURE0 + ssaoMethod::kRandom);
+        gl::ActiveTexture(GL_TEXTURE2);
         gl::BindTexture(format, m_ssao.texture(ssao::kRandom));
 
-        m_ssaoMethod.enable();
-        m_ssaoMethod.setPerspective(p.perspective());
-        m_ssaoMethod.setInverse((p.projection() * p.view()).inverse());
+        method &ssaoMethod = r::methods::instance()["ssao"];
+        ssaoMethod.enable();
+        ssaoMethod.getUniform("gScreenFrustum")->set(m::vec2(p.perspective().nearp,
+                                                             p.perspective().farp));
+        ssaoMethod.getUniform("gScreenSize")->set(m::vec2(p.perspective().width,
+                                                          p.perspective().height));
+        ssaoMethod.getUniform("gInverse")->set((p.projection() * p.view()).inverse());
 
         m_quad.render();
 
