@@ -58,7 +58,7 @@ method:
     gVP: mat4
     gColorMap: sampler
 
-#  Particle System Rendering Technique
+# Particle System Rendering Technique
 method:
   name: "particle system"
   vertex: shaders/particles.vs
