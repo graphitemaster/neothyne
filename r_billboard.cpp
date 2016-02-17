@@ -3,39 +3,6 @@
 
 namespace r {
 
-///! method
-billboardMethod::billboardMethod()
-    : m_VP(nullptr)
-    , m_colorMap(nullptr)
-{
-}
-
-bool billboardMethod::init() {
-    if (!method::init("billboarding"))
-        return false;
-
-    if (!addShader(GL_VERTEX_SHADER, "shaders/billboard.vs"))
-        return false;
-    if (!addShader(GL_FRAGMENT_SHADER, "shaders/billboard.fs"))
-        return false;
-    if (!finalize({ "position", "texCoord" }))
-        return false;
-
-    m_VP = getUniform("gVP", uniform::kMat4);
-    m_colorMap = getUniform("gColorMap", uniform::kSampler);
-
-    post();
-    return true;
-}
-
-void billboardMethod::setVP(const m::mat4 &vp) {
-    m_VP->set(vp);
-}
-
-void billboardMethod::setColorTextureUnit(int unit) {
-    m_colorMap->set(unit);
-}
-
 ///! renderer
 bool billboard::load(const u::string &billboardTexture) {
     if (!m_texture.load("<premul>" + billboardTexture))
@@ -46,8 +13,8 @@ bool billboard::load(const u::string &billboardTexture) {
 bool billboard::upload() {
     if (!m_texture.upload())
         return false;
-    if (!m_method.init())
-        return false;
+
+    m_method = &r::methods::instance()["billboarding"];
 
     geom::upload();
 
@@ -63,8 +30,8 @@ bool billboard::upload() {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint), 0, GL_DYNAMIC_DRAW);
 
-    m_method.enable();
-    m_method.setColorTextureUnit(0);
+    m_method->enable();
+    m_method->getUniform("gColorMap")->set(0);
 
     return true;
 }
@@ -125,8 +92,8 @@ void billboard::render(const pipeline &pl, float size) {
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof indices[0], &indices[0], GL_DYNAMIC_DRAW);
     m_memory += indices.size() * sizeof indices[0];
 
-    m_method.enable();
-    m_method.setVP(p.projection() * p.view());
+    m_method->enable();
+    m_method->getUniform("gVP")->set(p.projection() * p.view());
     m_texture.bind(GL_TEXTURE0);
     gl::DrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
     m_entries.clear();

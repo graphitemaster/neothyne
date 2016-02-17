@@ -43,3 +43,14 @@ method:
     gColorMap: sampler
     gColorGradingMap: sampler
     gScreenSize: vec2
+
+method:
+  name: billboarding
+  vertex: shaders/billboard.vs
+  fragment: shaders/billboard.fs
+  attributes:
+    position
+    texCoord
+  uniforms:
+    gVP: mat4
+    gColorMap: sampler

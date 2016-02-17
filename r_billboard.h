@@ -18,19 +18,6 @@ namespace r {
 
 struct pipeline;
 
-struct billboardMethod : method {
-    billboardMethod();
-
-    bool init();
-
-    void setVP(const m::mat4 &vp);
-    void setColorTextureUnit(int unit);
-
-private:
-    uniform *m_VP;
-    uniform *m_colorMap;
-};
-
 struct billboard : geom {
     billboard(const char *description);
     bool load(const u::string &billboardTexture);
@@ -69,13 +56,14 @@ private:
     u::vector<entry> m_entries;
     u::vector<vertex> m_vertices;
     texture2D m_texture;
-    billboardMethod m_method;
+    method *m_method;
     size_t m_memory;
     const char *m_description;
 };
 
 inline billboard::billboard(const char *description)
-    : m_memory(0)
+    : m_method(nullptr)
+    , m_memory(0)
     , m_description(description)
 {
 }
