@@ -508,31 +508,29 @@ bool methods::readMethod(const u::eon::entry *e) {
         u::print("[eon] => no method found\n");
         return false;
     }
-    u::print("[eon] => loading `%s' rendering method\n", name);
-    method *m = &(*m_methods)[name];
-    bool hasVertex = false;
-    bool hasFragment = false;
-    if (!m->init(name))
-        return false;
 
-    // Defines must come before shader code
+    // Read all defines
+    u::vector<u::string> defines;
     if (gl::has(gl::ARB_texture_rectangle))
-        m->define("HAS_TEXTURE_RECTANGLE");
+        defines.push_back("HAS_TEXTURE_RECTANGLE");
     for (e = head; e; e = e->next) {
         if (strcmp(e->name, "defines"))
             continue;
         for (const u::eon::entry *define = e->head; define; define = define->next) {
             if (define->head && define->head->name)
-                m->define(u::format("%s %s", define->name, define->head->name).c_str());
+                defines.push_back(u::format("%s %s", define->name, define->head->name).c_str());
             else
-                m->define(define->name);
+                defines.push_back(define->name);
         }
     }
 
     static const char *kSkipFields[] = {
-        "name", "attributes", "fragdata", "uniforms", "defines"
+        "name", "attributes", "fragdata", "uniforms", "defines", "permutations"
     };
 
+    // Read the vertex and fragment programs
+    u::string vertex;
+    u::string fragment;
     for (e = head; e; e = e->next) {
         bool hitSkippable = false;
         for (const auto *it : kSkipFields) {
@@ -544,27 +542,27 @@ bool methods::readMethod(const u::eon::entry *e) {
         if (hitSkippable)
             continue;
         else if (!strcmp(e->name, "vertex")) {
-            if (hasVertex) {
+            if (vertex.empty()) {
+                vertex = e->head->name;
+            } else {
                 u::print("[eon] => method `%s' already has vertex shader\n", name);
                 return false;
             }
-            if (!m->addShader(GL_VERTEX_SHADER, e->head->name))
-                return false;
-            hasVertex = true;
         } else if (!strcmp(e->name, "fragment")) {
-            if (hasFragment) {
+            if (fragment.empty()) {
+                fragment = e->head->name;
+            } else {
                 u::print("[eon] => method `%s' already has fragment shader\n", name);
                 return false;
             }
-            if (!m->addShader(GL_FRAGMENT_SHADER, e->head->name))
-                return false;
-            hasFragment = true;
         } else {
             u::print("[eon] => method `%s' contains invalid field `%s'\n",
                 name, e->name);
             return false;
         }
     }
+
+    // Read attributes and fragment data
     u::vector<const char *> attributes;
     u::vector<const char *> fragData;
     for (e = head; e; e = e->next) {
@@ -576,9 +574,9 @@ bool methods::readMethod(const u::eon::entry *e) {
                 fragData.push_back(u::string(f->name).copy());
         }
     }
-    if (!m->finalize(attributes, fragData))
-        return false;
-    // Now fetch the uniforms
+
+    // Read uniforms
+    u::map<u::string, uniform::type> uniforms;
     for (e = head; e; e = e->next) {
         if (strcmp(e->name, "uniforms"))
             continue;
@@ -610,15 +608,60 @@ bool methods::readMethod(const u::eon::entry *e) {
                 }
                 // Fetch all the uniforms from [0, length)
                 *tok = '\0';
-                for (size_t i = 0; i < length; i++)
-                    m->getUniform(u::format("%s[%zu]", uniform->name, i).c_str(), *get);
+                for (size_t i = 0; i < length; i++) {
+                    const auto uniformName = u::format("%s[%zu]", uniform->name, i);
+                    uniforms[uniformName] = *get;
+                }
             } else {
-                m->getUniform(uniform->name, *get);
+                uniforms[uniform->name] = *get;
             }
         }
     }
-    // Post the uniforms
-    m->post();
+
+    // Read permutations
+    u::vector<u::vector<u::string>> permutations;
+    permutations.push_back({}); // There is always the default permutation
+    for (e = head; e; e = e->next) {
+        if (strcmp(e->name, "permutations"))
+            continue;
+        for (const u::eon::entry *permutation = e->head; permutation; permutation = permutation->next) {
+            if (strcmp(e->head->name, "permute"))
+                neoFatal("invalid field `%s' in rendering technique `%s' permutation list", e->head->name, name);
+            permutations.push_back({});
+            for (const u::eon::entry *permute = e->head->head; permute; permute = permute->next)
+                permutations.back().push_back(permute->name);
+        }
+    }
+
+    if (vertex.empty() && fragment.empty())
+        neoFatal("rendering technique `%s' defined without shader\n", name);
+
+    u::print("[eon] => loaded `%s' rendering method with %zu %s\n",
+        name, permutations.size(), permutations.size() > 1 ? "permutations" : "permutation");
+
+    // Generate the shaders
+    for (const auto &it : permutations) {
+        u::string permuteName = name;
+        // The first technique does not have [] in its' name
+        if (&it != &permutations[0])
+            permuteName += u::format("[%zu]", &it - &permutations[0] - 1);
+        method *technique = &(*m_methods)[permuteName];
+        if (!technique->init(name))
+            return false;
+        for (const auto &jt : defines)
+            technique->define(jt.c_str());
+        for (const auto &jt : it)
+            technique->define(jt.c_str());
+        if (vertex.size() && !technique->addShader(GL_VERTEX_SHADER, vertex.c_str()))
+            return false;
+        if (fragment.size() && !technique->addShader(GL_FRAGMENT_SHADER, fragment.c_str()))
+            return false;
+        if (!technique->finalize(attributes, fragData))
+            return false;
+        for (const auto &it : uniforms)
+            technique->getUniform(it.first.c_str(), it.second);
+        technique->post();
+    }
     return true;
 };
 

@@ -84,6 +84,15 @@ private:
     pointLightMethod m_pointLightMethods[2]; // no shadow, shadow
     spotLightMethod m_spotLightMethods[2]; // no shadow, shadow
 
+    // Rendering techniques for the world
+    method *m_compositeMethod;
+    method *m_aaMethod;
+    method *m_bboxMethod;
+    method *m_screenSpaceMethod;
+    method *m_vignetteMethod;
+    method *m_ssaoMethod;
+    method *m_shadowMapMethod;
+
     // Other things in the world to render
     skybox m_skybox;
     quad m_quad;

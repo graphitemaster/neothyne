@@ -324,6 +324,13 @@ static constexpr float kLightRadiusTweak = 1.11f;
 
 world::world()
     : m_geomMethods(&geomMethods::instance())
+    , m_compositeMethod(nullptr)
+    , m_aaMethod(nullptr)
+    , m_bboxMethod(nullptr)
+    , m_screenSpaceMethod(nullptr)
+    , m_vignetteMethod(nullptr)
+    , m_ssaoMethod(nullptr)
+    , m_shadowMapMethod(nullptr)
     , m_map(nullptr)
     , m_kdWorld(nullptr)
     , m_memory(0)
@@ -432,17 +439,6 @@ bool world::upload(const m::perspective &p, ::world *map) {
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof m_indices[0], &m_indices[0], GL_STATIC_DRAW);
     m_memory += m_indices.size() * sizeof m_indices[0];
 
-    // composite shader
-    method &compositeMethod = r::methods::instance()["final"];
-    compositeMethod.enable();
-    compositeMethod.getUniform("gColorMap")->set(0);
-    compositeMethod.getUniform("gColorGradingMap")->set(1);
-
-    // aa shader
-    method &aaMethod = r::methods::instance()["fxaa"];
-    aaMethod.enable();
-    aaMethod.getUniform("gColorMap")->set(0);
-
     if (!m_geomMethods->init())
         neoFatal("failed to initialize geometry rendering method");
 
@@ -493,28 +489,42 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_spotLightMethods[1].setDepthTextureUnit(lightMethod::kDepth);
     m_spotLightMethods[1].setShadowMapTextureUnit(lightMethod::kShadowMap);
 
-    method &bboxMethod = r::methods::instance()["bounding box"];
-    bboxMethod.enable();
-    bboxMethod.getUniform("gColor")->set(m::vec3(1.0f, 1.0f, 1.0f)); // White by default
+    // composite shader
+    m_compositeMethod = &r::methods::instance()["final"];
+    m_compositeMethod->enable();
+    m_compositeMethod->getUniform("gColorMap")->set(0);
+    m_compositeMethod->getUniform("gColorGradingMap")->set(1);
 
-    method &screenSpaceMethod = r::methods::instance()["screen space"];
-    screenSpaceMethod.enable();
-    screenSpaceMethod.getUniform("gColorMap")->set(0);
+    // aa shader
+    m_aaMethod = &r::methods::instance()["fxaa"];
+    m_aaMethod->enable();
+    m_aaMethod->getUniform("gColorMap")->set(0);
 
-    method &vignetteMethod = r::methods::instance()["vignette"];
-    vignetteMethod.enable();
-    vignetteMethod.getUniform("gWVP")->set(m_identity);
-    vignetteMethod.getUniform("gColorMap")->set(0);
+    // bounding box shader
+    m_bboxMethod = &r::methods::instance()["bounding box"];
+    m_bboxMethod->enable();
+    m_bboxMethod->getUniform("gColor")->set(m::vec3(1.0f, 1.0f, 1.0f)); // White by default
 
-    method &ssaoMethod = r::methods::instance()["ssao"];
-    ssaoMethod.enable();
-    ssaoMethod.getUniform("gOccluderBias")->set(0.05f);
-    ssaoMethod.getUniform("gSamplingRadius")->set(15.0f);
-    ssaoMethod.getUniform("gAttenuation")->set(m::vec2(1.5f, 0.0000005f));
-    ssaoMethod.getUniform("gNormalMap")->set(0);
-    ssaoMethod.getUniform("gDepthMap")->set(1);
-    ssaoMethod.getUniform("gRandomMap")->set(2);
-    // Setup kernel
+    // screen space quad shader
+    m_screenSpaceMethod = &r::methods::instance()["screen space"];
+    m_screenSpaceMethod->enable();
+    m_screenSpaceMethod->getUniform("gColorMap")->set(0);
+
+    // vignetting shader
+    m_vignetteMethod = &r::methods::instance()["vignette"];
+    m_vignetteMethod->enable();
+    m_vignetteMethod->getUniform("gWVP")->set(m_identity);
+    m_vignetteMethod->getUniform("gColorMap")->set(0);
+
+    // screen space ambient occlusion shader
+    m_ssaoMethod = &r::methods::instance()["ssao"];
+    m_ssaoMethod->enable();
+    m_ssaoMethod->getUniform("gOccluderBias")->set(0.05f);
+    m_ssaoMethod->getUniform("gSamplingRadius")->set(15.0f);
+    m_ssaoMethod->getUniform("gAttenuation")->set(m::vec2(1.5f, 0.0000005f));
+    m_ssaoMethod->getUniform("gNormalMap")->set(0);
+    m_ssaoMethod->getUniform("gDepthMap")->set(1);
+    m_ssaoMethod->getUniform("gRandomMap")->set(2);
     static const m::vec2 kKernel[] = {
         {  0.0f,  1.0f, },
         {  1.0f,  0.0f, },
@@ -522,7 +532,12 @@ bool world::upload(const m::perspective &p, ::world *map) {
         { -1.0f,  0.0f  }
     };
     for (const auto &it : kKernel)
-        ssaoMethod.getUniform(u::format("gKernel[%zu]", &it - kKernel).c_str())->set(it);
+        m_ssaoMethod->getUniform(u::format("gKernel[%zu]", &it - kKernel).c_str())->set(it);
+
+    // shadow mapping shader
+    m_shadowMapMethod = &r::methods::instance()["shadow"];
+    m_shadowMapMethod->enable();
+    m_shadowMapMethod->getUniform("gWVP")->set(m_identity);
 
     // render buffers
     if (!m_gBuffer.init(p))
@@ -540,10 +555,6 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     if (!m_shadowMap.init(r_smsize*3, r_smsize*2))
         neoFatal("failed to initialize shadow map");
-
-    method &shadowMapMethod = r::methods::instance()["shadow"];
-    shadowMapMethod.enable();
-    shadowMapMethod.getUniform("gWVP")->set(m_identity);
 
     // Copy light entities into our rendering representation.
     for (auto &it : map->m_pointLights)
@@ -752,13 +763,12 @@ void world::geometryPass(const pipeline &pl) {
         gl::ActiveTexture(GL_TEXTURE2);
         gl::BindTexture(format, m_ssao.texture(ssao::kRandom));
 
-        method &ssaoMethod = r::methods::instance()["ssao"];
-        ssaoMethod.enable();
-        ssaoMethod.getUniform("gScreenFrustum")->set(m::vec2(p.perspective().nearp,
-                                                             p.perspective().farp));
-        ssaoMethod.getUniform("gScreenSize")->set(m::vec2(p.perspective().width,
-                                                          p.perspective().height));
-        ssaoMethod.getUniform("gInverse")->set((p.projection() * p.view()).inverse());
+        m_ssaoMethod->enable();
+        m_ssaoMethod->getUniform("gScreenFrustum")->set(m::vec2(p.perspective().nearp,
+                                                                p.perspective().farp));
+        m_ssaoMethod->getUniform("gScreenSize")->set(m::vec2(p.perspective().width,
+                                                             p.perspective().height));
+        m_ssaoMethod->getUniform("gInverse")->set((p.projection() * p.view()).inverse());
 
         m_quad.render();
 
@@ -891,10 +901,9 @@ void world::forwardPass(const pipeline &pl) {
                     bp.setWorld(jt.position);
                     bp.setScale(it.size);
 
-                    method &m = r::methods::instance()["bounding box"];
-                    m.enable();
-                    m.getUniform("gColor")->set(kOutline);
-                    m.getUniform("gWVP")->set((p.projection() * p.view() * p.world()) * bp.world());
+                    m_bboxMethod->enable();
+                    m_bboxMethod->getUniform("gColor")->set(kOutline);
+                    m_bboxMethod->getUniform("gWVP")->set((p.projection() * p.view() * p.world()) * bp.world());
 
                     m_bbox.render();
                 }
@@ -927,10 +936,9 @@ void world::forwardPass(const pipeline &pl) {
             bp.setWorld(mdl->bounds().center());
             bp.setScale(mdl->bounds().size());
 
-            method &m = r::methods::instance()["bounding box"];
-            m.enable();
-            m.getUniform("gColor")->set(it->highlight ? kHighlighted : kOutline);
-            m.getUniform("gWVP")->set((p.projection() * p.view() * p.world()) * bp.world());
+            m_bboxMethod->enable();
+            m_bboxMethod->getUniform("gColor")->set(it->highlight ? kHighlighted : kOutline);
+            m_bboxMethod->getUniform("gWVP")->set((p.projection() * p.view() * p.world()) * bp.world());
 
             m_bbox.render();
         }
@@ -939,9 +947,8 @@ void world::forwardPass(const pipeline &pl) {
         gl::Disable(GL_CULL_FACE);
         gl::PolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        method &m = r::methods::instance()["bounding box"];
-        m.enable();
-        m.getUniform("gColor")->set(kHighlighted);
+        m_bboxMethod->enable();
+        m_bboxMethod->getUniform("gColor")->set(kHighlighted);
         for (const auto &it : m_map->m_pointLights) {
             if (!it->highlight)
                 continue;
@@ -949,7 +956,7 @@ void world::forwardPass(const pipeline &pl) {
             pipeline p = pl;
             p.setWorld(it->position);
             p.setScale({scale, scale, scale});
-            m.getUniform("gWVP")->set(p.projection() * p.view() * p.world());
+            m_bboxMethod->getUniform("gWVP")->set(p.projection() * p.view() * p.world());
             m_sphere.render();
         }
 
@@ -969,7 +976,7 @@ void world::forwardPass(const pipeline &pl) {
             (rz * ry * rx).getMatrix(&rotate);
             p.setRotate(rotate);
 
-            m.getUniform("gWVP")->set(p.projection() * p.view() * p.world());
+            m_bboxMethod->getUniform("gWVP")->set(p.projection() * p.view() * p.world());
             m_cone.render(false);
         }
 
@@ -1105,10 +1112,9 @@ void world::compositePass(const pipeline &pl) {
     gl::BindTexture(GL_TEXTURE_3D, m_colorGrader.texture(grader::kColorGrading));
 
     // render to color grading buffer
-    method &compositeMethod = r::methods::instance()["final"];
-    compositeMethod.enable();
-    compositeMethod.getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
-                                                           pl.perspective().height));
+    m_compositeMethod->enable();
+    m_compositeMethod->getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
+                                                              pl.perspective().height));
     m_quad.render();
 
     // apply vignette now
@@ -1119,13 +1125,12 @@ void world::compositePass(const pipeline &pl) {
         gl::ActiveTexture(GL_TEXTURE0);
         gl::BindTexture(format, m_colorGrader.texture(grader::kOutput));
 
-        method &m = r::methods::instance()["vignette"];
-        m.enable();
-        m.getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
-                                                  pl.perspective().height));
-        m.getUniform("gProperties")->set(m::vec3(r_vignette_radius,
-                                                 r_vignette_softness,
-                                                 r_vignette_opacity));
+        m_vignetteMethod->enable();
+        m_vignetteMethod->getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
+                                                                 pl.perspective().height));
+        m_vignetteMethod->getUniform("gProperties")->set(m::vec3(r_vignette_radius,
+                                                                 r_vignette_softness,
+                                                                 r_vignette_opacity));
 
         m_quad.render();
     }
@@ -1144,10 +1149,9 @@ void world::compositePass(const pipeline &pl) {
         }
 
         // render aa buffer
-        method &aaMethod = r::methods::instance()["fxaa"];
-        aaMethod.enable();
-        aaMethod.getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
-                                                        pl.perspective().height));
+        m_aaMethod->enable();
+        m_aaMethod->getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
+                                                           pl.perspective().height));
         m_quad.render();
 
         // write to window buffer
@@ -1158,10 +1162,9 @@ void world::compositePass(const pipeline &pl) {
         gl::BindTexture(format, m_aa.texture());
 
         // render window buffer
-        method &screenSpaceMethod = r::methods::instance()["screen space"];
-        screenSpaceMethod.enable();
-        screenSpaceMethod.getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
-                                                                 pl.perspective().height));
+        m_screenSpaceMethod->enable();
+        m_screenSpaceMethod->getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
+                                                                    pl.perspective().height));
         m_quad.render();
     } else {
         // write to window buffer
@@ -1177,10 +1180,9 @@ void world::compositePass(const pipeline &pl) {
         }
 
         // render window buffer
-        method &screenSpaceMethod = r::methods::instance()["screen space"];
-        screenSpaceMethod.enable();
-        screenSpaceMethod.getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
-                                                                 pl.perspective().height));
+        m_screenSpaceMethod->enable();
+        m_screenSpaceMethod->getUniform("gScreenSize")->set(m::vec2(pl.perspective().width,
+                                                                    pl.perspective().height));
         m_quad.render();
     }
 }
@@ -1259,8 +1261,7 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 
     gl::Enable(GL_SCISSOR_TEST);
 
-    method &shadowMapMethod = r::methods::instance()["shadow"];
-    shadowMapMethod.enable();
+    m_shadowMapMethod->enable();
 
     // v = identity
     // for i=0 to 6:
@@ -1295,11 +1296,11 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
             continue;
 
         const auto &view = kSideViews[side];
-        shadowMapMethod.getUniform("gWVP")->set(m::mat4::scale({borderScale, borderScale, 1.0f}) *
-                                                m::mat4::project(90.0f, 1.0f / pl->radius, m::sqrt(3.0f)) *
-                                                view.view *
-                                                m::mat4::scale(1.0f /  pl->radius) *
-                                                m::mat4::translate(-pl->position));
+        m_shadowMapMethod->getUniform("gWVP")->set(m::mat4::scale({borderScale, borderScale, 1.0f}) *
+                                                   m::mat4::project(90.0f, 1.0f / pl->radius, m::sqrt(3.0f)) *
+                                                   view.view *
+                                                   m::mat4::scale(1.0f /  pl->radius) *
+                                                   m::mat4::translate(-pl->position));
 
         const size_t x = r_smsize * (side / 2);
         const size_t y = r_smsize * (side % 2);
@@ -1400,13 +1401,12 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
     gl::Clear(GL_DEPTH_BUFFER_BIT);
 
     const float borderScale = float(r_smsize - r_smborder) / r_smsize;
-    method &shadowMapMethod = r::methods::instance()["shadow"];
-    shadowMapMethod.enable();
-    shadowMapMethod.getUniform("gWVP")->set(m::mat4::scale({borderScale, borderScale, 1.0f}) *
-                                            m::mat4::project(sl->cutOff, 1.0f / sl->radius, m::sqrt(3.0f)) *
-                                            m::mat4::lookat(sl->direction, m::vec3::yAxis) *
-                                            m::mat4::scale(1.0f / sl->radius) *
-                                            m::mat4::translate(-sl->position));
+    m_shadowMapMethod->enable();
+    m_shadowMapMethod->getUniform("gWVP")->set(m::mat4::scale({borderScale, borderScale, 1.0f}) *
+                                               m::mat4::project(sl->cutOff, 1.0f / sl->radius, m::sqrt(3.0f)) *
+                                               m::mat4::lookat(sl->direction, m::vec3::yAxis) *
+                                               m::mat4::scale(1.0f / sl->radius) *
+                                               m::mat4::translate(-sl->position));
 
     // Draw the scene from the lights perspective into the shadow map
     gl::Viewport(0, 0, r_smsize, r_smsize);
