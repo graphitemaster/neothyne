@@ -6,6 +6,7 @@
 #include "u_vector.h"
 #include "u_optional.h"
 #include "u_map.h"
+#include "u_eon.h"
 
 #include "m_mat.h"
 
@@ -43,6 +44,8 @@ struct uniform {
     void set(const m::mat4 &value);             // kMat4
 
     void post();
+
+    static u::optional<type> typeFromString(const char *type);
 
 private:
     friend struct method;
@@ -138,6 +141,8 @@ struct methods {
     method &operator[](const u::string &name);
     const method &operator[](const u::string &name) const;
 
+protected:
+    bool readMethod(const u::eon::entry *e);
 private:
     methods();
     methods(const methods &) = delete;

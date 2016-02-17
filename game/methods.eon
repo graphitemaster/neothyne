@@ -1,3 +1,4 @@
+# Vignette Rendering Technique
 method:
   name: vignette
   vertex: shaders/vignette.vs
@@ -10,6 +11,7 @@ method:
     gScreenSize: vec2
     gProperties: vec3
 
+# Bounding Box Rendering Technique
 method:
   name: "bounding box"
   vertex: shaders/bbox.vs
@@ -22,6 +24,7 @@ method:
     gWVP: mat4
     gColor: vec3
 
+# Screen Space Rendering Technique:
 method:
   name: "screen space"
   vertex: shaders/screenspace.vs
@@ -32,6 +35,7 @@ method:
     gColorMap: sampler
     gScreenSize: vec2
 
+# Compositing Technique
 method:
   name: final
   vertex: shaders/final.vs
@@ -44,6 +48,7 @@ method:
     gColorGradingMap: sampler
     gScreenSize: vec2
 
+# Billboarding Rendering Technique
 method:
   name: billboarding
   vertex: shaders/billboard.vs
@@ -53,6 +58,7 @@ method:
     gVP: mat4
     gColorMap: sampler
 
+#  Particle System Rendering Technique
 method:
   name: "particle system"
   vertex: shaders/particles.vs
