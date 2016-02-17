@@ -169,4 +169,10 @@ method:
     gFog.color: vec3
     gFog.density: float
 
-
+# Shadow Mapping Technique
+method:
+  name: shadow
+  vertex: shaders/shadow.vs
+  attributes: position
+  uniforms:
+    gWVP: mat4

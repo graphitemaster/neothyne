@@ -25,14 +25,6 @@ private:
     GLuint m_shadowMap;
 };
 
-struct shadowMapMethod : method {
-    shadowMapMethod();
-    bool init();
-    void setWVP(const m::mat4 &wvp);
-private:
-    uniform *m_WVP;
-};
-
 }
 
 #endif

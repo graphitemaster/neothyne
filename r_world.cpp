@@ -540,10 +540,10 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     if (!m_shadowMap.init(r_smsize*3, r_smsize*2))
         neoFatal("failed to initialize shadow map");
-    if (!m_shadowMapMethod.init())
-        neoFatal("failed to initialize shadow map method");
-    m_shadowMapMethod.enable();
-    m_shadowMapMethod.setWVP(m_identity);
+
+    method &shadowMapMethod = r::methods::instance()["shadow"];
+    shadowMapMethod.enable();
+    shadowMapMethod.getUniform("gWVP")->set(m_identity);
 
     // Copy light entities into our rendering representation.
     for (auto &it : map->m_pointLights)
@@ -1259,7 +1259,8 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 
     gl::Enable(GL_SCISSOR_TEST);
 
-    m_shadowMapMethod.enable();
+    method &shadowMapMethod = r::methods::instance()["shadow"];
+    shadowMapMethod.enable();
 
     // v = identity
     // for i=0 to 6:
@@ -1294,11 +1295,11 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
             continue;
 
         const auto &view = kSideViews[side];
-        m_shadowMapMethod.setWVP(m::mat4::scale({borderScale, borderScale, 1.0f}) *
-                                 m::mat4::project(90.0f, 1.0f / pl->radius, m::sqrt(3.0f)) *
-                                 view.view *
-                                 m::mat4::scale(1.0f /  pl->radius) *
-                                 m::mat4::translate(-pl->position));
+        shadowMapMethod.getUniform("gWVP")->set(m::mat4::scale({borderScale, borderScale, 1.0f}) *
+                                                m::mat4::project(90.0f, 1.0f / pl->radius, m::sqrt(3.0f)) *
+                                                view.view *
+                                                m::mat4::scale(1.0f /  pl->radius) *
+                                                m::mat4::translate(-pl->position));
 
         const size_t x = r_smsize * (side / 2);
         const size_t y = r_smsize * (side % 2);
@@ -1399,12 +1400,13 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
     gl::Clear(GL_DEPTH_BUFFER_BIT);
 
     const float borderScale = float(r_smsize - r_smborder) / r_smsize;
-    m_shadowMapMethod.enable();
-    m_shadowMapMethod.setWVP(m::mat4::scale({borderScale, borderScale, 1.0f}) *
-                             m::mat4::project(sl->cutOff, 1.0f / sl->radius, m::sqrt(3.0f)) *
-                             m::mat4::lookat(sl->direction, m::vec3::yAxis) *
-                             m::mat4::scale(1.0f / sl->radius) *
-                             m::mat4::translate(-sl->position));
+    method &shadowMapMethod = r::methods::instance()["shadow"];
+    shadowMapMethod.enable();
+    shadowMapMethod.getUniform("gWVP")->set(m::mat4::scale({borderScale, borderScale, 1.0f}) *
+                                            m::mat4::project(sl->cutOff, 1.0f / sl->radius, m::sqrt(3.0f)) *
+                                            m::mat4::lookat(sl->direction, m::vec3::yAxis) *
+                                            m::mat4::scale(1.0f / sl->radius) *
+                                            m::mat4::translate(-sl->position));
 
     // Draw the scene from the lights perspective into the shadow map
     gl::Viewport(0, 0, r_smsize, r_smsize);

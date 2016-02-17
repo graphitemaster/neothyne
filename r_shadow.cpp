@@ -76,29 +76,4 @@ float shadowMap::heightScale(size_t size) const {
     return float(size) / float(m_height);
 }
 
-///! shadowMapMethod
-shadowMapMethod::shadowMapMethod()
-    : m_WVP(nullptr)
-{
-}
-
-bool shadowMapMethod::init() {
-    if (!method::init("shadow map"))
-        return false;
-    if (!addShader(GL_VERTEX_SHADER, "shaders/shadow.vs"))
-        return false;
-    // No fragment shader needed because gl::DrawBuffer(GL_NONE)
-    if (!finalize({ "position" }))
-        return false;
-
-    m_WVP = getUniform("gWVP", uniform::kMat4);
-
-    post();
-    return true;
-}
-
-void shadowMapMethod::setWVP(const m::mat4 &wvp) {
-    m_WVP->set(wvp);
-}
-
 }

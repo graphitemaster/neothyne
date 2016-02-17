@@ -121,7 +121,6 @@ private:
     u::vector<pointLightChunk> m_culledPointLights;
 
     shadowMap m_shadowMap;
-    shadowMapMethod m_shadowMapMethod;
 
     bool m_uploaded;
 };
