@@ -387,9 +387,9 @@ bool gui::upload() {
         gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::color));
     }
 
-    m_normalMethod = &r::methods::instance()["gui normal"];
-    m_fontMethod = &r::methods::instance()["gui font"];
-    m_imageMethod = &r::methods::instance()["gui image"];
+    m_normalMethod = &r::methods::instance()["gui"];
+    m_fontMethod = &r::methods::instance()["gui[0]"];
+    m_imageMethod = &r::methods::instance()["gui[1]"];
     m_modelMethod = &r::methods::instance()["gui model"];
 
     m_fontMethod->enable();

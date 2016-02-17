@@ -628,7 +628,7 @@ bool methods::readMethod(const u::eon::entry *e) {
             if (strcmp(e->head->name, "permute"))
                 neoFatal("invalid field `%s' in rendering technique `%s' permutation list", e->head->name, name);
             permutations.push_back({});
-            for (const u::eon::entry *permute = e->head->head; permute; permute = permute->next)
+            for (const u::eon::entry *permute = permutation->head; permute; permute = permute->next)
                 permutations.back().push_back(permute->name);
         }
     }

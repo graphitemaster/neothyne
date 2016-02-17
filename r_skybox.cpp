@@ -60,7 +60,7 @@ bool skybox::upload() {
     m_skyboxMethod->getUniform("gCubemap")->set(0);
     m_skyboxMethod->getUniform("gSkyColor")->set(m_skyColor);
 
-    m_foggedSkyboxMethod = &r::methods::instance()["fogged skybox"];
+    m_foggedSkyboxMethod = &r::methods::instance()["skybox[0]"];
     m_foggedSkyboxMethod->enable();
     m_foggedSkyboxMethod->getUniform("gCubemap")->set(0);
     m_foggedSkyboxMethod->getUniform("gSkyColor")->set(m_skyColor);
