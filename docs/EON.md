@@ -59,7 +59,7 @@ indentation width. Tabulators are supported as well.
 ## Render Techniques
 
 The technique parser supports the following fields and is invoked by
-creating an `method` section
+creating a `method` section
 
   - "name" *a name specifying the technique*
   - "vertex" *the vertex shader file*
