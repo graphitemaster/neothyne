@@ -261,6 +261,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             plane.setPosition({0, 0, -10});
             plane.setWorld({0, -7.3f, 60.0f});
 
+
             gui::drawModel(x, 0, w, neoHeight(), "models/plane", plane, 0, 10);
 
             logo.setPerspective(standard);

@@ -120,6 +120,8 @@ bool getline(u::file &fp, u::string &line) {
         size_t n = strlen(buf);
         if (n && buf[n - 1] == '\n')
             --n;
+        if (n && buf[n - 1] == '\r')
+            --n;
         line.append(buf, n);
         if (n < sizeof buf - 1)
             return true;
