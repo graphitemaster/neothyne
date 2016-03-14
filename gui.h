@@ -52,6 +52,8 @@ struct image : box {
 struct model : box {
     const char *path;
     r::pipeline pipeline;
+    int su;
+    int sv;
 };
 
 struct text {
@@ -103,7 +105,7 @@ struct queue {
     void addTriangle(int x, int y, int w, int h, int flags, uint32_t color);
     void addText(int x, int y, int align, const char *contents, uint32_t color);
     void addImage(int x, int y, int w, int h, const char *path);
-    void addModel(int x, int y, int w, int h, const char *path, const r::pipeline &p);
+    void addModel(int x, int y, int w, int h, const char *path, const r::pipeline &p, int su = 0, int sv = 0);
 private:
     u::stack<command, kCommandQueueSize> m_commands;
 };
@@ -166,7 +168,7 @@ void drawRectangle(int x, int y, int w, int h, int r, uint32_t color);
 void drawText(int x, int y, int align, const char *contents, uint32_t color);
 void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color);
 void drawImage(int x, int y, int w, int h, const char *path);
-void drawModel(int x, int y, int w, int h, const char *path, const r::pipeline &p);
+void drawModel(int x, int y, int w, int h, const char *path, const r::pipeline &p, int su = 0, int sv = 0);
 
 const queue &commands();
 

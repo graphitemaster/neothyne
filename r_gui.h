@@ -36,12 +36,15 @@ struct guiModelMethod : method {
     void setWorld(const m::mat4 &world);
     void setColorTextureUnit(int unit);
     void setEyeWorldPos(const m::vec3 &pos);
+    void setScroll(int u, int v, float millis);
 
 private:
     uniform *m_WVP;
     uniform *m_world;
     uniform *m_colorTextureUnit;
     uniform *m_eyeWorldPosition;
+    uniform *m_scrollRate;
+    uniform *m_scrollMillis;
 };
 
 struct gui {
@@ -153,6 +156,7 @@ private:
     atlas::node *m_notex;
     guiMethod m_methods[3];
     guiModelMethod m_modelMethod;
+    guiModelMethod m_modelScrollMethod;
 
     atlas::node *atlasPack(const u::string &file);
     atlas m_atlas;

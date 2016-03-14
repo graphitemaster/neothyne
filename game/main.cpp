@@ -96,6 +96,10 @@ static void setBinds() {
     });
 }
 
+NVAR(float, u_x, "", -180.0f, 360.0f, 0.0f);
+NVAR(float, u_y, "", -180.0f, 360.0f, 0.0f);
+NVAR(float, u_z, "", -180.0f, 360.0f, 0.0f);
+
 int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     // Setup rendering pipeline
     gPerspective.fov = cl_fov;
@@ -228,6 +232,48 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
         neoSwap();
 
         if (!gPlaying) {
+            const size_t w = neoWidth();
+            const size_t h = (neoHeight() / 2);
+            const size_t x = neoWidth() / 2 - w / 2; // Center on X
+            const size_t y = neoHeight() - h;
+
+            r::pipeline plane;
+            r::pipeline logo;
+
+            m::perspective standard = gPerspective;
+            standard.width = w;
+            standard.height = h;
+            standard.fov = 20.0f;
+
+            plane.setPerspective(standard);
+            plane.setTime(timer.ticks());
+            plane.setDelta(timer.delta());
+
+            //p.setPosition({0, 0, -300});
+            plane.setScale({120, 70, 120});
+
+            // Last 1/4th bottom screen
+            const m::vec3 rot(160, 0, 0);
+            m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+            m::mat4 rotate;
+            rx.getMatrix(&rotate);
+            plane.setRotate(rotate);
+            plane.setPosition({0, 0, -10});
+            plane.setWorld({0, -7.3f, 60.0f});
+
+            gui::drawModel(x, 0, w, neoHeight(), "models/plane", plane, 0, 10);
+
+            logo.setPerspective(standard);
+            logo.setTime(timer.ticks());
+            logo.setDelta(timer.delta());
+            logo.setWorld({0, 0, 0});
+            logo.setPosition({0, 0, -130});
+            logo.setScale({1, 1, 1});
+
+            gui::drawModel(x, y, w, h, "models/logo", logo);
+        }
+
+        if (!gPlaying) {
             // Render the model (for testing only)
             r::pipeline p;
             m::perspective pp = gPerspective;
@@ -261,24 +307,6 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             gui::drawLine(neoWidth() / 2, neoHeight() / 2 + 4, neoWidth() / 2, neoHeight() / 2 + 10, 2, 0xFFFFFFE1);
             gui::drawLine(neoWidth() / 2 + 10, neoHeight() / 2, neoWidth() / 2 + 4, neoHeight() / 2, 2, 0xFFFFFFE1);
             gui::drawLine(neoWidth() / 2 - 10, neoHeight() / 2, neoWidth() / 2 - 4, neoHeight() / 2, 2, 0xFFFFFFE1);
-        }
-        if (!gPlaying) {
-            const size_t w = neoWidth();
-            const size_t h = (neoHeight() / 2);
-            const size_t x = neoWidth() / 2 - w / 2; // Center on X
-            const size_t y = neoHeight() - h;
-
-            r::pipeline p;
-            m::perspective pp = gPerspective;
-            pp.width = w;
-            pp.height = h;
-            pp.fov = 20.0f;
-            p.setPerspective(pp);
-            p.setWorld({0, 0, 0});
-            p.setPosition({0, 0, -130});
-            p.setScale({1, 1, 1});
-
-            gui::drawModel(x, y, w, h, "models/logo", p);
         }
 
         menuUpdate();

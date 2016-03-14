@@ -30,6 +30,7 @@ struct geomMethod : method {
     void setParallax(float scale, float bias);
     void setBoneMats(size_t numJoints, const float *mats);
     void setAnimation(int x, int y, float flipu, float flipv, float w, float h);
+    void setScroll(int u, int v, float millis);
 
 private:
     uniform *m_WVP;
@@ -46,6 +47,8 @@ private:
     uniform *m_animOffset;
     uniform *m_animFlip;
     uniform *m_animScale;
+    uniform *m_scrollRate;
+    uniform *m_scrollMillis;
 };
 
 inline geomMethod::geomMethod()
@@ -63,6 +66,8 @@ inline geomMethod::geomMethod()
     , m_animOffset(nullptr)
     , m_animFlip(nullptr)
     , m_animScale(nullptr)
+    , m_scrollRate(nullptr)
+    , m_scrollMillis(nullptr)
 {
 }
 
@@ -111,21 +116,25 @@ struct material {
 
     void calculatePermutation(bool skeletal = false);
     geomMethod *bind(const r::pipeline &pl, const m::mat4 &rw, bool skeletal = false);
+    geomMethod *bind(geomMethod &method, const pipeline &pl, bool skeletal = false);
     bool load(u::map<u::string, texture2D*> &textures, const u::string &file, const u::string &basePath);
     bool upload();
-
 private:
-    int m_animFrameWidth;   // The width of one frame of animation
-    int m_animFrameHeight;  // The height of one frame of animation
-    int m_animFramerate;    // The framerate to playback the animation
-    int m_animFrames;       // The amount of frames in the animation
-    int m_animFrame;        // The current frame being rendered
-    int m_animFramesPerRow; // How many frames are in a row
-    float m_animWidth;      // spriteWidth/textureWidth (uv coordinate)
-    float m_animHeight;     // spriteHeight/textureHeight (uv coordinate)
-    bool m_animFlipU;       // Flip U for animation uvs
-    bool m_animFlipV;       // Flip V for animation uvs
-    uint32_t m_animMillis;  // Last frame update time
+    int m_animFrameWidth;    // The width of one frame of animation
+    int m_animFrameHeight;   // The height of one frame of animation
+    int m_animFramerate;     // The framerate to playback the animation
+    int m_animFrames;        // The amount of frames in the animation
+    int m_animFrame;         // The current frame being rendered
+    int m_animFramesPerRow;  // How many frames are in a row
+    float m_animWidth;       // spriteWidth/textureWidth (uv coordinate)
+    float m_animHeight;      // spriteHeight/textureHeight (uv coordinate)
+    bool m_animFlipU;        // Flip U for animation uvs
+    bool m_animFlipV;        // Flip V for animation uvs
+    uint32_t m_animMillis;   // Last frame update time
+
+    int m_scrollRateU;       // The scroll rate for U
+    int m_scrollRateV;       // The scroll rate for V
+    uint32_t m_scrollMillis; // The last scroll update time
 
     geomMethods *m_geomMethods;
 };

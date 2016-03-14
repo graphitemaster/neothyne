@@ -159,6 +159,8 @@ bool guiModelMethod::init(const u::vector<const char *> &defines) {
     m_world = getUniform("gWorld", uniform::kMat4);
     m_eyeWorldPosition = getUniform("gEyeWorldPosition", uniform::kVec3);
     m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
+    m_scrollRate = getUniform("gScrollRate", uniform::kInt2);
+    m_scrollMillis = getUniform("gScrollMillis", uniform::kFloat);
 
     post();
     return true;
@@ -178,6 +180,11 @@ void guiModelMethod::setColorTextureUnit(int unit) {
 
 void guiModelMethod::setEyeWorldPos(const m::vec3 &pos) {
     m_eyeWorldPosition->set(pos);
+}
+
+void guiModelMethod::setScroll(int u, int v, float millis) {
+    m_scrollRate->set(u, v);
+    m_scrollMillis->set(millis);
 }
 
 ///! gui::atlas
@@ -477,6 +484,8 @@ bool gui::upload() {
         return false;
     if (!m_modelMethod.init())
         return false;
+    if (!m_modelScrollMethod.init({"USE_SCROLL"}))
+        return false;
 
     m_methods[kMethodFont].enable();
     m_methods[kMethodFont].setColorTextureUnit(0);
@@ -488,6 +497,9 @@ bool gui::upload() {
     m_modelMethod.setColorTextureUnit(0);
     m_modelMethod.setEyeWorldPos(m::vec3::origin);
 
+    m_modelScrollMethod.enable();
+    m_modelScrollMethod.setColorTextureUnit(0);
+    m_modelScrollMethod.setEyeWorldPos(m::vec3::origin);
     return true;
 }
 
@@ -636,7 +648,6 @@ void gui::render(const pipeline &pl) {
             rebind = true;
             gl::Enable(GL_DEPTH_TEST);
             gl::Clear(GL_DEPTH_BUFFER_BIT);
-            m_modelMethod.enable();
             if (m_models.find(it.asModel.path) == m_models.end()) {
                 gl::Disable(GL_DEPTH_TEST);
                 gl::Viewport(0, 0, neoWidth(), neoHeight());
@@ -645,8 +656,16 @@ void gui::render(const pipeline &pl) {
             const auto &mdl = m_models[it.asModel.path];
             auto p = it.asModel.pipeline;
             gl::Viewport(it.asModel.x, it.asModel.y, it.asModel.w, it.asModel.h);
-            m_modelMethod.setWorld(p.world());
-            m_modelMethod.setWVP(p.projection() * p.view() * p.world());
+            if (it.asModel.su || it.asModel.sv) {
+                m_modelScrollMethod.enable();
+                m_modelScrollMethod.setScroll(it.asModel.su, it.asModel.sv, p.time() * -0.00001f);
+                m_modelScrollMethod.setWorld(p.world());
+                m_modelScrollMethod.setWVP(p.projection() * p.view() * p.world());
+            } else {
+                m_modelMethod.enable();
+                m_modelMethod.setWorld(p.world());
+                m_modelMethod.setWVP(p.projection() * p.view() * p.world());
+            }
             mdl->render();
             gl::Disable(GL_DEPTH_TEST);
             gl::Viewport(0, 0, neoWidth(), neoHeight());
