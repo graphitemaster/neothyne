@@ -17,10 +17,10 @@ out vec4 fragColor;
 void main() {
     pointLight light;
 
-    light.base.color = vec3(0.5f, 0.5f, 0.5f);
+    light.base.color = vec3(1.5f, 1.5f, 1.5f);
     light.base.ambient = 1.0f;
     light.base.diffuse = 1.0f;
-    light.position = vec3(0.0f, 1.0f, 10.0f);
+    light.position = vec3(0.0f, 1.0f, 5.0f);
     light.radius = 1000.0f;
 
     vec4 value = calcPointLight(light, worldPosition0, normalize(normal0), vec2(0.1f, 1.0f));
