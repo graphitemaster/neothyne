@@ -44,7 +44,8 @@ enum : size_t {
     ARB_debug_output,
     ARB_half_float_vertex,
     ARB_get_program_binary,
-    ARB_ES3_compatibility
+    ARB_ES3_compatibility,
+    ARB_texture_storage
 };
 
 void init();
@@ -150,6 +151,8 @@ void DepthRange(GLclampd nearVal, GLclampd farVal GL_INFOP);
 void ProgramParameteri(GLuint program, GLenum pname, GLint value GL_INFOP);
 void GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* binaryFormat, GLvoid* binary GL_INFOP);
 void ProgramBinary(GLuint program, GLenum binaryFormat, const GLvoid* binary, GLsizei length GL_INFOP);
+void TexStorage2D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height GL_INFOP);
+void TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height GL_INFOP);
 
 }
 #if defined(DEBUG_GL) && !defined(R_COMMON_NO_DEFINES)
@@ -249,5 +252,7 @@ void ProgramBinary(GLuint program, GLenum binaryFormat, const GLvoid* binary, GL
 #   define ProgramParameteri(...)        ProgramParameteri(__VA_ARGS__, __FILE__, __LINE__)
 #   define GetProgramBinary(...)         GetProgramBinary(__VA_ARGS__, __FILE__, __LINE__)
 #   define ProgramBinary(...)            ProgramBinary(__VA_ARGS__, __FILE__, __LINE__)
+#   define TexStorage2D(...)             TexStorage2D(__VA_ARGS__, __FILE__, __LINE__)
+#   define TexStorage3D(...)             TexStorage3D(__VA_ARGS__, __FILE__, __LINE__)
 #endif
 #endif

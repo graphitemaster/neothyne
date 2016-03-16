@@ -140,6 +140,8 @@ typedef void (APIENTRYP MYPFNGLDEPTHRANGEPROC)(GLclampd, GLclampd);
 typedef void (APIENTRYP MYPFNGLPROGRAMPARAMETERIPROC)(GLuint, GLenum, GLint);
 typedef void (APIENTRYP MYPFNGLGETPROGRAMBINARYPROC)(GLuint, GLsizei, GLsizei*, GLenum*, GLvoid*);
 typedef void (APIENTRYP MYPFNGLPROGRAMBINARYPROC)(GLuint, GLenum, const GLvoid*, GLsizei);
+typedef void (APIENTRYP MYPFNGLTEXSTORAGE2DPROC)(GLenum, GLsizei, GLenum, GLsizei, GLsizei);
+typedef void (APIENTRYP MYPFNGLTEXSTORAGE3DPROC)(GLenum, GLsizei, GLenum, GLsizei, GLsizei);
 
 static MYPFNGLCREATESHADERPROC              glCreateShader_             = nullptr;
 static MYPFNGLSHADERSOURCEPROC              glShaderSource_             = nullptr;
@@ -237,6 +239,8 @@ static MYPFNGLDEPTHRANGEPROC                glDepthRange_               = nullpt
 static MYPFNGLPROGRAMPARAMETERIPROC         glProgramParameteri_        = nullptr;
 static MYPFNGLGETPROGRAMBINARYPROC          glGetProgramBinary_         = nullptr;
 static MYPFNGLPROGRAMBINARYPROC             glProgramBinary_            = nullptr;
+static MYPFNGLTEXSTORAGE2DPROC              glTexStorage2D_             = nullptr;
+static MYPFNGLTEXSTORAGE3DPROC              glTexStorage3D_             = nullptr;
 
 #if defined(DEBUG_GL)
 ///! ARB_debug_output
@@ -475,7 +479,8 @@ static const char *kExtensions[] = {
     "GL_ARB_debug_output",
     "GL_ARB_half_float_vertex",
     "GL_ARB_get_program_binary",
-    "GL_ARB_ES3_compatibility"
+    "GL_ARB_ES3_compatibility",
+    "GL_ARB_texture_storage"
 };
 
 static int gGLSLVersion = -1;
@@ -603,6 +608,8 @@ void init() {
     glProgramParameteri_        = (MYPFNGLPROGRAMPARAMETERIPROC)neoGetProcAddress("glProgramParameteri");
     glGetProgramBinary_         = (MYPFNGLGETPROGRAMBINARYPROC)neoGetProcAddress("glGetProgramBinary");
     glProgramBinary_            = (MYPFNGLPROGRAMBINARYPROC)neoGetProcAddress("glProgramBinary");
+    glTexStorage2D_             = (MYPFNGLTEXSTORAGE2DPROC)neoGetProcAddress("glTexStorage2D");
+    glTexStorage3D_             = (MYPFNGLTEXSTORAGE3DPROC)neoGetProcAddress("glTexStorage3D");
 
     if (!glGetIntegerv_ || !glGetStringi_)
         neoFatal("Failed to initialize OpenGL\n");
@@ -1138,6 +1145,16 @@ void GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei* length, GLenum* 
 void ProgramBinary(GLuint program, GLenum binaryFormat, const GLvoid* binary, GLsizei length GL_INFOP) {
     glProgramBinary_(program, binaryFormat, binary, length);
     GL_CHECK("b2*08", program, binaryFormat, binary, length);
+}
+
+void TexStorage2D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height GL_INFOP) {
+    glTexStorage2D_(target, levels, internalformat, width, height);
+    GL_CHECK("28288", target, levels, internalformat, width, height);
+}
+
+void TexStorage3D(GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height GL_INFOP) {
+    glTexStorage3D_(target, levels, internalformat, width, height);
+    GL_CHECK("28288", target, levels, internalformat, width, height);
 }
 
 }

@@ -94,3 +94,4 @@ void: DepthRange(GLclampd: nearVal, GLclampd: farVal);
 void: ProgramParameteri(GLuint: program, GLenum: pname, GLint: value);
 void: GetProgramBinary(GLuint: program, GLsizei: bufSize, GLsizei*: length, GLenum*: binaryFormat, GLvoid*: binary);
 void: ProgramBinary(GLuint: program, GLenum: binaryFormat, const GLvoid*: binary, GLsizei: length);
+void: TexStorage2D(GLenum: target, GLsizei: levels, GLenum: internalformat, GLsizei: width, GLsizei: height);
