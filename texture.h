@@ -50,6 +50,7 @@ struct texture {
     texture(const unsigned char *const data, size_t length, size_t width,
         size_t height, bool normal, textureFormat format);
 
+    texture(const texture &other);
     texture(texture &&other);
 
     texture &operator=(texture &&other);
@@ -102,6 +103,8 @@ struct texture {
     void unload();
 
 private:
+    void normalize();
+
     void writeTGA(u::vector<unsigned char> &outData);
     void writeBMP(u::vector<unsigned char> &outData);
     void writePNG(u::vector<unsigned char> &outData);

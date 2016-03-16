@@ -10,6 +10,7 @@
 #include "u_traits.h"
 
 #include "m_const.h"
+#include "m_vec.h"
 
 VAR(int, tex_jpg_chroma, "chroma filtering method", 0, 1, 0);
 VAR(int, tex_jpg_cliplut, "clipping lookup table", 0, 1, 1);
@@ -2280,18 +2281,25 @@ void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t stride, uns
 void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *dst, size_t dw, size_t dh) {
     if (sw == dw * 2 && sh == dh * 2) {
         switch (bpp) {
+        case 1: return halve<1>(src, sw, sh, pitch, dst);
+        case 2: return halve<2>(src, sw, sh, pitch, dst);
         case 3: return halve<3>(src, sw, sh, pitch, dst);
         case 4: return halve<4>(src, sw, sh, pitch, dst);
         }
     } else if (sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1) || dw&(dw-1) || dh&(dh-1)) {
         switch (bpp) {
+        case 1: return scale<1>(src, sw, sh, pitch, dst, dw, dh);
+        case 2: return scale<2>(src, sw, sh, pitch, dst, dw, dh);
         case 3: return scale<3>(src, sw, sh, pitch, dst, dw, dh);
         case 4: return scale<4>(src, sw, sh, pitch, dst, dw, dh);
         }
-    }
-    switch(bpp) {
-    case 3: return shift<3>(src, sw, sh, pitch, dst, dw, dh);
-    case 4: return shift<4>(src, sw, sh, pitch, dst, dw, dh);
+    } else {
+        switch (bpp) {
+        case 1: return shift<1>(src, sw, sh, pitch, dst, dw, dh);
+        case 2: return shift<2>(src, sw, sh, pitch, dst, dw, dh);
+        case 3: return shift<3>(src, sw, sh, pitch, dst, dw, dh);
+        case 4: return shift<4>(src, sw, sh, pitch, dst, dw, dh);
+        }
     }
 }
 
@@ -2587,6 +2595,19 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
 texture::texture(texture &&other)
     : m_hashString(u::move(other.m_hashString))
     , m_data(u::move(other.m_data))
+    , m_width(other.m_width)
+    , m_height(other.m_height)
+    , m_bpp(other.m_bpp)
+    , m_pitch(other.m_pitch)
+    , m_mips(other.m_mips)
+    , m_flags(other.m_flags)
+    , m_format(other.m_format)
+{
+}
+
+texture::texture(const texture &other)
+    : m_hashString(other.m_hashString)
+    , m_data(other.m_data)
     , m_width(other.m_width)
     , m_height(other.m_height)
     , m_bpp(other.m_bpp)
@@ -2923,13 +2944,33 @@ bool texture::from(const unsigned char *const data, size_t length, size_t width,
 }
 
 void texture::resize(size_t width, size_t height) {
-    u::vector<unsigned char> data;
-    data.resize(m_bpp * width * height);
+    u::vector<unsigned char> data(m_bpp * width * height);
     scale(&m_data[0], m_width, m_height, m_bpp, m_pitch, &data[0], width, height);
     m_data = u::move(data);
     m_width = width;
     m_height = height;
     m_pitch = m_width * m_bpp;
+    normalize();
+}
+
+void texture::normalize() {
+    if (!(flags() & kTexFlagNormal))
+        return;
+    u::vector<unsigned char> data(m_bpp * m_width * m_height);
+    unsigned char *dst = &data[0];
+    for (size_t y = 0; y < m_height; y++) {
+        for (size_t x = 0; x < m_width; x++) {
+            m::vec3 normal(0.0f, 0.0f, 255.0f);
+            normal.x += m_data[y*m_pitch + ((x+m_width-1)%m_width)*m_bpp];
+            normal.x -= m_data[y*m_pitch + ((x+1)%m_width)*m_bpp];
+            normal.y += m_data[((y+m_height-1)%m_height)*m_pitch + x*m_bpp];
+            normal.y -= m_data[((y+1)%m_height)*m_pitch + x*m_bpp];
+            normal.normalize();
+            *dst++ = (unsigned char)(127.5f + normal.x*127.5f);
+            *dst++ = (unsigned char)(127.5f + normal.y*127.5f);
+        }
+    }
+    m_data = u::move(data);
 }
 
 void texture::unload() {

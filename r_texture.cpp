@@ -968,10 +968,28 @@ bool texture2D::upload() {
             else
 #endif
             {
-                gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_texture));
-                gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_texture.pitch() / m_texture.bpp());
-                gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
-                    m_texture.height(), 0, format.format, format.data, m_texture.data());
+                // Calculate the amount of levels required before texture gets to a
+                // size 1x1
+                const unsigned char levels = u::log2(u::max(m_texture.width(), m_texture.height())) + 1;
+                if (r_mipmaps) {
+                    texture resizing = m_texture;
+                    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, levels);
+                    for (unsigned char i = 0; i < levels; i++) {
+                        gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(resizing));
+                        gl::PixelStorei(GL_UNPACK_ROW_LENGTH, resizing.pitch() / resizing.bpp());
+                        gl::TexImage2D(GL_TEXTURE_2D, i, format.internal, resizing.width(),
+                            resizing.height(), 0, format.format, format.data, resizing.data());
+                        const size_t width = u::max(resizing.width() >> 1, 1_z);
+                        const size_t height = u::max(resizing.height() >> 1, 1_z);
+                        resizing.resize(width, height);
+                    }
+                } else {
+                    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+                    gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_texture));
+                    gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_texture.pitch() / m_texture.bpp());
+                    gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
+                        m_texture.height(), 0, format.format, format.data, m_texture.data());
+                }
                 gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
                 gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
 
@@ -986,15 +1004,6 @@ bool texture2D::upload() {
             }
         }
 
-        if (r_mipmaps) {
-            // Calculate the amount of levels required before texture gets to a
-            // size 1x1
-            const auto levels = u::log2(u::max(m_texture.width(), m_texture.height()));
-            if (levels != 0) {
-                gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, levels);
-                gl::GenerateMipmap(GL_TEXTURE_2D);
-            }
-        }
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         applyFilter();
