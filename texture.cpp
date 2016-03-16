@@ -10,6 +10,7 @@
 #include "u_traits.h"
 
 #include "m_const.h"
+#include "m_vec.h"
 
 VAR(int, tex_jpg_chroma, "chroma filtering method", 0, 1, 0);
 VAR(int, tex_jpg_cliplut, "clipping lookup table", 0, 1, 1);
@@ -2604,6 +2605,19 @@ texture::texture(texture &&other)
 {
 }
 
+texture::texture(const texture &other)
+    : m_hashString(other.m_hashString)
+    , m_data(other.m_data)
+    , m_width(other.m_width)
+    , m_height(other.m_height)
+    , m_bpp(other.m_bpp)
+    , m_pitch(other.m_pitch)
+    , m_mips(other.m_mips)
+    , m_flags(other.m_flags)
+    , m_format(other.m_format)
+{
+}
+
 texture &texture::operator=(texture &&other) {
     m_hashString = u::move(other.m_hashString);
     m_data = u::move(other.m_data);
@@ -2937,6 +2951,28 @@ void texture::resize(size_t width, size_t height) {
     m_width = width;
     m_height = height;
     m_pitch = m_width * m_bpp;
+    normalize();
+}
+
+void texture::normalize() {
+    if (!(flags() & kTexFlagNormal))
+        return;
+    u::vector<unsigned char> data;
+    data.resize(m_bpp * m_width * m_height);
+    unsigned char *write = &data[0];
+    for (size_t y = 0; y < m_height; y++) {
+        for (size_t x = 0; x < m_width; x++) {
+            m::vec3 normal(0.0f, 0.0f, 255.0f);
+            normal.x += m_data[y*m_pitch + ((x+m_width-1)%m_width)*m_bpp];
+            normal.x -= m_data[y*m_pitch + ((x+1)%m_width)*m_bpp];
+            normal.y += m_data[((y+m_height-1)%m_height)*m_pitch + x*m_bpp];
+            normal.y -= m_data[((y+1)%m_height)*m_pitch + x*m_bpp];
+            normal.normalize();
+            *write++ = (unsigned char)(127.5f + normal.x*127.5f);
+            *write++ = (unsigned char)(127.5f + normal.y*127.5f);
+        }
+    }
+    m_data = u::move(data);
 }
 
 void texture::unload() {

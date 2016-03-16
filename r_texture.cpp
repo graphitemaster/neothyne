@@ -822,6 +822,7 @@ bool texture2D::useCache() {
     gl::CompressedTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
         m_texture.width(), m_texture.height(), 0, m_texture.size(), m_texture.data());
     m_memory = m_texture.size();
+    // Let the implementation generate mips for cached textures
     gl::GenerateMipmap(GL_TEXTURE_2D);
     return true;
 }
@@ -982,15 +983,16 @@ bool texture2D::upload() {
                 const unsigned char levels = u::log2(u::max(m_texture.width(), m_texture.height())) + 1;
                 if (gl::has(gl::ARB_texture_storage) && storageFormatSafe) {
                     if (r_mipmaps) {
+                        texture copy = m_texture;
                         gl::TexStorage2D(GL_TEXTURE_2D, levels,
-                            format.internal, m_texture.width(), m_texture.height());
+                            format.internal, copy.width(), copy.height());
                         for (unsigned char i = 0; i < levels; i++) {
-                            gl::TexSubImage2D(GL_TEXTURE_2D, i, 0, 0, m_texture.width(),
-                                m_texture.height(), format.format, GL_UNSIGNED_BYTE, m_texture.data());
-                            m_memory += m_texture.width() * m_texture.height() * m_texture.bpp();
-                            const size_t width = u::max(m_texture.width() >> 1, 1_z);
-                            const size_t height = u::max(m_texture.height() >> 1, 1_z);
-                            m_texture.resize(width, height);
+                            gl::TexSubImage2D(GL_TEXTURE_2D, i, 0, 0, copy.width(),
+                                copy.height(), format.format, GL_UNSIGNED_BYTE, copy.data());
+                            m_memory += copy.width() * copy.height() * copy.bpp();
+                            const size_t width = u::max(copy.width() >> 1, 1_z);
+                            const size_t height = u::max(copy.height() >> 1, 1_z);
+                            copy.resize(width, height);
                         }
                     } else {
                         gl::TexStorage2D(GL_TEXTURE_2D, 1, format.internal,
@@ -1001,13 +1003,14 @@ bool texture2D::upload() {
                     }
                 } else {
                     if (r_mipmaps) {
+                        texture copy = m_texture;
                         for (unsigned char i = 0; i < levels; i++) {
-                            gl::TexImage2D(GL_TEXTURE_2D, i, format.internal, m_texture.width(),
-                                m_texture.height(), 0, format.format, format.data, m_texture.data());
-                            m_memory += m_texture.width() * m_texture.height() * m_texture.bpp();
-                            const size_t width = u::max(m_texture.width() >> 1, 1_z);
-                            const size_t height = u::max(m_texture.height() >> 1, 1_z);
-                            m_texture.resize(width, height);
+                            gl::TexImage2D(GL_TEXTURE_2D, i, format.internal, copy.width(),
+                                copy.height(), 0, format.format, format.data, copy.data());
+                            m_memory += copy.width() * copy.height() * copy.bpp();
+                            const size_t width = u::max(copy.width() >> 1, 1_z);
+                            const size_t height = u::max(copy.height() >> 1, 1_z);
+                            copy.resize(width, height);
                         }
                     } else {
                         gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
