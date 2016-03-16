@@ -81,6 +81,7 @@ struct texture {
         size_t stride, unsigned char *dst, bool flipx, bool flipy, bool swapxy);
 
     void resize(size_t width, size_t height);
+    void normalize();
 
     template <textureFormat F>
     void convert();
@@ -103,8 +104,6 @@ struct texture {
     void unload();
 
 private:
-    void normalize();
-
     void writeTGA(u::vector<unsigned char> &outData);
     void writeBMP(u::vector<unsigned char> &outData);
     void writePNG(u::vector<unsigned char> &outData);
