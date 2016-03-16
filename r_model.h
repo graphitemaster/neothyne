@@ -131,6 +131,11 @@ private:
     bool m_animFlipU;        // Flip U for animation uvs
     bool m_animFlipV;        // Flip V for animation uvs
     uint32_t m_animMillis;   // Last frame update time
+
+    int m_scrollRateU;       // The scroll rate for U
+    int m_scrollRateV;       // The scroll rate for V
+    uint32_t m_scrollMillis; // The last scroll update time
+
     geomMethods *m_geomMethods;
 };
 

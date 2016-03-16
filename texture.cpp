@@ -2280,25 +2280,18 @@ void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t stride, uns
 void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *dst, size_t dw, size_t dh) {
     if (sw == dw * 2 && sh == dh * 2) {
         switch (bpp) {
-        case 1: return halve<1>(src, sw, sh, pitch, dst);
-        case 2: return halve<2>(src, sw, sh, pitch, dst);
         case 3: return halve<3>(src, sw, sh, pitch, dst);
         case 4: return halve<4>(src, sw, sh, pitch, dst);
         }
-    } else if (sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1)) {
+    } else if (sw < dw || sh < dh || sw&(sw-1) || sh&(sh-1) || dw&(dw-1) || dh&(dh-1)) {
         switch (bpp) {
-        case 1: return scale<1>(src, sw, sh, pitch, dst, dw, dh);
-        case 2: return scale<2>(src, sw, sh, pitch, dst, dw, dh);
         case 3: return scale<3>(src, sw, sh, pitch, dst, dw, dh);
         case 4: return scale<4>(src, sw, sh, pitch, dst, dw, dh);
         }
-    } else {
-        switch(bpp) {
-        case 1: return shift<1>(src, sw, sh, pitch, dst, dw, dh);
-        case 2: return shift<2>(src, sw, sh, pitch, dst, dw, dh);
-        case 3: return shift<3>(src, sw, sh, pitch, dst, dw, dh);
-        case 4: return shift<4>(src, sw, sh, pitch, dst, dw, dh);
-        }
+    }
+    switch(bpp) {
+    case 3: return shift<3>(src, sw, sh, pitch, dst, dw, dh);
+    case 4: return shift<4>(src, sw, sh, pitch, dst, dw, dh);
     }
 }
 

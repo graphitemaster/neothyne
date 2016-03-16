@@ -750,21 +750,21 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
                 if (bptc) return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_BPTC_UNORM_ARB };
                 if (s3tc) return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT };
                 if (es3c) return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA8_ETC2_EAC };
-                break;
+            break;
             case kTexFormatBGR:
                 tex.convert<kTexFormatRGB>();
             case kTexFormatRGB:
-                if (bptc) return queryFormat { GL_RGB, R_TEX_DATA_RGB, GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB };
-                if (s3tc) return queryFormat { GL_RGB, R_TEX_DATA_RGB, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT };
-                if (es3c) return queryFormat { GL_RGB, R_TEX_DATA_RGB, GL_COMPRESSED_RGB8_ETC2 };
+                if (bptc) return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB };
+                if (s3tc) return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT };
+                if (es3c) return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_COMPRESSED_RGB8_ETC2 };
                 break;
             case kTexFormatRG:
                 if (es3c) return queryFormat { GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RG11_EAC };
                 if (rgtc) return queryFormat { GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT };
                 break;
             case kTexFormatLuminance:
-                if (es3c) return queryFormat { GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_R11_EAC };
-                if (rgtc) return queryFormat { GL_RED, R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT };
+                if (es3c) return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_COMPRESSED_R11_EAC };
+                if (rgtc) return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT };
                 break;
             default:
                 break;
@@ -776,17 +776,17 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     // format.
     switch (tex.format()) {
     case kTexFormatRGBA:
-        return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_RGBA8 };
+        return queryFormat { GL_RGBA, R_TEX_DATA_RGBA,GL_RGBA };
     case kTexFormatRGB:
-        return queryFormat { GL_RGB, R_TEX_DATA_RGB, GL_RGBA8 };
+        return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_RGBA };
     case kTexFormatBGRA:
-        return queryFormat { GL_BGRA, R_TEX_DATA_BGRA, GL_RGBA8 };
+        return queryFormat { GL_BGRA, R_TEX_DATA_BGRA,GL_RGBA };
     case kTexFormatBGR:
-        return queryFormat { GL_BGR, R_TEX_DATA_BGR, GL_RGBA8 };
+        return queryFormat { GL_BGR,R_TEX_DATA_BGR, GL_RGBA };
     case kTexFormatRG:
-        return queryFormat { GL_RG, R_TEX_DATA_RG, GL_RG8 };
+        return queryFormat { GL_RG, R_TEX_DATA_RG,GL_RG8 };
     case kTexFormatLuminance:
-        return queryFormat { GL_RED, R_TEX_DATA_LUMINANCE, GL_R8 };
+        return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_RED };
     default:
         u::unreachable();
         break;
@@ -822,7 +822,6 @@ bool texture2D::useCache() {
     gl::CompressedTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
         m_texture.width(), m_texture.height(), 0, m_texture.size(), m_texture.data());
     m_memory = m_texture.size();
-    gl::GenerateMipmap(GL_TEXTURE_2D);
     return true;
 }
 
@@ -924,6 +923,7 @@ bool texture2D::upload() {
 
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
     } else {
         queryFormat format;
         bool needsCache = !useCache();
@@ -968,53 +968,12 @@ bool texture2D::upload() {
             else
 #endif
             {
+                gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_texture));
+                gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_texture.pitch() / m_texture.bpp());
+                gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
+                    m_texture.height(), 0, format.format, format.data, m_texture.data());
                 gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
                 gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
-                // These formats are unsafe for ARB_texture_storage
-                static const GLuint kUnacceptable[] = { GL_BGRA, GL_BGR, GL_RG, GL_RED };
-                bool storageFormatSafe = true;
-                for (const auto &jt : kUnacceptable) {
-                    if (format.format == jt) {
-                        storageFormatSafe = false;
-                        break;
-                    }
-                }
-                const unsigned char levels = u::log2(u::max(m_texture.width(), m_texture.height())) + 1;
-                if (gl::has(gl::ARB_texture_storage) && storageFormatSafe) {
-                    if (r_mipmaps) {
-                        gl::TexStorage2D(GL_TEXTURE_2D, levels,
-                            format.internal, m_texture.width(), m_texture.height());
-                        for (unsigned char i = 0; i < levels; i++) {
-                            gl::TexSubImage2D(GL_TEXTURE_2D, i, 0, 0, m_texture.width(),
-                                m_texture.height(), format.format, GL_UNSIGNED_BYTE, m_texture.data());
-                            m_memory += m_texture.width() * m_texture.height() * m_texture.bpp();
-                            const size_t width = u::max(m_texture.width() >> 1, 1_z);
-                            const size_t height = u::max(m_texture.height() >> 1, 1_z);
-                            m_texture.resize(width, height);
-                        }
-                    } else {
-                        gl::TexStorage2D(GL_TEXTURE_2D, 1, format.internal,
-                            m_texture.width(), m_texture.height());
-                        gl::TexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_texture.width(),
-                            m_texture.height(), format.format, GL_UNSIGNED_BYTE, m_texture.data());
-                        m_memory += m_texture.width() * m_texture.height() * m_texture.bpp();
-                    }
-                } else {
-                    if (r_mipmaps) {
-                        for (unsigned char i = 0; i < levels; i++) {
-                            gl::TexImage2D(GL_TEXTURE_2D, i, format.internal, m_texture.width(),
-                                m_texture.height(), 0, format.format, format.data, m_texture.data());
-                            m_memory += m_texture.width() * m_texture.height() * m_texture.bpp();
-                            const size_t width = u::max(m_texture.width() >> 1, 1_z);
-                            const size_t height = u::max(m_texture.height() >> 1, 1_z);
-                            m_texture.resize(width, height);
-                        }
-                    } else {
-                        gl::TexImage2D(GL_TEXTURE_2D, 0, format.internal, m_texture.width(),
-                            m_texture.height(), 0, format.format, format.data, m_texture.data());
-                        m_memory += m_texture.width() * m_texture.height() * m_texture.bpp();
-                    }
-                }
 
                 if (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
                     format.internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT)
@@ -1027,6 +986,15 @@ bool texture2D::upload() {
             }
         }
 
+        if (r_mipmaps) {
+            // Calculate the amount of levels required before texture gets to a
+            // size 1x1
+            const auto levels = u::log2(u::max(m_texture.width(), m_texture.height()));
+            if (levels != 0) {
+                gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, levels);
+                gl::GenerateMipmap(GL_TEXTURE_2D);
+            }
+        }
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         applyFilter();
