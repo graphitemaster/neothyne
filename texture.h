@@ -50,7 +50,6 @@ struct texture {
     texture(const unsigned char *const data, size_t length, size_t width,
         size_t height, bool normal, textureFormat format);
 
-    texture(const texture &other);
     texture(texture &&other);
 
     texture &operator=(texture &&other);
@@ -81,7 +80,6 @@ struct texture {
         size_t stride, unsigned char *dst, bool flipx, bool flipy, bool swapxy);
 
     void resize(size_t width, size_t height);
-    void normalize();
 
     template <textureFormat F>
     void convert();
