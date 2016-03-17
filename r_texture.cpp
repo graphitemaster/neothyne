@@ -429,14 +429,6 @@ static const char *cacheFormat(GLuint internal) {
         return "RED_GREEN_RGTC2";
     case GL_COMPRESSED_RED_RGTC1_EXT:
         return "RED_RGTC1";
-    case GL_COMPRESSED_RGB8_ETC2:
-        return "RGB8_ETC2";
-    case GL_COMPRESSED_RGBA8_ETC2_EAC:
-        return "RGBA8_ETC2_EAC";
-    case GL_COMPRESSED_R11_EAC:
-        return "R11_EAC";
-    case GL_COMPRESSED_RG11_EAC:
-        return "RG11_EAC";
     }
     return "";
 }
@@ -493,14 +485,6 @@ static bool readCache(texture &tex, GLuint &internal) {
     case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
     case GL_COMPRESSED_RED_RGTC1_EXT:
         if (!gl::has(gl::EXT_texture_compression_rgtc))
-            return false;
-        break;
-
-    case GL_COMPRESSED_RGB8_ETC2:
-    case GL_COMPRESSED_RGBA8_ETC2_EAC:
-    case GL_COMPRESSED_R11_EAC:
-    case GL_COMPRESSED_RG11_EAC:
-        if (!gl::has(gl::ARB_ES3_compatibility))
             return false;
         break;
     }
@@ -639,10 +623,6 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle, size_
     case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
     case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
     case GL_COMPRESSED_RED_RGTC1_EXT:
-    case GL_COMPRESSED_RGB8_ETC2:
-    case GL_COMPRESSED_RGBA8_ETC2_EAC:
-    case GL_COMPRESSED_R11_EAC:
-    case GL_COMPRESSED_RG11_EAC:
         break;
     default:
         return false;
@@ -777,31 +757,26 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
         const bool bptc = gl::has(gl::ARB_texture_compression_bptc);
         const bool s3tc = gl::has(gl::EXT_texture_compression_s3tc);
         const bool rgtc = gl::has(gl::EXT_texture_compression_rgtc);
-        const bool es3c = gl::has(gl::ARB_ES3_compatibility);
         // Deal with conversion from BGR[A] space to RGB[A] space for compression
         // While falling through to the correct internal format for the compression
-        if (bptc || s3tc || rgtc || es3c) {
+        if (bptc || s3tc || rgtc) {
             switch (tex.format()) {
             case kTexFormatBGRA:
                 tex.convert<kTexFormatRGBA>();
             case kTexFormatRGBA:
                 if (bptc) return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_BPTC_UNORM_ARB };
                 if (s3tc) return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT };
-                if (es3c) return queryFormat { GL_RGBA, R_TEX_DATA_RGBA, GL_COMPRESSED_RGBA8_ETC2_EAC };
             break;
             case kTexFormatBGR:
                 tex.convert<kTexFormatRGB>();
             case kTexFormatRGB:
                 if (bptc) return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB };
                 if (s3tc) return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT };
-                if (es3c) return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_COMPRESSED_RGB8_ETC2 };
                 break;
             case kTexFormatRG:
-                if (es3c) return queryFormat { GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RG11_EAC };
                 if (rgtc) return queryFormat { GL_RG, R_TEX_DATA_RG, GL_COMPRESSED_RED_GREEN_RGTC2_EXT };
                 break;
             case kTexFormatLuminance:
-                if (es3c) return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_COMPRESSED_R11_EAC };
                 if (rgtc) return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_COMPRESSED_RED_RGTC1_EXT };
                 break;
             default:
@@ -866,15 +841,11 @@ bool texture2D::useCache() {
     switch (internalFormat) {
     case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
     case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-    case GL_COMPRESSED_RGBA8_ETC2_EAC:
     case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
     case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
-    case GL_COMPRESSED_RG11_EAC:
         blockSize = 16;
         break;
     case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-    case GL_COMPRESSED_RGB8_ETC2:
-    case GL_COMPRESSED_R11_EAC:
     case GL_COMPRESSED_RED_RGTC1_EXT:
         blockSize = 8;
         break;
@@ -1080,13 +1051,9 @@ bool texture2D::upload() {
                 static const GLuint kCompressedFormats[] = {
                     GL_COMPRESSED_RGBA_BPTC_UNORM_ARB,
                     GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
-                    GL_COMPRESSED_RGBA8_ETC2_EAC,
                     GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB,
                     GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
-                    GL_COMPRESSED_RGB8_ETC2,
-                    GL_COMPRESSED_RG11_EAC,
                     GL_COMPRESSED_RED_GREEN_RGTC2_EXT,
-                    GL_COMPRESSED_R11_EAC,
                     GL_COMPRESSED_RED_RGTC1_EXT
                 };
 
