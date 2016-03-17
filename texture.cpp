@@ -2185,7 +2185,7 @@ private:
 ///
 
 template <size_t S>
-void texture::halve(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst) {
+void texture::halve(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t stride, unsigned char *U_RESTRICT dst) {
     for (unsigned char *yend = src + sh * stride; src < yend;) {
         for (unsigned char *xend = src + sw * S, *xsrc = src; xsrc < xend; xsrc += 2 * S, dst += S) {
             for (size_t i = 0; i < S; i++)
@@ -2196,11 +2196,14 @@ void texture::halve(unsigned char *src, size_t sw, size_t sh, size_t stride, uns
 }
 
 template <size_t S>
-void texture::shift(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst, size_t dw, size_t dh) {
-    size_t wfrac = sw/dw, hfrac = sh/dh, wshift = 0, hshift = 0;
+void texture::shift(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t stride, unsigned char *U_RESTRICT dst, size_t dw, size_t dh) {
+    size_t wfrac = sw/dw,
+           hfrac = sh/dh,
+           wshift = 0,
+           hshift = 0;
     while (dw << wshift < sw) wshift++;
     while (dh << hshift < sh) hshift++;
-    size_t tshift = wshift + hshift;
+    const size_t tshift = wshift + hshift;
     for (unsigned char *yend = src + sh * stride; src < yend; ) {
         for (unsigned char *xend = src + sw * S, *xsrc = src; xsrc < xend; xsrc += wfrac * S, dst += S) {
             size_t r[S] = {0};
@@ -2219,7 +2222,7 @@ void texture::shift(unsigned char *src, size_t sw, size_t sh, size_t stride, uns
 }
 
 template <size_t S>
-void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t stride, unsigned char *dst, size_t dw, size_t dh) {
+void texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t stride, unsigned char *U_RESTRICT dst, size_t dw, size_t dh) {
     size_t wfrac = (sw << 12) / dw;
     size_t hfrac = (sh << 12) / dh;
     size_t darea = dw * dh;
@@ -2278,7 +2281,7 @@ void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t stride, uns
     }
 }
 
-void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *dst, size_t dw, size_t dh) {
+void texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *U_RESTRICT dst, size_t dw, size_t dh) {
     if (sw == dw * 2 && sh == dh * 2) {
         switch (bpp) {
         case 1: return halve<1>(src, sw, sh, pitch, dst);
@@ -2303,7 +2306,7 @@ void texture::scale(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t
     }
 }
 
-void texture::reorient(unsigned char *src, size_t sw, size_t sh, size_t bpp, size_t stride, unsigned char *dst, bool flipx, bool flipy, bool swapxy) {
+void texture::reorient(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t bpp, size_t stride, unsigned char *U_RESTRICT dst, bool flipx, bool flipy, bool swapxy) {
     int stridex = swapxy ? bpp * sh : bpp;
     int stridey = swapxy ? bpp : bpp * sw;
     if (flipx)

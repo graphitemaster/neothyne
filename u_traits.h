@@ -19,6 +19,15 @@
 #   define HAS_FEATURE(X) 0
 #endif
 
+// Restrict pointer
+#if defined(_MSC_VER)
+#   define U_RESTRICT __restrict
+#elif defined(__GNUC__) && __GNUC__ > 3
+#   define U_RESTRICT __restrict__
+#else
+#   define U_RESTRICT
+#endif
+
 namespace u {
 
 /// nullptr_t
