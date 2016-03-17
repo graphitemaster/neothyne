@@ -2564,10 +2564,10 @@ bool texture::load(const u::string &file, float quality) {
 }
 
 texture::texture(const unsigned char *const data, size_t length, size_t width,
-    size_t height, bool normal, textureFormat format)
+    size_t height, bool normal, textureFormat format, size_t mips)
     : m_width(width)
     , m_height(height)
-    , m_mips(0)
+    , m_mips(mips)
     , m_flags(normal ? kTexFlagNormal : 0)
     , m_format(format)
 {
@@ -2589,8 +2589,9 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
         m_bpp = 1;
         break;
     default:
-        u::unreachable();
-        break;
+        // m_bpp and m_pitch don't get assigned values for compressed
+        // textures
+        return;
     }
     m_pitch = m_width * m_bpp;
 }
@@ -2940,7 +2941,7 @@ bool texture::save(const u::string &file, saveFormat format, float quality) {
 }
 
 bool texture::from(const unsigned char *const data, size_t length, size_t width,
-    size_t height, bool normal, textureFormat format)
+    size_t height, bool normal, textureFormat format, size_t mips)
 {
     *this = u::move(texture(data, length, width, height, normal, format));
     return true;

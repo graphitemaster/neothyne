@@ -36,7 +36,7 @@ private:
     bool m_uploaded;
     GLuint m_textureHandle;
     texture m_texture;
-    bool m_mipmaps;
+    size_t m_mipmaps;
     int m_filter;
     size_t m_memory;
 };

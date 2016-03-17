@@ -48,7 +48,7 @@ struct texture {
     }
 
     texture(const unsigned char *const data, size_t length, size_t width,
-        size_t height, bool normal, textureFormat format);
+        size_t height, bool normal, textureFormat format, size_t mips = 1);
 
     texture(const texture &other);
     texture(texture &&other);
@@ -57,7 +57,7 @@ struct texture {
 
     bool load(const u::string &file, float quality = 1.0f);
     bool from(const unsigned char *const data, size_t length, size_t width,
-        size_t height, bool normal, textureFormat format);
+        size_t height, bool normal, textureFormat format, size_t mips = 1);
 
     bool save(const u::string &file, saveFormat save = kSaveBMP, float quality = 1.0f);
 

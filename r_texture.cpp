@@ -395,7 +395,7 @@ template u::vector<unsigned char> dxtCompress<kDXT5>(const unsigned char *const 
 
 #endif //! DXT_COMPRESSOR
 
-static const unsigned char kTextureCacheVersion = 0x05;
+static const unsigned char kTextureCacheVersion = 0x06;
 
 struct textureCacheHeader {
     uint8_t version;
@@ -404,6 +404,7 @@ struct textureCacheHeader {
     uint32_t internal;
     uint16_t format;
     uint8_t compressed;
+    uint8_t mips;
     void endianSwap();
 };
 
@@ -524,7 +525,7 @@ static bool readCache(texture &tex, GLuint &internal) {
 
     // Now swap!
     tex.unload();
-    tex.from(fromData, fromSize, head.width, head.height, false, textureFormat(head.format));
+    tex.from(fromData, fromSize, head.width, head.height, false, textureFormat(head.format), head.mips);
     u::print("[cache] => loaded %.50s... %s (%s)\n", u::fixPath(cacheString),
         cacheFormat(head.internal), u::sizeMetric(fromSize));
     return true;
@@ -537,6 +538,7 @@ static bool writeCacheData(textureFormat format,
                            size_t compressedWidth,
                            size_t compressedHeight,
                            size_t compressedSize,
+                           size_t mips,
                            GLuint internal,
                            const char *from = "driver")
 {
@@ -551,6 +553,7 @@ static bool writeCacheData(textureFormat format,
     head.internal = internal;
     head.format = format;
     head.compressed = uint8_t(r_tex_compress_cache_zlib);
+    head.mips = mips;
     head.endianSwap();
 
     // Apply DXT optimizations if we can
@@ -559,9 +562,26 @@ static bool writeCacheData(textureFormat format,
 
     size_t dxtOptimCount = 0;
     if (r_dxt_optimize && dxt) {
-        dxtOptimCount = (internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT)
-            ? dxtOptimize<kDXT1>(compressedData, compressedWidth, compressedHeight)
-            : dxtOptimize<kDXT5>(compressedData, compressedWidth, compressedHeight);
+        size_t offset = 0;
+        size_t mipWidth = compressedWidth;
+        size_t mipHeight = compressedHeight;
+        const size_t blockSize = internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ? 8 : 16;
+
+        // Run the optimizer on each level
+        for (size_t i = 0; i < mips; i++) {
+            const size_t mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * blockSize;
+            const size_t count = (internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT)
+                ? dxtOptimize<kDXT1>(compressedData + offset, mipWidth, mipHeight)
+                : dxtOptimize<kDXT5>(compressedData + offset, mipWidth, mipHeight);
+            // Only report for the base level
+            if (i == 0)
+                dxtOptimCount = count;
+            gl::CompressedTexImage2D(GL_TEXTURE_2D, i, internal, mipWidth,
+                mipHeight, 0, mipSize, compressedData + offset);
+            offset += mipSize;
+            mipWidth = u::max(mipWidth >> 1, 1_z);
+            mipHeight = u::max(mipHeight >> 1, 1_z);
+        }
     }
 
     // zlib compress the texture data
@@ -585,6 +605,7 @@ static bool writeCacheData(textureFormat format,
     u::print("[cache] => wrote %.50s... %s (compressed %s to %s with %s compressor)",
         u::fixPath(cacheString),
         cacheFormat(internal),
+        // TODO: calculate 33% more for mip levels
         u::sizeMetric(texSize),
         u::sizeMetric(compressedSize),
         from
@@ -602,7 +623,7 @@ static bool writeCacheData(textureFormat format,
     return u::write(data, neoUserPath() + cacheString);
 }
 
-static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
+static bool writeCache(const texture &tex, GLuint internal, GLuint handle, size_t mips) {
     if (!r_tex_compress_cache)
         return false;
 
@@ -641,9 +662,21 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
 
     // Query the compressed texture size
     gl::BindTexture(GL_TEXTURE_2D, handle);
-    GLint compressedSize;
-    gl::GetTexLevelParameteriv(GL_TEXTURE_2D, 0,
-        GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &compressedSize);
+
+    size_t mipWidth = tex.width();
+    size_t mipHeight = tex.height();
+
+    size_t totalSize = 0;
+    size_t totalMips = 0;
+    for (size_t i = 0; i < mips; i++, totalMips++) {
+        GLint size;
+        gl::GetTexLevelParameteriv(GL_TEXTURE_2D, i, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &size);
+        totalSize += size;
+        if (u::max(mipWidth, mipHeight) <= 1)
+            break;
+        mipWidth = u::max(mipWidth >> 1, 1_z);
+        mipHeight = u::max(mipHeight >> 1, 1_z);
+    }
 
     // Query the compressed height and width (driver may add padding)
     GLint compressedWidth;
@@ -651,12 +684,17 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle) {
     gl::GetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &compressedWidth);
     gl::GetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &compressedHeight);
 
-    // Read the compressed image
-    u::vector<unsigned char> compressedData(compressedSize);
-    gl::GetCompressedTexImage(GL_TEXTURE_2D, 0, &compressedData[0]);
+    u::vector<unsigned char> compressedData(totalSize);
+    unsigned char *dest = &compressedData[0];
+    for (size_t i = 0; i < totalMips; i++) {
+        GLint size;
+        gl::GetTexLevelParameteriv(GL_TEXTURE_2D, i, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &size);
+        gl::GetCompressedTexImage(GL_TEXTURE_2D, i, dest);
+        dest += size;
+    }
 
     return writeCacheData(tex.format(), tex.size(), cacheString, &compressedData[0],
-        compressedWidth, compressedHeight, compressedSize, internal);
+        compressedWidth, compressedHeight, compressedData.size(), totalMips, internal);
 }
 
 struct queryFormat {
@@ -778,15 +816,15 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
     case kTexFormatRGBA:
         return queryFormat { GL_RGBA, R_TEX_DATA_RGBA,GL_RGBA };
     case kTexFormatRGB:
-        return queryFormat { GL_RGB,R_TEX_DATA_RGB, GL_RGBA };
+        return queryFormat { GL_RGB, R_TEX_DATA_RGB, GL_RGBA };
     case kTexFormatBGRA:
         return queryFormat { GL_BGRA, R_TEX_DATA_BGRA,GL_RGBA };
     case kTexFormatBGR:
-        return queryFormat { GL_BGR,R_TEX_DATA_BGR, GL_RGBA };
+        return queryFormat { GL_BGR, R_TEX_DATA_BGR, GL_RGBA };
     case kTexFormatRG:
-        return queryFormat { GL_RG, R_TEX_DATA_RG,GL_RG8 };
+        return queryFormat { GL_RG, R_TEX_DATA_RG, GL_RG8 };
     case kTexFormatLuminance:
-        return queryFormat { GL_RED,R_TEX_DATA_LUMINANCE, GL_RED };
+        return queryFormat { GL_RED, R_TEX_DATA_LUMINANCE, GL_RED };
     default:
         u::unreachable();
         break;
@@ -797,7 +835,7 @@ static u::optional<queryFormat> getBestFormat(texture &tex) {
 texture2D::texture2D(bool mipmaps, int filter)
     : m_uploaded(false)
     , m_textureHandle(0)
-    , m_mipmaps(mipmaps)
+    , m_mipmaps(mipmaps ? 1 : 0)
     , m_filter(filter)
     , m_memory(0)
 {
@@ -819,11 +857,41 @@ bool texture2D::useCache() {
     GLuint internalFormat = 0;
     if (!readCache(m_texture, internalFormat))
         return false;
-    gl::CompressedTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
-        m_texture.width(), m_texture.height(), 0, m_texture.size(), m_texture.data());
-    m_memory = m_texture.size();
-    // Use glGenerateMipmap(GL_TEXTURE_2D) if these are compressed textures
-    gl::GenerateMipmap(GL_TEXTURE_2D);
+
+    size_t offset = 0;
+    size_t mipWidth = m_texture.width();
+    size_t mipHeight = m_texture.height();
+    size_t blockSize = 0;
+
+    switch (internalFormat) {
+    case GL_COMPRESSED_RGBA_BPTC_UNORM_ARB:
+    case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+    case GL_COMPRESSED_RGBA8_ETC2_EAC:
+    case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB:
+    case GL_COMPRESSED_RED_GREEN_RGTC2_EXT:
+    case GL_COMPRESSED_RG11_EAC:
+        blockSize = 16;
+        break;
+    case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+    case GL_COMPRESSED_RGB8_ETC2:
+    case GL_COMPRESSED_R11_EAC:
+    case GL_COMPRESSED_RED_RGTC1_EXT:
+        blockSize = 8;
+        break;
+    }
+
+    // Load all mip levels
+    m_memory = 0;
+    for (size_t i = 0; i < m_mipmaps; i++) {
+        const size_t mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * blockSize;
+        gl::CompressedTexImage2D(GL_TEXTURE_2D, i, internalFormat, mipWidth,
+            mipHeight, 0, mipSize, m_texture.data() + offset);
+        mipWidth = u::max(mipWidth >> 1, 1_z);
+        mipHeight = u::max(mipHeight >> 1, 1_z);
+        offset += mipSize;
+        m_memory += mipSize;
+    }
+
     return true;
 }
 
@@ -860,11 +928,16 @@ void texture2D::applyFilter() {
 }
 
 bool texture2D::cache(GLuint internal) {
-    return writeCache(m_texture, internal, m_textureHandle);
+    return writeCache(m_texture, internal, m_textureHandle, m_mipmaps);
 }
 
 bool texture2D::load(const u::string &file, bool preserveQuality) {
-    return m_texture.load(file, preserveQuality ? 1.0f : r_texquality);
+    const bool status = m_texture.load(file, preserveQuality ? 1.0f : r_texquality);
+    if (status) {
+        m_mipmaps = u::log2(u::max(m_texture.width(), m_texture.height())) + 1;
+        return true;
+    }
+    return false;
 }
 
 bool texture2D::load(const u::string &file) {
@@ -913,7 +986,7 @@ bool texture2D::upload() {
 
         // Load all mip levels
         m_memory = 0;
-        for (size_t i = 0; i < m_texture.mips(); i++) {
+        for (size_t i = 0; i < m_mipmaps; i++) {
             const size_t mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * blockSize;
             gl::CompressedTexImage2D(GL_TEXTURE_2D, i, format.internal, mipWidth,
                 mipHeight, 0, mipSize, m_texture.data() + offset);
@@ -943,12 +1016,23 @@ bool texture2D::upload() {
             {
                 needsCache = false;
                 u::vector<unsigned char> compressed;
-                if (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) {
-                    compressed = dxtCompress<kDXT1>(m_texture.data(), m_texture.width(),
-                        m_texture.height(), m_texture.bpp());
-                } else {
-                    compressed = dxtCompress<kDXT5>(m_texture.data(), m_texture.width(),
-                        m_texture.height(), m_texture.bpp());
+                texture resize = m_texture;
+                size_t mipWidth = m_texture.width();
+                size_t mipHeight = m_texture.height();
+                for (size_t i = 0; i < m_mipmaps; i++) {
+                    const size_t size = compressed.size();
+                    if (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) {
+                        const auto data = dxtCompress<kDXT1>(resize.data(), mipWidth, mipHeight, m_texture.bpp());
+                        compressed.resize(size + data.size());
+                        memcpy(&compressed[size], &data[0], data.size());
+                    } else {
+                        const auto data = dxtCompress<kDXT5>(resize.data(), mipWidth, mipHeight, m_texture.bpp());
+                        compressed.resize(size + data.size());
+                        memcpy(&compressed[size], &data[0], data.size());
+                    }
+                    mipWidth = u::max(mipWidth >> 1, 1_z);
+                    mipHeight = u::max(mipHeight >> 1, 1_z);
+                    resize.resize(mipWidth, mipHeight);
                 }
 
                 // Write cache data
@@ -961,6 +1045,7 @@ bool texture2D::upload() {
                                     m_texture.width(),
                                     m_texture.height(),
                                     compressed.size(),
+                                    m_mipmaps,
                                     format.internal,
                                     "our") || !useCache())
                 {
@@ -970,13 +1055,10 @@ bool texture2D::upload() {
             else
 #endif
             {
-                // Calculate the amount of levels required before texture gets to a
-                // size 1x1
-                const unsigned char levels = u::log2(u::max(m_texture.width(), m_texture.height())) + 1;
                 if (r_mipmaps) {
                     texture resizing = m_texture;
-                    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, levels);
-                    for (unsigned char i = 0; i < levels; i++) {
+                    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_mipmaps);
+                    for (unsigned char i = 0; i < m_mipmaps; i++) {
                         gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(resizing));
                         gl::PixelStorei(GL_UNPACK_ROW_LENGTH, resizing.pitch() / resizing.bpp());
                         gl::TexImage2D(GL_TEXTURE_2D, i, format.internal, resizing.width(),
