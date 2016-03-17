@@ -43,8 +43,7 @@ enum : size_t {
     ARB_texture_rectangle,
     ARB_debug_output,
     ARB_half_float_vertex,
-    ARB_get_program_binary,
-    ARB_ES3_compatibility
+    ARB_get_program_binary
 };
 
 void init();

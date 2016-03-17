@@ -474,8 +474,7 @@ static const char *kExtensions[] = {
     "GL_ARB_texture_rectangle",
     "GL_ARB_debug_output",
     "GL_ARB_half_float_vertex",
-    "GL_ARB_get_program_binary",
-    "GL_ARB_ES3_compatibility"
+    "GL_ARB_get_program_binary"
 };
 
 static int gGLSLVersion = -1;
