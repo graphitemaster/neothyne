@@ -1,4 +1,4 @@
-#include <shaders/screenspace.h>
+#include <shaders/screen.h>
 #include <shaders/depth.h>
 #include <shaders/light.h>
 #include <shaders/utils.h>

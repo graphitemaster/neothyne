@@ -1,4 +1,4 @@
-#include <shaders/screenspace.h>
+#include <shaders/screen.h>
 #include <shaders/depth.h>
 
 in vec2 texCoord0;
