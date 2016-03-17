@@ -822,6 +822,8 @@ bool texture2D::useCache() {
     gl::CompressedTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
         m_texture.width(), m_texture.height(), 0, m_texture.size(), m_texture.data());
     m_memory = m_texture.size();
+    // Use glGenerateMipmap(GL_TEXTURE_2D) if these are compressed textures
+    gl::GenerateMipmap(GL_TEXTURE_2D);
     return true;
 }
 
@@ -993,13 +995,27 @@ bool texture2D::upload() {
                 gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
                 gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
 
-                if (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
-                    format.internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT)
-                {
+                static const GLuint kCompressedFormats[] = {
+                    GL_COMPRESSED_RGBA_BPTC_UNORM_ARB,
+                    GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
+                    GL_COMPRESSED_RGBA8_ETC2_EAC,
+                    GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB,
+                    GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
+                    GL_COMPRESSED_RGB8_ETC2,
+                    GL_COMPRESSED_RG11_EAC,
+                    GL_COMPRESSED_RED_GREEN_RGTC2_EXT,
+                    GL_COMPRESSED_R11_EAC,
+                    GL_COMPRESSED_RED_RGTC1_EXT
+                };
+
+                for (const auto &it : kCompressedFormats) {
+                    if (format.internal != it)
+                        continue;
                     needsCache = false;
                     cache(format.internal);
                     if (!useCache())
                         neoFatal("failed to cache");
+                    break;
                 }
             }
         }
