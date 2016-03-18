@@ -179,48 +179,6 @@ void bbox::render() {
     gl::DrawElements(GL_LINES, 8, GL_UNSIGNED_BYTE, (void*)8);
 }
 
-bool cube::upload() {
-    geom::upload();
-
-    alignas(16) static const GLfloat vertices[] = {
-        -1.0, -1.0,  1.0,
-         1.0, -1.0,  1.0,
-        -1.0,  1.0,  1.0,
-         1.0,  1.0,  1.0,
-        -1.0, -1.0, -1.0,
-         1.0, -1.0, -1.0,
-        -1.0,  1.0, -1.0,
-         1.0,  1.0, -1.0,
-    };
-
-    static const GLubyte indices[] = {
-        0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1
-    };
-
-    gl::BindVertexArray(vao);
-    gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    if (gl::has(gl::ARB_half_float_vertex)) {
-        const auto convert = m::convertToHalf(vertices, sizeof vertices / sizeof *vertices);
-        gl::BufferData(GL_ARRAY_BUFFER, convert.size() * sizeof convert[0], &convert[0], GL_STATIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
-    } else {
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ATTRIB_OFFSET(0)); // position
-    }
-    gl::EnableVertexAttribArray(0);
-
-    gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof indices, indices, GL_STATIC_DRAW);
-
-    return true;
-}
-
-void cube::render() {
-    gl::BindVertexArray(vao);
-    gl::DrawElements(GL_TRIANGLE_STRIP, 14, GL_UNSIGNED_BYTE, 0);
-}
-
 bool cone::upload() {
     geom::upload();
     u::vector<m::vec3> vertices;

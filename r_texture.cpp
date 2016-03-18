@@ -915,7 +915,7 @@ bool texture2D::load(const u::string &file) {
     return load(file, false);
 }
 
-bool texture2D::upload() {
+bool texture2D::upload(GLint wrap) {
     if (m_uploaded)
         return true;
 
@@ -967,8 +967,8 @@ bool texture2D::upload() {
             m_memory += mipSize;
         }
 
-        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 
     } else {
         queryFormat format;
@@ -1069,8 +1069,8 @@ bool texture2D::upload() {
             }
         }
 
-        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
+        gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
         applyFilter();
 
         if (needsCache)
@@ -1092,96 +1092,6 @@ void texture2D::resize(size_t width, size_t height) {
 
 textureFormat texture2D::format() const {
   return m_texture.format();
-}
-
-///! texture3D
-texture3D::texture3D() :
-    m_uploaded(false),
-    m_textureHandle(0)
-{
-
-}
-
-texture3D::~texture3D() {
-    if (m_uploaded)
-        gl::DeleteTextures(1, &m_textureHandle);
-}
-
-void texture3D::applyFilter() {
-    gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-    // Anisotropic filtering
-    if (r_aniso)
-        gl::TexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT, float(r_aniso));
-}
-
-bool texture3D::load(const u::string &ft, const u::string &bk, const u::string &up,
-                     const u::string &dn, const u::string &rt, const u::string &lf)
-{
-    if (!m_textures[kFront].load(ft, r_texquality)) return false;
-    if (!m_textures[kBack].load(bk, r_texquality)) return false;
-    if (!m_textures[kUp].load(up, r_texquality)) return false;
-    if (!m_textures[kDown].load(dn, r_texquality)) return false;
-    if (!m_textures[kRight].load(rt, r_texquality)) return false;
-    if (!m_textures[kLeft].load(lf, r_texquality)) return false;
-    return true;
-}
-
-bool texture3D::upload() {
-    if (m_uploaded)
-        return true;
-
-    gl::GenTextures(1, &m_textureHandle);
-    gl::BindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
-    gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    gl::TexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    applyFilter();
-
-    // find the largest texture in the cubemap and scale all others to it
-    size_t mw = 0;
-    size_t mh = 0;
-    for (size_t i = 0; i < 6; i++) {
-        const size_t w = m_textures[i].width();
-        const size_t h = m_textures[i].height();
-        if (w*h > mw*mh) {
-            mw = w;
-            mh = h;
-        }
-    }
-
-    for (size_t i = 0; i < 6; i++) {
-        if (m_textures[i].width() != mw || m_textures[i].height() != mh)
-            m_textures[i].resize(mw, mh);
-        auto query = getBestFormat(m_textures[i]);
-        if (!query)
-            return false;
-        const auto &format = *query;
-        gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(m_textures[i]));
-        gl::PixelStorei(GL_UNPACK_ROW_LENGTH, m_textures[i].pitch() / m_textures[i].bpp());
-        gl::TexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-            format.internal, mw, mh, 0, format.format, format.data, m_textures[i].data());
-    }
-    gl::PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-    gl::PixelStorei(GL_UNPACK_ALIGNMENT, 8);
-
-    return m_uploaded = true;
-}
-
-void texture3D::bind(GLenum unit) {
-    gl::ActiveTexture(unit);
-    gl::BindTexture(GL_TEXTURE_CUBE_MAP, m_textureHandle);
-}
-
-void texture3D::resize(size_t width, size_t height) {
-    for (size_t i = 0; i < 6; i++)
-        m_textures[i].resize(width, height);
-}
-
-const texture &texture3D::get(int direction) const {
-    return m_textures[direction];
 }
 
 }

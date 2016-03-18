@@ -21,7 +21,7 @@ struct texture2D {
     void colorize(uint32_t color); // must be called before upload
     bool load(const u::string &file);
     bool load(const u::string &file, bool preserveQuality);
-    bool upload();
+    bool upload(GLint wrap = GL_REPEAT);
     bool cache(GLuint internal);
     void bind(GLenum unit);
     void resize(size_t width, size_t height);
@@ -29,6 +29,7 @@ struct texture2D {
     size_t width() const;
     size_t height() const;
     size_t memory() const;
+    const texture &get() const;
 
 private:
     bool useCache();
@@ -41,6 +42,10 @@ private:
     size_t m_memory;
 };
 
+inline const texture &texture2D::get() const {
+    return m_texture;
+}
+
 inline size_t texture2D::width() const {
     return m_texture.width();
 }
@@ -52,34 +57,6 @@ inline size_t texture2D::height() const {
 inline size_t texture2D::memory() const {
     return m_memory;
 }
-
-struct texture3D {
-    texture3D();
-    ~texture3D();
-
-    bool load(const u::string &ft, const u::string &bk, const u::string &up,
-              const u::string &dn, const u::string &rt, const u::string &lf);
-    bool upload();
-    void bind(GLenum unit);
-    void resize(size_t width, size_t height);
-
-    enum {
-        kFront,
-        kBack,
-        kUp,
-        kDown,
-        kRight,
-        kLeft
-    };
-
-    const texture &get(int direction) const;
-
-private:
-    void applyFilter();
-    bool m_uploaded;
-    GLuint m_textureHandle;
-    texture m_textures[6];
-};
 
 }
 

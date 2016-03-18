@@ -2,7 +2,6 @@
 #define R_SKYBOX_HDR
 #include "r_texture.h"
 #include "r_method.h"
-#include "r_geom.h"
 
 struct fog;
 
@@ -30,9 +29,9 @@ struct skyboxMethod : method {
 
 private:
     uniform *m_WVP;
-    uniform *m_cubeMap;
     uniform *m_world;
     uniform *m_skyColor;
+    uniform *m_colorMap;
     struct {
         uniform *color;
         uniform *density;
@@ -40,16 +39,19 @@ private:
 };
 
 struct skybox {
+    skybox();
+    ~skybox();
     bool load(const u::string &skyboxName);
     bool upload();
 
     void render(const pipeline &pl, const fog &f);
 
 private:
-    texture3D m_cubemap; // skybox cubemap
+    texture2D m_textures[6];
     skyboxMethod m_methods[2];
-    cube m_cube;
     m::vec3 m_skyColor;
+    GLuint m_vao;
+    GLuint m_vbo;
 };
 
 }

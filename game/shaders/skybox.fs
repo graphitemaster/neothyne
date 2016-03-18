@@ -1,17 +1,18 @@
 #include <shaders/fog.h>
 
-in vec3 texCoord0;
+in vec2 texCoord0;
+in vec3 position0;
 in vec3 worldPos0;
 
 out vec3 fragColor;
 
-uniform samplerCube gCubemap;
+uniform sampler2D gColorMap;
 uniform vec3 gSkyColor;
 
 void main() {
 #ifdef USE_FOG
-    vec3 color = texture(gCubemap, texCoord0).rgb;
-    vec3 cameraToWorld = texCoord0 - worldPos0;
+    vec3 color = texture(gColorMap, texCoord0).rgb;
+    vec3 cameraToWorld = position0 - worldPos0;
     vec3 eyeDir = normalize(cameraToWorld);
 
     // Vertical gradient below certain height so that world fog "reaches" into
@@ -20,6 +21,6 @@ void main() {
     vec3 verticalMixture = mix(color, gFog.color, vertFogGrad);
     fragColor = mix(verticalMixture, gSkyColor, gFog.density);
 #else
-    fragColor = texture(gCubemap, texCoord0).rgb;
+    fragColor = texture(gColorMap, texCoord0).rgb;
 #endif
 }

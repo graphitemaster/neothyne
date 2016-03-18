@@ -2943,7 +2943,7 @@ bool texture::save(const u::string &file, saveFormat format, float quality) {
 bool texture::from(const unsigned char *const data, size_t length, size_t width,
     size_t height, bool normal, textureFormat format, size_t mips)
 {
-    *this = u::move(texture(data, length, width, height, normal, format));
+    *this = u::move(texture(data, length, width, height, normal, format, mips));
     return true;
 }
 

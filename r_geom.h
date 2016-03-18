@@ -47,11 +47,6 @@ struct bbox : geom {
     void render();
 };
 
-struct cube : geom {
-    bool upload();
-    void render();
-};
-
 struct cone : geom {
     bool upload();
     void render(bool bottom = true);
