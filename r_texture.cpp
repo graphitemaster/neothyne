@@ -853,6 +853,7 @@ bool texture2D::useCache() {
 
     // Load all mip levels
     m_memory = 0;
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_mipmaps - 1);
     for (size_t i = 0; i < m_mipmaps; i++) {
         const size_t mipSize = ((mipWidth + 3) / 4) * ((mipHeight + 3) / 4) * blockSize;
         gl::CompressedTexImage2D(GL_TEXTURE_2D, i, internalFormat, mipWidth,
@@ -902,17 +903,16 @@ bool texture2D::cache(GLuint internal) {
     return writeCache(m_texture, internal, m_textureHandle, m_mipmaps);
 }
 
-bool texture2D::load(const u::string &file, bool preserveQuality) {
+bool texture2D::load(const u::string &file, bool preserveQuality, bool mipmaps) {
     const bool status = m_texture.load(file, preserveQuality ? 1.0f : r_texquality);
     if (status) {
-        m_mipmaps = u::log2(u::max(m_texture.width(), m_texture.height())) + 1;
+        if (mipmaps)
+            m_mipmaps = u::log2(u::max(m_texture.width(), m_texture.height())) + 1;
+        else
+            m_mipmaps = 1;
         return true;
     }
     return false;
-}
-
-bool texture2D::load(const u::string &file) {
-    return load(file, false);
 }
 
 bool texture2D::upload(GLint wrap) {
@@ -1026,9 +1026,9 @@ bool texture2D::upload(GLint wrap) {
             else
 #endif
             {
-                if (r_mipmaps) {
+                if (r_mipmaps && m_mipmaps > 1) {
                     texture resizing = m_texture;
-                    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_mipmaps);
+                    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_mipmaps - 1);
                     for (unsigned char i = 0; i < m_mipmaps; i++) {
                         gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(resizing));
                         gl::PixelStorei(GL_UNPACK_ROW_LENGTH, resizing.pitch() / resizing.bpp());
