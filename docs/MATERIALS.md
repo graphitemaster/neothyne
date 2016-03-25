@@ -32,6 +32,10 @@ Scale and bias used for displacement mapping. Bias is optional.
 ##### colorize
 Hexadecimal RGBA color to colorize (modulate) the texture by.
 
+##### nodebug
+The following flag disables the rendering of debug information into the
+textures associated with the material for when `r_debug_tex` is enabled.
+
 ## Tags
 The texture value for a material key can be prefixed with a series of tags. A
 tag is a way of indicating a task for which the engine will interpret and carry
