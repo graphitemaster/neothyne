@@ -215,6 +215,12 @@ visible in the top right hand corner of the respective texture when enabled.
 * 0 = disable
 * 1 = enable
 
+The texture size presented in debug mode is an estimate of how much
+video memory the texture takes. The actual usage may vary depending on
+padding, alignment and compression. When texture compression is enabled
+and supported by the system the actual cost can be as little as 1/16th
+of what is reported.
+
 ## Client
 ##### cl_farp
 Far clipping plane distance
