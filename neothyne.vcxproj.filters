@@ -351,4 +351,7 @@
   <ItemGroup>
     <ResourceCompile Include="neothyne.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
 </Project>
