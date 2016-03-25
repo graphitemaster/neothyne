@@ -923,9 +923,8 @@ bool texture2D::load(const u::string &file, bool preserveQuality, bool mipmaps, 
                 m_texture.width(), m_texture.height()).c_str());
             const size_t size = m_texture.size() + (m_mipmaps > 1 ? m_texture.size() / 3 : 0);
             m_texture.drawString(line, u::sizeMetric(size).c_str());
-            m_texture.drawString(line, m_texture.components());
-            m_texture.drawString(line, u::format("%zu bpp",
-                m_texture.bpp()).c_str());
+            m_texture.drawString(line, u::format("%s%zu",
+                m_texture.components(), m_texture.bpp()).c_str());
             if (m_mipmaps > 1) {
                 m_texture.drawString(line, u::format("%zu mips",
                     m_mipmaps - 1).c_str());
