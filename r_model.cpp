@@ -287,6 +287,8 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
 
     for (u::string get; u::getline(fp, get); ) {
         const auto split = u::split(get);
+        if (get == "nodebug")
+            debug = false;
         if (split.size() < 2)
             continue;
         const auto &key = split[0];
@@ -317,8 +319,6 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
             if (split.size() > 6) m_animFlipV = u::atoi(split[6]);
         } else if (key == "colorize" && split.size() == 2) {
             colorized = strtol(split[1].c_str(), nullptr, 16);
-        } else if (key == "nodebug") {
-            debug = false;
         }
     }
 
