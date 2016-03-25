@@ -21,42 +21,6 @@
 
 #include "m_vec.h"
 
-// To render text into screen shots we use an 8x8 bitmap font
-static const uint64_t kFont[128] = {
-    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
-    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
-    0x7E7E7E7E7E7E0000,0x0000000000000000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
-    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
-    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
-    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
-    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
-    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
-    0x0000000000000000,0x0808080800080000,0x2828000000000000,0x00287C287C280000,
-    0x081E281C0A3C0800,0x6094681629060000,0x1C20201926190000,0x0808000000000000,
-    0x0810202010080000,0x1008040408100000,0x2A1C3E1C2A000000,0x0008083E08080000,
-    0x0000000000081000,0x0000003C00000000,0x0000000000080000,0x0204081020400000,
-    0x1824424224180000,0x08180808081C0000,0x3C420418207E0000,0x3C420418423C0000,
-    0x081828487C080000,0x7E407C02423C0000,0x3C407C42423C0000,0x7E04081020400000,
-    0x3C423C42423C0000,0x3C42423E023C0000,0x0000080000080000,0x0000080000081000,
-    0x0006186018060000,0x00007E007E000000,0x0060180618600000,0x3844041800100000,
-    0x003C449C945C201C,0x1818243C42420000,0x7844784444780000,0x3844808044380000,
-    0x7844444444780000,0x7C407840407C0000,0x7C40784040400000,0x3844809C44380000,
-    0x42427E4242420000,0x3E080808083E0000,0x1C04040444380000,0x4448507048440000,
-    0x40404040407E0000,0x4163554941410000,0x4262524A46420000,0x1C222222221C0000,
-    0x7844784040400000,0x1C222222221C0200,0x7844785048440000,0x1C22100C221C0000,
-    0x7F08080808080000,0x42424242423C0000,0x8142422424180000,0x4141495563410000,
-    0x4224181824420000,0x4122140808080000,0x7E040810207E0000,0x3820202020380000,
-    0x4020100804020000,0x3808080808380000,0x1028000000000000,0x00000000007E0000,
-    0x1008000000000000,0x003C023E463A0000,0x40407C42625C0000,0x00001C20201C0000,
-    0x02023E42463A0000,0x003C427E403C0000,0x0018103810100000,0x0000344C44340438,
-    0x2020382424240000,0x0800080808080000,0x0800180808080870,0x20202428302C0000,
-    0x1010101010180000,0x0000665A42420000,0x00002E3222220000,0x00003C42423C0000,
-    0x00005C62427C4040,0x00003A46423E0202,0x00002C3220200000,0x001C201804380000,
-    0x00103C1010180000,0x00002222261A0000,0x0000424224180000,0x000081815A660000,
-    0x0000422418660000,0x0000422214081060,0x00003C08103C0000,0x1C103030101C0000,
-    0x0808080808080800,0x38080C0C08380000,0x000000324C000000,0x7E7E7E7E7E7E0000
-};
-
 ///! Query the operating system name
 static char gOperatingSystem[1024];
 #if !defined(_WIN32) && !defined(_WIN64)
@@ -850,87 +814,35 @@ void engine::screenShot() {
         (GLvoid *)pixels.get());
     gl::PixelStorei(GL_PACK_ALIGNMENT, 8);
 
-    // Reorient because it will be upside down
-    auto temp = u::unique_ptr<unsigned char>(new unsigned char[screenSize * 3]);
-    texture::reorient(pixels.get(), screenWidth, screenHeight, 3, screenWidth * 3,
-        temp.get(), false, true, false);
-
-    // Rasterize some information into the screen shot
+    // Construct a texture object from the pixel data
+    texture screenShot(&pixels[0], screenSize*3, screenWidth, screenHeight, false, kTexFormatRGB);
+    screenShot.flip();
     if (scr_info) {
         size_t line = 0;
-        auto drawString = [&temp, &line](const char *s) {
-            u::vector<unsigned char> pixelData;
-            size_t c = 0;
-            unsigned char glyph[8*8*3];
-            for (; *s; s++, c++) {
-                memset(glyph, 0, sizeof glyph);
-                unsigned char *prev = &glyph[8*8*3-1];
-                uint64_t n = 1;
-                for (size_t h = 0; h < 8; h++)
-                    for (size_t w = 0; w < 8; w++, n+=n)
-                        for (size_t k = 0; k < 3; k++)
-                            *prev-- = (kFont[int(*s)] & n) ? 255 : 0;
-                const size_t size = pixelData.size();
-                pixelData.resize(size + sizeof glyph);
-                memcpy(&pixelData[size], glyph, sizeof glyph);
-            }
-            const size_t size = 8*c*8*3,
-                         offset = pixelData.size();
-            pixelData.resize(size + offset);
-            for (size_t i = 0; i < c; i++) {
-                unsigned char *s = &pixelData[8*i*8*3];
-                unsigned char *d = &pixelData[offset]+i*8*3;
-                for (size_t h = 0; h < 8; h++, s+=8*3, d+=8*c*3)
-                    memcpy(d, s, 8*3);
-            }
-            for (size_t h = 0; h < 8; h++) {
-                unsigned char *s = &pixelData[offset]+8*c*3*h;
-                unsigned char *d = temp.get() + 8*neoWidth()*3*line + neoWidth()*3*h;
-                memcpy(d, s, 8*c*3);
-            }
-            line++;
-        };
-
-        // Print some info
         auto vendor = (const char *)gl::GetString(GL_VENDOR);
         auto renderer = (const char *)gl::GetString(GL_RENDERER);
         auto version = (const char *)gl::GetString(GL_VERSION);
         auto shader = (const char *)gl::GetString(GL_SHADING_LANGUAGE_VERSION);
-
-        drawString(gOperatingSystem);
-        drawString(u::CPUDesc());
-        drawString(u::RAMDesc());
-        drawString(vendor);
-        drawString(renderer);
-        drawString(version);
-        drawString(shader);
-        drawString("Extensions");
+        screenShot.drawString(line, gOperatingSystem);
+        screenShot.drawString(line, u::CPUDesc());
+        screenShot.drawString(line, u::RAMDesc());
+        screenShot.drawString(line, vendor);
+        screenShot.drawString(line, renderer);
+        screenShot.drawString(line, version);
+        screenShot.drawString(line, shader);
+        screenShot.drawString(line, "Extensions");
         for (auto &it : gl::extensions()) {
             char buffer[2048];
             snprintf(buffer, sizeof buffer, " %s", gl::extensionString(it));
-            drawString(buffer);
+            screenShot.drawString(line, buffer);
         }
     }
 
-    texture tex;
-    if (!tex.from(temp.get(), screenSize*3, screenWidth, screenHeight, false, kTexFormatRGB))
-        u::print("[screenshot] => failed to create screenshot texture\n");
-
     auto fixedPath = u::fixPath(file);
-    switch (scr_format) {
-    case kSaveBMP:
-        if (tex.save(file, kSaveBMP, scr_quality))
-            u::print("[screenshot] => %s.bmp\n", fixedPath);
-        break;
-    case kSaveTGA:
-        if (tex.save(file, kSaveTGA, scr_quality))
-            u::print("[screenshot] => %s.tga\n", fixedPath);
-        break;
-    case kSavePNG:
-        if (tex.save(file, kSavePNG, scr_quality))
-            u::print("[screenshot] => %s.png\n", fixedPath);
-        break;
-    }
+    saveFormat format = saveFormat(scr_format.get());
+
+    if (screenShot.save(file, format, scr_quality))
+        u::print("[screenshot] => %s.%s\n", fixedPath, kSaveFormatExtensions[scr_format]);
 }
 
 const u::string &engine::userPath() const {

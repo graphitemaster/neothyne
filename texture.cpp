@@ -12,6 +12,42 @@
 #include "m_const.h"
 #include "m_vec.h"
 
+// To render text into textures we use an 8x8 bitmap font
+static const uint64_t kFont[128] = {
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x0000000000000000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
+    0x0000000000000000,0x0808080800080000,0x2828000000000000,0x00287C287C280000,
+    0x081E281C0A3C0800,0x6094681629060000,0x1C20201926190000,0x0808000000000000,
+    0x0810202010080000,0x1008040408100000,0x2A1C3E1C2A000000,0x0008083E08080000,
+    0x0000000000081000,0x0000003C00000000,0x0000000000080000,0x0204081020400000,
+    0x1824424224180000,0x08180808081C0000,0x3C420418207E0000,0x3C420418423C0000,
+    0x081828487C080000,0x7E407C02423C0000,0x3C407C42423C0000,0x7E04081020400000,
+    0x3C423C42423C0000,0x3C42423E023C0000,0x0000080000080000,0x0000080000081000,
+    0x0006186018060000,0x00007E007E000000,0x0060180618600000,0x3844041800100000,
+    0x003C449C945C201C,0x1818243C42420000,0x7844784444780000,0x3844808044380000,
+    0x7844444444780000,0x7C407840407C0000,0x7C40784040400000,0x3844809C44380000,
+    0x42427E4242420000,0x3E080808083E0000,0x1C04040444380000,0x4448507048440000,
+    0x40404040407E0000,0x4163554941410000,0x4262524A46420000,0x1C222222221C0000,
+    0x7844784040400000,0x1C222222221C0200,0x7844785048440000,0x1C22100C221C0000,
+    0x7F08080808080000,0x42424242423C0000,0x8142422424180000,0x4141495563410000,
+    0x4224181824420000,0x4122140808080000,0x7E040810207E0000,0x3820202020380000,
+    0x4020100804020000,0x3808080808380000,0x1028000000000000,0x00000000007E0000,
+    0x1008000000000000,0x003C023E463A0000,0x40407C42625C0000,0x00001C20201C0000,
+    0x02023E42463A0000,0x003C427E403C0000,0x0018103810100000,0x0000344C44340438,
+    0x2020382424240000,0x0800080808080000,0x0800180808080870,0x20202428302C0000,
+    0x1010101010180000,0x0000665A42420000,0x00002E3222220000,0x00003C42423C0000,
+    0x00005C62427C4040,0x00003A46423E0202,0x00002C3220200000,0x001C201804380000,
+    0x00103C1010180000,0x00002222261A0000,0x0000424224180000,0x000081815A660000,
+    0x0000422418660000,0x0000422214081060,0x00003C08103C0000,0x1C103030101C0000,
+    0x0808080808080800,0x38080C0C08380000,0x000000324C000000,0x7E7E7E7E7E7E0000
+};
+
 VAR(int, tex_jpg_chroma, "chroma filtering method", 0, 1, 0);
 VAR(int, tex_jpg_cliplut, "clipping lookup table", 0, 1, 1);
 VAR(int, tex_tga_compress, "compress TGA", 0, 1, 1);
@@ -2325,6 +2361,64 @@ void texture::reorient(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size
     }
 }
 
+void texture::flip(int flags) {
+    u::vector<unsigned char> temp(m_data.size());
+    reorient(&m_data[0],
+             m_width,
+             m_height,
+             m_bpp,
+             m_pitch,
+             &temp[0],
+             flags & kFlipVertical,
+             flags & kFlipHorizontal,
+             false);
+    m_data = u::move(temp);
+}
+
+void texture::drawString(size_t &line, const char *string) {
+    // Can't render into compressed textures or normal maps
+    if (m_flags & kTexFlagCompressed || m_flags & kTexFlagNormal)
+        return;
+
+    u::vector<unsigned char> pixelData;
+    size_t c = 0;
+    unsigned char glyph[8*8*m_bpp];
+    for (; *string; string++, c++) {
+        memset(glyph, 0, sizeof glyph);
+        unsigned char *prev = &glyph[8*8*m_bpp-1];
+        uint64_t n = 1;
+        for (size_t h = 0; h < 8; h++)
+            for (size_t w = 0; w < 8; w++, n += n)
+                for (size_t k = 0; k < m_bpp; k++)
+                    *prev-- = (kFont[int(*string)] & n) ? 255 : 0;
+        const size_t size = pixelData.size();
+        pixelData.resize(size + sizeof glyph);
+        memcpy(&pixelData[size], glyph, sizeof glyph);
+    }
+    const size_t size = 8*c*8*m_bpp,
+                 offset = pixelData.size();
+    pixelData.resize(size + offset);
+    for (size_t i = 0; i < c; i++) {
+        unsigned char *s = &pixelData[8*i*8*m_bpp];
+        unsigned char *d = &pixelData[offset]+i*8*m_bpp;
+        for (size_t h = 0; h < 8; h++, s+=8*m_bpp, d+=8*c*m_bpp)
+            memcpy(d, s, 8*m_bpp);
+    }
+    for (size_t h = 0; h < 8; h++) {
+        unsigned char *s = &pixelData[offset]+8*c*m_bpp*h;
+        unsigned char *d = &m_data[0] + 8*m_pitch*line+m_pitch*h;
+        // No way to render this information into the texture for there is no
+        // available space to do so.
+        if (d+8*c*m_bpp >= &m_data[m_data.size()])
+            break;
+        memcpy(d, s, 8*c*m_bpp);
+    }
+    line++;
+    // Recalculate hash string
+    u::sha512 hash(&m_data[0], m_data.size());
+    m_hashString = hash.hex();
+}
+
 template <textureFormat F>
 void texture::convert() {
     if (F == m_format)
@@ -2924,20 +3018,25 @@ bool texture::save(const u::string &file, saveFormat format, float quality) {
         resize(w, h);
     }
 
-    u::vector<unsigned char> data;
+    static const struct {
+        void (texture::*function)(u::vector<unsigned char> &out);
+        int format;
+    } kExtensions[] = {
+        { &texture::writeTGA, kSaveTGA },
+        { &texture::writeBMP, kSaveBMP },
+        { &texture::writePNG, kSavePNG }
+    };
 
-    const char *ext = nullptr;
-    if (format == kSaveTGA) {
-        writeTGA(data);
-        ext = ".tga";
-    } else if (format == kSaveBMP) {
-        writeBMP(data);
-        ext = ".bmp";
-    } else if (format == kSavePNG) {
-        writePNG(data);
-        ext = ".png";
+
+    u::vector<unsigned char> data;
+    for (const auto &it : kExtensions) {
+        if (it.format != format)
+            continue;
+        (this->*it.function)(data);
+        return u::write(data, file + "." + kSaveFormatExtensions[format], "wb");
     }
-    return u::write(data, file + ext, "wb");
+
+    return false;
 }
 
 bool texture::from(const unsigned char *const data, size_t length, size_t width,
@@ -3000,6 +3099,25 @@ size_t texture::height() const {
 textureFormat texture::format() const {
     return m_format;
 }
+
+const char *texture::components() const {
+    switch (m_format) {
+    case kTexFormatRGB:       return "RGB";
+    case kTexFormatRGBA:      return "RGBA";
+    case kTexFormatBGR:       return "BGR";
+    case kTexFormatBGRA:      return "BGRA";
+    case kTexFormatRG:        return "RG";
+    case kTexFormatLuminance: return "Luminance";
+    case kTexFormatDXT1:      return "DXT1";
+    case kTexFormatDXT3:      return "DXT3";
+    case kTexFormatDXT5:      return "DXT5";
+    case kTexFormatBC4U:      return "BC4U/ATI1";
+    case kTexFormatBC4S:      return "BC4S";
+    case kTexFormatBC5U:      return "BC5U/ATI2";
+    case kTexFormatBC5S:      return "BC5S";
+    }
+    u::unreachable();
+};
 
 size_t texture::size() const {
     return m_data.size();

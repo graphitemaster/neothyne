@@ -207,6 +207,13 @@ Debug memory statistics for the world
 * 0 = disable
 * 1 = enable
 
+##### r_debug_tex
+The engine is allowed free reign to resize, reformat and adjust
+textures at runtime to be suitable for rendering. This information becomes
+visible in the top right hand corner of the respective texture when enabled.
+
+* 0 = disable
+* 1 = enable
 
 ## Client
 ##### cl_farp

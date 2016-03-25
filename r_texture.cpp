@@ -608,6 +608,9 @@ static bool writeCacheData(textureFormat format,
 }
 
 static bool writeCache(const texture &tex, GLuint internal, GLuint handle, size_t mips) {
+    auto &r_debug_tex = varGet<int>("r_debug_tex");
+    if (r_debug_tex)
+        return false;
     if (!r_tex_compress_cache)
         return false;
 
@@ -903,13 +906,32 @@ bool texture2D::cache(GLuint internal) {
     return writeCache(m_texture, internal, m_textureHandle, m_mipmaps);
 }
 
-bool texture2D::load(const u::string &file, bool preserveQuality, bool mipmaps) {
+bool texture2D::load(const u::string &file, bool preserveQuality, bool mipmaps, bool debug) {
     const bool status = m_texture.load(file, preserveQuality ? 1.0f : r_texquality);
     if (status) {
         if (mipmaps)
             m_mipmaps = u::log2(u::max(m_texture.width(), m_texture.height())) + 1;
         else
             m_mipmaps = 1;
+        if (debug) {
+            // For debugging draw the file name and other information into
+            // the texture. This will silently truncate if the information
+            // cannot fit into the texture space
+            size_t line = 0;
+            m_texture.drawString(line, file.c_str());
+            m_texture.drawString(line, u::format("%zux%zu",
+                m_texture.width(), m_texture.height()).c_str());
+            const size_t size = m_texture.size() + (m_mipmaps > 1 ? m_texture.size() / 3 : 0);
+            m_texture.drawString(line, u::sizeMetric(size).c_str());
+            m_texture.drawString(line, m_texture.components());
+            m_texture.drawString(line, u::format("%zu bpp",
+                m_texture.bpp()).c_str());
+            if (m_mipmaps > 1) {
+                m_texture.drawString(line, u::format("%zu mips",
+                    m_mipmaps - 1).c_str());
+            }
+
+        }
         return true;
     }
     return false;
@@ -971,6 +993,8 @@ bool texture2D::upload(GLint wrap) {
         gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 
     } else {
+        // Don't attempt to cache debug textures
+        auto &r_debug_tex = varGet<int>("r_debug_tex");
         queryFormat format;
         bool needsCache = !useCache();
         if (needsCache) {
@@ -982,6 +1006,7 @@ bool texture2D::upload(GLint wrap) {
 #if defined(DXT_COMPRESSOR)
             // Use our DXT compressor instead of the driver
             if (r_dxt_compressor &&
+                !r_debug_tex &&
                 (format.internal == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ||
                  format.internal == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT))
             {
@@ -1057,14 +1082,17 @@ bool texture2D::upload(GLint wrap) {
                     GL_COMPRESSED_RED_RGTC1_EXT
                 };
 
-                for (const auto &it : kCompressedFormats) {
-                    if (format.internal != it)
-                        continue;
-                    needsCache = false;
-                    cache(format.internal);
-                    if (!useCache())
-                        neoFatal("failed to cache");
-                    break;
+                // Avoid caching when debugging textures
+                if (!r_debug_tex) {
+                    for (const auto &it : kCompressedFormats) {
+                        if (format.internal != it)
+                            continue;
+                        needsCache = false;
+                        cache(format.internal);
+                        if (!useCache())
+                            neoFatal("failed to cache");
+                        break;
+                    }
                 }
             }
         }

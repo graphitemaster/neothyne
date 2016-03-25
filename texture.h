@@ -35,6 +35,15 @@ enum saveFormat {
     kSavePNG
 };
 
+static constexpr const char *kSaveFormatExtensions[] = {
+    "bmp", "tga", "png"
+};
+
+enum flipFlags {
+    kFlipHorizontal = 1 << 0,
+    kFlipVertical = 1 << 1
+};
+
 struct texture {
     texture()
         : m_width(0)
@@ -82,12 +91,19 @@ struct texture {
 
     void resize(size_t width, size_t height);
 
+    // Flip a texture either horizontally or vertically
+    void flip(int flags = kFlipHorizontal);
+
+    // Draw a string into the texture
+    void drawString(size_t &line, const char *string);
+
     template <textureFormat F>
     void convert();
 
     size_t width() const;
     size_t height() const;
     textureFormat format() const;
+    const char *components() const;
 
     const unsigned char *data() const;
 

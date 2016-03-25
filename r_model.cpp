@@ -9,6 +9,8 @@
 
 #include "cvar.h"
 
+VAR(int, r_debug_tex, "debug textures by rendering information into them", 0, 1, 0);
+
 namespace r {
 
 ///! Geometry rendering method (used for models and the world.)
@@ -275,6 +277,7 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
     }
 
     bool specParams = false;
+    bool debug = r_debug_tex;
     float specIntensity = 0;
     float specPower = 0;
     float dispScale = 0;
@@ -314,17 +317,19 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
             if (split.size() > 6) m_animFlipV = u::atoi(split[6]);
         } else if (key == "colorize" && split.size() == 2) {
             colorized = strtol(split[1].c_str(), nullptr, 16);
+        } else if (key == "nodebug") {
+            debug = false;
         }
     }
 
-    auto loadTexture = [&](const u::string &ident, texture2D **store, bool preserveQuality) {
+    auto loadTexture = [&](const u::string &ident, texture2D **store, bool preserveQuality, bool debug) {
         if (ident.empty())
             return;
         if (textures.find(ident) != textures.end()) {
             *store = textures[ident];
         } else {
             u::unique_ptr<texture2D> tex(new texture2D);
-            if (tex->load(ident, preserveQuality)) {
+            if (tex->load(ident, preserveQuality, true, debug)) {
                 auto release = tex.release();
                 textures[ident] = release;
                 *store = release;
@@ -351,10 +356,10 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
         }
     };
 
-    loadTexture(diffuseName, &diffuse, m_animFrames);
-    loadTexture(normalName, &normal, m_animFrames);
-    loadTexture(specName, &spec, m_animFrames);
-    loadTexture(displacementName, &displacement, m_animFrames);
+    loadTexture(diffuseName, &diffuse, m_animFrames, debug);
+    loadTexture(normalName, &normal, m_animFrames, debug);
+    loadTexture(specName, &spec, m_animFrames, debug);
+    loadTexture(displacementName, &displacement, m_animFrames, debug);
 
     // Sanitize animated inputs
     auto checkSize = [this, &fileName](texture2D *tex) {

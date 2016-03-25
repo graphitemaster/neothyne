@@ -71,9 +71,10 @@ skybox::~skybox() {
 }
 
 bool skybox::load(const u::string &skyboxName) {
+    auto &r_debug_tex = varGet<int>("r_debug_tex");
     static const char *kSuffices[] = { "_bk", "_ft", "_lf", "_rt", "_up", "_dn" };
     for (size_t i = 0; i < 6; i++)
-        if (!m_textures[i].load(skyboxName + kSuffices[i], false, false))
+        if (!m_textures[i].load(skyboxName + kSuffices[i], false, false, r_debug_tex.get()))
             return false;
 
     // Calculate the average color of the top of the skybox. We utilize this color
