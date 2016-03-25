@@ -2382,9 +2382,12 @@ void texture::drawString(size_t &line, const char *string) {
 
     u::vector<unsigned char> pixelData;
     size_t c = 0;
-    unsigned char glyph[8*8*m_bpp];
+    // Avoid using m_bpp in the glyph's intermediate storage so that we
+    // don't need to heap allocate it.
+    const size_t glyphSize = 8*8*m_bpp;
+    unsigned char glyph[8*8*4];
     for (; *string; string++, c++) {
-        memset(glyph, 0, sizeof glyph);
+        memset(glyph, 0, glyphSize);
         unsigned char *prev = &glyph[8*8*m_bpp-1];
         uint64_t n = 1;
         for (size_t h = 0; h < 8; h++)
@@ -2392,8 +2395,8 @@ void texture::drawString(size_t &line, const char *string) {
                 for (size_t k = 0; k < m_bpp; k++)
                     *prev-- = (kFont[int(*string)] & n) ? 255 : 0;
         const size_t size = pixelData.size();
-        pixelData.resize(size + sizeof glyph);
-        memcpy(&pixelData[size], glyph, sizeof glyph);
+        pixelData.resize(size + glyphSize);
+        memcpy(&pixelData[size], glyph, glyphSize);
     }
     const size_t size = 8*c*8*m_bpp,
                  offset = pixelData.size();
