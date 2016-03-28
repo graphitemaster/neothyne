@@ -430,7 +430,8 @@ inline vec4 &vec4::operator+=(const vec4 &o) {
 }
 
 inline vec4 vec4::operator-() const {
-    return _mm_xor_ps(v, _mm_set1_ps(-0.f));
+    alignas(16) static const float kNegZero[] = { -0.0f, -0.0f, -0.0f, -0.0f };
+    return _mm_xor_ps(v, *(const __m128 *)kNegZero);
 }
 
 inline float vec4::dot(const vec4 &l, const vec4 &r) {
