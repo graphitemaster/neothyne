@@ -99,7 +99,7 @@ void vec4::endianSwap() {
 }
 
 float vec4::abs() const {
-    return m::sqrt(dot(*this, *this)); //*this * *this);
+    return m::sqrt(dot(*this, *this));
 }
 
 }
