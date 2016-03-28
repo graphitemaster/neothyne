@@ -128,9 +128,6 @@ mat4 mat4::operator*(const mat4 &t) const {
 
 #ifdef __SSE2__
 mat4 mat4::inverse() const {
-    #define _mm_pshufd(xmm, mask) \
-        _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(xmm), mask))
-
     __m128 f1 = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(2,2,2,2)),
                                       _mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(3,3,3,3)), _MM_SHUFFLE(2,0,0,0))),
                            _mm_mul_ps(_mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(2,2,2,2)), _MM_SHUFFLE(2,0,0,0)),
