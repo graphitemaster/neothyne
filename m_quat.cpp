@@ -29,7 +29,8 @@ void quat::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
 #include <immintrin.h>
 #else
 static inline __m128 _mm_addsub_ps(__m128 a, __m128 b) {
-    const __m128 n = _mm_set_ps(1,-1,1,-1);
+    alignas(16) static const float kSign[] = { -1.0f, 1.0f, -1.0f, 1.0f };
+    const __m128 n = *(const __m128 *)kSign;
     b = _mm_mul_ps(b, n); // 5/4, 1
     a = _mm_add_ps(a, b); // 5/4, 1
     return a;
