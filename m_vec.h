@@ -6,6 +6,10 @@
 
 #include "u_algorithm.h"
 
+#ifdef __SSE2__
+#include <xmmintrin.h>
+#endif
+
 namespace m {
 
 struct vec2 {
@@ -309,16 +313,20 @@ struct vec4 {
     union {
         struct { float x, y, z, w; };
         float m[4];
+#ifdef __SSE2__
+        __m128 v;
+#endif
     };
 
     constexpr vec4();
+    constexpr vec4(float n);
     constexpr vec4(const float (&vals)[4]);
     constexpr vec4(const vec3 &vec, float w);
     constexpr vec4(float x, float y, float z, float w);
 
     float &operator[](size_t index);
     const float &operator[](size_t index) const;
-    constexpr vec4 addw(float f) const;
+    vec4 addw(float f) const;
 
     vec4 &operator*=(float k);
     vec4 &operator+=(const vec4 &o);
@@ -328,9 +336,22 @@ struct vec4 {
 
     void endianSwap();
 
-    friend float operator*(const vec4 &l, const vec4 &r);
+    static float dot(const vec4 &l, const vec4 &r);
+
+    friend vec4 operator*(const vec4 &l, const vec4 &r);
     friend vec4 operator*(const vec4 &l, float k);
     friend vec4 operator+(const vec4 &l, const vec4 &r);
+    friend vec4 operator-(const vec4 &l, const vec4 &r);
+
+#ifdef __SSE2__
+    constexpr vec4(__m128 v);
+    vec4 rcp() const;
+#endif
+
+    template <size_t X, size_t Y, size_t Z, size_t W>
+    vec4 swizzle() const;
+    template <size_t N>
+    vec4 splat() const;
 };
 
 inline constexpr vec4::vec4()
@@ -338,6 +359,14 @@ inline constexpr vec4::vec4()
     , y(0.0f)
     , z(0.0f)
     , w(1.0f)
+{
+}
+
+inline constexpr vec4::vec4(float n)
+    : x(n)
+    , y(n)
+    , z(n)
+    , w(n)
 {
 }
 
@@ -373,10 +402,72 @@ inline const float &vec4::operator[](size_t index) const {
     return m[index];
 }
 
-inline constexpr vec4 vec4::addw(float f) const {
-    return { x, y, z, w + f };
+template <size_t N>
+inline vec4 vec4::splat() const {
+    return swizzle<N,N,N,N>();
 }
 
+#ifdef __SSE2__
+inline constexpr vec4::vec4(__m128 v)
+    : v(v)
+{
+}
+
+inline vec4 &vec4::operator*=(float k) {
+    v = _mm_mul_ps(v, _mm_set1_ps(k));
+    return *this;
+}
+
+inline vec4 &vec4::operator+=(const vec4 &o) {
+    v = _mm_add_ps(v, o.v);
+    return *this;
+}
+
+inline vec4 vec4::operator-() const {
+    return _mm_xor_ps(v, _mm_set1_ps(-0.f));
+}
+
+inline float vec4::dot(const vec4 &l, const vec4 &r) {
+    __m128 v0, v1;
+    v0 = _mm_mul_ps(l.v, r.v);
+    v1 = _mm_shuffle_ps(v0, v0, _MM_SHUFFLE(2, 3, 0, 1));
+    v0 = _mm_add_ps(v0, v1);
+    v1 = _mm_shuffle_ps(v0, v0, _MM_SHUFFLE(0, 1, 2, 3));
+    v0 = _mm_add_ps(v0, v1);
+    return *(float *)&v0;
+}
+
+inline vec4 operator*(const vec4 &l, const vec4 &r) {
+    return _mm_mul_ps(l.v, r.v);
+}
+
+inline vec4 operator*(const vec4 &l, float k) {
+    return _mm_mul_ps(l.v, _mm_set1_ps(k));
+}
+
+inline vec4 operator+(const vec4 &l, const vec4 &r) {
+    return _mm_add_ps(l.v, r.v);
+}
+
+inline vec4 operator-(const vec4 &l, const vec4 &r) {
+    return _mm_sub_ps(l.v, r.v);
+}
+
+inline vec4 vec4::addw(float f) const {
+    return _mm_add_ps(v, _mm_set_ps(f, 0, 0, 0));
+}
+
+inline vec4 vec4::rcp() const {
+    const vec4 &x = _mm_rcp_ps(v);
+    return (x + x) - (*this * x * x);
+}
+
+template <size_t X, size_t Y, size_t Z, size_t W>
+inline vec4 vec4::swizzle() const {
+    return _mm_shuffle_ps(v, v, _MM_SHUFFLE(W, Z, Y, X));
+}
+
+#else
 inline vec4 &vec4::operator*=(float k) {
     x *= k;
     y *= k;
@@ -397,8 +488,12 @@ inline vec4 vec4::operator-() const {
     return { -x, -y, -z, -w };
 }
 
-inline float operator*(const vec4 &l, const vec4 &r) {
+inline float vec4::dot(const vec4 &l, const vec4 &r) {
     return l.x*r.x + l.y*r.y + l.z*r.z + l.w*r.w;
+}
+
+inline vec4 operator*(const vec4 &l, const vec4 &r) {
+    return { l.x * r.x, l.y * r.y, l.z * r.z, l.w * r.w };
 }
 
 inline vec4 operator*(const vec4 &l, float k) {
@@ -408,6 +503,21 @@ inline vec4 operator*(const vec4 &l, float k) {
 inline vec4 operator+(const vec4 &l, const vec4 &r) {
     return { l.x+r.x, l.y+r.y, l.z+r.z, l.w+r.w };
 }
+
+inline vec4 operator-(const vec4 &l, const vec4 &r) {
+    return { l.x-r.x, l.y-r.y, l.z-r.z, l.w-r.w };
+}
+
+inline vec4 vec4::addw(float f) const {
+    return { x, y, z, w + f };
+}
+
+template <size_t X, size_t Y, size_t Z, size_t W>
+inline vec4 vec4::swizzle() const {
+    return { m[X], m[Y], m[Z], m[W] };
+}
+
+#endif
 
 }
 

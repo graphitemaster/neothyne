@@ -91,15 +91,15 @@ vec3 vec3::rand(float mx, float my, float mz) {
              mz * ((float)(u::randu() % 20000) * 0.0001f - 1.0f) };
 }
 
-float vec4::abs() const {
-    return m::sqrt(*this * *this);
-}
-
 void vec4::endianSwap() {
     x = u::endianSwap(x);
     y = u::endianSwap(y);
     z = u::endianSwap(z);
     w = u::endianSwap(w);
+}
+
+float vec4::abs() const {
+    return m::sqrt(dot(*this, *this)); //*this * *this);
 }
 
 }

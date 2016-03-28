@@ -31,7 +31,7 @@ struct mat4 {
     constexpr mat4(const vec4 &a, const vec4 &b, const vec4 &c, const vec4 &d);
 
     static mat4 identity();
-    mat4 inverse();
+    mat4 inverse() const;
     mat4 operator*(const mat4 &t) const;
 
     static mat4 project(float angle, float nearClip, float farClip, float bias = 0);
@@ -48,10 +48,17 @@ struct mat4 {
     const float *ptr() const;
 
 private:
+#ifdef __SSE2__
+    static vec4 mul2x2(const vec4 &l, const vec4 &r);
+    static vec4 det2x2(const vec4 &v);
+    static vec4 adj2x2(const vec4 &v);
+    static vec4 inv2x2(const vec4 &v);
+#else
     static float det2x2(float a, float b, float c, float d);
     static float det3x3(float a1, float a2, float a3,
                         float b1, float b2, float b3,
                         float c1, float c2, float c3);
+#endif
 };
 
 inline constexpr mat4::mat4(const vec4 &a, const vec4 &b, const vec4 &c, const vec4 &d)

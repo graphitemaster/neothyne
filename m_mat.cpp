@@ -2,6 +2,10 @@
 #include "m_vec.h"
 #include "m_quat.h"
 
+#ifdef __SSE2__
+#include <xmmintrin.h>
+#endif
+
 namespace m {
 
 ///! mat4x4
@@ -10,25 +14,6 @@ mat4 mat4::identity() {
              { 0.0f, 1.0f, 0.0f, 0.0f },
              { 0.0f, 0.0f, 1.0f, 0.0f },
              { 0.0f, 0.0f, 0.0f, 1.0f } };
-}
-
-mat4 mat4::operator*(const mat4 &t) const {
-    return { { a.x * t.a.x + a.y * t.b.x + a.z * t.c.x + a.w * t.d.x,
-               a.x * t.a.y + a.y * t.b.y + a.z * t.c.y + a.w * t.d.y,
-               a.x * t.a.z + a.y * t.b.z + a.z * t.c.z + a.w * t.d.z,
-               a.x * t.a.w + a.y * t.b.w + a.z * t.c.w + a.w * t.d.w },
-             { b.x * t.a.x + b.y * t.b.x + b.z * t.c.x + b.w * t.d.x,
-               b.x * t.a.y + b.y * t.b.y + b.z * t.c.y + b.w * t.d.y,
-               b.x * t.a.z + b.y * t.b.z + b.z * t.c.z + b.w * t.d.z,
-               b.x * t.a.w + b.y * t.b.w + b.z * t.c.w + b.w * t.d.w },
-             { c.x * t.a.x + c.y * t.b.x + c.z * t.c.x + c.w * t.d.x,
-               c.x * t.a.y + c.y * t.b.y + c.z * t.c.y + c.w * t.d.y,
-               c.x * t.a.z + c.y * t.b.z + c.z * t.c.z + c.w * t.d.z,
-               c.x * t.a.w + c.y * t.b.w + c.z * t.c.w + c.w * t.d.w },
-             { d.x * t.a.x + d.y * t.b.x + d.z * t.c.x + d.w * t.d.x,
-               d.x * t.a.y + d.y * t.b.y + d.z * t.c.y + d.w * t.d.y,
-               d.x * t.a.z + d.y * t.b.z + d.z * t.c.z + d.w * t.d.z,
-               d.x * t.a.w + d.y * t.b.w + d.z * t.c.w + d.w * t.d.w } };
 }
 
 mat4 mat4::scale(const vec3 &s) {
@@ -134,6 +119,57 @@ void mat4::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
     }
 }
 
+mat4 mat4::operator*(const mat4 &t) const {
+    return { t.a*a.splat<0>() + t.b*a.splat<1>() + t.c*a.splat<2>() + t.d*a.splat<3>(),
+             t.a*b.splat<0>() + t.b*b.splat<1>() + t.c*b.splat<2>() + t.d*b.splat<3>(),
+             t.a*c.splat<0>() + t.b*c.splat<1>() + t.c*c.splat<2>() + t.d*c.splat<3>(),
+             t.a*d.splat<0>() + t.b*d.splat<1>() + t.c*d.splat<2>() + t.d*d.splat<3>() };
+}
+
+#ifdef __SSE2__
+inline m::vec4 mat4::mul2x2(const m::vec4 &l, const m::vec4 &r) {
+    return r.swizzle<0,0,2,2>() * _mm_movelh_ps(l.v, l.v) +
+           r.swizzle<1,1,3,3>() * _mm_movehl_ps(l.v, l.v);
+}
+
+inline m::vec4 mat4::det2x2(const m::vec4 &v) {
+    const m::vec4 &t = v.swizzle<0,0,1,1>() * v.swizzle<3,3,2,2>();
+    return _mm_sub_ps(_mm_unpacklo_ps(t.v, t.v),
+                      _mm_unpackhi_ps(t.v, t.v));
+}
+inline m::vec4 mat4::adj2x2(const m::vec4 &v) {
+    const m::vec4 znzn(0.0f, -0.0f, -0.0f, 0.0f);
+    return _mm_xor_ps(v.swizzle<3,1,2,0>().v, znzn.v);
+}
+inline m::vec4 mat4::inv2x2(const m::vec4 &v) {
+    return adj2x2(v) * det2x2(v).rcp();
+}
+mat4 mat4::inverse() const {
+    m::vec4 c0 = a;
+    m::vec4 c1 = b;
+    m::vec4 c2 = c;
+    m::vec4 c3 = d;
+
+    // 2x2 sub matrices
+    const m::vec4 &m11 = _mm_movelh_ps(c0.v, c1.v);
+    const m::vec4 &m21 = _mm_movehl_ps(c1.v, c0.v);
+    const m::vec4 &m12 = _mm_movelh_ps(c2.v, c3.v);
+    const m::vec4 &m22 = _mm_movehl_ps(c3.v, c2.v);
+    // inverse sub matrices
+    const m::vec4 &inv11 = inv2x2(m11);
+    const m::vec4 &inv22 = inv2x2(m22);
+    // partitions
+    const m::vec4 &p11 = inv2x2(m11 - mul2x2(mul2x2(m12, inv22), m21));
+    const m::vec4 &p21 = mul2x2(mul2x2(-inv22, m21), p11);
+    const m::vec4 &p22 = inv2x2(m22 - mul2x2(mul2x2(m21, inv11), m12));
+    const m::vec4 &p12 = mul2x2(mul2x2(-inv11, m12), p22);
+    return { _mm_movelh_ps(p11.v, p21.v),
+             _mm_movehl_ps(p21.v, p11.v),
+             _mm_movelh_ps(p12.v, p22.v),
+             _mm_movehl_ps(p22.v, p12.v) };
+
+}
+#else
 inline float mat4::det2x2(float a, float b, float c, float d) {
     return a*d - b*c;
 }
@@ -147,7 +183,7 @@ inline float mat4::det3x3(float a1, float a2, float a3,
          + c1 * det2x2(a2, a3, b2, b3);
 }
 
-mat4 mat4::inverse() {
+mat4 mat4::inverse() const {
     mat4 m;
     const float a1 = a.x, a2 = a.y, a3 = a.z, a4 = a.w,
                 b1 = b.x, b2 = b.y, b3 = b.z, b4 = b.w,
@@ -177,6 +213,7 @@ mat4 mat4::inverse() {
     m.d.w = det3x3(a1, a2, a3, b1, b2, b3, c1, c2, c3) * id;
     return m;
 }
+#endif
 
 ///! mat3x3
 void mat3x3::convertQuaternion(const quat &q) {
