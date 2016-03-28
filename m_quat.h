@@ -3,6 +3,10 @@
 #include "m_vec.h"
 #include "m_trig.h"
 
+#ifdef __SSE2__
+#include <emmintrin.h>
+#endif
+
 namespace m {
 
 struct mat4;
@@ -28,6 +32,9 @@ struct quat : vec4 {
 
     quat normalize() const;
 
+#ifdef __SSE2__
+    constexpr quat(__m128 v);
+#endif
 };
 
 inline constexpr quat::quat() = default;
@@ -41,6 +48,13 @@ inline constexpr quat::quat(float x, float y, float z, float w)
     : vec4(x, y, z, w)
 {
 }
+
+#ifdef __SSE2__
+inline constexpr quat::quat(__m128 v)
+    : vec4(v)
+{
+}
+#endif
 
 inline quat::quat(float angle, const vec3 &vec) {
     const vec2 sc = m::sincos(angle * 0.5f);
