@@ -345,7 +345,6 @@ struct vec4 {
 
 #ifdef __SSE2__
     constexpr vec4(__m128 v);
-    vec4 rcp() const;
 #endif
 
     template <size_t X, size_t Y, size_t Z, size_t W>
@@ -408,6 +407,9 @@ inline vec4 vec4::splat() const {
 }
 
 #ifdef __SSE2__
+#define _mm_shufd(xmm, mask) \
+    _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(xmm), mask))
+
 inline constexpr vec4::vec4(__m128 v)
     : v(v)
 {
@@ -428,13 +430,9 @@ inline vec4 vec4::operator-() const {
 }
 
 inline float vec4::dot(const vec4 &l, const vec4 &r) {
-    __m128 v0, v1;
-    v0 = _mm_mul_ps(l.v, r.v);
-    v1 = _mm_shuffle_ps(v0, v0, _MM_SHUFFLE(2, 3, 0, 1));
-    v0 = _mm_add_ps(v0, v1);
-    v1 = _mm_shuffle_ps(v0, v0, _MM_SHUFFLE(0, 1, 2, 3));
-    v0 = _mm_add_ps(v0, v1);
-    return *(float *)&v0;
+    __m128 e = _mm_mul_ps(l.v, r.v);
+    e = _mm_add_ps(e, _mm_shufd(e, 0x4E));
+    return _mm_cvtss_f32(_mm_add_ss(e, _mm_shufd(e, 0x11)));
 }
 
 inline vec4 operator*(const vec4 &l, const vec4 &r) {
@@ -457,14 +455,9 @@ inline vec4 vec4::addw(float f) const {
     return _mm_add_ps(v, _mm_set_ps(f, 0, 0, 0));
 }
 
-inline vec4 vec4::rcp() const {
-    const vec4 &x = _mm_rcp_ps(v);
-    return (x + x) - (*this * x * x);
-}
-
 template <size_t X, size_t Y, size_t Z, size_t W>
 inline vec4 vec4::swizzle() const {
-    return _mm_shuffle_ps(v, v, _MM_SHUFFLE(W, Z, Y, X));
+    return _mm_shufd(v, _MM_SHUFFLE(W, Z, Y, X));
 }
 
 #else

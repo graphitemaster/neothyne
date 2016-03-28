@@ -98,8 +98,16 @@ void vec4::endianSwap() {
     w = u::endianSwap(w);
 }
 
+#ifdef __SSE2__
+float vec4::abs() const {
+    __m128 e = _mm_mul_ps(v, v);
+    e = _mm_add_ps(e, _mm_shufd(e, 0x4E));
+    return _mm_cvtss_f32(_mm_sqrt_ss(_mm_add_ss(e, _mm_shufd(e, 0x11))));
+}
+#else
 float vec4::abs() const {
     return m::sqrt(dot(*this, *this));
 }
+#endif
 
 }

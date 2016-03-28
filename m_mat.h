@@ -49,10 +49,6 @@ struct mat4 {
 
 private:
 #ifdef __SSE2__
-    static vec4 mul2x2(const vec4 &l, const vec4 &r);
-    static vec4 det2x2(const vec4 &v);
-    static vec4 adj2x2(const vec4 &v);
-    static vec4 inv2x2(const vec4 &v);
 #else
     static float det2x2(float a, float b, float c, float d);
     static float det3x3(float a1, float a2, float a3,
