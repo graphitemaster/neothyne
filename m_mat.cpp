@@ -145,16 +145,11 @@ inline m::vec4 mat4::inv2x2(const m::vec4 &v) {
     return adj2x2(v) * det2x2(v).rcp();
 }
 mat4 mat4::inverse() const {
-    m::vec4 c0 = a;
-    m::vec4 c1 = b;
-    m::vec4 c2 = c;
-    m::vec4 c3 = d;
-
     // 2x2 sub matrices
-    const m::vec4 &m11 = _mm_movelh_ps(c0.v, c1.v);
-    const m::vec4 &m21 = _mm_movehl_ps(c1.v, c0.v);
-    const m::vec4 &m12 = _mm_movelh_ps(c2.v, c3.v);
-    const m::vec4 &m22 = _mm_movehl_ps(c3.v, c2.v);
+    const m::vec4 &m11 = _mm_movelh_ps(a.v, b.v);
+    const m::vec4 &m21 = _mm_movehl_ps(b.v, a.v);
+    const m::vec4 &m12 = _mm_movelh_ps(c.v, d.v);
+    const m::vec4 &m22 = _mm_movehl_ps(d.v, c.v);
     // inverse sub matrices
     const m::vec4 &inv11 = inv2x2(m11);
     const m::vec4 &inv22 = inv2x2(m22);
