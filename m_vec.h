@@ -431,8 +431,8 @@ inline vec4 vec4::operator-() const {
 
 inline float vec4::dot(const vec4 &l, const vec4 &r) {
     __m128 e = _mm_mul_ps(l.v, r.v);
-    e = _mm_add_ps(e, _mm_shufd(e, 0x4E));
-    return _mm_cvtss_f32(_mm_add_ss(e, _mm_shufd(e, 0x11)));
+    e = _mm_add_ps(e, _mm_shufd(e, _MM_SHUFFLE(0,1,3,2)));
+    return _mm_cvtss_f32(_mm_add_ss(e, _mm_shufd(e, _MM_SHUFFLE(0,1,0,1))));
 }
 
 inline vec4 operator*(const vec4 &l, const vec4 &r) {
