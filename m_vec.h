@@ -407,7 +407,11 @@ inline vec4 vec4::splat() const {
 }
 
 #ifdef __SSE2__
-#define _mm_shufd(xmm, mask) \
+// When both arguments to _mm_shuffle_ps are the same we can achieve the
+// same result using pshufd instruction instead. This saves ~2 mov instructions
+// on average and has less latency; similarly, multiple pshufd instructions
+// can be scheduled in parallel and complete together.
+#define _mm_pshufd(xmm, mask) \
     _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(xmm), mask))
 
 inline constexpr vec4::vec4(__m128 v)
@@ -431,8 +435,8 @@ inline vec4 vec4::operator-() const {
 
 inline float vec4::dot(const vec4 &l, const vec4 &r) {
     __m128 e = _mm_mul_ps(l.v, r.v);
-    e = _mm_add_ps(e, _mm_shufd(e, _MM_SHUFFLE(0,1,3,2)));
-    return _mm_cvtss_f32(_mm_add_ss(e, _mm_shufd(e, _MM_SHUFFLE(0,1,0,1))));
+    e = _mm_add_ps(e, _mm_pshufd(e, _MM_SHUFFLE(0,1,3,2)));
+    return _mm_cvtss_f32(_mm_add_ss(e, _mm_pshufd(e, _MM_SHUFFLE(0,1,0,1))));
 }
 
 inline vec4 operator*(const vec4 &l, const vec4 &r) {
@@ -457,7 +461,7 @@ inline vec4 vec4::addw(float f) const {
 
 template <size_t X, size_t Y, size_t Z, size_t W>
 inline vec4 vec4::swizzle() const {
-    return _mm_shufd(v, _MM_SHUFFLE(W, Z, Y, X));
+    return _mm_pshufd(v, _MM_SHUFFLE(W, Z, Y, X));
 }
 
 #else

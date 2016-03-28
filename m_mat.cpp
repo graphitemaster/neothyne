@@ -128,37 +128,37 @@ mat4 mat4::operator*(const mat4 &t) const {
 
 #ifdef __SSE2__
 mat4 mat4::inverse() const {
-    #define _mm_shufd(xmm, mask) \
+    #define _mm_pshufd(xmm, mask) \
         _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(xmm), mask))
 
     __m128 f1 = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(2,2,2,2)),
-                                      _mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(3,3,3,3)), _MM_SHUFFLE(2,0,0,0))),
-                           _mm_mul_ps(_mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(2,2,2,2)), _MM_SHUFFLE(2,0,0,0)),
-                                                _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(3,3,3,3))));
+                                      _mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(3,3,3,3)), _MM_SHUFFLE(2,0,0,0))),
+                           _mm_mul_ps(_mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(2,2,2,2)), _MM_SHUFFLE(2,0,0,0)),
+                                                 _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(3,3,3,3))));
     __m128 f2 = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(1,1,1,1)),
-                                      _mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(3,3,3,3)), _MM_SHUFFLE(2,0,0,0))),
-                           _mm_mul_ps(_mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(1,1,1,1)), _MM_SHUFFLE(2,0,0,0)),
-                                                _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(3,3,3,3))));
+                                      _mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(3,3,3,3)), _MM_SHUFFLE(2,0,0,0))),
+                           _mm_mul_ps(_mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(1,1,1,1)), _MM_SHUFFLE(2,0,0,0)),
+                                                 _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(3,3,3,3))));
     __m128 f3 = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(1,1,1,1)),
-                                      _mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(2,2,2,2)), _MM_SHUFFLE(2,0,0,0))),
-                           _mm_mul_ps(_mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(1,1,1,1)), _MM_SHUFFLE(2,0,0,0)),
-                                                _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(2,2,2,2))));
+                                      _mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(2,2,2,2)), _MM_SHUFFLE(2,0,0,0))),
+                           _mm_mul_ps(_mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(1,1,1,1)), _MM_SHUFFLE(2,0,0,0)),
+                                                 _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(2,2,2,2))));
     __m128 f4 = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(0,0,0,0)),
-                                      _mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(3,3,3,3)), _MM_SHUFFLE(2,0,0,0))),
-                           _mm_mul_ps(_mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,0,0,0)),
-                                                _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(3,3,3,3))));
+                                      _mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(3,3,3,3)), _MM_SHUFFLE(2,0,0,0))),
+                           _mm_mul_ps(_mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,0,0,0)),
+                                                 _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(3,3,3,3))));
     __m128 f5 = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(0,0,0,0)),
-                                      _mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(2,2,2,2)), _MM_SHUFFLE(2,0,0,0))),
-                           _mm_mul_ps(_mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,0,0,0)),
-                                                _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(2,2,2,2))));
+                                      _mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(2,2,2,2)), _MM_SHUFFLE(2,0,0,0))),
+                           _mm_mul_ps(_mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,0,0,0)),
+                                                 _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(2,2,2,2))));
     __m128 f6 = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(0,0,0,0)),
-                                      _mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(1,1,1,1)), _MM_SHUFFLE(2,0,0,0))),
-                           _mm_mul_ps(_mm_shufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,0,0,0)),
-                                                _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(1,1,1,1))));
-    __m128 v1 = _mm_shufd(_mm_shuffle_ps(b.v, a.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,2,2,0));
-    __m128 v2 = _mm_shufd(_mm_shuffle_ps(b.v, a.v, _MM_SHUFFLE(1,1,1,1)), _MM_SHUFFLE(2,2,2,0));
-    __m128 v3 = _mm_shufd(_mm_shuffle_ps(b.v, a.v, _MM_SHUFFLE(2,2,2,2)), _MM_SHUFFLE(2,2,2,0));
-    __m128 v4 = _mm_shufd(_mm_shuffle_ps(b.v, a.v, _MM_SHUFFLE(3,3,3,3)), _MM_SHUFFLE(2,2,2,0));
+                                      _mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(1,1,1,1)), _MM_SHUFFLE(2,0,0,0))),
+                           _mm_mul_ps(_mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,0,0,0)),
+                                                 _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(1,1,1,1))));
+    __m128 v1 = _mm_pshufd(_mm_shuffle_ps(b.v, a.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,2,2,0));
+    __m128 v2 = _mm_pshufd(_mm_shuffle_ps(b.v, a.v, _MM_SHUFFLE(1,1,1,1)), _MM_SHUFFLE(2,2,2,0));
+    __m128 v3 = _mm_pshufd(_mm_shuffle_ps(b.v, a.v, _MM_SHUFFLE(2,2,2,2)), _MM_SHUFFLE(2,2,2,0));
+    __m128 v4 = _mm_pshufd(_mm_shuffle_ps(b.v, a.v, _MM_SHUFFLE(3,3,3,3)), _MM_SHUFFLE(2,2,2,0));
     __m128 s1 = _mm_set_ps(-0.0f,  0.0f, -0.0f,  0.0f);
     __m128 s2 = _mm_set_ps( 0.0f, -0.0f,  0.0f, -0.0f);
     __m128 i1 = _mm_xor_ps(s1, _mm_add_ps(_mm_sub_ps(_mm_mul_ps(v2, f1),
@@ -175,8 +175,8 @@ mat4 mat4::inverse() const {
                                                      _mm_mul_ps(v3, f6)));
     __m128 d = _mm_mul_ps(a.v, _mm_movelh_ps(_mm_unpacklo_ps(i1, i2),
                                              _mm_unpacklo_ps(i3, i4)));
-    d = _mm_add_ps(d, _mm_shufd(d, _MM_SHUFFLE(1,0,3,2)));
-    d = _mm_add_ps(d, _mm_shufd(d, _MM_SHUFFLE(0,1,0,1)));
+    d = _mm_add_ps(d, _mm_pshufd(d, _MM_SHUFFLE(1,0,3,2)));
+    d = _mm_add_ps(d, _mm_pshufd(d, _MM_SHUFFLE(0,1,0,1)));
     d = _mm_div_ps(_mm_set1_ps(1.0f), d);
     return { _mm_mul_ps(i1, d), _mm_mul_ps(i2, d), _mm_mul_ps(i3, d), _mm_mul_ps(i4, d) };
 

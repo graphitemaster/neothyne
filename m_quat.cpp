@@ -39,12 +39,12 @@ static inline __m128 _mm_addsub_ps(__m128 a, __m128 b) {
 quat operator*(const quat &l, const quat &r) {
     // ~18 cycles if SSE3 is supported (addsubps)
     // ~21 cycles for SSE2
-    __m128 t0 = _mm_shufd(l.v, _MM_SHUFFLE(3,3,3,3)); // 1, 0.5
-    __m128 t1 = _mm_shufd(r.v, _MM_SHUFFLE(2,3,0,1)); // 1, 0.5
-    __m128 t3 = _mm_shufd(l.v, _MM_SHUFFLE(0,0,0,0)); // 1, 0.5
-    __m128 t4 = _mm_shufd(r.v, _MM_SHUFFLE(1,0,3,2)); // 1, 0.5
-    __m128 t5 = _mm_shufd(l.v, _MM_SHUFFLE(1,1,1,1)); // 1, 0.5
-    __m128 t6 = _mm_shufd(r.v, _MM_SHUFFLE(2,0,3,1)); // 1, 0.5
+    __m128 t0 = _mm_pshufd(l.v, _MM_SHUFFLE(3,3,3,3)); // 1, 0.5
+    __m128 t1 = _mm_pshufd(r.v, _MM_SHUFFLE(2,3,0,1)); // 1, 0.5
+    __m128 t3 = _mm_pshufd(l.v, _MM_SHUFFLE(0,0,0,0)); // 1, 0.5
+    __m128 t4 = _mm_pshufd(r.v, _MM_SHUFFLE(1,0,3,2)); // 1, 0.5
+    __m128 t5 = _mm_pshufd(l.v, _MM_SHUFFLE(1,1,1,1)); // 1, 0.5
+    __m128 t6 = _mm_pshufd(r.v, _MM_SHUFFLE(2,0,3,1)); // 1, 0.5
     // [d,d,d,d]*[z,w,x,y] = [dz,dw,dx,dy]
     __m128 m0 = _mm_mul_ps(t0, t1); // 5/4, 1
     // [a,a,a,a]*[y,x,w,z] = [ay,ax,aw,az]
@@ -52,21 +52,21 @@ quat operator*(const quat &l, const quat &r) {
     // [b,b,b,b]*[z,x,w,y] = [bz,bx,bw,by]
     __m128 m2 = _mm_mul_ps(t5, t6); // 5/4, 1
     // [c,c,c,c]*[w,z,x,y] = [cw,cz,cx,cy]
-    __m128 t7 = _mm_shufd(l.v, _MM_SHUFFLE(2,2,2,2)); // 1, 0.5
-    __m128 t8 = _mm_shufd(r.v, _MM_SHUFFLE(3,2,0,1)); // 1, 0.5
+    __m128 t7 = _mm_pshufd(l.v, _MM_SHUFFLE(2,2,2,2)); // 1, 0.5
+    __m128 t8 = _mm_pshufd(r.v, _MM_SHUFFLE(3,2,0,1)); // 1, 0.5
     __m128 m3 = _mm_mul_ps(t7, t8); // 5/4, 1
     // [dz,dw,dx,dy]+-[ay,ax,sw,az] = [dz+ay,dw-ax,dx+aw,dy-az]
     __m128 e = _mm_addsub_ps(m0, m1); // 3, 1
     // [dx+aw,dz+ay,dy-az,dw-ax]
-    e = _mm_shufd(e, _MM_SHUFFLE(1,3,0,2)); // 1, 0.5
+    e = _mm_pshufd(e, _MM_SHUFFLE(1,3,0,2)); // 1, 0.5
     // [dx+aw,dz+ay,dy-az,dw-ax]+-[bz,bx,bw,by] = [dx+aw+bz,dz+ay-bx,dy-az+bw,dw-ax-by]
     e = _mm_addsub_ps(e, m2); // 3, 1
     // [dz+ay-bx,dw-ax-by,dy-az+bw,dx+aw+bz]
-    e = _mm_shufd(e, _MM_SHUFFLE(2,0,1,3)); // 1, 0.5
+    e = _mm_pshufd(e, _MM_SHUFFLE(2,0,1,3)); // 1, 0.5
     // [dz+ay-bx,dw-ax-by,dy-az+bw,dx+aw+bz]+-[cw,cz,cx,cy] = [dz+ay-bx+cw,dw-ax-by-cz,dy-az+bw+cx,dx+aw+bz-cy]
     e = _mm_addsub_ps(e, m3); // 3, 1
     // [dw-ax-by-cz,dz+ay-bx+cw,dy-az+bw+cx,dx+aw+bz-cy]
-    return _mm_shufd(e, _MM_SHUFFLE(2,3,1,0)); // 1, 0.5
+    return _mm_pshufd(e, _MM_SHUFFLE(2,3,1,0)); // 1, 0.5
 }
 #else
 quat operator*(const quat &l, const quat &r) {
