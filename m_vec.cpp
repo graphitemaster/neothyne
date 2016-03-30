@@ -18,9 +18,16 @@ vec2 sincos(float x) {
     return { sin, cos };
 }
 
-const vec3 vec3::xAxis(1.0f, 0.0f, 0.0f);
-const vec3 vec3::yAxis(0.0f, 1.0f, 0.0f);
-const vec3 vec3::zAxis(0.0f, 0.0f, 1.0f);
+const vec3 vec3::kAxis[3] = {
+    { 1.0f, 0.0f, 0.0f },
+    { 0.0f, 1.0f, 0.0f },
+    { 0.0f, 0.0f, 1.0f }
+};
+
+const vec3 &vec3::xAxis = vec3::kAxis[0];
+const vec3 &vec3::yAxis = vec3::kAxis[1];
+const vec3 &vec3::zAxis = vec3::kAxis[2];
+
 const vec3 vec3::origin(0.0f, 0.0f, 0.0f);
 
 void vec3::rotate(float angle, const vec3 &axe) {

@@ -103,9 +103,7 @@ struct vec3 {
     float &operator[](size_t index);
 
     static inline const vec3 getAxis(axis a) {
-        if (a == kAxisX) return xAxis;
-        else if (a == kAxisY) return yAxis;
-        return zAxis;
+        return kAxis[a];
     }
 
     static bool rayCylinderIntersect(const vec3 &start, const vec3 &direction,
@@ -119,10 +117,12 @@ struct vec3 {
 
     static vec3 rand(float mx, float my, float mz);
 
-    static const vec3 xAxis;
-    static const vec3 yAxis;
-    static const vec3 zAxis;
+    static const vec3 kAxis[3];
     static const vec3 origin;
+
+    static const vec3 &xAxis;// = kAxis[0];
+    static const vec3 &yAxis;// = kAxis[1];
+    static const vec3 &zAxis;// = kAxis[2];
 };
 
 inline constexpr vec3::vec3()
