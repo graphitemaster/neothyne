@@ -69,6 +69,94 @@ quat operator*(const quat &l, const quat &r) {
     // [dw-ax-by-cz,dz+ay-bx+cw,dy-az+bw+cx,dx+aw+bz-cy]
     return _mm_pshufd(e, _MM_SHUFFLE(2,3,1,0)); // 1, 0.5
 }
+
+void quat::getMatrix(mat4 *mat) const {
+    // It's possible to construct a rotation matrix as the product of two
+    // simple 4x4 matrices. Lets show how this accomplishes just that,
+    // (forget everything you've learned about the relationship of columns
+    //  and rows with respect to multi-vectors.)
+    //
+    // Remember the standard formula for vector rotation by a quaternion?
+    //
+    // q v ~q
+    //
+    // The trick exploited here is to represent each product above as a
+    // matrix transformation and concatenate the results.
+    //
+    // Lets represent the quaternion as a rotor in geometric algebra -
+    // though you can do the same using the standard formula, this tends
+    // to show the process better though.
+    //
+    // Our rotor `q' expressed in a bivector basis:
+    //  q1 e2e3 + q2 e3e1 + q3 e1e2 + q4
+    //
+    // Note: e2e3, e3e1, and e1e2 may coorespond to the yz, xz, and xy
+    // planes respectively
+    //
+    // We want to calculate q v ~q - to do that we need to find a matrix
+    // to represent the multiplication by a rotor on the left first.
+    //
+    // let I = e1e2e3
+    // (q1 e2e3 + q2 e3e1 + q3 e1e2 + q4) e1    q1 I  +  q2 e3 + -q3 e2 + q4 e1
+    //                                    e2 = -q1 e3 +  q2 I  +  q3 e1 + q4 e2
+    //                                    e3    q1 e2 + -q2 e1 +  q3 I  + q4 e3
+    //                                    I    -q1 e1 + -q2 e2 + -q3 e3 + q4 I
+    //
+    // which is the matrix:
+    // |  q4 -q3  q2 q1 |
+    // |  q3  q4 -q1 q2 |
+    // | -q2  q1  q4 a3 |
+    // | -q1 -q2 -q3 14 |
+    //
+    // If we follow the same process for right-multiplication by the
+    // rotor's inverse (-q1 e2e3 + -q2 e3e1 + -q3 e1e2 + q4) - we get
+    // the following:
+    //
+    // e1 (-q1 e2e3 + -q2 e3e1 + -q3 e1e2 + q4)     -q1 I  +  q2 e3 + -q3 e2 + q4 e1
+    // e2                                        =  -q1 e3 + -q2 I  +  q3 e1 + q4 e2
+    // e3                                            q1 e2 + -q2 e1 + -q3 I  + q4 e3
+    // I                                             q1 e1 +  q2 e2 +  q3 e3 + q4 I
+    //
+    // which is the matrix:
+    // | q4 -q3  q2 -q1|
+    // | q3  q4 -q1 -q2|
+    // |-q2  q1  q4 -q3|
+    // | q1  q2  q3  q4|
+    //
+    // Now we have a matrix for the left-multiplication (q v) and for the
+    // right-multiplication by the conjugate (v ~q) which needs to be
+    // applied sequentially - so concatenate them thus:
+    //
+    //                             | q4 -q3  q2  q1|   | q4 -q3  q2 -q1|
+    // q v ~q =   | v1 v2 v3 0 | * | q3  q4 -q1  q2| * | q3  q4 -q1 -q2|
+    //                             |-q2  q1  q4  q3|   |-q2  q1  q4 -q3|
+    //                             |-q1 -q2 -q3  q4|   | q1  q2  q3  q4|
+
+    const __m128 C0 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(0,1,2,3));
+    const __m128 C1 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(1,0,3,2));
+    const __m128 C2 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2,3,0,1));
+    const __m128 C3 = v;
+
+    // a = -a requires flipping the sign bit, so xor sign bit with 1
+    static const int kP = 0x00000000;
+    static const int kM = 0x80000000;
+    static const __m128 L0 = _mm_castsi128_ps(_mm_setr_epi32(kP, kM, kP, kM));
+    static const __m128 L1 = _mm_castsi128_ps(_mm_setr_epi32(kP, kP, kM, kM));
+    static const __m128 L2 = _mm_castsi128_ps(_mm_setr_epi32(kM, kP, kP, kM));
+    static const __m128 R0 = _mm_castsi128_ps(_mm_setr_epi32(kP, kM, kP, kP));
+    static const __m128 R1 = _mm_castsi128_ps(_mm_setr_epi32(kP, kP, kM, kP));
+    static const __m128 R2 = _mm_castsi128_ps(_mm_setr_epi32(kM, kP, kP, kP));
+    static const __m128 R3 = _mm_castsi128_ps(_mm_setr_epi32(kM, kM, kM, kP));
+
+    *mat = m::mat4(m::vec4(_mm_xor_ps(C0, L0)),
+                   m::vec4(_mm_xor_ps(C1, L1)),
+                   m::vec4(_mm_xor_ps(C2, L2)),
+                   m::vec4(C3)) *
+           m::mat4(m::vec4(_mm_xor_ps(C0, R0)),
+                   m::vec4(_mm_xor_ps(C1, R1)),
+                   m::vec4(_mm_xor_ps(C2, R2)),
+                   m::vec4(_mm_xor_ps(C3, R3)));
+}
 #else
 quat operator*(const quat &l, const quat &r) {
     const float w = (l.w * r.w) - (l.x * r.x) - (l.y * r.y) - (l.z * r.z);
@@ -76,6 +164,38 @@ quat operator*(const quat &l, const quat &r) {
     const float y = (l.y * r.w) + (l.w * r.y) + (l.z * r.x) - (l.x * r.z);
     const float z = (l.z * r.w) + (l.w * r.z) + (l.x * r.y) - (l.y * r.x);
     return { x, y, z, w };
+}
+
+void quat::getMatrix(mat4 *mat) const {
+    // Same as the SSE code (boy this is clever  ...)
+    const m::vec4 C0(w, z, y, x);
+    const m::vec4 C1(z, w, x, y);
+    const m::vec4 C2(y, x, w, z);
+    const m::vec4 C3(x, y, z, w);
+
+    static const m::vec4 kL0( 0.0f, -0.0f,  0.0f, -0.0f);
+    static const m::vec4 kL1( 0.0f,  0.0f, -0.0f, -0.0f);
+    static const m::vec4 kL2(-0.0f,  0.0f,  0.0f, -0.0f);
+    static const m::vec4 kR0( 0.0f, -0.0f,  0.0f,  0.0f);
+    static const m::vec4 kR1( 0.0f,  0.0f, -0.0f,  0.0f);
+    static const m::vec4 kR2(-0.0f,  0.0f,  0.0f,  0.0f);
+    static const m::vec4 kR3(-0.0f, -0.0f, -0.0f,  0.0f);
+
+    auto exor = [](const m::vec4 &lhs, const m::vec4 &rhs) {
+        return m::vec4((floatShape { (floatShape { lhs.x }).asInt ^ (floatShape { rhs.x }).asInt }).asFloat,
+                       (floatShape { (floatShape { lhs.y }).asInt ^ (floatShape { rhs.y }).asInt }).asFloat,
+                       (floatShape { (floatShape { lhs.z }).asInt ^ (floatShape { rhs.z }).asInt }).asFloat,
+                       (floatShape { (floatShape { lhs.w }).asInt ^ (floatShape { rhs.w }).asInt }).asFloat);
+    };
+
+    *mat = m::mat4(m::vec4(exor(C0, kL0)),
+                   m::vec4(exor(C1, kL1)),
+                   m::vec4(exor(C2, kL2)),
+                   m::vec4(C3)) *
+           m::mat4(m::vec4(exor(C0, kR0)),
+                   m::vec4(exor(C1, kR1)),
+                   m::vec4(exor(C2, kR2)),
+                   m::vec4(exor(C3, kR3)));
 }
 #endif
 
@@ -85,24 +205,6 @@ quat operator*(const quat &q, const vec3 &v) {
 
 quat operator*(const quat &l, float k) {
     return { l.x*k, l.y*k, l.z*k, l.w*k };
-}
-
-void quat::getMatrix(mat4 *mat) const {
-    const float n = 1.0f / m::sqrt(x*x + y*y + z*z + w*w);
-    const m::vec4 q = (*this) * n;
-    mat->a = { 1.0f - 2.0f*q.y*q.y - 2.0f*q.z*q.z,
-               2.0f*q.x*q.y - 2.0f*q.z*q.w,
-               2.0f*q.x*q.z + 2.0f*q.y*q.w,
-               0.0f };
-    mat->b = { 2.0f*q.x*q.y + 2.0f*q.z*q.w,
-               1.0f - 2.0f*q.x*q.x - 2.0f*q.z*q.z,
-               2.0f*q.y*q.z - 2.0f*q.x*q.w,
-               0.0f };
-    mat->c = { 2.0f*q.x*q.z - 2.0f*q.y*q.w,
-               2.0f*q.y*q.z + 2.0f*q.x*q.w,
-               1.0f - 2.0f*q.x*q.x - 2.0f*q.y*q.y,
-               0.0f };
-    mat->d = { 0.0f, 0.0f, 0.0f, 1.0f };
 }
 
 }
