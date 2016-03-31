@@ -132,7 +132,7 @@ void quat::getMatrix(mat4 *mat) const {
     //                             |-q2  q1  q4  q3|   |-q2  q1  q4 -q3|
     //                             |-q1 -q2 -q3  q4|   | q1  q2  q3  q4|
     //
-    // and no we have our rotation matrix!
+    // and now we have our rotation matrix!
 
     const __m128 C0 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(0,1,2,3));
     const __m128 C1 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(1,0,3,2));
