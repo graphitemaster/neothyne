@@ -90,7 +90,7 @@ void quat::getMatrix(mat4 *mat) const {
     // Our rotor `q' expressed in a bivector basis:
     //  q1 e2e3 + q2 e3e1 + q3 e1e2 + q4
     //
-    // Note: e2e3, e3e1, and e1e2 may coorespond to the yz, xz, and xy
+    // Note: e2e3, e3e1, and e1e2 may correspond to the yz, xz, and xy
     // planes respectively
     //
     // We want to calculate q v ~q - to do that we need to find a matrix
@@ -125,12 +125,14 @@ void quat::getMatrix(mat4 *mat) const {
     //
     // Now we have a matrix for the left-multiplication (q v) and for the
     // right-multiplication by the conjugate (v ~q) which needs to be
-    // applied sequentially - so concatenate them thus:
+    // applied sequentially - so concatenate them like so:
     //
     //                             | q4 -q3  q2  q1|   | q4 -q3  q2 -q1|
     // q v ~q =   | v1 v2 v3 0 | * | q3  q4 -q1  q2| * | q3  q4 -q1 -q2|
     //                             |-q2  q1  q4  q3|   |-q2  q1  q4 -q3|
     //                             |-q1 -q2 -q3  q4|   | q1  q2  q3  q4|
+    //
+    // and no we have our rotation matrix!
 
     const __m128 C0 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(0,1,2,3));
     const __m128 C1 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(1,0,3,2));
@@ -167,7 +169,7 @@ quat operator*(const quat &l, const quat &r) {
 }
 
 void quat::getMatrix(mat4 *mat) const {
-    // Same as the SSE code (boy this is clever  ...)
+    // Same as the SSE code
     const m::vec4 C0(w, z, y, x);
     const m::vec4 C1(z, w, x, y);
     const m::vec4 C2(y, x, w, z);
