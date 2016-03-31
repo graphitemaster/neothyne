@@ -13,6 +13,7 @@ struct mat4;
 
 struct quat : vec4 {
     constexpr quat();
+    constexpr quat(const m::vec4 &v);
     constexpr quat(const float (&vals)[4]);
     constexpr quat(float x, float y, float z, float w);
 
@@ -38,6 +39,11 @@ struct quat : vec4 {
 };
 
 inline constexpr quat::quat() = default;
+
+inline constexpr quat::quat(const m::vec4 &vec)
+    : vec4(vec)
+{
+}
 
 inline constexpr quat::quat(const float (&vals)[4])
     : vec4(vals)

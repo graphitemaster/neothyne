@@ -80,11 +80,7 @@ quat operator*(const quat &l, const quat &r) {
 #endif
 
 quat operator*(const quat &q, const vec3 &v) {
-    const float w = - (q.x * v.x) - (q.y * v.y) - (q.z * v.z);
-    const float x = (q.w * v.x) + (q.y * v.z) - (q.z * v.y);
-    const float y = (q.w * v.y) + (q.z * v.x) - (q.x * v.z);
-    const float z = (q.w * v.z) + (q.x * v.y) - (q.y * v.x);
-    return { x, y, z, w };
+    return m::vec4(q.asVec3 - v, - (q.x * v.x) - (q.y * v.y) - (q.z * v.z) );
 }
 
 quat operator*(const quat &l, float k) {
@@ -93,21 +89,18 @@ quat operator*(const quat &l, float k) {
 
 void quat::getMatrix(mat4 *mat) const {
     const float n = 1.0f / m::sqrt(x*x + y*y + z*z + w*w);
-    const float qx = x*n;
-    const float qy = y*n;
-    const float qz = z*n;
-    const float qw = w*n;
-    mat->a = { 1.0f - 2.0f*qy*qy - 2.0f*qz*qz,
-               2.0f*qx*qy - 2.0f*qz*qw,
-               2.0f*qx*qz + 2.0f*qy*qw,
+    const m::vec4 q = (*this) * n;
+    mat->a = { 1.0f - 2.0f*q.y*q.y - 2.0f*q.z*q.z,
+               2.0f*q.x*q.y - 2.0f*q.z*q.w,
+               2.0f*q.x*q.z + 2.0f*q.y*q.w,
                0.0f };
-    mat->b = { 2.0f*qx*qy + 2.0f*qz*qw,
-               1.0f - 2.0f*qx*qx - 2.0f*qz*qz,
-               2.0f*qy*qz - 2.0f*qx*qw,
+    mat->b = { 2.0f*q.x*q.y + 2.0f*q.z*q.w,
+               1.0f - 2.0f*q.x*q.x - 2.0f*q.z*q.z,
+               2.0f*q.y*q.z - 2.0f*q.x*q.w,
                0.0f };
-    mat->c = { 2.0f*qx*qz - 2.0f*qy*qw,
-               2.0f*qy*qz + 2.0f*qx*qw,
-               1.0f - 2.0f*qx*qx - 2.0f*qy*qy,
+    mat->c = { 2.0f*q.x*q.z - 2.0f*q.y*q.w,
+               2.0f*q.y*q.z + 2.0f*q.x*q.w,
+               1.0f - 2.0f*q.x*q.x - 2.0f*q.y*q.y,
                0.0f };
     mat->d = { 0.0f, 0.0f, 0.0f, 1.0f };
 }

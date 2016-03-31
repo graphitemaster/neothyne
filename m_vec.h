@@ -313,6 +313,7 @@ struct vec4 {
     union {
         struct { float x, y, z, w; };
         float m[4];
+        vec3 asVec3;
 #ifdef __SSE2__
         __m128 v;
 #endif

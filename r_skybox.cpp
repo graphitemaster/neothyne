@@ -81,21 +81,39 @@ bool skybox::load(const u::string &skyboxName) {
     // for vertical fog mixture that reaches into the sky if the map has fog at
     // all.
     const auto &tex = m_textures[2].get();
+    if (tex.flags() & kTexFlagCompressed) {
+        // Unfortunately it's not possible to inherit the sky color from
+        // texture data if it's a compressed block format.
+        return false;
+    }
+
     const auto &data = tex.data();
 
-    uint32_t totals[3] = {0};
+    // Assuming a maximum of 4096*4096 with 255 values per component, a
+    // 32-bit unsigned integer is the perfect size to store this value!
+    uint32_t totals[4] = {0};
     const size_t stride = tex.width() * tex.bpp();
     for (size_t y = 0; y < tex.height(); y++) {
         for (size_t x = 0; x < tex.width(); x++) {
-            for (size_t i = 0; i < 3; i++) {
+            for (size_t i = 0; i < tex.bpp(); i++) {
                 const size_t index = (y * stride) + x*tex.bpp() + i;
                 totals[i] += data[index];
             }
         }
     }
-    int reduce[3] = {0};
-    for (size_t i = 0; i < 3; i++)
+    int reduce[4] = {0};
+    for (size_t i = 0; i < tex.bpp(); i++)
         reduce[i] = totals[i] / (tex.width() * tex.height());
+
+    if (tex.bpp() == 4) {
+        // Do a cheap "alpha blend" of sorts to adjust the intensity of the
+        // average color if there exists an alpha channel
+        unsigned int alpha = reduce[3];
+        unsigned int inv = 256 - alpha;
+        reduce[0] = alpha * reduce[0] + inv * reduce[0];
+        reduce[1] = alpha * reduce[1] + inv * reduce[1];
+        reduce[2] = alpha * reduce[2] + inv * reduce[2];
+    }
 
     m_skyColor = { reduce[0] / 255.0f,
                    reduce[1] / 255.0f,
