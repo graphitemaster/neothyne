@@ -25,7 +25,7 @@ struct quat : vec4 {
     void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
 
     // get matrix of this quaternion
-    void getMatrix(mat4 *mat) const;
+    mat4 getMatrix() const;
 
     friend quat operator*(const quat &l, const vec3 &v);
     friend quat operator*(const quat &l, const quat &r);

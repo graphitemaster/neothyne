@@ -255,8 +255,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             // Last 1/4th bottom screen
             const m::vec3 rot(160, 0, 0);
             m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
-            m::mat4 rotate;
-            rx.getMatrix(&rotate);
+            m::mat4 rotate = rx.getMatrix();
             plane.setRotate(rotate);
             plane.setPosition({0, 0, -10});
             plane.setWorld({0, -7.3f, 60.0f});
@@ -281,8 +280,7 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
 
             const m::vec3 rot(0.0f, -(m::fmod(gPipeline.time() / 10.0f, 361.0f)), 0.0f);
             m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
-            m::mat4 rotate;
-            ry.getMatrix(&rotate);
+            m::mat4 rotate = ry.getMatrix();
             p.setRotate(rotate);
 
             int w = neoWidth() / 12;

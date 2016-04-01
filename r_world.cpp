@@ -730,8 +730,7 @@ void world::geometryPass(const pipeline &pl) {
             const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
             const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
             const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
-            m::mat4 rotate;
-            (rz * ry * rx).getMatrix(&rotate);
+            m::mat4 rotate = (rz * ry * rx).getMatrix();
             pm.setRotate(rotate);
 
             if (mdl->animated()) {
@@ -792,8 +791,7 @@ void world::geometryPass(const pipeline &pl) {
             const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
             const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
             const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
-            m::mat4 rotate;
-            (rz * ry * rx).getMatrix(&rotate);
+            m::mat4 rotate = (rz * ry * rx).getMatrix();
             p.setRotate(rotate);
             p.setScale({0.1, 0.1, 0.1});
             p.setPosition({-0.15, 0.2, -0.35});
@@ -924,8 +922,7 @@ void world::forwardPass(const pipeline &pl) {
             const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
             const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
             const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
-            m::mat4 rotate;
-            (rz * ry * rx).getMatrix(&rotate);
+            m::mat4 rotate = (rz * ry * rx).getMatrix();
             p.setRotate(rotate);
 
             pipeline bp;
@@ -966,8 +963,7 @@ void world::forwardPass(const pipeline &pl) {
             const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
             const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
             const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
-            m::mat4 rotate;
-            (rz * ry * rx).getMatrix(&rotate);
+            m::mat4 rotate = (rz * ry * rx).getMatrix();
             p.setRotate(rotate);
 
             m_bboxMethod.setWVP(p.projection() * p.view() * p.world());

@@ -70,7 +70,7 @@ quat operator*(const quat &l, const quat &r) {
     return _mm_pshufd(e, _MM_SHUFFLE(2,3,1,0)); // 1, 0.5
 }
 
-void quat::getMatrix(mat4 *mat) const {
+m::mat4 quat::getMatrix() const {
     // It's possible to construct a rotation matrix as the product of two
     // simple 4x4 matrices. Lets show how this accomplishes just that,
     // (forget everything you've learned about the relationship of columns
@@ -155,7 +155,7 @@ void quat::getMatrix(mat4 *mat) const {
     const __m128 R2 = *(const __m128 *)kR2;
     const __m128 R3 = *(const __m128 *)kR3;
 
-    *mat = m::mat4(m::vec4(_mm_xor_ps(C0, L0)),
+    return m::mat4(m::vec4(_mm_xor_ps(C0, L0)),
                    m::vec4(_mm_xor_ps(C1, L1)),
                    m::vec4(_mm_xor_ps(C2, L2)),
                    m::vec4(C3)) *
@@ -173,36 +173,23 @@ quat operator*(const quat &l, const quat &r) {
     return { x, y, z, w };
 }
 
-void quat::getMatrix(mat4 *mat) const {
+m::mat4 quat::getMatrix() const {
     // Same as the SSE code
     const m::vec4 C0(w, z, y, x);
     const m::vec4 C1(z, w, x, y);
     const m::vec4 C2(y, x, w, z);
     const m::vec4 C3(x, y, z, w);
 
-    static const m::vec4 kL0( 0.0f, -0.0f,  0.0f, -0.0f);
-    static const m::vec4 kL1( 0.0f,  0.0f, -0.0f, -0.0f);
-    static const m::vec4 kL2(-0.0f,  0.0f,  0.0f, -0.0f);
-    static const m::vec4 kR0( 0.0f, -0.0f,  0.0f,  0.0f);
-    static const m::vec4 kR1( 0.0f,  0.0f, -0.0f,  0.0f);
-    static const m::vec4 kR2(-0.0f,  0.0f,  0.0f,  0.0f);
-    static const m::vec4 kR3(-0.0f, -0.0f, -0.0f,  0.0f);
+    static const m::vec4 kL0( 1.0f, -1.0f,  1.0f, -1.0f);
+    static const m::vec4 kL1( 1.0f,  1.0f, -1.0f, -1.0f);
+    static const m::vec4 kL2(-1.0f,  1.0f,  1.0f, -1.0f);
+    static const m::vec4 kR0( 1.0f, -1.0f,  1.0f,  1.0f);
+    static const m::vec4 kR1( 1.0f,  1.0f, -1.0f,  1.0f);
+    static const m::vec4 kR2(-1.0f,  1.0f,  1.0f,  1.0f);
+    static const m::vec4 kR3(-1.0f, -1.0f, -1.0f,  1.0f);
 
-    auto exor = [](const m::vec4 &lhs, const m::vec4 &rhs) {
-        return m::vec4((floatShape { (floatShape { lhs.x }).asInt ^ (floatShape { rhs.x }).asInt }).asFloat,
-                       (floatShape { (floatShape { lhs.y }).asInt ^ (floatShape { rhs.y }).asInt }).asFloat,
-                       (floatShape { (floatShape { lhs.z }).asInt ^ (floatShape { rhs.z }).asInt }).asFloat,
-                       (floatShape { (floatShape { lhs.w }).asInt ^ (floatShape { rhs.w }).asInt }).asFloat);
-    };
-
-    *mat = m::mat4(m::vec4(exor(C0, kL0)),
-                   m::vec4(exor(C1, kL1)),
-                   m::vec4(exor(C2, kL2)),
-                   m::vec4(C3)) *
-           m::mat4(m::vec4(exor(C0, kR0)),
-                   m::vec4(exor(C1, kR1)),
-                   m::vec4(exor(C2, kR2)),
-                   m::vec4(exor(C3, kR3)));
+    return m::mat4(C0 * kL0, C1 * kL1, C2 * kL2, C3) *
+           m::mat4(C0 * kR0, C1 * kR1, C2 * kR2, C3 * kR3);
 }
 #endif
 
