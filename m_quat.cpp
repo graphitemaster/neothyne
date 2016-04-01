@@ -140,15 +140,20 @@ void quat::getMatrix(mat4 *mat) const {
     const __m128 C3 = v;
 
     // a = -a requires flipping the sign bit, so xor sign bit with 1
-    static const int kP = 0x00000000;
-    static const int kM = 0x80000000;
-    const __m128 L0 = _mm_castsi128_ps(_mm_setr_epi32(kP, kM, kP, kM));
-    const __m128 L1 = _mm_castsi128_ps(_mm_setr_epi32(kP, kP, kM, kM));
-    const __m128 L2 = _mm_castsi128_ps(_mm_setr_epi32(kM, kP, kP, kM));
-    const __m128 R0 = _mm_castsi128_ps(_mm_setr_epi32(kP, kM, kP, kP));
-    const __m128 R1 = _mm_castsi128_ps(_mm_setr_epi32(kP, kP, kM, kP));
-    const __m128 R2 = _mm_castsi128_ps(_mm_setr_epi32(kM, kP, kP, kP));
-    const __m128 R3 = _mm_castsi128_ps(_mm_setr_epi32(kM, kM, kM, kP));
+    alignas(16) static const uint32_t kL0[] = { 0x00000000, 0x80000000, 0x00000000, 0x80000000 };
+    alignas(16) static const uint32_t kL1[] = { 0x00000000, 0x00000000, 0x80000000, 0x80000000 };
+    alignas(16) static const uint32_t kL2[] = { 0x80000000, 0x00000000, 0x00000000, 0x80000000 };
+    alignas(16) static const uint32_t kR0[] = { 0x00000000, 0x80000000, 0x00000000, 0x00000000 };
+    alignas(16) static const uint32_t kR1[] = { 0x00000000, 0x00000000, 0x80000000, 0x00000000 };
+    alignas(16) static const uint32_t kR2[] = { 0x80000000, 0x00000000, 0x00000000, 0x00000000 };
+    alignas(16) static const uint32_t kR3[] = { 0x80000000, 0x80000000, 0x80000000, 0x00000000 };
+    const __m128 L0 = *(const __m128 *)kL0;
+    const __m128 L1 = *(const __m128 *)kL1;
+    const __m128 L2 = *(const __m128 *)kL2;
+    const __m128 R0 = *(const __m128 *)kR0;
+    const __m128 R1 = *(const __m128 *)kR1;
+    const __m128 R2 = *(const __m128 *)kR2;
+    const __m128 R3 = *(const __m128 *)kR3;
 
     *mat = m::mat4(m::vec4(_mm_xor_ps(C0, L0)),
                    m::vec4(_mm_xor_ps(C1, L1)),
