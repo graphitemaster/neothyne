@@ -134,9 +134,9 @@ void quat::getMatrix(mat4 *mat) const {
     //
     // and now we have our rotation matrix!
 
-    const __m128 C0 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(0,1,2,3));
-    const __m128 C1 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(1,0,3,2));
-    const __m128 C2 = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2,3,0,1));
+    const __m128 C0 = _mm_pshufd(v, _MM_SHUFFLE(0,1,2,3));
+    const __m128 C1 = _mm_pshufd(v, _MM_SHUFFLE(1,0,3,2));
+    const __m128 C2 = _mm_pshufd(v, _MM_SHUFFLE(2,3,0,1));
     const __m128 C3 = v;
 
     // a = -a requires flipping the sign bit, so xor sign bit with 1
