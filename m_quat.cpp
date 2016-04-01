@@ -69,6 +69,15 @@ quat operator*(const quat &l, const quat &r) {
     // [dw-ax-by-cz,dz+ay-bx+cw,dy-az+bw+cx,dx+aw+bz-cy]
     return _mm_pshufd(e, _MM_SHUFFLE(2,3,1,0)); // 1, 0.5
 }
+#else
+quat operator*(const quat &l, const quat &r) {
+    const float w = (l.w * r.w) - (l.x * r.x) - (l.y * r.y) - (l.z * r.z);
+    const float x = (l.x * r.w) + (l.w * r.x) + (l.y * r.z) - (l.z * r.y);
+    const float y = (l.y * r.w) + (l.w * r.y) + (l.z * r.x) - (l.x * r.z);
+    const float z = (l.z * r.w) + (l.w * r.z) + (l.x * r.y) - (l.y * r.x);
+    return { x, y, z, w };
+}
+#endif
 
 m::mat4 quat::getMatrix() const {
     // It's possible to construct a rotation matrix as the product of two
@@ -133,52 +142,10 @@ m::mat4 quat::getMatrix() const {
     //                             |-q1 -q2 -q3  q4|   | q1  q2  q3  q4|
     //
     // and now we have our rotation matrix!
-
-    const __m128 C0 = _mm_pshufd(v, _MM_SHUFFLE(0,1,2,3));
-    const __m128 C1 = _mm_pshufd(v, _MM_SHUFFLE(1,0,3,2));
-    const __m128 C2 = _mm_pshufd(v, _MM_SHUFFLE(2,3,0,1));
-    const __m128 C3 = v;
-
-    // a = -a requires flipping the sign bit, so xor sign bit with 1
-    alignas(16) static const uint32_t kL0[] = { 0x00000000, 0x80000000, 0x00000000, 0x80000000 };
-    alignas(16) static const uint32_t kL1[] = { 0x00000000, 0x00000000, 0x80000000, 0x80000000 };
-    alignas(16) static const uint32_t kL2[] = { 0x80000000, 0x00000000, 0x00000000, 0x80000000 };
-    alignas(16) static const uint32_t kR0[] = { 0x00000000, 0x80000000, 0x00000000, 0x00000000 };
-    alignas(16) static const uint32_t kR1[] = { 0x00000000, 0x00000000, 0x80000000, 0x00000000 };
-    alignas(16) static const uint32_t kR2[] = { 0x80000000, 0x00000000, 0x00000000, 0x00000000 };
-    alignas(16) static const uint32_t kR3[] = { 0x80000000, 0x80000000, 0x80000000, 0x00000000 };
-    const __m128 L0 = *(const __m128 *)kL0;
-    const __m128 L1 = *(const __m128 *)kL1;
-    const __m128 L2 = *(const __m128 *)kL2;
-    const __m128 R0 = *(const __m128 *)kR0;
-    const __m128 R1 = *(const __m128 *)kR1;
-    const __m128 R2 = *(const __m128 *)kR2;
-    const __m128 R3 = *(const __m128 *)kR3;
-
-    return m::mat4(m::vec4(_mm_xor_ps(C0, L0)),
-                   m::vec4(_mm_xor_ps(C1, L1)),
-                   m::vec4(_mm_xor_ps(C2, L2)),
-                   m::vec4(C3)) *
-           m::mat4(m::vec4(_mm_xor_ps(C0, R0)),
-                   m::vec4(_mm_xor_ps(C1, R1)),
-                   m::vec4(_mm_xor_ps(C2, R2)),
-                   m::vec4(_mm_xor_ps(C3, R3)));
-}
-#else
-quat operator*(const quat &l, const quat &r) {
-    const float w = (l.w * r.w) - (l.x * r.x) - (l.y * r.y) - (l.z * r.z);
-    const float x = (l.x * r.w) + (l.w * r.x) + (l.y * r.z) - (l.z * r.y);
-    const float y = (l.y * r.w) + (l.w * r.y) + (l.z * r.x) - (l.x * r.z);
-    const float z = (l.z * r.w) + (l.w * r.z) + (l.x * r.y) - (l.y * r.x);
-    return { x, y, z, w };
-}
-
-m::mat4 quat::getMatrix() const {
-    // Same as the SSE code
-    const m::vec4 C0(w, z, y, x);
-    const m::vec4 C1(z, w, x, y);
-    const m::vec4 C2(y, x, w, z);
-    const m::vec4 C3(x, y, z, w);
+    const m::vec4 C0 = swizzle<3, 2, 1, 0>();
+    const m::vec4 C1 = swizzle<2, 3, 0, 1>();
+    const m::vec4 C2 = swizzle<1, 0, 3, 2>();
+    const m::vec4 C3 = *this;
 
     static const m::vec4 kL0( 1.0f, -1.0f,  1.0f, -1.0f);
     static const m::vec4 kL1( 1.0f,  1.0f, -1.0f, -1.0f);
@@ -191,7 +158,6 @@ m::mat4 quat::getMatrix() const {
     return m::mat4(C0 * kL0, C1 * kL1, C2 * kL2, C3) *
            m::mat4(C0 * kR0, C1 * kR1, C2 * kR2, C3 * kR3);
 }
-#endif
 
 quat operator*(const quat &q, const vec3 &v) {
     return m::vec4(q.asVec3 - v, - (q.x * v.x) - (q.y * v.y) - (q.z * v.z) );
