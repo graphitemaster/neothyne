@@ -118,10 +118,10 @@ void quat::getMatrix(mat4 *mat) const {
     // I                                             q1 e1 +  q2 e2 +  q3 e3 + q4 I
     //
     // which is the matrix:
-    // | q4 -q3  q2 -q1|
-    // | q3  q4 -q1 -q2|
-    // |-q2  q1  q4 -q3|
-    // | q1  q2  q3  q4|
+    // | q4 -q3  q2 -q1 |
+    // | q3  q4 -q1 -q2 |
+    // |-q2  q1  q4 -q3 |
+    // | q1  q2  q3  q4 |
     //
     // Now we have a matrix for the left-multiplication (q v) and for the
     // right-multiplication by the conjugate (v ~q) which needs to be
@@ -211,7 +211,7 @@ quat operator*(const quat &q, const vec3 &v) {
 }
 
 quat operator*(const quat &l, float k) {
-    return { l.x*k, l.y*k, l.z*k, l.w*k };
+    return (vec4 &)l * k;
 }
 
 }
