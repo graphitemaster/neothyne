@@ -142,13 +142,13 @@ void quat::getMatrix(mat4 *mat) const {
     // a = -a requires flipping the sign bit, so xor sign bit with 1
     static const int kP = 0x00000000;
     static const int kM = 0x80000000;
-    static const __m128 L0 = _mm_castsi128_ps(_mm_setr_epi32(kP, kM, kP, kM));
-    static const __m128 L1 = _mm_castsi128_ps(_mm_setr_epi32(kP, kP, kM, kM));
-    static const __m128 L2 = _mm_castsi128_ps(_mm_setr_epi32(kM, kP, kP, kM));
-    static const __m128 R0 = _mm_castsi128_ps(_mm_setr_epi32(kP, kM, kP, kP));
-    static const __m128 R1 = _mm_castsi128_ps(_mm_setr_epi32(kP, kP, kM, kP));
-    static const __m128 R2 = _mm_castsi128_ps(_mm_setr_epi32(kM, kP, kP, kP));
-    static const __m128 R3 = _mm_castsi128_ps(_mm_setr_epi32(kM, kM, kM, kP));
+    const __m128 L0 = _mm_castsi128_ps(_mm_setr_epi32(kP, kM, kP, kM));
+    const __m128 L1 = _mm_castsi128_ps(_mm_setr_epi32(kP, kP, kM, kM));
+    const __m128 L2 = _mm_castsi128_ps(_mm_setr_epi32(kM, kP, kP, kM));
+    const __m128 R0 = _mm_castsi128_ps(_mm_setr_epi32(kP, kM, kP, kP));
+    const __m128 R1 = _mm_castsi128_ps(_mm_setr_epi32(kP, kP, kM, kP));
+    const __m128 R2 = _mm_castsi128_ps(_mm_setr_epi32(kM, kP, kP, kP));
+    const __m128 R3 = _mm_castsi128_ps(_mm_setr_epi32(kM, kM, kM, kP));
 
     *mat = m::mat4(m::vec4(_mm_xor_ps(C0, L0)),
                    m::vec4(_mm_xor_ps(C1, L1)),
