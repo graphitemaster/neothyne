@@ -7,6 +7,10 @@
 #include "u_assert.h"
 #include "u_traits.h"
 
+#ifdef __SSE2__
+#include <xmmintrin.h>
+#endif
+
 namespace m {
 
 static const double kC1PIO2 = 1*kPiHalf;
@@ -540,9 +544,23 @@ float fmod(float x, float y) {
 }
 
 float sqrt(float x) {
-    // Nothing can beat math.h's sqrt performance. Mostly because all native
-    // instruction sets have an instruction for it. So just use math.h.
+#ifdef __SSE2__
+    // The use of inverse square root is actually faster than a full
+    // sqrtss instruction which would be issued if we called sqrtf(x)
+    // like we do below. This only has ~11 bits of precision and has
+    // 1/4th the latency.
+    //
+    // We can actually survive with ~11 bits of precision without much
+    // concern for accuracy since we favor techniques which avoid sqrt
+    // where precision matters.
+    const __m128 a = _mm_set1_ps(x);   // shufps $0x0,%xmm0,%xmm0
+                                       // movaps %xmm0,%xmm1
+    const __m128 b = _mm_rsqrt_ss(a);  // rsqrtss %xmm0,%xmm1
+    const __m128 c = _mm_mul_ps(a, b); // mulps %xmm1, %xmm0
+    return _mm_cvtss_f32(c);           // retq
+#else
     return sqrtf(x);
+#endif
 }
 
 }
