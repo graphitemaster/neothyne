@@ -3030,7 +3030,6 @@ bool texture::save(const u::string &file, saveFormat format, float quality) {
         { &texture::writePNG, kSavePNG }
     };
 
-
     u::vector<unsigned char> data;
     for (const auto &it : kExtensions) {
         if (it.format != format)

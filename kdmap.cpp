@@ -223,7 +223,7 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
 
     // triangle face check
     float fractional = 0.0f;
-    const bool notParallel = plane.getIntersection(&fractional, spherePosition, direction);
+    const bool notParallel = plane.intersect(fractional, spherePosition, direction);
     if (notParallel && fractional >= 0.0f) {
         // calculate hit point
         const m::vec3 checkHitPoint = spherePosition + direction * fractional - plane.n * sphereRadius;
@@ -317,7 +317,7 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
                 if (fraction < kMinFraction)
                     fraction = 0.0f; // prevent small noise
                 if (fraction < minFraction) {
-                    hitPlane.setupPlane(hitPoint, hitNormal);
+                    hitPlane = { hitPoint, hitNormal };
                     trace->plane = hitPlane;
                     trace->fraction = fraction;
                     minFraction = fraction;
@@ -327,15 +327,15 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
         return;
     }
     // not a leaf node
-    m::pointPlane start;
-    m::pointPlane end;
+    m::plane::point start;
+    m::plane::point end;
 
     // check if everything is infront of the splitting plane
     m::plane checkPlane = planes[nodes[node].plane];
     checkPlane.d -= trace->radius;
     start = checkPlane.classify(trace->start, kdTree::kEpsilon);
     end = checkPlane.classify(trace->start + trace->direction, kdTree::kEpsilon);
-    if (start > m::kPointPlaneOnPlane && end > m::kPointPlaneOnPlane) {
+    if (start > m::plane::kOn && end > m::plane::kOn) {
         traceSphere(trace, nodes[node].children[0]);
         return;
     }
@@ -344,7 +344,7 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
     checkPlane.d = planes[nodes[node].plane].d + trace->radius;
     start = checkPlane.classify(trace->start, kdTree::kEpsilon);
     end = checkPlane.classify(trace->start + trace->direction, kdTree::kEpsilon);
-    if (start < m::kPointPlaneOnPlane && end < m::kPointPlaneOnPlane) {
+    if (start < m::plane::kOn && end < m::plane::kOn) {
         traceSphere(trace, nodes[node].children[1]);
         return;
     }
@@ -400,19 +400,19 @@ bool kdMap::isSphereStuck(const m::vec3 &position, float radius, int32_t node) c
         return false;
     }
 
-    m::pointPlane location;
+    m::plane::point location;
     m::plane plane = planes[nodes[node].plane];
 
     // check if everything is in front of the plane
     plane.d -= radius;
     location = plane.classify(position, kdTree::kEpsilon);
-    if (location == m::kPointPlaneFront)
+    if (location == m::plane::kFront)
         return isSphereStuck(position, radius, nodes[node].children[0]);
 
     // check if everything is behind the plane
     plane.d = planes[nodes[node].plane].d + radius;
     location = plane.classify(position, kdTree::kEpsilon);
-    if (location == m::kPointPlaneBack)
+    if (location == m::plane::kBack)
         return isSphereStuck(position, radius, nodes[node].children[1]);
 
     // check both

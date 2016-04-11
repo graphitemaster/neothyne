@@ -15,9 +15,9 @@ m::vec3 kdTriangle::getNormal(const kdTree *const tree) {
 }
 
 void kdTriangle::generatePlane(const kdTree *const tree) {
-    plane.setupPlane(tree->vertices[vertices[0]],
-                     tree->vertices[vertices[1]],
-                     tree->vertices[vertices[2]]);
+    plane = { tree->vertices[vertices[0]],
+              tree->vertices[vertices[1]],
+              tree->vertices[vertices[2]] };
 }
 
 ///! node
@@ -248,10 +248,10 @@ polyPlane kdTree::testTriangle(size_t index, const m::plane &plane) const {
     };
     for (size_t i = 0; i < 3; i++) {
         switch (plane.classify(vertices[indexTo[i]], kEpsilon)) {
-        case m::kPointPlaneFront:
+        case m::plane::kFront:
             backBits = kPolyPlaneSplit;
             break;
-        case m::kPointPlaneBack:
+        case m::plane::kBack:
             frontBits = kPolyPlaneSplit;
             break;
         default:

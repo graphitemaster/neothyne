@@ -145,8 +145,8 @@ mat4 mat4::inverse() const {
                                                        _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(2,2,2,2))));
     const __m128 f4 = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(0,0,0,0)),
                                             _mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(3,3,3,3)), _MM_SHUFFLE(2,0,0,0))),
-                                _mm_mul_ps(_mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,0,0,0)),
-                                                      _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(3,3,3,3))));
+                                 _mm_mul_ps(_mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,0,0,0)),
+                                                       _mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(3,3,3,3))));
     const __m128 f5 = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(c.v, b.v, _MM_SHUFFLE(0,0,0,0)),
                                             _mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(2,2,2,2)), _MM_SHUFFLE(2,0,0,0))),
                                  _mm_mul_ps(_mm_pshufd(_mm_shuffle_ps(d.v, c.v, _MM_SHUFFLE(0,0,0,0)), _MM_SHUFFLE(2,0,0,0)),

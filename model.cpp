@@ -561,9 +561,9 @@ bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store) {
             for (size_t v = 0; v < 10; v++)
                 if (p.mask & (1 << v))
                     data[v] += (*frameData++) * p.channelScale[v];
-            const m::vec3 translate(data[0], data[1], data[2]);
-            const m::quat rotate(data[3], data[4], data[5], data[6]);
-            const m::vec3 scale(data[7], data[8], data[9]);
+            const m::vec3 translate((const float (&)[3])data[0]);
+            const m::quat rotate((const float (&)[4])data[3]);
+            const m::vec3 scale((const float (&)[3])data[7]);
             const m::mat3x4 m(rotate.normalize(), translate, scale);
             store->m_frames[size + (i*hdr->numPoses + j)] =
                 p.parent >= 0

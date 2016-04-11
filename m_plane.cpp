@@ -37,12 +37,12 @@ void frustum::setup(const m::vec3 &origin, const m::quat &orient, const m::persp
     const m::vec3 nbl = origin + nearPlane - nearUp - nearSide;
     const m::vec3 nbr = origin + nearPlane - nearUp + nearSide;
 
-    m_planes[kPlaneLeft].setupPlane(fbl, ftl, ntl);
-    m_planes[kPlaneRight].setupPlane(ftr, fbr, nbr);
-    m_planes[kPlaneUp].setupPlane(ntl, ftl, ftr);
-    m_planes[kPlaneDown].setupPlane(fbr, fbl, nbl);
-    m_planes[kPlaneNear].setupPlane(origin + nearPlane, direction);
-    m_planes[kPlaneFar].setupPlane(fbr, ftr, ftl);
+    m_planes[kPlaneLeft] = { fbl, ftl, ntl };
+    m_planes[kPlaneRight] = { ftr, fbr, nbr };
+    m_planes[kPlaneUp] = { ntl, ftl, ftr };
+    m_planes[kPlaneDown] = { fbr, fbl, nbl };
+    m_planes[kPlaneNear] = { origin + nearPlane, direction };
+    m_planes[kPlaneFar] = { fbr, ftr, ftl };
 }
 
 }
