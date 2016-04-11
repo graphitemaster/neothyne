@@ -54,7 +54,7 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth)
 
     // find a plane which gives a good balanced node
     for (size_t i = 0; i < 3; i++) {
-        split(tree, tris, (m::axis)i, *frontList[i], *backList[i], *splitList[i], plane[i]);
+        split(tree, tris, m::axis(i), *frontList[i], *backList[i], *splitList[i], plane[i]);
         const size_t fsize = (*frontList[i]).size();
         const size_t bsize = (*backList[i]).size();
         if (fsize > bsize)

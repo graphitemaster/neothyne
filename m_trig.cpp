@@ -21,11 +21,11 @@ static const double kC4PIO2 = 4*kPiHalf;
 // R(x^2): a rational approximation of (asin(x)-x)/x^3
 // Remez error is bounded by:
 //  |(asin(x)-x)/x^3 - R(x^2)| < 2^(-58.75)
+static const float kPS0 =  1.6666586697e-01;
+static const float kPS1 = -4.2743422091e-02;
+static const float kPS2 = -8.6563630030e-03;
+static const float kQS1 = -7.0662963390e-01;
 static float R(float z) {
-    static const float kPS0 =  1.6666586697e-01;
-    static const float kPS1 = -4.2743422091e-02;
-    static const float kPS2 = -8.6563630030e-03;
-    static const float kQS1 = -7.0662963390e-01;
     const float p = z*(kPS0+z*(kPS1+z*kPS2));
     const float q = 1.0f+z*kQS1;
     return p/q;
@@ -89,13 +89,13 @@ static inline void sincosdf(double x, float &sin, float &cos) {
 }
 
 // |tan(x)/x - t(x)| < 2**-25.5 (~[-2e-08, 2e-08])
+static const double kT0 = 3.33331395030791400e-01;
+static const double kT1 = 1.33392002712976743e-01;
+static const double kT2 = 5.33812378445670394e-02;
+static const double kT3 = 2.45283181166547279e-02;
+static const double kT4 = 2.97435743359967305e-03;
+static const double kT5 = 9.46564784943673167e-03;
 static inline float tandf(double x, bool odd) {
-    static const double kT0 = 3.33331395030791400e-01;
-    static const double kT1 = 1.33392002712976743e-01;
-    static const double kT2 = 5.33812378445670394e-02;
-    static const double kT3 = 2.45283181166547279e-02;
-    static const double kT4 = 2.97435743359967305e-03;
-    static const double kT5 = 9.46564784943673167e-03;
     const f64 z = x*x;
     // polynomial reduction into independent terms for parallel evaluation
     const f64 r = kT4 + z*kT5;
@@ -109,15 +109,16 @@ static inline float tandf(double x, bool odd) {
     return odd ? -1.0/v : v;
 }
 
-static inline int rempio2(float x, uint32_t ix, double &y) {
 #if FLT_EVAL_METHOD == 0 || FLT_EVAL_METHOD == 1
-    static const double kToInt = 1.5 / DBL_EPSILON;
+static const double kToInt = 1.5 / DBL_EPSILON;
 #elif FLT_EVAL_METHOD == 2 || defined(_MSC_VER)
-    static const double kToInt = 1.5 / LDBL_EPSILON;
+static const double kToInt = 1.5 / LDBL_EPSILON;
 #endif
-    static const double kInvPio2 = 6.36619772367581382433e-01;
-    static const double kPIO2H = 1.57079631090164184570e+00;
-    static const double kPIO2T = 1.58932547735281966916e-08;
+static const double kInvPio2 = 6.36619772367581382433e-01;
+static const double kPIO2H = 1.57079631090164184570e+00;
+static const double kPIO2T = 1.58932547735281966916e-08;
+
+static inline int rempio2(float x, uint32_t ix, double &y) {
     // 25+53 bit pi is good enough for median size
     if (ix < 0x4DC90FDB) { // |x| ~< 2^28*(pi/2)
         const f64 fn = (f64)x*kInvPio2 + kToInt - kToInt;
@@ -160,9 +161,9 @@ float cos(float x) {
     return sindf(y);
 }
 
+static const float kPIO2Hi = 1.5707962513e+00; // 0x3FC90FDA
+static const float kPIO2Lo = 7.5497894159e-08; // 0x33A22168
 float acos(float x) {
-    static const float kPIO2Hi = 1.5707962513e+00; // 0x3FC90FDA
-    static const float kPIO2Lo = 7.5497894159e-08; // 0x33A22168
     const floatShape shape = { x };
     const uint32_t ix = shape.asInt & 0x7FFFFFFF;
     const uint32_t sign = shape.asInt >> 31;
@@ -218,8 +219,9 @@ float sin(float x) {
     return -cosdf(y);
 }
 
+static const double kPIO2 = 1.570796326794896558e+00;
+
 float asin(float x) {
-    static const double kPIO2 = 1.570796326794896558e+00;
     const floatShape shape = { x };
     const uint32_t ix = shape.asInt & 0x7FFFFFFF;
     const uint32_t sign = shape.asInt >> 31;
@@ -263,29 +265,29 @@ float tan(float x) {
     return tandf(y, n&1);
 }
 
+static const float kATanHi[] = {
+    4.6364760399e-01, // atan(0.5)hi 0x3EED6338
+    7.8539812565e-01, // atan(1.0)hi 0x3F490FDA
+    9.8279368877e-01, // atan(1.5)hi 0x3F7b985E
+    1.5707962513e+00, // atan(inf)hi 0x3FC90FDA
+};
+
+static const float kATanLo[] = {
+    5.0121582440e-09, // atan(0.5)lo 0x31AC3769
+    3.7748947079e-08, // atan(1.0)lo 0x33222168
+    3.4473217170e-08, // atan(1.5)lo 0x33140FB4
+    7.5497894159e-08, // atan(inf)lo 0x33A22168
+};
+
+static const float kAT[] = {
+     3.3333328366e-01,
+    -1.9999158382e-01,
+     1.4253635705e-01,
+    -1.0648017377e-01,
+     6.1687607318e-02,
+};
+
 float atan(float x) {
-    static const float kATanHi[] = {
-        4.6364760399e-01, // atan(0.5)hi 0x3EED6338
-        7.8539812565e-01, // atan(1.0)hi 0x3F490FDA
-        9.8279368877e-01, // atan(1.5)hi 0x3F7b985E
-        1.5707962513e+00, // atan(inf)hi 0x3FC90FDA
-    };
-
-    static const float kATanLo[] = {
-        5.0121582440e-09, // atan(0.5)lo 0x31AC3769
-        3.7748947079e-08, // atan(1.0)lo 0x33222168
-        3.4473217170e-08, // atan(1.5)lo 0x33140FB4
-        7.5497894159e-08, // atan(inf)lo 0x33A22168
-    };
-
-    static const float kAT[] = {
-         3.3333328366e-01,
-        -1.9999158382e-01,
-         1.4253635705e-01,
-        -1.0648017377e-01,
-         6.1687607318e-02,
-    };
-
     const floatShape shape = { x };
     const uint32_t ix = shape.asInt & 0x7FFFFFFF;
     const uint32_t sign = shape.asInt >> 31;
@@ -333,7 +335,6 @@ float atan(float x) {
     const float m = kATanHi[i] - ((x*(s1+s2) - kATanLo[i]) - x);
     return sign ? -m : m;
 }
-
 
 void sincos(float x, float &s, float &c) {
     const floatShape shape = { x };
@@ -438,14 +439,14 @@ float ceil(float x) {
 }
 
 // |(log(1+s)-log(1-s))/s - Lg(s)| < 2**-34.24 (~[-4.95e-11, 4.97e-11])
-float log2(float x) {
-    static const float kIvLn2Hi = 1.4428710938e+00; // 0x3fb8b000
-    static const float kIvLn2Lo = -1.7605285393e-04; // 0xb9389ad4
-    static const float kLg1 = 6.66666626930236816e-01;
-    static const float kLg2 = 4.00009721517562866e-01;
-    static const float kLg3 = 2.84987866878509521e-01;
-    static const float kLg4 = 2.42790788412094116e-01;
+static const float kIvLn2Hi = 1.4428710938e+00; // 0x3fb8b000
+static const float kIvLn2Lo = -1.7605285393e-04; // 0xb9389ad4
+static const float kLg1 = 6.66666626930236816e-01;
+static const float kLg2 = 4.00009721517562866e-01;
+static const float kLg3 = 2.84987866878509521e-01;
+static const float kLg4 = 2.42790788412094116e-01;
 
+float log2(float x) {
     floatShape shape = { x };
     uint32_t ix = shape.asInt;
     int k = 0;
