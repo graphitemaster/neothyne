@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "u_new.h"
+#include "u_misc.h"
 #include "u_assert.h"
 #include "u_traits.h"
 
@@ -81,7 +82,7 @@ voidptr alignedAllocator<true>::neoRealloc(voidptr what, size_t size) {
         unsigned char *aligned = (unsigned char *)((uintptr_t)(resize + sizeof(size_t) + (kMemoryAlignment - 1)) & ~(kMemoryAlignment - 1));
         // relative shift of data can be different than from before, this will only move what is absolutely necessary
         if (shift != aligned-resize)
-            memmove(aligned, resize+shift, originalSize);
+            u::moveMemory(aligned, resize+shift, originalSize);
         ((size_t *)aligned)[-1] = size|(aligned-resize-sizeof(size_t));
         return aligned;
     }

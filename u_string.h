@@ -35,8 +35,6 @@ struct string {
     size_t size() const;
     bool empty() const;
 
-    char *copy() const;
-
     void reserve(size_t size);
     void resize(size_t size);
     void clear();

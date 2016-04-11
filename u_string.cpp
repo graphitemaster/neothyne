@@ -409,11 +409,6 @@ bool string::empty() const {
     return m_last - m_first == 0;
 }
 
-char *string::copy() const {
-    const size_t length = size() + 1;
-    return (char *)memcpy(STR_MALLOC(length), m_first, length);
-}
-
 void string::reserve(size_t capacity) {
     if (m_first + capacity + 1 <= m_capacity)
         return;
