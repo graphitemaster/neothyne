@@ -416,6 +416,7 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
 
     entry e;
     e.name = file;
+    e.compressed = !!(head.compression == kCompressDeflate);
     e.usize = local.usize;
     e.csize = local.csize;
     e.offset = localFileContentsOffset;
@@ -532,7 +533,7 @@ bool zip::remove(const char *file) {
 }
 
 bool zip::rename(const char *find, const char *replace) {
-    if (!exists(find) || exists(replace))
+    if (exists(replace))
         return false;
     auto contents = read(find);
     if (!contents || !remove(find))
