@@ -6,13 +6,12 @@
 #include "u_file.h"
 #include "u_algorithm.h"
 #include "u_misc.h"
-#include "u_zlib.h"
+#include "u_zip.h"
 
 #include "m_const.h"
 
 VAR(int, r_tex_compress, "texture compression", 0, 1, 1);
 VAR(int, r_tex_compress_cache, "cache compressed textures", 0, 1, 1);
-VAR(int, r_tex_compress_cache_zlib, "zlib compress cached compressed textures", 0, 1, 1);
 VAR(int, r_aniso, "anisotropic filtering", 0, 16, 4);
 VAR(int, r_bilinear, "bilinear filtering", 0, 1, 1);
 VAR(int, r_trilinear, "trilinear filtering", 0, 1, 1);
@@ -28,6 +27,9 @@ VAR(int, r_dxt_compressor, "DXT compressor", 0, 0, 0);
 VAR(float, r_texquality, "texture quality", 0.0f, 1.0f, 1.0f);
 
 namespace r {
+
+// Singleton texture cache
+static u::zip gTextureCache;
 
 #if defined(GL_UNSIGNED_INT_8_8_8_8_REV)
 #   define R_TEX_DATA_RGBA GL_UNSIGNED_INT_8_8_8_8_REV
@@ -395,24 +397,23 @@ template u::vector<unsigned char> dxtCompress<kDXT5>(const unsigned char *const 
 
 #endif //! DXT_COMPRESSOR
 
-static const unsigned char kTextureCacheVersion = 0x06;
+static const unsigned char kTextureCacheVersion = 0x07;
 
 struct textureCacheHeader {
     uint8_t version;
+    uint8_t mips;
+    uint16_t format;
     uint16_t width;
     uint16_t height;
     uint32_t internal;
-    uint16_t format;
-    uint8_t compressed;
-    uint8_t mips;
     void endianSwap();
 };
 
 void textureCacheHeader::endianSwap() {
+    format = u::endianSwap(format);
     width = u::endianSwap(width);
     height = u::endianSwap(height);
     internal = u::endianSwap(internal);
-    format = u::endianSwap(format);
 }
 
 static const char *cacheFormat(GLuint internal) {
@@ -433,6 +434,24 @@ static const char *cacheFormat(GLuint internal) {
     return "";
 }
 
+static bool mountCache() {
+    if (gTextureCache.opened())
+        return true;
+    const auto cacheFile = neoUserPath() + "cache/textures.zip";
+    if (u::exists(cacheFile)) {
+        // Cache already exists: open
+        if (!gTextureCache.open(cacheFile))
+            return false;
+        u::print("[cache] => mounted texture cache `%s'\n", cacheFile);
+        return true;
+    }
+    // Cache does not exist: create the file
+    if (!gTextureCache.create(cacheFile))
+        return false;
+    u::print("[cache] => created texture cache `%s'\n", cacheFile);
+    return true;
+}
+
 static bool readCache(texture &tex, GLuint &internal) {
     if (!r_tex_compress)
         return false;
@@ -447,14 +466,9 @@ static bool readCache(texture &tex, GLuint &internal) {
     if (tex.flags() & kTexFlagNoCompress)
         return false;
 
-    // Do we even have it in cache?
-    const u::string cacheString = u::format("cache/textures/%s", tex.hashString());
-    const u::string file = neoUserPath() + cacheString;
-    if (!u::exists(file))
-        return false;
-
-    // Found it in cache, unload the current texture and load the cache from disk.
-    auto load = u::read(file, "rb");
+    // Load the cache from disk.
+    const auto cacheName = tex.hashString();
+    auto load = gTextureCache.read(cacheName);
     if (!load)
         return false;
 
@@ -462,11 +476,11 @@ static bool readCache(texture &tex, GLuint &internal) {
     const auto &vec = *load;
     textureCacheHeader head;
     memcpy(&head, &vec[0], sizeof head);
+    head.endianSwap();
     if (head.version != kTextureCacheVersion) {
-        u::remove(file);
+        gTextureCache.remove(tex.hashString());
         return false;
     }
-    head.endianSwap();
 
     // Make sure we even support the format before using it
     switch (head.internal) {
@@ -492,32 +506,19 @@ static bool readCache(texture &tex, GLuint &internal) {
     const unsigned char *const data = &vec[0] + sizeof head;
     const size_t length = vec.size() - sizeof head;
 
-    // decompress
-    u::vector<unsigned char> decompress;
-    const unsigned char *fromData = nullptr;
-    size_t fromSize = 0;
-    if (head.compressed) {
-        u::zlib::decompress(decompress, data, length);
-        fromData = &decompress[0];
-        fromSize = decompress.size();
-    } else {
-        fromData = data;
-        fromSize = length;
-    }
-
     internal = head.internal;
 
     // Now swap!
     tex.unload();
-    tex.from(fromData, fromSize, head.width, head.height, false, textureFormat(head.format), head.mips);
-    u::print("[cache] => loaded %.50s... %s (%s)\n", u::fixPath(cacheString),
-        cacheFormat(head.internal), u::sizeMetric(fromSize));
+    tex.from(data, length, head.width, head.height, false, textureFormat(head.format), head.mips);
+    u::print("[cache] => loaded %.50s... %s (%s)\n", cacheName,
+        cacheFormat(head.internal), u::sizeMetric(length));
     return true;
 }
 
 static bool writeCacheData(textureFormat format,
                            size_t texSize,
-                           const u::string &cacheString,
+                           const u::string &hash,
                            unsigned char *compressedData,
                            size_t compressedWidth,
                            size_t compressedHeight,
@@ -536,7 +537,6 @@ static bool writeCacheData(textureFormat format,
     head.height = compressedHeight;
     head.internal = internal;
     head.format = format;
-    head.compressed = uint8_t(r_tex_compress_cache_zlib);
     head.mips = mips;
     head.endianSwap();
 
@@ -568,26 +568,13 @@ static bool writeCacheData(textureFormat format,
         }
     }
 
-    // zlib compress the texture data
-    u::vector<unsigned char> compressedTexture;
-    const unsigned char *toData = nullptr;
-    size_t toSize = 0;
-    if (r_tex_compress_cache_zlib) {
-        u::zlib::compress(compressedTexture, compressedData, compressedSize);
-        toData = &compressedTexture[0];
-        toSize = compressedTexture.size();
-    } else {
-        toData = compressedData;
-        toSize = compressedSize;
-    }
-
     // prepare file data
-    u::vector<unsigned char> data(sizeof head + toSize);
+    u::vector<unsigned char> data(sizeof head + compressedSize);
     memcpy(&data[0], &head, sizeof head);
-    memcpy(&data[0] + sizeof head, toData, toSize);
+    memcpy(&data[0] + sizeof head, compressedData, compressedSize);
 
     u::print("[cache] => wrote %.50s... %s (compressed %s to %s with %s compressor)",
-        u::fixPath(cacheString),
+        hash,
         cacheFormat(internal),
         // TODO: calculate 33% more for mip levels
         u::sizeMetric(texSize),
@@ -604,7 +591,9 @@ static bool writeCacheData(textureFormat format,
     u::print("\n");
 
     // Write it out
-    return u::write(data, neoUserPath() + cacheString);
+    if (!gTextureCache.write(hash, data))
+        u::print("FAILED TO WRITE CACHE FILE!\n");
+    return true;
 }
 
 static bool writeCache(const texture &tex, GLuint internal, GLuint handle, size_t mips) {
@@ -638,9 +627,7 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle, size_
         return false;
 
     // Don't bother caching if we already have it
-    const u::string cacheString = u::format("cache/textures/%s", tex.hashString());
-    const u::string file = neoUserPath() + cacheString;
-    if (u::exists(file))
+    if (gTextureCache.exists(tex.hashString()))
         return false;
 
     // Query the compressed texture size
@@ -676,7 +663,7 @@ static bool writeCache(const texture &tex, GLuint internal, GLuint handle, size_
         dest += size;
     }
 
-    return writeCacheData(tex.format(), tex.size(), cacheString, &compressedData[0],
+    return writeCacheData(tex.format(), tex.size(), tex.hashString(), &compressedData[0],
         compressedWidth, compressedHeight, compressedData.size(), totalMips, internal);
 }
 
@@ -931,7 +918,8 @@ bool texture2D::load(const u::string &file, bool preserveQuality, bool mipmaps, 
             }
 
         }
-        return true;
+        // Ensure texture cache is mounted
+        return mountCache();
     }
     return false;
 }
@@ -1031,11 +1019,9 @@ bool texture2D::upload(GLint wrap) {
                 }
 
                 // Write cache data
-                const u::string cacheString = u::format("cache/textures/%s",
-                                                        m_texture.hashString());
                 if (!writeCacheData(m_texture.format(),
                                     m_texture.size(),
-                                    u::fixPath(cacheString),
+                                    m_texture.hashString(),
                                     &compressed[0],
                                     m_texture.width(),
                                     m_texture.height(),
@@ -1044,7 +1030,7 @@ bool texture2D::upload(GLint wrap) {
                                     format.internal,
                                     "our") || !useCache())
                 {
-                    neoFatal("failed to cache");
+                    neoFatal("failed to write cache");
                 }
             }
             else
@@ -1089,7 +1075,7 @@ bool texture2D::upload(GLint wrap) {
                         needsCache = false;
                         cache(format.internal);
                         if (!useCache())
-                            neoFatal("failed to cache");
+                            neoFatal("failed to use cache");
                         break;
                     }
                 }

@@ -386,6 +386,7 @@ bool zlib::decompress(u::vector<unsigned char> &out, const unsigned char *in, si
     // "The additional flags shall not specify a preset dictionary."
     if (fdict != 0)
         return false;
+    // Skip first two bytes (FCHECK / WINDOW)
     return inflator().inflate(out, in, length, 2);
 }
 
@@ -465,15 +466,23 @@ void zlib::deflator::huff(int n) {
         huffSwitch<4>(n);
 }
 
-void zlib::deflator::deflate(u::vector<unsigned char> &out, const unsigned char *in, size_t length, int quality) {
+void zlib::deflator::deflate(u::vector<unsigned char> &out,
+                             const unsigned char *in,
+                             size_t length,
+                             bool head,
+                             int quality)
+{
     static constexpr size_t kHashSize = 16384;
     m_data = &out;
 
     if (quality < 5)
         quality = 5;
 
-    out.push_back(0x78); // DEFLATE 32K window
-    out.push_back(0x5E); // FLEVEL = 1
+    // Needed by PNG but not ZIP
+    if (head) {
+        out.push_back(0x78); // DEFLATE 32K window
+        out.push_back(0x5E); // FLEVEL = 1
+    }
 
     add(1, 1); // BFINAL = 1
     add(1, 2); // BTYPE = 1 (fixed huffman)
@@ -580,7 +589,7 @@ bool zlib::compress(u::vector<unsigned char> &out, const u::vector<unsigned char
 }
 
 bool zlib::compress(u::vector<unsigned char> &out, const unsigned char *in, size_t length, int quality) {
-    deflator().deflate(out, in, length, quality);
+    deflator().deflate(out, in, length, true, quality);
     return true;
 }
 

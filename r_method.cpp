@@ -5,6 +5,7 @@
 #include "u_file.h"
 #include "u_misc.h"
 #include "u_sha512.h"
+#include "u_zip.h"
 
 namespace r {
 
@@ -262,10 +263,33 @@ uniform *method::getUniform(const u::string &name, uniform::type type) {
     return value;
 }
 
+static u::zip gMethodCache;
+
+static bool mountCache() {
+    if (gMethodCache.opened())
+        return true;
+    const auto cacheFile = neoUserPath() + "cache/methods.zip";
+    if (u::exists(cacheFile)) {
+        // Cache already exists: open
+        if (!gMethodCache.open(cacheFile))
+            return false;
+        u::print("[cache] => mounted method cache `%s'\n", cacheFile);
+        return true;
+    }
+    // Cache does not exist: create the file
+    if (!gMethodCache.create(cacheFile))
+        return false;
+    u::print("[cache] => created method cache `%s'\n", cacheFile);
+    return true;
+}
+
 bool method::finalize(const u::initializer_list<const char *> &attributes,
                       const u::initializer_list<const char *> &fragData,
                       bool initial)
 {
+    if (!mountCache())
+        return false;
+
     // Check if the system supports any program binary format
     GLint formats = 0;
     if (gl::has(gl::ARB_get_program_binary))
@@ -288,13 +312,8 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
         // Hash the result of the concatenation
         auto hash = u::sha512((const unsigned char *)&concatenate[0],
                               concatenate.size());
-        // Does this program exist?
-        const u::string cacheString = u::format("cache/shaders/%s", hash.hex());
-        const u::string file = neoUserPath() + cacheString;
-        if (!u::exists(file))
-            break;
         // Load the cached program in memory
-        auto load = u::read(file, "rb");
+        auto load = gMethodCache.read(hash.hex());
         if (!load)
             break;
         methodCacheHeader *header = (methodCacheHeader*)&(*load)[0];
@@ -302,7 +321,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
         if (memcmp(header->magic, (const void *)methodCacheHeader::kMagic, sizeof header->magic)
             || header->version != methodCacheHeader::kVersion)
         {
-            u::remove(file);
+            gMethodCache.remove(hash.hex());
             break;
         }
 
@@ -316,14 +335,14 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             // Verify that this program is valid (linked)
             gl::GetProgramiv(m_program, GL_LINK_STATUS, &status);
             if (status) {
-                u::print("[cache] => loaded %.50s...\n", u::fixPath(cacheString));
+                u::print("[cache] => loaded %.50s...\n", hash.hex());
                 notUsingCache = false;
             }
             break;
         }
         // Not supported, remove it
-        u::print("[cache] => failed loading `%s'\n", u::fixPath(cacheString));
-        u::remove(file);
+        u::print("[cache] => failed loading `%s'\n", hash.hex());
+        gMethodCache.remove(hash.hex());
         break;
     }
 
@@ -405,8 +424,6 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             // Hash the result of the concatenation
             auto hash = u::sha512((const unsigned char *const)&concatenate[0],
                                   concatenate.size());
-            const u::string cacheString = u::format("cache/shaders/%s", hash.hex());
-            const u::string file = neoUserPath() + cacheString;
 
             // Get the program binary from the driver
             GLint length = 0;
@@ -427,8 +444,10 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             memcpy(&serialize[0], &header, sizeof header);
             memcpy(&serialize[sizeof header], &programBinary[0], programBinary.size());
 
-            u::write(serialize, file, "wb");
-            u::print("[cache] => wrote %.50s...\n", u::fixPath(cacheString));
+            if (gMethodCache.write(hash.hex(), serialize))
+                u::print("[cache] => wrote %.50s...\n", hash.hex());
+            else
+                return false;
         }
 
         // Don't need these anymore

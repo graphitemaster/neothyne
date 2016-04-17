@@ -161,7 +161,7 @@ found:
 }
 
 
-bool zip::create(const char *file) {
+bool zip::create(const u::string &file) {
     if (!(m_file = u::fopen(file, "wb")))
         return false;
     centralDirectoryTail tail;
@@ -178,7 +178,7 @@ bool zip::create(const char *file) {
     return open(file);
 }
 
-bool zip::open(const char *file) {
+bool zip::open(const u::string &file) {
     if (!(m_file = u::fopen(file, "r+b")))
         return false;
 
@@ -250,7 +250,7 @@ bool zip::open(const char *file) {
     return true;
 }
 
-u::optional<u::vector<unsigned char>> zip::read(const char *file) {
+u::optional<u::vector<unsigned char>> zip::read(const u::string &file) {
     for (const auto &e : m_entries) {
         const auto &it = e.second;
         if (it.name != file)
@@ -262,22 +262,23 @@ u::optional<u::vector<unsigned char>> zip::read(const char *file) {
         contents.resize(size);
         if (fread(&contents[0], size, 1, m_file) != 1)
             return u::none;
-        if (u::crc32(&contents[0], contents.size()) != it.crc)
-            return u::none;
         if (it.compressed) {
             u::vector<unsigned char> decompressed;
+            decompressed.reserve(it.usize);
             if (!u::zlib::inflator().inflate(decompressed, &contents[0], contents.size()))
                 return u::none;
+            if (u::crc32(&decompressed[0], decompressed.size()) != it.crc)
+                return u::none;
             return decompressed;
+        } else if (u::crc32(&contents[0], contents.size()) != it.crc) {
+            return u::none;
         }
         return contents;
     }
     return u::none;
 }
 
-bool zip::write(const char *file, const unsigned char *const data, size_t length, int strength) {
-    const size_t fileNameLength = strlen(file);
-
+bool zip::write(const u::string &fileName, const unsigned char *const data, size_t length, int strength) {
     // Find the end of the central directory
     centralDirectoryTail tail;
     if (!findCentralDirectory((unsigned char *)&tail))
@@ -320,25 +321,18 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
     const size_t localFileHeaderOffset = ftell(temp);
 
     u::vector<unsigned char> compressed;
-    u::zlib::deflator().deflate(compressed, data, length, strength);
+    u::zlib::deflator().deflate(compressed, data, length, false, strength);
     bool isCompressed = compressed.size() < length;
 
     // The new local file header
     localFileHeader local;
     memset(&local, 0, sizeof local);
     local.signature = localFileHeader::kSignature;
-    local.fileNameLength = fileNameLength;
-    if (isCompressed) {
-        local.compression = kCompressDeflate;
-        local.crc = u::crc32(&compressed[0], compressed.size());
-        local.csize = compressed.size();
-        local.usize = length;
-    } else {
-        local.compression = kCompressNone;
-        local.crc = u::crc32(data, length);
-        local.csize = length;
-        local.usize = length;
-    }
+    local.fileNameLength = fileName.size();
+    local.crc = u::crc32(data, length);
+    local.usize = length;
+    local.csize = isCompressed ? compressed.size() : length;
+    local.compression = isCompressed ? kCompressDeflate : kCompressNone;
     time_t currentTime = time(nullptr);
     struct tm *t = localtime(&currentTime);
     local.date = ((t->tm_year - 80) << 9) | ((t->tm_mon + 1) << 5) | t->tm_mday;
@@ -348,7 +342,7 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
     local.endianSwap();
     if (fwrite(&local, sizeof local, 1, temp) != 1)
         return false;
-    if (fwrite(file, fileNameLength, 1, temp) != 1)
+    if (fwrite(&fileName[0], fileName.size(), 1, temp) != 1)
         return false;
     // Write the contents of the file
     const size_t localFileContentsOffset = ftell(temp);
@@ -384,7 +378,7 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
     centralDirectoryHead head;
     memset(&head, 0, sizeof head);
     head.signature = centralDirectoryHead::kSignature;
-    head.compression = isCompressed ? 8 : 0;
+    head.compression = isCompressed ? kCompressDeflate : kCompressNone;
     head.time = local.time;
     head.date = local.date;
     head.crc = local.crc;
@@ -395,14 +389,14 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
     head.endianSwap();
     if (fwrite(&head, sizeof head, 1, temp) != 1)
         return false;
-    if (fwrite(file, fileNameLength, 1, temp) != 1)
+    if (fwrite(&fileName[0], fileName.size(), 1, temp) != 1)
         return false;
 
     // Write the end of central directory
     tail.entries++;
     tail.entriesDisk++;
     tail.offset = centralDirectoryOffset;
-    tail.size += sizeof(centralDirectoryHead) + fileNameLength;
+    tail.size += sizeof(centralDirectoryHead) + fileName.size();
     tail.endianSwap();
     if (fwrite(&tail, sizeof tail, 1, temp) != 1)
         return false;
@@ -413,9 +407,8 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
         return false;
     if (!replaceFileContents(m_file, temp))
         return false;
-
     entry e;
-    e.name = file;
+    e.name = fileName;
     e.compressed = !!(head.compression == kCompressDeflate);
     e.usize = local.usize;
     e.csize = local.csize;
@@ -425,7 +418,7 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
     return true;
 }
 
-bool zip::remove(const char *file) {
+bool zip::remove(const u::string &file) {
     if (!exists(file))
         return false;
     centralDirectoryTail tail;
@@ -515,7 +508,7 @@ bool zip::remove(const char *file) {
     // Write the end of the central directory
     tail.entriesDisk--;
     tail.entries--;
-    tail.size -= sizeof(centralDirectoryHead) + strlen(file);
+    tail.size -= sizeof(centralDirectoryHead) + file.size();
     if (tail.size == 0)
         tail.offset = 0;
     tail.endianSwap();
@@ -532,7 +525,7 @@ bool zip::remove(const char *file) {
     return replaceFileContents(m_file, temp);
 }
 
-bool zip::rename(const char *find, const char *replace) {
+bool zip::rename(const u::string &find, const u::string &replace) {
     if (exists(replace))
         return false;
     const auto &contents = read(find);

@@ -35,7 +35,11 @@ private:
         {
         }
 
-        void deflate(u::vector<unsigned char> &out, const unsigned char *in, size_t length, int strength = 5);
+        void deflate(u::vector<unsigned char> &out,
+                     const unsigned char *in,
+                     size_t length,
+                     bool head = true,
+                     int strength = 5);
 
     protected:
         int bitReverse(int code, int codeBits);

@@ -51,7 +51,7 @@ file::operator FILE*() {
     return m_handle;
 }
 
-FILE *file::get() {
+FILE *file::get() const {
     return m_handle;
 }
 

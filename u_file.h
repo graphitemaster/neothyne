@@ -24,7 +24,7 @@ struct file {
     ~file();
     file &operator=(file &&other);
     operator FILE*();
-    FILE *get();
+    FILE *get() const;
 
 private:
     FILE *m_handle;
