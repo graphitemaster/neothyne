@@ -2,6 +2,7 @@
 #define U_ZIP_HDR
 #include "u_file.h"
 #include "u_optional.h"
+#include "u_map.h"
 
 namespace u {
 
@@ -42,13 +43,11 @@ protected:
         size_t usize;
     };
 
-    void sort();
-    size_t search(const char *file);
     bool findCentralDirectory(unsigned char *);
 
 private:
     u::file m_file;
-    u::vector<entry> m_entries;
+    u::map<u::string, entry> m_entries;
 };
 
 inline bool zip::write(const char *file, const u::vector<unsigned char> &data, int stength) {
@@ -56,7 +55,7 @@ inline bool zip::write(const char *file, const u::vector<unsigned char> &data, i
 }
 
 inline bool zip::exists(const char *file) {
-    return search(file) != -1_z;
+    return m_entries.find(file) != m_entries.end();
 }
 
 }

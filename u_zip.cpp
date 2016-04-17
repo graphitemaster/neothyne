@@ -1,7 +1,6 @@
 #include <time.h>
 
 #include "u_zip.h"
-#include "u_map.h"
 #include "u_misc.h"
 #include "u_zlib.h"
 
@@ -85,41 +84,25 @@ struct centralDirectoryTail {
 #pragma pack(pop)
 
 inline void localFileHeader::endianSwap() {
-    signature = u::endianSwap(signature);
-    version = u::endianSwap(version);
-    flags = u::endianSwap(flags);
-    compression = u::endianSwap(compression);
-    time = u::endianSwap(time);
-    date = u::endianSwap(date);
-    crc = u::endianSwap(crc);
-    csize = u::endianSwap(csize);
-    usize = u::endianSwap(usize);
-    fileNameLength = u::endianSwap(fileNameLength);
-    extraFieldLength = u::endianSwap(extraFieldLength);
+    u::endianSwap(&signature, 1);
+    u::endianSwap(&version, 5);
+    u::endianSwap(&crc, 3);
+    u::endianSwap(&fileNameLength, 2);
 }
 
 inline void centralDirectoryHead::endianSwap() {
-    signature = u::endianSwap(signature);
-    flags = u::endianSwap(flags);
-    compression = u::endianSwap(compression);
-    time = u::endianSwap(time);
-    date = u::endianSwap(date);
-    crc = u::endianSwap(crc);
-    csize = u::endianSwap(csize);
-    usize = u::endianSwap(usize);
-    fileNameLength = u::endianSwap(fileNameLength);
-    extraFieldLength = u::endianSwap(extraFieldLength);
-    fileCommentLength = u::endianSwap(fileCommentLength);
-    offset = u::endianSwap(offset);
+    u::endianSwap(&signature, 2);
+    u::endianSwap(&flags, 4);
+    u::endianSwap(&crc, 3);
+    u::endianSwap(&fileNameLength, 5);
+    u::endianSwap(&offset, 1);
 }
 
 inline void centralDirectoryTail::endianSwap() {
-    signature = u::endianSwap(signature);
-    entriesDisk = u::endianSwap(entriesDisk);
-    entries = u::endianSwap(entries);
-    size = u::endianSwap(size);
-    offset = u::endianSwap(offset);
-    commentLength = u::endianSwap(commentLength);
+    u::endianSwap(&signature, 1);
+    u::endianSwap(&entriesDisk, 2);
+    u::endianSwap(&size, 2);
+    u::endianSwap(&commentLength, 1);
 }
 
 bool zip::findCentralDirectory(unsigned char *store) {
@@ -220,8 +203,6 @@ bool zip::open(const char *file) {
     if (tail.entriesDisk != tail.entries)
         return false;
 
-    // Reserve space for the entries
-    m_entries.reserve(tail.entries);
     // Seek to the beginning of the central directory
     if (fseek(m_file, tail.offset, SEEK_SET) != 0)
         return false;
@@ -276,27 +257,17 @@ bool zip::open(const char *file) {
         e.offset = ftell(m_file);
 
         // Add the entry and roll back to the next central directory
-        m_entries.push_back(e);
+        if (e.name.end()[-1] != '/')
+            m_entries[e.name] = e;
         if (fseek(m_file, next, SEEK_SET) != 0)
             return false;
     }
-
-    sort();
     return true;
 }
 
-void zip::sort() {
-    // Sort the entries by lexicographical name (for binary search.)
-    u::sort(m_entries.begin(),
-            m_entries.end(),
-            [](const entry &a, const entry &b) {
-                return a.name < b.name;
-            }
-    );
-}
-
 u::optional<u::vector<unsigned char>> zip::read(const char *file) {
-    for (const auto &it : m_entries) {
+    for (const auto &e : m_entries) {
+        const auto &it = e.second;
         if (it.name != file)
             continue;
         if (fseek(m_file, it.offset, SEEK_SET) != 0)
@@ -315,25 +286,6 @@ u::optional<u::vector<unsigned char>> zip::read(const char *file) {
         return contents;
     }
     return u::none;
-}
-
-size_t zip::search(const char *file) {
-    if (m_entries.size() == 0)
-        return -1_z;
-    // Binary search for existence
-    size_t first = 0;
-    size_t last = m_entries.size() - 1;
-    size_t middle;
-    while (first <= last) {
-        middle = (first + last) / 2;
-        if (m_entries[middle].name == file)
-            return middle;
-        else if (m_entries[middle].name > file)
-            last = middle - 1;
-        else
-            first = middle + 1;
-    }
-    return -1_z;
 }
 
 bool zip::write(const char *file, const unsigned char *const data, size_t length, int strength) {
@@ -498,15 +450,12 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
     e.usize = local.usize;
     e.csize = local.csize;
     e.offset = localFileContentsOffset;
-    m_entries.push_back(e);
-    sort();
-
+    m_entries[e.name] = e;
     return true;
 }
 
 bool zip::remove(const char *file) {
-    size_t entryIndex = search(file);
-    if (entryIndex == -1_z)
+    if (!exists(file))
         return false;
     centralDirectoryTail tail;
     if (!findCentralDirectory((unsigned char *)&tail))
@@ -611,10 +560,8 @@ bool zip::remove(const char *file) {
     if (!copyFileContents(temp, m_file, tail.commentLength))
         return false;
 
-    // Remove it from m_entries and resort
-    m_entries.erase(m_entries.begin() + entryIndex,
-                    m_entries.begin() + entryIndex + 1);
-    sort();
+    // Remove it from m_entries
+    m_entries.erase(m_entries.find(file));
 
     // Now seek to the beginning of m_file and copy the contents of the temp
     // file into the zip file
