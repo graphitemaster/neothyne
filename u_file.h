@@ -1,6 +1,7 @@
 #ifndef U_FILE_HDR
 #define U_FILE_HDR
 #include <stdio.h>
+#include <sys/types.h> // off_t
 
 #include "u_optional.h"
 #include "u_string.h"
