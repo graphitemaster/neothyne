@@ -212,6 +212,7 @@ bool zip::open(const char *file) {
         e.compressed = !!(head.compression == kCompressDeflate);
         e.csize = head.csize;
         e.usize = head.usize;
+        e.crc = head.crc;
 
         // Calculate where to seek to for the next central directory
         if (fseek(m_file, head.extraFieldLength, SEEK_CUR) != 0)
@@ -260,6 +261,8 @@ u::optional<u::vector<unsigned char>> zip::read(const char *file) {
         u::vector<unsigned char> contents;
         contents.resize(size);
         if (fread(&contents[0], size, 1, m_file) != 1)
+            return u::none;
+        if (u::crc32(&contents[0], contents.size()) != it.crc)
             return u::none;
         if (it.compressed) {
             u::vector<unsigned char> decompressed;
@@ -416,6 +419,7 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
     e.usize = local.usize;
     e.csize = local.csize;
     e.offset = localFileContentsOffset;
+    e.crc = local.crc;
     m_entries[e.name] = e;
     return true;
 }

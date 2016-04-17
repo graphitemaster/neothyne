@@ -1,5 +1,7 @@
 #ifndef U_ZIP_HDR
 #define U_ZIP_HDR
+#include <stdint.h>
+
 #include "u_file.h"
 #include "u_optional.h"
 #include "u_map.h"
@@ -45,6 +47,7 @@ protected:
         size_t offset;
         size_t csize;
         size_t usize;
+        uint32_t crc;
     };
 
     bool findCentralDirectory(unsigned char *);
