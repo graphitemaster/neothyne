@@ -146,7 +146,7 @@ float randf(); // [0, 1]
 
 unsigned char log2(uint32_t v);
 
-uint32_t crc32(const unsigned char *const buffer, size_t length);
+uint32_t crc32(const unsigned char *buffer, size_t length);
 
 // We don't use <ctype.h> as it's locale dependent and the engine operates on
 // the assumption that everything is the C locale.

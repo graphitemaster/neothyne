@@ -303,15 +303,54 @@ const char *RAMDesc() {
     return desc;
 }
 
-uint32_t crc32(const unsigned char *const buffer, size_t length) {
+static struct crc32Table {
+    crc32Table() {
+        // Build the initial CRC32 table
+        for (size_t i = 0; i < 256; i++) {
+            uint32_t c = i;
+            for (size_t j = 0; j < 8; j++)
+                c = (c & 1) ? (c >> 1) ^ 0xEDB88320 : (c >> 1);
+            m_table[0][i] = c;
+        }
+        // Build the others for slicing-by-8
+        for (size_t i = 0; i < 256; i++) {
+            uint32_t c = m_table[0][i];
+            for (size_t j = 1; j < 8; j++) {
+                c = m_table[0][c & 0xFF] ^ (c >> 8);
+                m_table[j][i] = c;
+            }
+        }
+    }
+    uint32_t operator()(size_t i, size_t j) const {
+        return m_table[i][j];
+    }
+private:
+    uint32_t m_table[8][256];
+} gCRC32;
+
+// based on the slicing-by-8 algorithm as described in
+// "High Octane CRC Generation with the Intel Slicing-by-8 Algorithm"
+uint32_t crc32(const unsigned char *buffer, size_t length) {
+    // Align to 8 for better performance
     uint32_t crc = ~0u;
-    static uint32_t table[256];
-    if (table[0] == 0)
-        for (size_t i = 0, j; i < 256; i++)
-            for (table[i] = i, j = 0; j < 8; ++j)
-                table[i] = (table[i] >> 1) ^ (table[i] & 1 ? 0xEDB88320 : 0);
-    for (size_t i = 0; i < length; i++)
-        crc = (crc >> 8) ^ table[buffer[i] ^ (crc & 0xFF)];
+    for (; length && ((uintptr_t)buffer & 7); length--, buffer++)
+        crc = gCRC32(0, (crc ^ *buffer) & 0xFF) ^ (crc >> 8);
+    for (; length >= 8; length -= 8, buffer += 8) {
+        uint32_t word;
+        memcpy(&word, buffer, sizeof word);
+        u::endianSwap(&word, 1);
+        crc ^= word;
+        crc = gCRC32(7, crc & 0xFF) ^
+              gCRC32(6, (crc >> 8) & 0xFF) ^
+              gCRC32(5, (crc >> 16) & 0xFF) ^
+              gCRC32(4, (crc >> 24) & 0xFF) ^
+              gCRC32(3, buffer[4]) ^
+              gCRC32(2, buffer[5]) ^
+              gCRC32(1, buffer[6]) ^
+              gCRC32(0, buffer[7]);
+    }
+    for (; length; length--, buffer++)
+        crc = gCRC32(0, (crc ^ *buffer) & 0xFF) ^ (crc >> 8);
     return ~crc;
 }
 
