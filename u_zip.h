@@ -33,6 +33,10 @@ struct zip {
     // Remove the file `file' in ZIP
     bool remove(const char *file);
 
+    // Rename file `search' to `replace' in ZIP. Returns false if the
+    // `search' file is not found or if `replace' already exists
+    bool rename(const char *search, const char *replace);
+
 protected:
     // An entry can be a file or directory
     struct entry {

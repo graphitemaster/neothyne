@@ -527,4 +527,13 @@ bool zip::remove(const char *file) {
     return replaceFileContents(m_file, temp);
 }
 
+bool zip::rename(const char *find, const char *replace) {
+    if (!exists(find) || exists(replace))
+        return false;
+    auto contents = read(find);
+    if (!contents || !remove(find))
+        return false;
+    return write(replace, *contents);
+}
+
 }
