@@ -24,6 +24,7 @@ struct file {
     ~file();
     file &operator=(file &&other);
     operator FILE*();
+    void close();
     FILE *get() const;
 
 private:
@@ -69,9 +70,6 @@ bool exists(const u::string &path, pathType type = kFile);
 // remove a file or directory
 bool remove(const u::string &file, pathType type = kFile);
 
-// truncate a file to `bytes'
-bool truncate(u::file &file, off_t bytes);
-
 // open a file
 u::file fopen(const u::string& infile, const char *type);
 // read file line by line
@@ -108,6 +106,19 @@ inline dir::const_iterator dir::end() const {
 
 inline bool dir::isFile(const u::string &fileName) {
     return dir::isFile(fileName.c_str());
+}
+
+struct tempFile {
+    tempFile();
+    operator file&();
+    bool replace(const u::string &other);
+private:
+    u::file m_file;
+    u::string m_name;
+};
+
+inline tempFile::operator file&() {
+    return m_file;
 }
 
 }

@@ -9,7 +9,6 @@
 #   define NOMINMAX
 #   include <windows.h>
 #   include <direct.h>  // rmdir, mkdir
-#   include <io.h>      // _chsize_s
 #else
 #   include <dirent.h>  // opendir, readir, DIR
 #   include <unistd.h>  // rmdir, mkdir
@@ -17,6 +16,9 @@
 
 #include "u_file.h"
 #include "u_algorithm.h"
+#include "u_misc.h"
+
+#include "engine.h"
 
 namespace u {
 
@@ -53,6 +55,11 @@ file::operator FILE*() {
 
 FILE *file::get() const {
     return m_handle;
+}
+
+void file::close() {
+    fclose(m_handle);
+    m_handle = nullptr;
 }
 
 u::string fixPath(const u::string &path) {
@@ -102,14 +109,6 @@ bool remove(const u::string &path, pathType type) {
     return ::_rmdir(fix.c_str()) == 0;
 #else
     return ::rmdir(fix.c_str()) == 0;
-#endif
-}
-
-bool truncate(u::file &file, off_t bytes) {
-#if defined(_WIN32)
-    return _chsize_s(_fileno(file.get()), bytes) == 0;
-#else
-    return ftruncate(fileno(file.get()), bytes) == 0;
 #endif
 }
 
@@ -310,5 +309,25 @@ bool dir::isFile(const char *fileName) {
 #endif
 }
 #endif
+
+tempFile::tempFile() {
+    for (size_t i = 0; i < 128; i++) {
+        m_name = u::fixPath(u::format("%s/tmp%zu", neoUserPath(), u::randu()));
+        if (u::exists(m_name, kFile))
+            continue;
+        if (!(m_file = u::fopen(m_name, "wb")))
+            continue;
+        return;
+    }
+    neoFatalError("failed to create a temporary file");
+}
+
+bool tempFile::replace(const u::string &replacee) {
+    m_file.close();
+    if (rename(m_name.c_str(), replacee.c_str()) != 0)
+        return false;
+    remove(m_name);
+    return true;
+}
 
 }

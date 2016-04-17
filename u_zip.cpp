@@ -28,13 +28,6 @@ static bool copyFileContents(u::file &dst, u::file &src, size_t bytes) {
     return true;
 }
 
-static bool replaceFileContents(u::file &dst, u::file &src) {
-    const size_t length = ftell(src);
-    fseek(dst, 0, SEEK_SET);
-    fseek(src, 0, SEEK_SET);
-    return copyFileContents(dst, src, length) ? u::truncate(dst, length) : false;
-}
-
 static constexpr uint16_t kCompressNone = 0;
 static constexpr uint16_t kCompressDeflate = 8;
 
@@ -160,9 +153,8 @@ found:
     return true;
 }
 
-
-bool zip::create(const u::string &file) {
-    if (!(m_file = u::fopen(file, "wb")))
+bool zip::create(const u::string &fileName) {
+    if (!(m_file = u::fopen(fileName, "wb")))
         return false;
     centralDirectoryTail tail;
     memset(&tail, 0, sizeof tail);
@@ -174,12 +166,12 @@ bool zip::create(const u::string &file) {
     tail.endianSwap();
     if (fwrite(&tail, sizeof tail, 1, m_file) != 1)
         return false;
-    fclose(m_file);
-    return open(file);
+    m_file.~file();
+    return open(fileName);
 }
 
-bool zip::open(const u::string &file) {
-    if (!(m_file = u::fopen(file, "r+b")))
+bool zip::open(const u::string &fileName) {
+    if (!(m_file = u::fopen((m_fileName = fileName), "r+b")))
         return false;
 
     centralDirectoryTail tail;
@@ -298,7 +290,8 @@ bool zip::write(const u::string &fileName, const unsigned char *const data, size
             return false;
     }
 
-    u::file temp = tmpfile();
+    tempFile tmp;
+    u::file &temp = tmp;
 
     // Copy all the local file headers
     if (fseek(m_file, 0, SEEK_SET) != 0)
@@ -405,8 +398,13 @@ bool zip::write(const u::string &fileName, const unsigned char *const data, size
     tail.endianSwap();
     if (!copyFileContents(temp, m_file, tail.commentLength))
         return false;
-    if (!replaceFileContents(m_file, temp))
+
+    m_file.close();
+    if (!tmp.replace(m_fileName))
         return false;
+    if (!open(m_fileName))
+        return false;
+
     entry e;
     e.name = fileName;
     e.compressed = !!(head.compression == kCompressDeflate);
@@ -439,7 +437,8 @@ bool zip::remove(const u::string &file) {
 
     // Copy all local file headers except the one we wish to remove
     u::map<u::string, size_t> localFileOffsets;
-    u::file temp = tmpfile();
+    tempFile tmp;
+    u::file &temp = tmp;
     for (size_t i = 0; i < tail.entries; i++) {
         localFileHeader current;
         if (fread(&current, sizeof current, 1, m_file) != 1)
@@ -520,9 +519,13 @@ bool zip::remove(const u::string &file) {
     if (!copyFileContents(temp, m_file, tail.commentLength))
         return false;
 
+    m_file.close();
+    if (!tmp.replace(m_fileName))
+        return false;
+
     m_entries.erase(m_entries.find(file));
 
-    return replaceFileContents(m_file, temp);
+    return open(m_fileName);
 }
 
 bool zip::rename(const u::string &find, const u::string &replace) {

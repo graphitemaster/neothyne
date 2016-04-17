@@ -511,7 +511,7 @@ static bool readCache(texture &tex, GLuint &internal) {
     // Now swap!
     tex.unload();
     tex.from(data, length, head.width, head.height, false, textureFormat(head.format), head.mips);
-    u::print("[cache] => loaded %.50s... %s (%s)\n", cacheName,
+    u::print("[cache] => loaded (texture) %.50s... %s (%s)\n", cacheName,
         cacheFormat(head.internal), u::sizeMetric(length));
     return true;
 }
@@ -573,7 +573,7 @@ static bool writeCacheData(textureFormat format,
     memcpy(&data[0], &head, sizeof head);
     memcpy(&data[0] + sizeof head, compressedData, compressedSize);
 
-    u::print("[cache] => wrote %.50s... %s (compressed %s to %s with %s compressor)",
+    u::print("[cache] => wrote (texture) %.50s... %s (compressed %s to %s with %s compressor)",
         hash,
         cacheFormat(internal),
         // TODO: calculate 33% more for mip levels
@@ -591,9 +591,7 @@ static bool writeCacheData(textureFormat format,
     u::print("\n");
 
     // Write it out
-    if (!gTextureCache.write(hash, data))
-        u::print("FAILED TO WRITE CACHE FILE!\n");
-    return true;
+    return gTextureCache.write(hash, data);
 }
 
 static bool writeCache(const texture &tex, GLuint internal, GLuint handle, size_t mips) {

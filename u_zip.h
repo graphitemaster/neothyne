@@ -57,6 +57,7 @@ protected:
 
 private:
     u::file m_file;
+    u::string m_fileName;
     u::map<u::string, entry> m_entries;
 };
 

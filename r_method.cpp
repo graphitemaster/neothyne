@@ -335,7 +335,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             // Verify that this program is valid (linked)
             gl::GetProgramiv(m_program, GL_LINK_STATUS, &status);
             if (status) {
-                u::print("[cache] => loaded %.50s...\n", hash.hex());
+                u::print("[cache] => loaded (method) %.50s...\n", hash.hex());
                 notUsingCache = false;
             }
             break;
@@ -445,7 +445,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             memcpy(&serialize[sizeof header], &programBinary[0], programBinary.size());
 
             if (gMethodCache.write(hash.hex(), serialize))
-                u::print("[cache] => wrote %.50s...\n", hash.hex());
+                u::print("[cache] => wrote (method) %.50s...\n", hash.hex());
             else
                 return false;
         }

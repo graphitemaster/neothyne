@@ -531,7 +531,7 @@ bool engine::initData(int &argc, char **argv) {
     // path separator rules before verifying.
     // Engine paths
     static const char *kPaths[] = {
-        "screenshots", "cache",
+        "screenshots", "cache", "tmp"
     };
     u::string fixedDirectory;
     if (directory) {
