@@ -28,6 +28,13 @@ static bool copyFileContents(u::file &dst, u::file &src, size_t bytes) {
     return true;
 }
 
+static bool replaceFileContents(u::file &dst, u::file &src) {
+    const size_t length = ftell(src);
+    fseek(dst, 0, SEEK_SET);
+    fseek(src, 0, SEEK_SET);
+    return copyFileContents(dst, src, length) ? u::truncate(dst, length) : false;
+}
+
 static constexpr uint16_t kCompressNone = 0;
 static constexpr uint16_t kCompressDeflate = 8;
 
@@ -36,49 +43,29 @@ struct localFileHeader {
     static constexpr uint32_t kSignature = 0x04034b50;
     void endianSwap();
     uint32_t signature;
-    uint16_t version;
-    uint16_t flags;
-    uint16_t compression;
-    uint16_t time;
-    uint16_t date;
-    uint32_t crc;
-    uint32_t csize;
-    uint32_t usize;
-    uint16_t fileNameLength;
-    uint16_t extraFieldLength;
+    uint16_t version, flags, compression, time, date;
+    uint32_t crc, csize, usize;
+    uint16_t fileNameLength, extraFieldLength;
 };
 
 struct centralDirectoryHead {
     static constexpr uint32_t kSignature = 0x02014b50;
     void endianSwap();
-    uint32_t signature;
-    uint32_t : 32;
-    uint16_t flags;
-    uint16_t compression;
-    uint16_t time;
-    uint16_t date;
-    uint32_t crc;
-    uint32_t csize;
-    uint32_t usize;
-    uint16_t fileNameLength;
-    uint16_t extraFieldLength;
-    uint16_t fileCommentLength;
-    uint16_t : 16;
-    uint16_t : 16;
-    uint32_t : 32;
-    uint32_t offset;
+    uint32_t signature, : 32;
+    uint16_t flags, compression, time, date;
+    uint32_t crc, csize, usize;
+    uint16_t fileNameLength, extraFieldLength, fileCommentLength;
+    uint16_t : 16, : 16;
+    uint32_t : 32, offset;
 };
 
 struct centralDirectoryTail {
     static constexpr uint32_t kSignature = 0x06054b50;
     void endianSwap();
     uint32_t signature;
-    uint16_t : 16;
-    uint16_t : 16;
-    uint16_t entriesDisk;
-    uint16_t entries;
-    uint32_t size;
-    uint32_t offset;
+    uint16_t : 16, : 16;
+    uint16_t entriesDisk, entries;
+    uint32_t size, offset;
     uint16_t commentLength;
 };
 #pragma pack(pop)
@@ -202,8 +189,6 @@ bool zip::open(const char *file) {
     // We don't support ZIP files across multiple "files"
     if (tail.entriesDisk != tail.entries)
         return false;
-
-    // Seek to the beginning of the central directory
     if (fseek(m_file, tail.offset, SEEK_SET) != 0)
         return false;
 
@@ -235,7 +220,6 @@ bool zip::open(const char *file) {
             return false;
         const size_t next = ftell(m_file);
 
-        // Seek to the local header
         localFileHeader local;
         if (fseek(m_file, head.offset, SEEK_SET) != 0)
             return false;
@@ -295,12 +279,8 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
     centralDirectoryTail tail;
     if (!findCentralDirectory((unsigned char *)&tail))
         return false;
-
-    // Seek to the beginning of the central directory
     if (fseek(m_file, tail.offset, SEEK_SET) != 0)
         return false;
-
-    // Find the end of the central directory list
     for (size_t i = 0; i < tail.entries; i++) {
         centralDirectoryHead head;
         if (fread(&head, sizeof head, 1, m_file) != 1)
@@ -326,25 +306,21 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
         if (fwrite(&current, sizeof current, 1, temp) != 1)
             return false;
         current.endianSwap();
-        // Copy file name
         if (!copyFileContents(temp, m_file, current.fileNameLength))
             return false;
-        // Copy the extra field if there is any
         if (!copyFileContents(temp, m_file, current.extraFieldLength))
             return false;
-        // Copy the contents of the file
         if (!copyFileContents(temp, m_file, current.compression ? current.csize : current.usize))
             return false;
     }
 
     const size_t localFileHeaderOffset = ftell(temp);
 
-    // DEFLATE the data and check if it's smaller than what is supplied
     u::vector<unsigned char> compressed;
     u::zlib::deflator().deflate(compressed, data, length, strength);
     bool isCompressed = compressed.size() < length;
 
-    // Create a local file header
+    // The new local file header
     localFileHeader local;
     memset(&local, 0, sizeof local);
     local.signature = localFileHeader::kSignature;
@@ -369,7 +345,6 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
     local.endianSwap();
     if (fwrite(&local, sizeof local, 1, temp) != 1)
         return false;
-    // Write the file name
     if (fwrite(file, fileNameLength, 1, temp) != 1)
         return false;
     // Write the contents of the file
@@ -433,18 +408,9 @@ bool zip::write(const char *file, const unsigned char *const data, size_t length
     tail.endianSwap();
     if (!copyFileContents(temp, m_file, tail.commentLength))
         return false;
-
-    // Now seek to the beginning of m_file and copy the contents of the temp
-    // file into the zip file
-    const size_t totalSize = ftell(temp);
-    if (fseek(m_file, 0, SEEK_SET) != 0)
-        return false;
-    if (fseek(temp, 0, SEEK_SET) != 0)
-        return false;
-    if (!copyFileContents(m_file, temp, totalSize))
+    if (!replaceFileContents(m_file, temp))
         return false;
 
-    // Add it to the entries list
     entry e;
     e.name = file;
     e.usize = local.usize;
@@ -481,7 +447,6 @@ bool zip::remove(const char *file) {
         if (fread(&current, sizeof current, 1, m_file) != 1)
             return false;
         current.endianSwap();
-        // Copy file name
         u::string fileName;
         fileName.resize(current.fileNameLength);
         if (fread(&fileName[0], fileName.size(), 1, m_file) != 1)
@@ -509,17 +474,14 @@ bool zip::remove(const char *file) {
             return false;
     }
 
-    // Write the central directories
     if (fseek(m_file, tail.offset, SEEK_SET) != 0)
         return false;
-
     tail.offset = ftell(temp);
     for (size_t i = 0; i < tail.entries; i++) {
         centralDirectoryHead head;
         if (fread(&head, sizeof head, 1, m_file) != 1)
             return false;
         head.endianSwap();
-        // Copy file name
         u::string fileName;
         fileName.resize(head.fileNameLength);
         if (fread(&fileName[0], fileName.size(), 1, m_file) != 1)
@@ -560,19 +522,9 @@ bool zip::remove(const char *file) {
     if (!copyFileContents(temp, m_file, tail.commentLength))
         return false;
 
-    // Remove it from m_entries
     m_entries.erase(m_entries.find(file));
 
-    // Now seek to the beginning of m_file and copy the contents of the temp
-    // file into the zip file
-    const size_t totalSize = ftell(temp);
-    if (fseek(m_file, 0, SEEK_SET) != 0)
-        return false;
-    if (fseek(temp, 0, SEEK_SET) != 0)
-        return false;
-    if (!copyFileContents(m_file, temp, totalSize))
-        return false;
-    return u::truncate(m_file, totalSize);
+    return replaceFileContents(m_file, temp);
 }
 
 }
