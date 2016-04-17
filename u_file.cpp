@@ -30,11 +30,22 @@ file::file(FILE *fp)
 {
 }
 
+file::file(file &&other)
+    : m_handle(other.m_handle)
+{
+    other.m_handle = nullptr;
+}
+
 file::~file() {
     if (m_handle)
         fclose(m_handle);
 }
 
+file &file::operator=(file &&other) {
+    m_handle = other.m_handle;
+    other.m_handle = nullptr;
+    return *this;
+}
 
 file::operator FILE*() {
     return m_handle;
@@ -91,6 +102,14 @@ bool remove(const u::string &path, pathType type) {
     return ::_rmdir(fix.c_str()) == 0;
 #else
     return ::rmdir(fix.c_str()) == 0;
+#endif
+}
+
+bool truncate(u::file &file, off_t bytes) {
+#if defined(_WIN32)
+    return _chsize_s(_fileno(file.get()), bytes) == 0;
+#else
+    return ftruncate(fileno(file.get()), bytes) == 0;
 #endif
 }
 

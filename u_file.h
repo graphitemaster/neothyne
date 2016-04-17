@@ -19,8 +19,9 @@ static constexpr char kPathSep = '/';
 struct file {
     file();
     file(FILE *fp);
+    file(file &&other);
     ~file();
-
+    file &operator=(file &&other);
     operator FILE*();
     FILE *get();
 
@@ -66,6 +67,9 @@ private:
 bool exists(const u::string &path, pathType type = kFile);
 // remove a file or directory
 bool remove(const u::string &file, pathType type = kFile);
+
+// truncate a file to `bytes'
+bool truncate(u::file &file, off_t bytes);
 
 // open a file
 u::file fopen(const u::string& infile, const char *type);

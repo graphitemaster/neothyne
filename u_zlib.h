@@ -12,6 +12,7 @@ struct zlib {
     static bool compress(u::vector<unsigned char> &out, const unsigned char *in, size_t length, int quality = 5);
 
 private:
+    friend struct zip;
     static size_t readBitFromStream(size_t &bitp, const unsigned char *bits);
     static size_t readBitsFromStream(size_t &bitp, const unsigned char *bits, size_t nbits);
 
@@ -34,7 +35,7 @@ private:
         {
         }
 
-        void deflate(u::vector<unsigned char> &out, const unsigned char *in, size_t length, int quality = 5);
+        void deflate(u::vector<unsigned char> &out, const unsigned char *in, size_t length, int strength = 5);
 
     protected:
         int bitReverse(int code, int codeBits);

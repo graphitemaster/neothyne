@@ -89,6 +89,16 @@ inline bool operator!=(const string &lhs, const string &rhs) {
     return strcmp(lhs.c_str(), rhs.c_str()) != 0;
 }
 
+inline bool operator<(const string &lhs, const string &rhs) {
+    if (&lhs == &rhs) return false;
+    return strcmp(lhs.c_str(), rhs.c_str()) < 0;
+}
+
+inline bool operator>(const string &lhs, const string &rhs) {
+    if (&lhs == &rhs) return false;
+    return strcmp(lhs.c_str(), rhs.c_str()) > 0;
+}
+
 inline string operator+(const string &lhs, const char *rhs) {
     return string(lhs).append(rhs, strlen(rhs));
 }

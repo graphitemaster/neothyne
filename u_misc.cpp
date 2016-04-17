@@ -303,4 +303,16 @@ const char *RAMDesc() {
     return desc;
 }
 
+uint32_t crc32(const unsigned char *const buffer, size_t length) {
+    uint32_t crc = ~0u;
+    static uint32_t table[256];
+    if (table[0] == 0)
+        for (size_t i = 0, j; i < 256; i++)
+            for (table[i] = i, j = 0; j < 8; ++j)
+                table[i] = (table[i] >> 1) ^ (table[i] & 1 ? 0xEDB88320 : 0);
+    for (size_t i = 0; i < length; i++)
+        crc = (crc >> 8) ^ table[buffer[i] ^ (crc & 0xFF)];
+    return ~crc;
+}
+
 }

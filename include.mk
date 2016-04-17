@@ -40,6 +40,7 @@ UTIL_SOURCES = \
 	u_new.cpp \
 	u_sha512.cpp \
 	u_string.cpp \
+	u_zip.cpp \
 	u_zlib.cpp
 
 CONSOLE_SOURCES = \

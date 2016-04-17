@@ -2964,20 +2964,8 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
         *store++ = data[3];
     };
 
-    auto crc32 = [](const unsigned char *const buffer, size_t length) {
-        unsigned int crc = ~0u;
-        static unsigned int table[256];
-        if (table[0] == 0)
-            for (size_t i = 0, j; i < 256; i++)
-                for (table[i] = i, j = 0; j < 8; ++j)
-                    table[i] = (table[i] >> 1) ^ (table[i] & 1 ? 0xEDB88320 : 0);
-        for (size_t i = 0; i < length; ++i)
-            crc = (crc >> 8) ^ table[buffer[i] ^ (crc & 0xFF)];
-        return ~crc;
-    };
-
-    auto crc = [&crc32, &write](unsigned char *data, size_t length) {
-        write(crc32(data - length - 4, length + 4));
+    auto crc = [&write](unsigned char *data, size_t length) {
+        write(u::crc32(data - length - 4, length + 4));
     };
 
     // magic + header length
