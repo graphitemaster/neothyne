@@ -3,13 +3,13 @@
 
 // These exist on Windows too
 #include <sys/stat.h>   // S_ISREG, stat
-#include <sys/types.h>
 
 #if defined(_WIN32)
 #   define _WIN32_LEAN_AND_MEAN
 #   define NOMINMAX
 #   include <windows.h>
 #   include <direct.h>  // rmdir, mkdir
+#   include <io.h>      // _chsize_s
 #else
 #   include <dirent.h>  // opendir, readir, DIR
 #   include <unistd.h>  // rmdir, mkdir
