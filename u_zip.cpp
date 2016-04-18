@@ -4,6 +4,8 @@
 #include "u_misc.h"
 #include "u_zlib.h"
 
+#include "engine.h" // neoUserPath
+
 namespace u {
 
 // Copy contents from `src' to `dst' in block sized chunks
@@ -270,13 +272,27 @@ u::optional<u::vector<unsigned char>> zip::read(const u::string &file) {
     return u::none;
 }
 
+#define ERROR() \
+    do { printf("%s %d\n", __FILE__, __LINE__); return false; } while (0)
+
 bool zip::write(const u::string &fileName, const unsigned char *const data, size_t length, int strength) {
     // Find the end of the central directory
     centralDirectoryTail tail;
     if (!findCentralDirectory((unsigned char *)&tail))
         return false;
+    // Read the entire comment if any
+    u::vector<unsigned char> savedComment;
+    if (tail.commentLength) {
+        savedComment.resize(tail.commentLength);
+        if (fread(&savedComment[0], savedComment.size(), 1, m_file) != 1)
+            return false;
+    }
+
+    // Seek to the first central directory entry
     if (fseek(m_file, tail.offset, SEEK_SET) != 0)
         return false;
+    // Now skip all the central directory entries
+    size_t firstLocalFileHeader = 0;
     for (size_t i = 0; i < tail.entries; i++) {
         centralDirectoryHead head;
         if (fread(&head, sizeof head, 1, m_file) != 1)
@@ -288,30 +304,53 @@ bool zip::write(const u::string &fileName, const unsigned char *const data, size
             return false;
         if (fseek(m_file, head.fileCommentLength, SEEK_CUR) != 0)
             return false;
+        firstLocalFileHeader = u::min(firstLocalFileHeader, size_t(head.offset));
     }
 
-    tempFile tmp;
-    u::file &temp = tmp;
-
-    // Copy all the local file headers
-    if (fseek(m_file, 0, SEEK_SET) != 0)
+    // Skip all the local file headers
+    if (fseek(m_file, firstLocalFileHeader, SEEK_SET) != 0)
         return false;
     for (size_t i = 0; i < tail.entries; i++) {
         localFileHeader current;
         if (fread(&current, sizeof current, 1, m_file) != 1)
             return false;
-        if (fwrite(&current, sizeof current, 1, temp) != 1)
-            return false;
         current.endianSwap();
-        if (!copyFileContents(temp, m_file, current.fileNameLength))
+        if (fseek(m_file, current.fileNameLength, SEEK_CUR) != 0)
             return false;
-        if (!copyFileContents(temp, m_file, current.extraFieldLength))
+        if (fseek(m_file, current.extraFieldLength, SEEK_CUR) != 0)
             return false;
-        if (!copyFileContents(temp, m_file, current.compression ? current.csize : current.usize))
+        if (fseek(m_file, current.compression ? current.csize : current.usize, SEEK_CUR) != 0)
             return false;
     }
 
-    const size_t localFileHeaderOffset = ftell(temp);
+    // So we can seek here later to write the new local file header
+    const size_t localFileHeaderEnd = ftell(m_file);
+
+    // Read the entire central directory into memory
+    if (fseek(m_file, tail.offset, SEEK_SET) != 0)
+        return false;
+    for (size_t i = 0; i < tail.entries; i++) {
+        centralDirectoryHead entry;
+        if (fread(&entry, sizeof entry, 1, m_file) != 1)
+            return false;
+        entry.endianSwap();
+        if (fseek(m_file, entry.fileNameLength, SEEK_CUR) != 0)
+            return false;
+        if (fseek(m_file, entry.extraFieldLength, SEEK_CUR) != 0)
+            return false;
+        if (fseek(m_file, entry.fileCommentLength, SEEK_CUR) != 0)
+            return false;
+    }
+    // Use the stream position to calculate length and read the whole thing
+    // in in one read
+    u::vector<unsigned char> entireCentralDirectory(ftell(m_file) - tail.offset);
+    if (fseek(m_file, tail.offset, SEEK_SET) != 0)
+        return false;
+    if (entireCentralDirectory.size() && fread(&entireCentralDirectory[0], entireCentralDirectory.size(), 1, m_file) != 1)
+        return false;
+
+    // Compress the data and see if that operation produces a smaller file
+    // than the uncompressed contents
 
     u::vector<unsigned char> compressed;
     u::zlib::deflator().deflate(compressed, data, length, false, strength);
@@ -330,41 +369,29 @@ bool zip::write(const u::string &fileName, const unsigned char *const data, size
     struct tm *t = localtime(&currentTime);
     local.date = ((t->tm_year - 80) << 9) | ((t->tm_mon + 1) << 5) | t->tm_mday;
     local.time = (t->tm_hour << 11) | (t->tm_min << 5) | (t->tm_sec / 2);
+    local.endianSwap();
 
     // Write the new local file header
-    local.endianSwap();
-    if (fwrite(&local, sizeof local, 1, temp) != 1)
+    if (fseek(m_file, localFileHeaderEnd, SEEK_SET) != 0)
         return false;
-    if (fwrite(&fileName[0], fileName.size(), 1, temp) != 1)
+    if (fwrite(&local, sizeof local, 1, m_file) != 1)
+        return false;
+    if (fwrite(&fileName[0], fileName.size(), 1, m_file) != 1)
         return false;
     // Write the contents of the file
-    const size_t localFileContentsOffset = ftell(temp);
+    const size_t localFileContentsOffset = ftell(m_file);
     if (isCompressed) {
-        if (fwrite(&compressed[0], compressed.size(), 1, temp) != 1)
+        if (fwrite(&compressed[0], compressed.size(), 1, m_file) != 1)
             return false;
     } else {
-        if (fwrite(data, length, 1, temp) != 1)
+        if (fwrite(data, length, 1, m_file) != 1)
             return false;
     }
 
-    // Copy the central directories
-    const size_t centralDirectoryOffset = ftell(temp);
-    if (fseek(m_file, tail.offset, SEEK_SET) != 0)
+    // Write out the original central directories
+    const size_t centralDirectoryOffset = ftell(m_file);
+    if (entireCentralDirectory.size() && fwrite(&entireCentralDirectory[0], entireCentralDirectory.size(), 1, m_file) != 1)
         return false;
-    for (size_t i = 0; i < tail.entries; i++) {
-        centralDirectoryHead entry;
-        if (fread(&entry, sizeof entry, 1, m_file) != 1)
-            return false;
-        if (fwrite(&entry, sizeof entry, 1, temp) != 1)
-            return false;
-        entry.endianSwap();
-        if (!copyFileContents(temp, m_file, entry.fileNameLength))
-            return false;
-        if (!copyFileContents(temp, m_file, entry.extraFieldLength))
-            return false;
-        if (!copyFileContents(temp, m_file, entry.fileCommentLength))
-            return false;
-    }
 
     // Write a new central directory
     local.endianSwap();
@@ -378,11 +405,11 @@ bool zip::write(const u::string &fileName, const unsigned char *const data, size
     head.csize = local.csize;
     head.usize = local.usize;
     head.fileNameLength = local.fileNameLength;
-    head.offset = localFileHeaderOffset;
+    head.offset = localFileHeaderEnd;
     head.endianSwap();
-    if (fwrite(&head, sizeof head, 1, temp) != 1)
+    if (fwrite(&head, sizeof head, 1, m_file) != 1)
         return false;
-    if (fwrite(&fileName[0], fileName.size(), 1, temp) != 1)
+    if (fwrite(&fileName[0], fileName.size(), 1, m_file) != 1)
         return false;
 
     // Write the end of central directory
@@ -391,19 +418,13 @@ bool zip::write(const u::string &fileName, const unsigned char *const data, size
     tail.offset = centralDirectoryOffset;
     tail.size += sizeof(centralDirectoryHead) + fileName.size();
     tail.endianSwap();
-    if (fwrite(&tail, sizeof tail, 1, temp) != 1)
+    if (fwrite(&tail, sizeof tail, 1, m_file) != 1)
         return false;
 
     // Preserve the comment if any
-    tail.endianSwap();
-    if (!copyFileContents(temp, m_file, tail.commentLength))
-        return false;
-
-    m_file.close();
-    if (!tmp.replace(m_fileName))
-        return false;
-    if (!open(m_fileName))
-        return false;
+    if (savedComment.size())
+        if (fwrite(&savedComment[0], savedComment.size(), 1, m_file) != 1)
+            return false;
 
     entry e;
     e.name = fileName;
@@ -437,8 +458,21 @@ bool zip::remove(const u::string &file) {
 
     // Copy all local file headers except the one we wish to remove
     u::map<u::string, size_t> localFileOffsets;
-    tempFile tmp;
-    u::file &temp = tmp;
+
+    // Removal requires rebuilding the ZIP file basically
+    u::string tempFileName;
+    u::file tempFile;
+    // Generate a temporary file name
+    for (size_t i = 0; i < 128; i++) {
+        tempFileName = u::fixPath(u::format("%s/tmp%zu", neoUserPath(), u::randu()));
+        if (u::exists(tempFileName, kFile))
+            continue;
+        if (!(tempFile = u::fopen(tempFileName, "wb")))
+            continue;
+    }
+    if (!tempFile)
+        return false;
+
     for (size_t i = 0; i < tail.entries; i++) {
         localFileHeader current;
         if (fread(&current, sizeof current, 1, m_file) != 1)
@@ -458,22 +492,22 @@ bool zip::remove(const u::string &file) {
         }
         // Remember where in the stream this local file header will
         // be written for the central directory entry
-        localFileOffsets[fileName] = ftell(temp);
+        localFileOffsets[fileName] = ftell(tempFile);
         current.endianSwap();
-        if (fwrite(&current, sizeof current, 1, temp) != 1)
+        if (fwrite(&current, sizeof current, 1, tempFile) != 1)
             return false;
         current.endianSwap();
-        if (fwrite(&fileName[0], fileName.size(), 1, temp) != 1)
+        if (fwrite(&fileName[0], fileName.size(), 1, tempFile) != 1)
             return false;
-        if (!copyFileContents(temp, m_file, current.extraFieldLength))
+        if (!copyFileContents(tempFile, m_file, current.extraFieldLength))
             return false;
-        if (!copyFileContents(temp, m_file, current.compression ? current.csize : current.usize))
+        if (!copyFileContents(tempFile, m_file, current.compression ? current.csize : current.usize))
             return false;
     }
 
     if (fseek(m_file, tail.offset, SEEK_SET) != 0)
         return false;
-    tail.offset = ftell(temp);
+    tail.offset = ftell(tempFile);
     for (size_t i = 0; i < tail.entries; i++) {
         centralDirectoryHead head;
         if (fread(&head, sizeof head, 1, m_file) != 1)
@@ -493,14 +527,14 @@ bool zip::remove(const u::string &file) {
         }
         head.offset = localFileOffsets[fileName];
         head.endianSwap();
-        if (fwrite(&head, sizeof head, 1, temp) != 1)
+        if (fwrite(&head, sizeof head, 1, tempFile) != 1)
             return false;
         head.endianSwap();
-        if (fwrite(&fileName[0], fileName.size(), 1, temp) != 1)
+        if (fwrite(&fileName[0], fileName.size(), 1, tempFile) != 1)
             return false;
-        if (!copyFileContents(temp, m_file, head.extraFieldLength))
+        if (!copyFileContents(tempFile, m_file, head.extraFieldLength))
             return false;
-        if (!copyFileContents(temp, m_file, head.fileCommentLength))
+        if (!copyFileContents(tempFile, m_file, head.fileCommentLength))
             return false;
     }
 
@@ -511,16 +545,17 @@ bool zip::remove(const u::string &file) {
     if (tail.size == 0)
         tail.offset = 0;
     tail.endianSwap();
-    if (fwrite(&tail, sizeof tail, 1, temp) != 1)
+    if (fwrite(&tail, sizeof tail, 1, tempFile) != 1)
         return false;
 
     // Preserve the comment if any
     tail.endianSwap();
-    if (!copyFileContents(temp, m_file, tail.commentLength))
+    if (!copyFileContents(tempFile, m_file, tail.commentLength))
         return false;
 
     m_file.close();
-    if (!tmp.replace(m_fileName))
+
+    if (rename(tempFileName, m_fileName) != 0)
         return false;
 
     m_entries.erase(m_entries.find(file));

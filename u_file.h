@@ -108,19 +108,6 @@ inline bool dir::isFile(const u::string &fileName) {
     return dir::isFile(fileName.c_str());
 }
 
-struct tempFile {
-    tempFile();
-    operator file&();
-    bool replace(const u::string &other);
-private:
-    u::file m_file;
-    u::string m_name;
-};
-
-inline tempFile::operator file&() {
-    return m_file;
-}
-
 }
 
 #endif

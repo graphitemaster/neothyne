@@ -18,8 +18,6 @@
 #include "u_algorithm.h"
 #include "u_misc.h"
 
-#include "engine.h"
-
 namespace u {
 
 file::file()
@@ -309,25 +307,5 @@ bool dir::isFile(const char *fileName) {
 #endif
 }
 #endif
-
-tempFile::tempFile() {
-    for (size_t i = 0; i < 128; i++) {
-        m_name = u::fixPath(u::format("%s/tmp%zu", neoUserPath(), u::randu()));
-        if (u::exists(m_name, kFile))
-            continue;
-        if (!(m_file = u::fopen(m_name, "wb")))
-            continue;
-        return;
-    }
-    neoFatalError("failed to create a temporary file");
-}
-
-bool tempFile::replace(const u::string &replacee) {
-    m_file.close();
-    if (rename(m_name.c_str(), replacee.c_str()) != 0)
-        return false;
-    remove(m_name);
-    return true;
-}
 
 }
