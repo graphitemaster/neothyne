@@ -260,6 +260,7 @@ bool obj::load(const u::string &file, model *store) {
 ///! IQM loader
 struct iqm {
     static constexpr int kUByte = 1;
+    static constexpr int kUInt = 5;
     static constexpr int kHalf = 6;
     static constexpr int kFloat = 7;
 
@@ -347,35 +348,46 @@ inline void iqm::iqmHeader::endianSwap() {
     u::endianSwap(&version, (sizeof(iqmHeader) - sizeof(magic)) / sizeof(uint32_t));
 }
 
-// Helper structure to deal with aliasing input buffer as half precision or
-// single precision floats as well as other general utilities
+// Helper structure to deal with aliasing input buffer as half precision,
+// single precision floats or unsigned int as well as other general utilities
 struct inData {
     inData()
-        : isHalf(false)
-        , asOpaque(nullptr)
+        : type(-1)
+        , asUByte(nullptr)
     {
     }
 
     operator bool() const {
-        return asOpaque;
+        return asUByte;
     }
 
     void operator=(const u::pair<uint32_t, unsigned char *> &data) {
-        isHalf = data.first == iqm::kHalf;
-        asOpaque = data.second;
+        type = data.first;
+        asUByte = data.second;
     }
+
+    bool isHalf() const { return type == iqm::kHalf; }
+    bool isUInt() const { return type == iqm::kUInt; }
 
     void endianSwap(size_t count) {
-        if (isHalf)
+        switch (type) {
+        case iqm::kHalf:
             u::endianSwap(asHalf, count);
-        else
+            break;
+        case iqm::kFloat:
             u::endianSwap(asFloat, count);
+            break;
+        case iqm::kUInt:
+            u::endianSwap(asUInt, count);
+            break;
+        }
     }
 
-    bool isHalf;
+    int type;
 
     union {
-        unsigned char *asOpaque;
+        unsigned char *asUByte;
+        uint32_t *asUInt;
         float *asFloat;
         m::half *asHalf;
     };
@@ -395,8 +407,8 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
     inData inNormal;
     inData inTangent;
     inData inCoordinate;
-    unsigned char *inBlendIndex = nullptr;
-    unsigned char *inBlendWeight = nullptr;
+    inData inBlendIndex;
+    inData inBlendWeight;
 
     iqmVertexArray *vertexArrays = (iqmVertexArray*)&buf[hdr->ofsVertexArrays];
     for (uint32_t i = 0; i < hdr->numVertexArrays; i++) {
@@ -423,14 +435,14 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
             inCoordinate = { va.format, buf + va.offset };
             break;
         case iqm::kBlendIndexes:
-            if (va.format != kUByte || va.size != 4)
+            if ((va.format != kUByte && va.format != kUInt) || va.size != 4)
                 return false;
-            inBlendIndex = (unsigned char *)&buf[va.offset];
+            inBlendIndex = { va.format, buf + va.offset };
             break;
         case iqm::kBlendWeights:
-            if (va.format != kUByte || va.size != 4)
+            if ((va.format != kUByte && va.format != kUInt) || va.size != 4)
                 return false;
-            inBlendWeight = (unsigned char *)&buf[va.offset];
+            inBlendWeight = { va.format, buf + va.offset };
             break;
         }
     }
@@ -470,19 +482,23 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
         store->m_indices.push_back(triangle.vertex[1]);
     }
 
-    if (inPosition)   inPosition.endianSwap(3*hdr->numVertexes);
-    if (inNormal)     inNormal.endianSwap(3*hdr->numVertexes);
-    if (inTangent)    inTangent.endianSwap(4*hdr->numVertexes);
-    if (inCoordinate) inCoordinate.endianSwap(2*hdr->numVertexes);
+    if (inPosition)    inPosition.endianSwap(3*hdr->numVertexes);
+    if (inNormal)      inNormal.endianSwap(3*hdr->numVertexes);
+    if (inTangent)     inTangent.endianSwap(4*hdr->numVertexes);
+    if (inCoordinate)  inCoordinate.endianSwap(2*hdr->numVertexes);
+    if (inBlendIndex)  inBlendIndex.endianSwap(4*hdr->numVertexes);
+    if (inBlendWeight) inBlendWeight.endianSwap(4*hdr->numVertexes);
 
     // if one attribute is half float, all attributes must be half float
-    if (inPosition.isHalf != inNormal.isHalf || inNormal.isHalf != inTangent.isHalf || inTangent.isHalf != inCoordinate.isHalf)
+    if (inPosition.isHalf() != inNormal.isHalf() || inNormal.isHalf() != inTangent.isHalf() || inTangent.isHalf() != inCoordinate.isHalf())
         return false;
-    bool isHalf = inPosition.isHalf;
+    bool isHalf = inPosition.isHalf();
 
     if (animated) {
         store->m_animVertices.resize(hdr->numVertexes);
         for (uint32_t i = 0; i < hdr->numVertexes; i++) {
+            unsigned char (*curBlendWeight)[4] = nullptr;
+            unsigned char (*curBlendIndex)[4] = nullptr;
             if (isHalf) {
                 mesh::animHalfVertex &v = store->m_animHalfVertices[i];
                 if (inPosition)    memcpy(v.position, &inPosition.asHalf[i*3], sizeof v.position);
@@ -493,8 +509,8 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
                         inNormal.asHalf[i*3+j] ^= 0x8000;
                     memcpy(v.normal, &inNormal.asHalf[i*3], sizeof v.normal);
                 }
-                if (inBlendIndex)  memcpy(v.blendIndex, &inBlendIndex[i*4], sizeof v.blendIndex);
-                if (inBlendWeight) memcpy(v.blendWeight, &inBlendWeight[i*4], sizeof v.blendWeight);
+                curBlendIndex = &v.blendIndex;
+                curBlendWeight = &v.blendWeight;
             } else {
                 mesh::animVertex &v = store->m_animVertices[i];
                 if (inPosition)    memcpy(v.position, &inPosition.asFloat[i*3], sizeof v.position);
@@ -507,8 +523,28 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
                                                          inNormal.asFloat[i*3+2]);
                     memcpy(v.normal, &flip.x, sizeof v.normal);
                 }
-                if (inBlendIndex)  memcpy(v.blendIndex, &inBlendIndex[i*4], sizeof v.blendIndex);
-                if (inBlendWeight) memcpy(v.blendWeight, &inBlendWeight[i*4], sizeof v.blendWeight);
+                curBlendIndex = &v.blendIndex;
+                curBlendWeight = &v.blendWeight;
+            }
+            if (inBlendIndex) {
+                if (inBlendIndex.isUInt()) {
+                    uint32_t indices[4];
+                    memcpy(indices, &inBlendIndex.asUInt[i*4], sizeof indices);
+                    for (size_t i = 0; i < 4; i++)
+                        (*curBlendIndex)[i] = indices[i] & 0xFF;
+                } else {
+                    memcpy(*curBlendIndex, &inBlendIndex.asUByte[i*4], 4);
+                }
+            }
+            if (inBlendWeight) {
+                if (inBlendWeight.isUInt()) {
+                    uint32_t weights[4];
+                    memcpy(weights, &inBlendWeight.asUInt[i*4], sizeof weights);
+                    for (size_t i = 0; i < 4; i++)
+                        (*curBlendWeight)[i] = weights[i] & 0xFF;
+                } else {
+                    memcpy(*curBlendWeight, &inBlendWeight.asUByte[i*4], 4);
+                }
             }
         }
     } else {
