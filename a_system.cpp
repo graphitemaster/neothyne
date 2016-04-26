@@ -42,8 +42,9 @@ void audioInit(a::audio *system) {
 }
 
 void audioShutdown(a::audio *system) {
-    neoFree(system->m_mixerData);
     SDL_CloseAudio();
+    // free the mixer data after shutting down the mixer thread
+    neoFree(system->m_mixerData);
 }
 
 ///! fader
