@@ -19,6 +19,7 @@ struct fader {
 private:
     friend struct audio;
 
+    float m_current;
     float m_from;
     float m_to;
     float m_delta;

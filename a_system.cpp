@@ -48,11 +48,19 @@ void audioShutdown(a::audio *system) {
 
 ///! fader
 fader::fader()
-    : m_active(false)
+    : m_current(0.0f)
+    , m_from(0.0f)
+    , m_to(0.0f)
+    , m_delta(0.0f)
+    , m_time(0.0f)
+    , m_startTime(0.0f)
+    , m_endTime(0.0f)
+    , m_active(false)
 {
 }
 
 void fader::set(float from, float to, float time, float startTime) {
+    m_current = from;
     m_from = from;
     m_to = to;
     m_time = time;
@@ -63,11 +71,22 @@ void fader::set(float from, float to, float time, float startTime) {
 }
 
 float fader::get(float currentTime) {
+    if (m_startTime > currentTime) {
+        // time rolled over
+        float delta = (m_current - m_from) / m_delta;
+        m_from = m_current;
+        m_startTime = currentTime;
+        m_time = m_time * (1.0f - delta); // time left
+        m_delta = m_to - m_from;
+        m_endTime = m_startTime + m_time;
+    }
+
     if (currentTime > m_endTime) {
         m_active = false;
         return m_to;
     }
-    return m_from + m_delta * ((currentTime - m_startTime) / m_time);
+    m_current = m_from + m_delta * ((currentTime - m_startTime) / m_time);
+    return m_current;
 }
 
 ///! producer
