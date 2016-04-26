@@ -33,6 +33,10 @@ RENDERER_SOURCES = \
 	r_light.cpp \
 	r_particles.cpp
 
+AUDIO_SOURCES = \
+	a_system.cpp \
+	a_wav.cpp
+
 UTIL_SOURCES = \
 	u_assert.cpp \
 	u_file.cpp \
@@ -57,6 +61,7 @@ ENGINE_SOURCES = \
 	cvar.cpp \
 	gui.cpp \
 	grader.cpp \
+	$(AUDIO_SOURCES) \
 	$(UTIL_SOURCES) \
 	$(CONSOLE_SOURCES) \
 	$(MATH_SOURCES) \

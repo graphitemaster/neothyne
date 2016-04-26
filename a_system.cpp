@@ -1,0 +1,238 @@
+#include <SDL.h>
+
+#include "a_system.h"
+
+#include "m_const.h"
+#include "m_trig.h"
+
+#include "u_new.h"
+
+#include "engine.h"
+
+
+namespace a {
+
+static void audioMixer(void *user, Uint8 *stream, int length) {
+    const int samples = length / 4;
+    short *buffer = (short *)stream;
+    a::audio *system = (a::audio *)user;
+    float *data = (float *)system->mixerData;
+    system->mix(data, samples);
+    for (int i = 0; i < samples*2; i++)
+        buffer[i] = (short)(data[i] * 0x7fff);
+}
+
+void audioInit(a::audio *system) {
+    SDL_AudioSpec spec;
+    spec.freq = 44100;
+    spec.format = AUDIO_S16;
+    spec.channels = 2;
+    spec.samples = 2048;
+    spec.callback = &audioMixer;
+    spec.userdata = (void *)system;
+
+    SDL_AudioSpec got;
+    if (SDL_OpenAudio(&spec, &got) < 0)
+        neoFatalError("failed to initialize audio");
+
+    system->mixerData = neoMalloc(sizeof(float) * got.samples*4);
+
+    u::print("[audio] => initialized for %d channels @ %dHz (%d samples)\n", got.channels, got.freq, got.samples);
+    SDL_PauseAudio(0);
+}
+
+void audioShutdown(a::audio *system) {
+    neoFree(system->mixerData);
+    SDL_CloseAudio();
+}
+
+void factory::setLooping(bool looping) {
+    if (looping)
+        m_flags |= kLoop;
+    else
+        m_flags &= ~kLoop;
+}
+
+void audio::init(int channels, int sampleRate, int bufferSize, int flags) {
+    m_globalVolume = 1.0f;
+    m_channels.resize(channels);
+    m_sampleRate = sampleRate;
+    m_bufferSize = bufferSize;
+    m_flags = flags;
+}
+
+void audio::setVolume(float volume) {
+    m_globalVolume = volume;
+}
+
+int audio::findFreeChannel() {
+    unsigned int lowest = 0xFFFFFFFF;
+    int current = -1;
+    for (size_t i = 0; i < m_channels.size(); i++) {
+        if (m_channels[i] == nullptr)
+            return i;
+        if ((m_channels[i]->m_flags & producer::kProtected) == 0 && m_channels[i]->m_playIndex < lowest) {
+            lowest = m_channels[i]->m_playIndex;
+            current = int(i);
+        }
+    }
+    stop(current);
+    return current;
+}
+
+int audio::play(factory &sound, float volume, float pan) {
+    int channel = findFreeChannel();
+    m_channels[channel] = sound.create();
+    m_channels[channel]->m_playIndex = m_playIndex;
+    m_channels[channel]->m_flags = 0;
+    int handle = channel | (m_channels[channel]->m_playIndex << 8);
+    setPan(handle, pan);
+    setVolume(handle, volume);
+    if (sound.m_flags & factory::kLoop)
+        m_channels[channel]->m_flags |= producer::kLooping;
+    m_playIndex++;
+    size_t scratchNeeded = size_t(m::ceil((m_channels[channel]->m_sampleRate / m_sampleRate) * m_bufferSize));
+    if (m_scratchNeeded < scratchNeeded) {
+        size_t next = 1024;
+        while (next < scratchNeeded) next <<= 1;
+        m_scratchNeeded = next;
+    }
+    return handle;
+}
+
+int audio::absChannel(int handle) const {
+    int channel = handle & 0xFF;
+    unsigned int index = handle >> 8;
+    if (m_channels[channel] && (m_channels[channel]->m_playIndex & 0xFFFFFF) == index)
+        return channel;
+    return -1;
+}
+
+float audio::getVolume(int handle) const {
+    int channel = absChannel(handle);
+    return channel == -1 ? 0.0f : m_channels[channel]->m_volume.z;
+}
+
+float audio::getSampleRate(int handle) const {
+    int channel = absChannel(handle);
+    return channel == -1 ? 0.0f : m_channels[channel]->m_sampleRate;
+}
+
+void audio::setSampleRate(int handle, float sampleRate) {
+    int channel = absChannel(handle);
+    if (channel == -1)
+        return;
+    m_channels[channel]->m_sampleRate = sampleRate;
+}
+
+bool audio::getProtected(int handle) const {
+    int channel = absChannel(handle);
+    return channel == -1 ? false : !!(m_channels[channel]->m_flags & producer::kProtected);
+}
+
+void audio::setProtected(int handle, bool protect) {
+    int channel = absChannel(handle);
+    if (channel == -1)
+        return;
+    if (protect)
+        m_channels[channel]->m_flags |= producer::kProtected;
+    else
+        m_channels[channel]->m_flags &= ~producer::kProtected;
+}
+
+void audio::setPan(int handle, float pan) {
+    setPanAbs(handle, m::sincos((pan + 1.0f) * m::kPi / 4.0f));
+}
+
+void audio::setPanAbs(int handle, const m::vec2 &panning) {
+    int channel = absChannel(handle);
+    if (channel == -1)
+        return;
+    m_channels[channel]->m_volume.x = panning.x;
+    m_channels[channel]->m_volume.y = panning.y;
+}
+
+void audio::setVolume(int handle, float volume) {
+    int channel = absChannel(handle);
+    if (channel == -1)
+        return;
+    m_channels[channel]->m_volume.z = volume;
+}
+
+void audio::stop(int handle) {
+    int channel = absChannel(handle);
+    if (channel == -1)
+        return;
+    stopAbs(channel);
+}
+
+void audio::stopAbs(int channel) {
+    if (m_channels[channel]) {
+        delete m_channels[channel];
+        m_channels[channel] = nullptr;
+    }
+}
+
+void audio::stop() {
+    for (size_t i = 0; i < m_channels.size(); i++)
+        stopAbs(i);
+}
+
+void audio::mix(float *buffer, int samples) {
+    if (m_scratch.size() < m_scratchNeeded)
+        m_scratch.resize(m_scratchNeeded);
+    // clear accumulation buffer
+    for (int i = 0; i < samples*2; i++)
+        buffer[i] = 0.0f;
+    // accumulate sound sources
+    int index = 0;
+    for (auto *it : m_channels) {
+        if (it) {
+            float lPan = it->m_volume.x * it->m_volume.z * m_globalVolume;
+            float rPan = it->m_volume.y * it->m_volume.z * m_globalVolume;
+            float next = it->m_sampleRate / m_sampleRate;
+            it->getAudio(&m_scratch[0], int(m::ceil(samples * next)));
+
+            float step = 0.0f;
+            for (int j = 0; j < samples; j++, step += next) {
+                float sample = m_scratch[int(m::floor(step))];
+                buffer[j * 2 + 0] += sample * lPan;
+                buffer[j * 2 + 1] += sample * rPan;
+            }
+
+            // clear channel if the sound is over
+            if (!(it->m_flags & producer::kLooping) && it->hasEnded())
+                stopAbs(index);
+        }
+        index++;
+    }
+    // clipping
+    if (m_flags & kClipRoundOff) {
+        for (int i = 0; i < samples*2; i++) {
+            buffer[i] = buffer[i] <= -1.65f ? -0.9862875f :
+                        buffer[i] >=  1.65f ?  0.9862875f : 0.87f * buffer[i] - 0.1f * buffer[i] * buffer[i] * buffer[i];
+        }
+    } else {
+        for (int i = 0; i < samples; i++)
+            buffer[i] = m::clamp(buffer[i], -1.0f, 1.0f);
+    }
+}
+
+audio::audio()
+    : mixerData(nullptr)
+    , m_scratchNeeded(0)
+    , m_sampleRate(0)
+    , m_bufferSize(0)
+    , m_flags(0)
+    , m_globalVolume(0)
+    , m_playIndex(0)
+{
+}
+
+audio::~audio() {
+    stop();
+    for (auto *it : m_channels)
+        delete it;
+}
+
+}

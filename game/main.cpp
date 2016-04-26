@@ -100,7 +100,7 @@ NVAR(float, u_x, "", -180.0f, 360.0f, 0.0f);
 NVAR(float, u_y, "", -180.0f, 360.0f, 0.0f);
 NVAR(float, u_z, "", -180.0f, 360.0f, 0.0f);
 
-int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
+int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
     // Setup rendering pipeline
     gPerspective.fov = cl_fov;
     gPerspective.nearp = cl_nearp;
@@ -127,6 +127,14 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
     menuReset();
     neoSetWindowTitle("Neothyne");
     neoCenterMouse();
+
+    a::wav theme;
+    if (!theme.load("theme.wav", 0))
+        neoFatal("failed to load theme music\n");
+    theme.setLooping(true);
+
+    // fire and forget!
+    int handle = audio.play(theme, 1.0f, 0.0f); // middle
 
 #if 1
     // Setup some lights
@@ -360,6 +368,10 @@ int neoMain(frameTimer &timer, int, char **, bool &shutdown) {
             gui::drawImage(mouse.x, mouse.y - (32 - 3), 32, 32, "textures/ui/cursor");
 
         gui::finish();
+
+        m::vec3 direction;
+        gClient.getDirection(&direction, nullptr, nullptr);
+        audio.setPan(handle, direction.x);
     }
 
     return 0;

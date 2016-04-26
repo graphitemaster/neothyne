@@ -7,6 +7,9 @@
 #include "u_misc.h"
 #include "u_stack.h"
 
+//#include "a_system.h"
+#include "a_wav.h"
+
 /// Frame timer
 struct frameTimer {
     static constexpr size_t kMaxFPS = 0; ///< For capping framerate (0 = disabled)
@@ -108,6 +111,7 @@ struct engine {
     textState textInput(u::string &what);
 
     frameTimer m_frameTimer; // TODO: private
+    a::audio m_audio; // TODO: private
 
 protected:
     bool initContext();

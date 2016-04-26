@@ -342,6 +342,7 @@ inline engine::engine()
 }
 
 inline engine::~engine() {
+    a::audioShutdown(&m_audio);
     delete CTX(m_context);
 }
 
@@ -971,7 +972,7 @@ void *neoGetProcAddress(const char *proc) {
 ///     main -> entryPoint -> neoMain
 ///
 static int entryPoint(int argc, char **argv) {
-    extern int neoMain(frameTimer&, int argc, char **argv, bool &shutdown);
+    extern int neoMain(frameTimer&, a::audio &, int argc, char **argv, bool &shutdown);
 
     signal(SIGINT, neoSignalHandler);
     signal(SIGTERM, neoSignalHandler);
@@ -1022,8 +1023,12 @@ static int entryPoint(int argc, char **argv) {
 
     u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
 
+    // initialize the audio
+    gEngine.m_audio.init(8, 44100, 4096*2, 1);
+    a::audioInit(&gEngine.m_audio);
+
     // Launch the game
-    const int status = neoMain(gEngine.m_frameTimer, argc, argv, (bool &)gShutdown);
+    const int status = neoMain(gEngine.m_frameTimer, gEngine.m_audio, argc, argv, (bool &)gShutdown);
     writeConfig(gEngine.userPath());
 
     // Instance must be released before OpenGL context is lost

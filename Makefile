@@ -17,7 +17,6 @@ CXXFLAGS = \
 	-std=c++11 \
 	-Wall \
 	-Wextra \
-	-ffast-math \
 	-fno-exceptions \
 	-fno-rtti \
 	-I. \
