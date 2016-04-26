@@ -26,6 +26,7 @@ void wavProducer::getAudio(float *buffer, size_t samples) {
         if (m_flags & producer::kLooping) {
             memcpy(buffer + copySize * channels, m_parent->m_data, sizeof(float) * (samples - copySize) * channels);
             m_offset = samples - copySize;
+            m_streamTime = m_offset / m_sampleRate;
         } else {
             memset(buffer + copySize * channels, 0, sizeof(float) * (samples - copySize) * channels);
             m_offset += samples - copySize;
@@ -37,6 +38,13 @@ void wavProducer::getAudio(float *buffer, size_t samples) {
 
 bool wavProducer::hasEnded() const {
     return m_offset >= m_parent->m_samples;
+}
+
+bool wavProducer::rewind() {
+    m_offset = 0;
+    m_streamTime = 0.0f;
+    return true;
+    return true;
 }
 
 wav::wav()

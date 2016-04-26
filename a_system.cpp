@@ -119,6 +119,7 @@ void producer::seek(float seconds, float *scratch, size_t scratchSize) {
         getAudio(scratch, samples);
         discard -= samples;
     }
+    m_streamTime = seconds;
 }
 
 ///! factory
@@ -400,6 +401,7 @@ void audio::fadeRelativePlaySpeed(int channelHandle, float from, float to, float
 }
 
 void audio::fadeGlobalVolume(float from, float to, float time) {
+    m_streamTime = 0.0f; // avoid ~6 day rollover
     m_globalVolumeFader.set(from, to, time, m_streamTime);
 }
 

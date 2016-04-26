@@ -10,6 +10,7 @@ struct wavProducer : producer {
     wavProducer(wav *parent);
     virtual void getAudio(float *buffer, size_t samples);
     virtual bool hasEnded() const;
+    virtual bool rewind();
 private:
     wav *m_parent;
     size_t m_offset;
