@@ -402,24 +402,40 @@ void audio::stopAll() {
 }
 
 void audio::fadeVolume(int channelHandle, float from, float to, float time) {
+    if (time <= 0.0f || to == from) {
+        setVolume(channelHandle, to);
+        return;
+    }
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return;
     m_channels[channel]->m_volumeFader.set(from, to, time, m_channels[channel]->m_streamTime);
 }
 
 void audio::fadePan(int channelHandle, float from, float to, float time) {
+    if (time <= 0.0f || to == from) {
+        setPan(channelHandle, to);
+        return;
+    }
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return;
     m_channels[channel]->m_panFader.set(from, to, time, m_channels[channel]->m_streamTime);
 }
 
 void audio::fadeRelativePlaySpeed(int channelHandle, float from, float to, float time) {
+    if (time <= 0.0f || to == from) {
+        setRelativePlaySpeed(channelHandle, to);
+        return;
+    }
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return;
     m_channels[channel]->m_relativePlaySpeedFader.set(from, to, time, m_channels[channel]->m_streamTime);
 }
 
 void audio::fadeGlobalVolume(float from, float to, float time) {
+    if (time <= 0.0f || to == from) {
+        setGlobalVolume(to);
+        return;
+    }
     m_streamTime = 0.0f; // avoid ~6 day rollover
     m_globalVolumeFader.set(from, to, time, m_streamTime);
 }
