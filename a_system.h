@@ -68,8 +68,10 @@ struct audio {
 
     float getVolume(int channel) const;
     float getSampleRate(int channel) const;
+    float getPostClipScaler() const;
     bool getProtected(int channel) const;
 
+    void setPostClipScaler(float scaler);
     void setSampleRate(int channel, float sampleRate);
     void setProtected(int channel, bool protect);
 
@@ -98,6 +100,7 @@ private:
     int m_bufferSize;
     int m_flags;
     float m_globalVolume;
+    float m_postClipScaler;
     unsigned int m_playIndex;
 };
 

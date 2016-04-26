@@ -57,8 +57,10 @@ void audio::init(int channels, int sampleRate, int bufferSize, int flags) {
     m_globalVolume = 1.0f;
     m_channels.resize(channels);
     m_sampleRate = sampleRate;
+    m_scratchNeeded = 1;
     m_bufferSize = bufferSize;
     m_flags = flags;
+    m_postClipScaler = 0.5f;
 }
 
 void audio::setVolume(float volume) {
@@ -118,11 +120,19 @@ float audio::getSampleRate(int handle) const {
     return channel == -1 ? 0.0f : m_channels[channel]->m_sampleRate;
 }
 
+float audio::getPostClipScaler() const {
+    return m_postClipScaler;
+}
+
 void audio::setSampleRate(int handle, float sampleRate) {
     int channel = absChannel(handle);
     if (channel == -1)
         return;
     m_channels[channel]->m_sampleRate = sampleRate;
+}
+
+void audio::setPostClipScaler(float scaler) {
+    m_postClipScaler = scaler;
 }
 
 bool audio::getProtected(int handle) const {
@@ -209,12 +219,12 @@ void audio::mix(float *buffer, int samples) {
     // clipping
     if (m_flags & kClipRoundOff) {
         for (int i = 0; i < samples*2; i++) {
-            buffer[i] = buffer[i] <= -1.65f ? -0.9862875f :
-                        buffer[i] >=  1.65f ?  0.9862875f : 0.87f * buffer[i] - 0.1f * buffer[i] * buffer[i] * buffer[i];
+            buffer[i] = (buffer[i] <= -1.65f ? -0.9862875f :
+                         buffer[i] >=  1.65f ?  0.9862875f : 0.87f * buffer[i] - 0.1f * buffer[i] * buffer[i] * buffer[i]) * m_postClipScaler;
         }
     } else {
         for (int i = 0; i < samples; i++)
-            buffer[i] = m::clamp(buffer[i], -1.0f, 1.0f);
+            buffer[i] = m::clamp(buffer[i], -1.0f, 1.0f) * m_postClipScaler;
     }
 }
 
