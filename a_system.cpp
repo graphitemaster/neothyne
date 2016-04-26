@@ -36,7 +36,7 @@ void audioInit(a::audio *system) {
 
     system->mixerData = neoMalloc(sizeof(float) * got.samples*4);
 
-    u::print("[audio] => initialized for %d channels @ %dHz (%d samples)\n", got.channels, got.freq, got.samples);
+    u::print("[audio] => device configured for %d channels @ %dHz (%d samples)\n", got.channels, got.freq, got.samples);
     SDL_PauseAudio(0);
 }
 
@@ -72,6 +72,8 @@ void audio::init(int channels, int sampleRate, int bufferSize, int flags) {
     m_bufferSize = bufferSize;
     m_flags = flags;
     m_postClipScaler = 0.5f;
+    u::print("[audio] => initialized for %d channels @ %dHz with %s buffer\n",
+        channels, sampleRate, u::sizeMetric(bufferSize));
 }
 
 void audio::setVolume(float volume) {
@@ -306,8 +308,6 @@ audio::audio()
 
 audio::~audio() {
     stop();
-    for (auto *it : m_channels)
-        delete it;
 }
 
 }
