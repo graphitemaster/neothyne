@@ -139,6 +139,12 @@ void audio::setRelativePlaySpeed(int handle, float speed) {
         return;
     m_channels[channel]->m_relativePlaySpeed = speed;
     m_channels[channel]->m_sampleRate = m_channels[channel]->m_baseSampleRate * m_channels[channel]->m_relativePlaySpeed;
+    size_t scratchNeeded = size_t(m::ceil((m_channels[channel]->m_sampleRate / m_sampleRate) * m_bufferSize));
+    if (m_scratchNeeded < scratchNeeded) {
+        size_t next = 1024;
+        while (next < scratchNeeded) next <<= 1;
+        m_scratchNeeded = next;
+    }
 }
 
 void audio::setSampleRate(int handle, float sampleRate) {
