@@ -139,6 +139,8 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
     audio.fadeVolume(handle, 0.0f, 1.0f, 15.0f);
     // come in from right to left
     audio.fadePan(handle, -1.0f, 1.0f, 15.0f);
+    // speed up playback from 0 to 1 within the first 5 seconds
+    audio.fadeRelativePlaySpeed(handle, 0.0f, 1.0f, 5.0f);
 
 #if 1
     // Setup some lights
