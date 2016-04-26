@@ -9,7 +9,6 @@
 
 #include "engine.h"
 
-
 namespace a {
 
 static void audioMixer(void *user, Uint8 *stream, int length) {
@@ -103,7 +102,6 @@ int audio::play(factory &sound, float volume, float pan, bool paused) {
     m_channels[channel]->m_playIndex = m_playIndex;
     m_channels[channel]->m_flags = paused ? producer::kPaused : 0;
     m_channels[channel]->m_baseSampleRate = sound.m_baseSampleRate;
-
     int handle = channel | (m_channels[channel]->m_playIndex << 8);
     setRelativePlaySpeed(handle, 1);
     setPan(handle, pan);
@@ -122,27 +120,27 @@ int audio::play(factory &sound, float volume, float pan, bool paused) {
     return handle;
 }
 
-int audio::absChannel(int handle) const {
+producer *audio::absChannel(int handle) const {
     int channel = handle & 0xFF;
     unsigned int index = handle >> 8;
     if (m_channels[channel] && (m_channels[channel]->m_playIndex & 0xFFFFFF) == index)
-        return channel;
-    return -1;
+        return m_channels[channel];
+    return nullptr;
 }
 
 float audio::getRelativePlaySpeed(int handle) const {
-    int channel = absChannel(handle);
-    return channel == -1 ? 1.0f : m_channels[channel]->m_relativePlaySpeed;
+    auto channel = absChannel(handle);
+    return channel ? channel->m_relativePlaySpeed : 0.0f;
 }
 
 float audio::getVolume(int handle) const {
-    int channel = absChannel(handle);
-    return channel == -1 ? 0.0f : m_channels[channel]->m_volume.z;
+    auto channel = absChannel(handle);
+    return channel ? channel->m_volume.z : 0.0f;
 }
 
 float audio::getSampleRate(int handle) const {
-    int channel = absChannel(handle);
-    return channel == -1 ? 0.0f : m_channels[channel]->m_baseSampleRate;
+    auto channel = absChannel(handle);
+    return channel ? channel->m_baseSampleRate : 0.0f;
 }
 
 float audio::getPostClipScaler() const {
@@ -150,12 +148,12 @@ float audio::getPostClipScaler() const {
 }
 
 void audio::setRelativePlaySpeed(int handle, float speed) {
-    int channel = absChannel(handle);
-    if (channel == -1)
+    auto channel = absChannel(handle);
+    if (channel == nullptr)
         return;
-    m_channels[channel]->m_relativePlaySpeed = speed;
-    m_channels[channel]->m_sampleRate = m_channels[channel]->m_baseSampleRate * m_channels[channel]->m_relativePlaySpeed;
-    size_t scratchNeeded = size_t(m::ceil((m_channels[channel]->m_sampleRate / m_sampleRate) * m_bufferSize));
+    channel->m_relativePlaySpeed = speed;
+    channel->m_sampleRate = channel->m_baseSampleRate * channel->m_relativePlaySpeed;
+    size_t scratchNeeded = size_t(m::ceil((channel->m_sampleRate / m_sampleRate) * m_bufferSize));
     if (m_scratchNeeded < scratchNeeded) {
         size_t next = 1024;
         while (next < scratchNeeded) next <<= 1;
@@ -164,11 +162,11 @@ void audio::setRelativePlaySpeed(int handle, float speed) {
 }
 
 void audio::setSampleRate(int handle, float sampleRate) {
-    int channel = absChannel(handle);
-    if (channel == -1)
+    auto channel = absChannel(handle);
+    if (channel == nullptr)
         return;
-    m_channels[channel]->m_baseSampleRate = sampleRate;
-    m_channels[channel]->m_sampleRate = m_channels[channel]->m_baseSampleRate * m_channels[channel]->m_relativePlaySpeed;
+    channel->m_baseSampleRate = sampleRate;
+    channel->m_sampleRate = channel->m_baseSampleRate * channel->m_relativePlaySpeed;
 }
 
 void audio::setPostClipScaler(float scaler) {
@@ -176,33 +174,33 @@ void audio::setPostClipScaler(float scaler) {
 }
 
 bool audio::getProtected(int handle) const {
-    int channel = absChannel(handle);
-    return channel == -1 ? false : !!(m_channels[channel]->m_flags & producer::kProtected);
+    auto channel = absChannel(handle);
+    return channel ? !!(channel->m_flags & producer::kProtected) : false;
 }
 
 bool audio::getPaused(int handle) const {
-    int channel = absChannel(handle);
-    return channel == -1 ? false : !!(m_channels[channel]->m_flags & producer::kPaused);
+    auto channel = absChannel(handle);
+    return channel ? !!(channel->m_flags & producer::kPaused) : false;
 }
 
 void audio::setProtected(int handle, bool protect) {
-    int channel = absChannel(handle);
-    if (channel == -1)
+    auto channel = absChannel(handle);
+    if (channel == nullptr)
         return;
     if (protect)
-        m_channels[channel]->m_flags |= producer::kProtected;
+        channel->m_flags |= producer::kProtected;
     else
-        m_channels[channel]->m_flags &= ~producer::kProtected;
+        channel->m_flags &= ~producer::kProtected;
 }
 
 void audio::setPaused(int handle, bool paused) {
-    int channel = absChannel(handle);
-    if (channel == -1)
+    auto channel = absChannel(handle);
+    if (channel == nullptr)
         return;
     if (paused)
-        m_channels[channel]->m_flags |= producer::kPaused;
+        channel->m_flags |= producer::kPaused;
     else
-        m_channels[channel]->m_flags &= ~producer::kPaused;
+        channel->m_flags &= ~producer::kPaused;
 }
 
 void audio::setPan(int handle, float pan) {
@@ -210,25 +208,28 @@ void audio::setPan(int handle, float pan) {
 }
 
 void audio::setPanAbs(int handle, const m::vec2 &panning) {
-    int channel = absChannel(handle);
-    if (channel == -1)
+    auto channel = absChannel(handle);
+    if (channel == nullptr)
         return;
-    m_channels[channel]->m_volume.x = panning.x;
-    m_channels[channel]->m_volume.y = panning.y;
+    channel->m_volume.x = panning.x;
+    channel->m_volume.y = panning.y;
 }
 
 void audio::setVolume(int handle, float volume) {
-    int channel = absChannel(handle);
-    if (channel == -1)
-        return;
-    m_channels[channel]->m_volume.z = volume;
+    auto channel = absChannel(handle);
+    if (channel)
+        channel->m_volume.z = volume;
 }
 
 void audio::stop(int handle) {
-    int channel = absChannel(handle);
-    if (channel == -1)
-        return;
-    stopAbs(channel);
+    auto channel = absChannel(handle);
+    for (size_t i = 0; i < m_channels.size(); i++) {
+        if (m_channels[i] != channel)
+            continue;
+        m_channels[i] = nullptr;
+        break;
+    }
+    delete channel;
 }
 
 void audio::stopAbs(int channel) {

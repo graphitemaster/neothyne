@@ -100,7 +100,7 @@ struct audio {
 
 protected:
     int findFreeChannel();
-    int absChannel(int handle) const;
+    producer *absChannel(int handle) const;
 
     void setPanAbs(int channel, const m::vec2 &volume);
     void stopAbs(int channel);
