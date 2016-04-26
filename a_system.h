@@ -127,6 +127,7 @@ protected:
 
     void stopChannel(int channel);
     void setChannelPan(int channel, float panning);
+    void setChannelVolume(int channel, float volume);
     void setChannelRelativePlaySpeed(int channel, float speed);
 
 private:

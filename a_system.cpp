@@ -177,6 +177,7 @@ void audio::setPostClipScaler(float scaler) {
 }
 
 void audio::setGlobalVolume(float volume) {
+    m_globalVolumeFader.m_active = false;
     m_globalVolume = volume;
 }
 
@@ -205,9 +206,9 @@ int audio::play(factory &sound, float volume, float pan, bool paused) {
     if (paused)
         m_channels[channel]->m_flags |= producer::kPaused;
 
-    setPan(handle, pan);
-    setVolume(handle, volume);
-    setRelativePlaySpeed(handle, 1.0f);
+    setChannelPan(channel, pan);
+    setChannelVolume(channel, volume);
+    setChannelRelativePlaySpeed(channel, 1.0f);
 
     m_playIndex++;
     const size_t scratchNeeded = size_t(m::ceil((m_channels[channel]->m_sampleRate / m_sampleRate) * m_bufferSize));
@@ -264,6 +265,7 @@ void audio::setChannelRelativePlaySpeed(int channel, float speed) {
 void audio::setRelativePlaySpeed(int channelHandle, float speed) {
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return;
+    m_channels[channel]->m_relativePlaySpeedFader.m_active = false;
     setChannelRelativePlaySpeed(channel, speed);
 }
 
@@ -335,6 +337,11 @@ void audio::setChannelPan(int channel, float pan) {
     }
 }
 
+void audio::setChannelVolume(int channel, float volume) {
+    if (m_channels[channel])
+        m_channels[channel]->m_volume.z = volume;
+}
+
 void audio::setPan(int channelHandle, float pan) {
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return;
@@ -344,6 +351,7 @@ void audio::setPan(int channelHandle, float pan) {
 void audio::setPanAbsolute(int channelHandle, const m::vec2 &panning) {
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return;
+    m_channels[channel]->m_panFader.m_active = false;
     m_channels[channel]->m_volume.x = panning.x;
     m_channels[channel]->m_volume.y = panning.y;
 }
@@ -351,7 +359,8 @@ void audio::setPanAbsolute(int channelHandle, const m::vec2 &panning) {
 void audio::setVolume(int channelHandle, float volume) {
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return;
-    m_channels[channel]->m_volume.z = volume;
+    m_channels[channel]->m_volumeFader.m_active = false;
+    setChannelVolume(channel, volume);
 }
 
 void audio::stop(int channelHandle) {
