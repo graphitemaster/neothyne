@@ -94,6 +94,8 @@ int audio::play(factory &sound, float volume, float pan) {
     setVolume(handle, volume);
     if (sound.m_flags & factory::kLoop)
         m_channels[channel]->m_flags |= producer::kLooping;
+    if (sound.m_flags & factory::kStereo)
+        m_channels[channel]->m_flags |= producer::kStereo;
     m_playIndex++;
     size_t scratchNeeded = size_t(m::ceil((m_channels[channel]->m_sampleRate / m_sampleRate) * m_bufferSize));
     if (m_scratchNeeded < scratchNeeded) {
@@ -220,10 +222,19 @@ void audio::mix(float *buffer, int samples) {
             it->getAudio(&m_scratch[0], int(m::ceil(samples * next)));
 
             float step = 0.0f;
-            for (int j = 0; j < samples; j++, step += next) {
-                float sample = m_scratch[int(m::floor(step))];
-                buffer[j * 2 + 0] += sample * lPan;
-                buffer[j * 2 + 1] += sample * rPan;
+            if (it->m_flags & producer::kStereo) {
+                for (int j = 0; j < samples; j++, step += next) {
+                    const float sample1 = m_scratch[(int)m::floor(step)*2];
+                    const float sample2 = m_scratch[(int)m::floor(step)*2+1];
+                    buffer[j * 2 + 0] += sample1 * lPan;
+                    buffer[j * 2 + 1] += sample2 * rPan;
+                }
+            } else {
+                for (int j = 0; j < samples; j++, step += next) {
+                    const float sample = m_scratch[(int)m::floor(step)];
+                    buffer[j * 2 + 0] += sample * lPan;
+                    buffer[j * 2 + 1] += sample * rPan;
+                }
             }
 
             // clear channel if the sound is over

@@ -12,8 +12,9 @@ void audioShutdown(a::audio *system);
 
 struct producer {
     enum {
-        kProtected = 1 << 0,
-        kLooping = 1 << 1
+        kLooping = 1 << 0,
+        kStereo = 1 << 1,
+        kProtected = 1 << 2
     };
 
     virtual ~producer() {};
@@ -34,7 +35,8 @@ protected:
 
 struct factory {
     enum {
-        kLoop = 1 << 0
+        kLoop = 1 << 0,
+        kStereo = 1 << 1
     };
 
     factory();
