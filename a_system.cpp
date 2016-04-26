@@ -87,7 +87,9 @@ int audio::play(factory &sound, float volume, float pan) {
     m_channels[channel] = sound.create();
     m_channels[channel]->m_playIndex = m_playIndex;
     m_channels[channel]->m_flags = 0;
+    m_channels[channel]->m_baseSampleRate = sound.m_baseSampleRate;
     int handle = channel | (m_channels[channel]->m_playIndex << 8);
+    setRelativePlaySpeed(handle, 1);
     setPan(handle, pan);
     setVolume(handle, volume);
     if (sound.m_flags & factory::kLoop)
@@ -110,6 +112,11 @@ int audio::absChannel(int handle) const {
     return -1;
 }
 
+float audio::getRelativePlaySpeed(int handle) const {
+    int channel = absChannel(handle);
+    return channel == -1 ? 1.0f : m_channels[channel]->m_relativePlaySpeed;
+}
+
 float audio::getVolume(int handle) const {
     int channel = absChannel(handle);
     return channel == -1 ? 0.0f : m_channels[channel]->m_volume.z;
@@ -117,18 +124,27 @@ float audio::getVolume(int handle) const {
 
 float audio::getSampleRate(int handle) const {
     int channel = absChannel(handle);
-    return channel == -1 ? 0.0f : m_channels[channel]->m_sampleRate;
+    return channel == -1 ? 0.0f : m_channels[channel]->m_baseSampleRate;
 }
 
 float audio::getPostClipScaler() const {
     return m_postClipScaler;
 }
 
+void audio::setRelativePlaySpeed(int handle, float speed) {
+    int channel = absChannel(handle);
+    if (channel == -1)
+        return;
+    m_channels[channel]->m_relativePlaySpeed = speed;
+    m_channels[channel]->m_sampleRate = m_channels[channel]->m_baseSampleRate * m_channels[channel]->m_relativePlaySpeed;
+}
+
 void audio::setSampleRate(int handle, float sampleRate) {
     int channel = absChannel(handle);
     if (channel == -1)
         return;
-    m_channels[channel]->m_sampleRate = sampleRate;
+    m_channels[channel]->m_baseSampleRate = sampleRate;
+    m_channels[channel]->m_sampleRate = m_channels[channel]->m_baseSampleRate * m_channels[channel]->m_relativePlaySpeed;
 }
 
 void audio::setPostClipScaler(float scaler) {

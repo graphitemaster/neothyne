@@ -9,7 +9,6 @@ wavProducer::wavProducer(wav *parent)
     : m_parent(parent)
     , m_offset(0)
 {
-    m_sampleRate = (float)parent->m_sampleRate;
 }
 
 void wavProducer::getAudio(float *buffer, size_t samples) {
@@ -45,7 +44,6 @@ wav::~wav() {
 
 bool wav::load(const char *file, int channel) {
     m_samples = 0;
-    m_sampleRate = 1;
     auto read = u::read(neoGamePath() + file, "rb");
     if (!read) {
         u::print("NOT FOUND!\n");
@@ -114,7 +112,7 @@ bool wav::load(const char *file, int channel) {
             }
         }
     }
-    m_sampleRate = sampleRate;
+    m_baseSampleRate = sampleRate;
     m_samples = samples;
     return true;
 }

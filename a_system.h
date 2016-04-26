@@ -27,7 +27,9 @@ protected:
     unsigned int m_playIndex;
     int m_flags;
     m::vec3 m_volume; // left, right, global scale
+    float m_baseSampleRate;
     float m_sampleRate;
+    float m_relativePlaySpeed;
 };
 
 struct factory {
@@ -42,14 +44,16 @@ struct factory {
     virtual ~factory() {}
     virtual producer *create() = 0;
 
-private:
+protected:
     friend struct audio;
 
     int m_flags;
+    float m_baseSampleRate;
 };
 
 inline factory::factory()
     : m_flags(0)
+    , m_baseSampleRate(44100.0f)
 {
 }
 
@@ -69,8 +73,10 @@ struct audio {
     float getVolume(int channel) const;
     float getSampleRate(int channel) const;
     float getPostClipScaler() const;
+    float getRelativePlaySpeed(int channel) const;
     bool getProtected(int channel) const;
 
+    void setRelativePlaySpeed(int channel, float speed);
     void setPostClipScaler(float scaler);
     void setSampleRate(int channel, float sampleRate);
     void setProtected(int channel, bool protect);

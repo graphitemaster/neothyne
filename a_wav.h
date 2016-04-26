@@ -24,7 +24,6 @@ private:
     friend struct wavProducer;
     float *m_data;
     size_t m_samples;
-    float m_sampleRate;
 };
 
 }
