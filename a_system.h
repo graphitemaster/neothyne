@@ -91,8 +91,10 @@ struct audio {
     void setPan(int channel, float pan);
     void setVolume(int channel, float volume);
 
+    void stopChannel(int channel);
+    void stopAll();
+
     void stop(int channel);
-    void stop();
 
     void mix(float *buffer, int samples);
 

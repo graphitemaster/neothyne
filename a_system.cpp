@@ -225,25 +225,26 @@ void audio::setVolume(int handle, float volume) {
 
 void audio::stop(int handle) {
     auto channel = absChannel(handle);
-    for (size_t i = 0; i < m_channels.size(); i++) {
-        if (m_channels[i] != channel)
-            continue;
-        m_channels[i] = nullptr;
-        break;
+    if (channel) {
+        for (size_t i = 0; i < m_channels.size(); i++) {
+            if (m_channels[i] != channel)
+                continue;
+            stopChannel(i);
+            break;
+        }
     }
-    delete channel;
 }
 
-void audio::stopAbs(int channel) {
+void audio::stopChannel(int channel) {
     if (m_channels[channel]) {
         delete m_channels[channel];
         m_channels[channel] = nullptr;
     }
 }
 
-void audio::stop() {
+void audio::stopAll() {
     for (size_t i = 0; i < m_channels.size(); i++)
-        stopAbs(i);
+        stopChannel(i);
 }
 
 void audio::mix(float *buffer, int samples) {
@@ -279,7 +280,7 @@ void audio::mix(float *buffer, int samples) {
 
             // clear channel if the sound is over
             if (!(it->m_flags & producer::kLooping) && it->hasEnded())
-                stopAbs(index);
+                stopChannel(index);
         }
         index++;
     }
@@ -307,7 +308,7 @@ audio::audio()
 }
 
 audio::~audio() {
-    stop();
+    stopAll();
 }
 
 }
