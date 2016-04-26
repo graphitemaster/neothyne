@@ -133,8 +133,12 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
         neoFatal("failed to load theme music\n");
     theme.setLooping(true);
 
+
     // fire and forget!
     int handle = audio.play(theme, 1.0f, 0.0f); // middle
+    audio.fadeVolume(handle, 0.0f, 1.0f, 15.0f);
+    // come in from right to left
+    audio.fadePan(handle, -1.0f, 1.0f, 15.0f);
 
 #if 1
     // Setup some lights

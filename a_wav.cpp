@@ -12,14 +12,14 @@ wavProducer::wavProducer(wav *parent)
 }
 
 void wavProducer::getAudio(float *buffer, size_t samples) {
-    if (m_parent->m_data == nullptr)
+    if (!m_parent->m_data)
         return;
+
+    const size_t channels = m_flags & kStereo ? 2 : 1;
 
     size_t copySize = samples;
     if (copySize + m_offset > m_parent->m_samples)
         copySize = m_parent->m_samples - m_offset;
-
-    const size_t channels = m_flags & kStereo ? 2 : 1;
 
     memcpy(buffer, m_parent->m_data + m_offset * channels, sizeof(float) * copySize * channels);
     if (copySize != samples) {
