@@ -11,6 +11,8 @@ void audioInit(a::audio *system);
 void audioShutdown(a::audio *system);
 
 struct producer {
+    producer();
+
     enum {
         kLooping = 1 << 0,
         kStereo = 1 << 1,

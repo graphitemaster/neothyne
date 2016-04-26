@@ -53,6 +53,18 @@ void factory::setLooping(bool looping) {
         m_flags &= ~kLoop;
 }
 
+producer::producer()
+    : m_playIndex(0)
+    , m_flags(0)
+    , m_baseSampleRate(44100.0f)
+    , m_sampleRate(44100.0f)
+    , m_relativePlaySpeed(1.0f)
+{
+    m_volume.x = 1.0f / m::sqrt(2.0f);
+    m_volume.y = 1.0f / m::sqrt(2.0f);
+    m_volume.z = 1.0f;
+}
+
 void audio::init(int channels, int sampleRate, int bufferSize, int flags) {
     m_globalVolume = 1.0f;
     m_channels.resize(channels);
@@ -84,10 +96,14 @@ int audio::findFreeChannel() {
 
 int audio::play(factory &sound, float volume, float pan, bool paused) {
     int channel = findFreeChannel();
+    if (channel < 0)
+        return -1;
+
     m_channels[channel] = sound.create();
     m_channels[channel]->m_playIndex = m_playIndex;
     m_channels[channel]->m_flags = paused ? producer::kPaused : 0;
     m_channels[channel]->m_baseSampleRate = sound.m_baseSampleRate;
+
     int handle = channel | (m_channels[channel]->m_playIndex << 8);
     setRelativePlaySpeed(handle, 1);
     setPan(handle, pan);
