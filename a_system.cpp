@@ -213,7 +213,7 @@ int audio::findFreeChannel() {
             next = int(i);
         }
     }
-    stop(next);
+    stopChannel(next);
     return next;
 }
 
