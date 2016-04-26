@@ -82,11 +82,11 @@ int audio::findFreeChannel() {
     return current;
 }
 
-int audio::play(factory &sound, float volume, float pan) {
+int audio::play(factory &sound, float volume, float pan, bool paused) {
     int channel = findFreeChannel();
     m_channels[channel] = sound.create();
     m_channels[channel]->m_playIndex = m_playIndex;
-    m_channels[channel]->m_flags = 0;
+    m_channels[channel]->m_flags = paused ? producer::kPaused : 0;
     m_channels[channel]->m_baseSampleRate = sound.m_baseSampleRate;
     int handle = channel | (m_channels[channel]->m_playIndex << 8);
     setRelativePlaySpeed(handle, 1);
@@ -164,6 +164,11 @@ bool audio::getProtected(int handle) const {
     return channel == -1 ? false : !!(m_channels[channel]->m_flags & producer::kProtected);
 }
 
+bool audio::getPaused(int handle) const {
+    int channel = absChannel(handle);
+    return channel == -1 ? false : !!(m_channels[channel]->m_flags & producer::kPaused);
+}
+
 void audio::setProtected(int handle, bool protect) {
     int channel = absChannel(handle);
     if (channel == -1)
@@ -172,6 +177,16 @@ void audio::setProtected(int handle, bool protect) {
         m_channels[channel]->m_flags |= producer::kProtected;
     else
         m_channels[channel]->m_flags &= ~producer::kProtected;
+}
+
+void audio::setPaused(int handle, bool paused) {
+    int channel = absChannel(handle);
+    if (channel == -1)
+        return;
+    if (paused)
+        m_channels[channel]->m_flags |= producer::kPaused;
+    else
+        m_channels[channel]->m_flags &= ~producer::kPaused;
 }
 
 void audio::setPan(int handle, float pan) {
@@ -221,7 +236,7 @@ void audio::mix(float *buffer, int samples) {
     // accumulate sound sources
     int index = 0;
     for (auto *it : m_channels) {
-        if (it) {
+        if (it && !(it->m_flags & producer::kPaused)) {
             float lPan = it->m_volume.x * it->m_volume.z * m_globalVolume;
             float rPan = it->m_volume.y * it->m_volume.z * m_globalVolume;
             float next = it->m_sampleRate / m_sampleRate;
