@@ -39,7 +39,7 @@ struct instance {
 
     instance();
     virtual ~instance();
-    void init(size_t playIndex, float baseSampleRate, int factoryFlags);
+    void init(size_t playIndex, float baseSampleRate, int sourceFlags);
 
 protected:
     virtual void getAudio(float *buffer, size_t samples) = 0;
@@ -61,17 +61,17 @@ protected:
     fader m_relativePlaySpeedFader;
 };
 
-struct factory {
+struct source {
     enum {
         kLoop = 1 << 0,
         kStereo = 1 << 1
     };
 
-    factory();
+    source();
 
     void setLooping(bool looping);
 
-    virtual ~factory();
+    virtual ~source();
     virtual instance *create() = 0;
 
 protected:
@@ -92,7 +92,7 @@ struct audio {
     void init(int channels, int sampleRate, int bufferSize, int flags);
     void mix(float *buffer, size_t samples);
 
-    int play(factory &sound, float volume = 1.0f, float pan = 0.0f, bool paused = false);
+    int play(source &sound, float volume = 1.0f, float pan = 0.0f, bool paused = false);
 
     void seek(int channelHandle, float seconds);
     void stop(int channelHandle);

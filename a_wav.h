@@ -16,7 +16,7 @@ private:
     size_t m_offset;
 };
 
-struct wav : factory {
+struct wav : source {
     wav();
     virtual ~wav();
     virtual instance *create();

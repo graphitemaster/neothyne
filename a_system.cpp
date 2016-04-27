@@ -108,15 +108,15 @@ instance::~instance() {
     // Empty
 }
 
-void instance::init(size_t playIndex, float baseSampleRate, int factoryFlags) {
+void instance::init(size_t playIndex, float baseSampleRate, int sourceFlags) {
     m_playIndex = playIndex;
     m_baseSampleRate = baseSampleRate;
     m_sampleRate = m_baseSampleRate;
     m_streamTime = 0.0f;
     m_flags = 0;
-    if (factoryFlags & factory::kLoop)
+    if (sourceFlags & source::kLoop)
         m_flags |= instance::kLooping;
-    if (factoryFlags & factory::kStereo)
+    if (sourceFlags & source::kStereo)
         m_flags |= instance::kStereo;
 }
 
@@ -142,18 +142,18 @@ void instance::seek(float seconds, float *scratch, size_t scratchSize) {
     m_streamTime = seconds;
 }
 
-///! factory
-factory::factory()
+///! source
+source::source()
     : m_flags(0)
     , m_baseSampleRate(44100.0f)
 {
 }
 
-factory::~factory() {
+source::~source() {
     // Empty
 }
 
-void factory::setLooping(bool looping) {
+void source::setLooping(bool looping) {
     if (looping)
         m_flags |= kLoop;
     else
@@ -217,7 +217,7 @@ int audio::findFreeChannel() {
     return next;
 }
 
-int audio::play(factory &sound, float volume, float pan, bool paused) {
+int audio::play(source &sound, float volume, float pan, bool paused) {
     int channel = findFreeChannel();
     if (channel < 0) return -1;
 
