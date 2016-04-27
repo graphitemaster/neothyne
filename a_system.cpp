@@ -25,7 +25,7 @@ static void audioMixer(void *user, Uint8 *stream, int length) {
         buffer[i] = (short)(data[i] * 0x7fff);
 }
 
-void audioInit(a::audio *system, int channels, int flags, int sampleRate, int bufferSize) {
+void init(a::audio *system, int channels, int flags, int sampleRate, int bufferSize) {
     system->m_mutex = (void *)SDL_CreateMutex();
 
     SDL_AudioSpec spec;
@@ -49,7 +49,7 @@ void audioInit(a::audio *system, int channels, int flags, int sampleRate, int bu
     SDL_PauseAudio(0);
 }
 
-void audioShutdown(a::audio *system) {
+void stop(a::audio *system) {
     SDL_CloseAudio();
     // free the mixer data after shutting down the mixer thread
     neoFree(system->m_mixerData);

@@ -154,8 +154,8 @@ public:
     float *m_mixerData;
 };
 
-void audioInit(a::audio *system, int channels = 32, int flags = audio::kClipRoundOff, int sampleRate = 44100, int bufferSize = 2048);
-void audioShutdown(a::audio *system);
+void init(a::audio *system, int channels = 32, int flags = audio::kClipRoundOff, int sampleRate = 44100, int bufferSize = 2048);
+void stop(a::audio *system);
 
 }
 

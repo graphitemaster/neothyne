@@ -1023,11 +1023,11 @@ static int entryPoint(int argc, char **argv) {
     u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
 
     a::audio audio;
-    a::audioInit(&audio);
+    a::init(&audio);
     // Launch the game
     const int status = neoMain(gEngine.m_frameTimer, audio, argc, argv, (bool &)gShutdown);
     writeConfig(gEngine.userPath());
-    a::audioShutdown(&audio);
+    a::stop(&audio);
 
     // Instance must be released before OpenGL context is lost
     r::geomMethods::instance().release();
