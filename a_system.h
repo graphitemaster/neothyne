@@ -23,7 +23,7 @@ private:
     float m_time;
     float m_startTime;
     float m_endTime;
-    bool m_active;
+    int m_active;
 };
 
 struct instance {
@@ -56,6 +56,8 @@ protected:
     fader m_panFader;
     fader m_volumeFader;
     fader m_relativePlaySpeedFader;
+    fader m_pauseScheduler;
+    fader m_stopScheduler;
     int m_sourceID;
 };
 
@@ -121,6 +123,9 @@ struct audio {
     void fadePan(int channelHandle, float from, float to, float time);
     void fadeRelativePlaySpeed(int channelHandle, float from, float to, float time);
     void fadeGlobalVolume(float from, float to, float time);
+
+    void schedulePause(int channelHandle, float time);
+    void scheduleStop(int channelHandle, float time);
 
 protected:
     friend struct source;

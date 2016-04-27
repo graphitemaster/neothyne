@@ -66,7 +66,7 @@ fader::fader()
     , m_time(0.0f)
     , m_startTime(0.0f)
     , m_endTime(0.0f)
-    , m_active(false)
+    , m_active(0)
 {
 }
 
@@ -78,7 +78,7 @@ void fader::set(float from, float to, float time, float startTime) {
     m_startTime = startTime;
     m_delta = to - from;
     m_endTime = m_startTime + time;
-    m_active = true;
+    m_active = 1;
 }
 
 float fader::get(float currentTime) {
@@ -93,7 +93,7 @@ float fader::get(float currentTime) {
     }
 
     if (currentTime > m_endTime) {
-        m_active = false;
+        m_active = -1;
         return m_to;
     }
     m_current = m_from + m_delta * ((currentTime - m_startTime) / m_time);
@@ -216,7 +216,7 @@ void audio::setPostClipScaler(float scaler) {
 }
 
 void audio::setGlobalVolume(float volume) {
-    m_globalVolumeFader.m_active = false;
+    m_globalVolumeFader.m_active = 0;
     m_globalVolume = volume;
 }
 
@@ -338,7 +338,7 @@ void audio::setRelativePlaySpeed(int channelHandle, float speed) {
         UNLOCK();
         return;
     }
-    m_channels[channel]->m_relativePlaySpeedFader.m_active = false;
+    m_channels[channel]->m_relativePlaySpeedFader.m_active = 0;
     setChannelRelativePlaySpeed(channel, speed);
     UNLOCK();
 }
@@ -436,11 +436,34 @@ void audio::setProtected(int channelHandle, bool protect) {
 
 void audio::setChannelPaused(int channel, bool paused) {
     if (m_channels[channel]) {
+        m_channels[channel]->m_pauseScheduler.m_active = 0;
         if (paused)
             m_channels[channel]->m_flags |= instance::kPaused;
         else
             m_channels[channel]->m_flags &= ~instance::kPaused;
     }
+}
+
+void audio::schedulePause(int channelHandle, float time) {
+    LOCK();
+    const int channel = getChannelFromHandle(channelHandle);
+    if (channel == -1) {
+        UNLOCK();
+        return;
+    }
+    m_channels[channel]->m_pauseScheduler.set(1.0f, 0.0f, time, m_channels[channel]->m_streamTime);
+    UNLOCK();
+}
+
+void audio::scheduleStop(int channelHandle, float time) {
+    LOCK();
+    const int channel = getChannelFromHandle(channelHandle);
+    if (channel == -1) {
+        UNLOCK();
+        return;
+    }
+    m_channels[channel]->m_stopScheduler.set(1.0f, 0.0f, time, m_channels[channel]->m_streamTime);
+    UNLOCK();
 }
 
 void audio::setChannelPan(int channel, float pan) {
@@ -469,7 +492,7 @@ void audio::setPanAbsolute(int channelHandle, const m::vec2 &panning) {
         UNLOCK();
         return;
     }
-    m_channels[channel]->m_panFader.m_active = false;
+    m_channels[channel]->m_panFader.m_active = 0;
     m_channels[channel]->m_volume.x = panning.x;
     m_channels[channel]->m_volume.y = panning.y;
     UNLOCK();
@@ -487,7 +510,7 @@ void audio::setVolume(int channelHandle, float volume) {
         UNLOCK();
         return;
     }
-    m_channels[channel]->m_volumeFader.m_active = false;
+    m_channels[channel]->m_volumeFader.m_active = 0;
     setChannelVolume(channel, volume);
     UNLOCK();
 }
@@ -595,15 +618,29 @@ void audio::mix(float *buffer, size_t samples) {
     for (size_t i = 0; i < m_channels.size(); i++) {
         if (m_channels[i] && !(m_channels[i]->m_flags & instance::kPaused)) {
             m_channels[i]->m_streamTime += bufferTime;
-            if (m_channels[i]->m_volumeFader.m_active)
+            if (m_channels[i]->m_volumeFader.m_active == 1)
                 m_channels[i]->m_volume.z = m_channels[i]->m_volumeFader.get(m_channels[i]->m_streamTime);
-            if (m_channels[i]->m_relativePlaySpeedFader.m_active) {
+            if (m_channels[i]->m_relativePlaySpeedFader.m_active == 1) {
                 const float speed = m_channels[i]->m_relativePlaySpeedFader.get(m_channels[i]->m_streamTime);
                 setChannelRelativePlaySpeed(i, speed);
             }
-            if (m_channels[i]->m_panFader.m_active) {
+            if (m_channels[i]->m_panFader.m_active == 1) {
                 const float pan = m_channels[i]->m_panFader.get(m_channels[i]->m_streamTime);
                 setChannelPan(i, pan);
+            }
+            if (m_channels[i]->m_pauseScheduler.m_active) {
+                m_channels[i]->m_pauseScheduler.get(m_channels[i]->m_streamTime);
+                if (m_channels[i]->m_pauseScheduler.m_active == -1) {
+                    m_channels[i]->m_pauseScheduler.m_active = 0;
+                    setChannelPaused(i, true);
+                }
+            }
+            if (m_channels[i]->m_stopScheduler.m_active) {
+                m_channels[i]->m_stopScheduler.get(m_channels[i]->m_streamTime);
+                if (m_channels[i]->m_stopScheduler.m_active == -1) {
+                    m_channels[i]->m_stopScheduler.m_active = 0;
+                    stopChannel(i);
+                }
             }
         }
     }
