@@ -90,8 +90,8 @@ float fader::get(float currentTime) {
     return m_current;
 }
 
-///! producer
-producer::producer()
+///! iroducer
+instance::instance()
     : m_playIndex(0)
     , m_flags(0)
     , m_baseSampleRate(44100.0f)
@@ -104,28 +104,28 @@ producer::producer()
     m_volume.z = 1.0f;
 }
 
-producer::~producer() {
+instance::~instance() {
     // Empty
 }
 
-void producer::init(size_t playIndex, float baseSampleRate, int factoryFlags) {
+void instance::init(size_t playIndex, float baseSampleRate, int factoryFlags) {
     m_playIndex = playIndex;
     m_baseSampleRate = baseSampleRate;
     m_sampleRate = m_baseSampleRate;
     m_streamTime = 0.0f;
     m_flags = 0;
     if (factoryFlags & factory::kLoop)
-        m_flags |= producer::kLooping;
+        m_flags |= instance::kLooping;
     if (factoryFlags & factory::kStereo)
-        m_flags |= producer::kStereo;
+        m_flags |= instance::kStereo;
 }
 
-bool producer::rewind() {
+bool instance::rewind() {
     // TODO
     return false;
 }
 
-void producer::seek(float seconds, float *scratch, size_t scratchSize) {
+void instance::seek(float seconds, float *scratch, size_t scratchSize) {
     float offset = seconds - m_streamTime;
     if (offset < 0.0f) {
         if (!rewind()) {
@@ -208,7 +208,7 @@ int audio::findFreeChannel() {
     for (size_t i = 0; i < m_channels.size(); i++) {
         if (!m_channels[i])
             return i;
-        if (!(m_channels[i]->m_flags & producer::kProtected) && m_channels[i]->m_playIndex < slat) {
+        if (!(m_channels[i]->m_flags & instance::kProtected) && m_channels[i]->m_playIndex < slat) {
             slat = m_channels[i]->m_playIndex;
             next = int(i);
         }
@@ -225,7 +225,7 @@ int audio::play(factory &sound, float volume, float pan, bool paused) {
     int handle = channel | (m_playIndex << 8);
     m_channels[channel]->init(m_playIndex, sound.m_baseSampleRate, sound.m_flags);
     if (paused)
-        m_channels[channel]->m_flags |= producer::kPaused;
+        m_channels[channel]->m_flags |= instance::kPaused;
 
     setChannelPan(channel, pan);
     setChannelVolume(channel, volume);
@@ -313,18 +313,18 @@ void audio::setPaused(int channelHandle, bool paused) {
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return;
     if (paused)
-        m_channels[channel]->m_flags |= producer::kPaused;
+        m_channels[channel]->m_flags |= instance::kPaused;
     else
-        m_channels[channel]->m_flags &= ~producer::kPaused;
+        m_channels[channel]->m_flags &= ~instance::kPaused;
 }
 
 void audio::setPausedAll(bool paused) {
     for (size_t i = 0; i < m_channels.size(); i++) {
         if (m_channels[i]) {
             if (paused)
-                m_channels[i]->m_flags |= producer::kPaused;
+                m_channels[i]->m_flags |= instance::kPaused;
             else
-                m_channels[i]->m_flags &= ~producer::kPaused;
+                m_channels[i]->m_flags &= ~instance::kPaused;
         }
     }
 }
@@ -332,22 +332,22 @@ void audio::setPausedAll(bool paused) {
 bool audio::getPaused(int channelHandle) const {
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return false;
-    return !!(m_channels[channel]->m_flags & producer::kPaused);
+    return !!(m_channels[channel]->m_flags & instance::kPaused);
 }
 
 bool audio::getProtected(int channelHandle) const {
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return false;
-    return !!(m_channels[channel]->m_flags & producer::kProtected);
+    return !!(m_channels[channel]->m_flags & instance::kProtected);
 }
 
 void audio::setProtected(int channelHandle, bool protect) {
     const int channel = getChannelFromHandle(channelHandle);
     if (channel == -1) return;
     if (protect)
-        m_channels[channel]->m_flags |= producer::kProtected;
+        m_channels[channel]->m_flags |= instance::kProtected;
     else
-        m_channels[channel]->m_flags &= ~producer::kProtected;
+        m_channels[channel]->m_flags &= ~instance::kProtected;
 }
 
 void audio::setChannelPan(int channel, float pan) {
@@ -451,7 +451,7 @@ void audio::mix(float *buffer, size_t samples) {
 
     // process per-channel faders
     for (size_t i = 0; i < m_channels.size(); i++) {
-        if (m_channels[i] && !(m_channels[i]->m_flags & producer::kPaused)) {
+        if (m_channels[i] && !(m_channels[i]->m_flags & instance::kPaused)) {
             m_channels[i]->m_streamTime += bufferTime;
             if (m_channels[i]->m_volumeFader.m_active)
                 m_channels[i]->m_volume.z = m_channels[i]->m_volumeFader.get(m_channels[i]->m_streamTime);
@@ -476,7 +476,7 @@ void audio::mix(float *buffer, size_t samples) {
 
     // accumulate active sound sources
     for (size_t i = 0; i < m_channels.size(); i++) {
-        if (m_channels[i] && !(m_channels[i]->m_flags & producer::kPaused)) {
+        if (m_channels[i] && !(m_channels[i]->m_flags & instance::kPaused)) {
             const float panL = m_channels[i]->m_volume.x * m_channels[i]->m_volume.z * m_globalVolume;
             const float panR = m_channels[i]->m_volume.y * m_channels[i]->m_volume.z * m_globalVolume;
             const float next = m_channels[i]->m_sampleRate / m_sampleRate;
@@ -485,7 +485,7 @@ void audio::mix(float *buffer, size_t samples) {
             m_channels[i]->getAudio(&m_scratch[0], m::ceil(samples * next));
 
             float step = 0.0f;
-            if (m_channels[i]->m_flags & producer::kStereo) {
+            if (m_channels[i]->m_flags & instance::kStereo) {
                 for (size_t j = 0; j < samples; j++, step += next) {
                     const float sampleL = m_scratch[(int)m::floor(step) *2 + 0];
                     const float sampleR = m_scratch[(int)m::floor(step) *2 + 1];
@@ -501,7 +501,7 @@ void audio::mix(float *buffer, size_t samples) {
             }
 
             // clear the channel if the sound is complete
-            if (!(m_channels[i]->m_flags & producer::kLooping) && m_channels[i]->hasEnded())
+            if (!(m_channels[i]->m_flags & instance::kLooping) && m_channels[i]->hasEnded())
                 stopChannel(i);
         }
     }

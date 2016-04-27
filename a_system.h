@@ -29,7 +29,7 @@ private:
     bool m_active;
 };
 
-struct producer {
+struct instance {
     enum {
         kLooping = 1 << 0,
         kStereo = 1 << 1,
@@ -37,8 +37,8 @@ struct producer {
         kPaused = 1 << 3
     };
 
-    producer();
-    virtual ~producer();
+    instance();
+    virtual ~instance();
     void init(size_t playIndex, float baseSampleRate, int factoryFlags);
 
 protected:
@@ -72,7 +72,7 @@ struct factory {
     void setLooping(bool looping);
 
     virtual ~factory();
-    virtual producer *create() = 0;
+    virtual instance *create() = 0;
 
 protected:
     friend struct audio;
@@ -134,7 +134,7 @@ protected:
 private:
     u::vector<float> m_scratch;
     size_t m_scratchNeeded;
-    u::vector<producer *> m_channels;
+    u::vector<instance *> m_channels;
     int m_sampleRate;
     int m_bufferSize;
     int m_flags;

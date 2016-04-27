@@ -6,8 +6,8 @@
 namespace a {
 
 struct wav;
-struct wavProducer : producer {
-    wavProducer(wav *parent);
+struct wavInstance : instance {
+    wavInstance(wav *parent);
     virtual void getAudio(float *buffer, size_t samples);
     virtual bool hasEnded() const;
     virtual bool rewind();
@@ -19,10 +19,10 @@ private:
 struct wav : factory {
     wav();
     virtual ~wav();
-    virtual producer *create();
+    virtual instance *create();
     bool load(const char *file, int channel);
 private:
-    friend struct wavProducer;
+    friend struct wavInstance;
     float *m_data;
     size_t m_samples;
 };

@@ -5,13 +5,13 @@
 
 namespace a {
 
-wavProducer::wavProducer(wav *parent)
+wavInstance::wavInstance(wav *parent)
     : m_parent(parent)
     , m_offset(0)
 {
 }
 
-void wavProducer::getAudio(float *buffer, size_t samples) {
+void wavInstance::getAudio(float *buffer, size_t samples) {
     if (!m_parent->m_data)
         return;
 
@@ -23,7 +23,7 @@ void wavProducer::getAudio(float *buffer, size_t samples) {
 
     memcpy(buffer, m_parent->m_data + m_offset * channels, sizeof(float) * copySize * channels);
     if (copySize != samples) {
-        if (m_flags & producer::kLooping) {
+        if (m_flags & instance::kLooping) {
             memcpy(buffer + copySize * channels, m_parent->m_data, sizeof(float) * (samples - copySize) * channels);
             m_offset = samples - copySize;
             m_streamTime = m_offset / m_sampleRate;
@@ -36,11 +36,11 @@ void wavProducer::getAudio(float *buffer, size_t samples) {
     }
 }
 
-bool wavProducer::hasEnded() const {
+bool wavInstance::hasEnded() const {
     return m_offset >= m_parent->m_samples;
 }
 
-bool wavProducer::rewind() {
+bool wavInstance::rewind() {
     m_offset = 0;
     m_streamTime = 0.0f;
     return true;
@@ -149,8 +149,8 @@ bool wav::load(const char *file, int channel) {
     return true;
 }
 
-producer *wav::create() {
-    return new wavProducer(this);
+instance *wav::create() {
+    return new wavInstance(this);
 }
 
 }
