@@ -342,7 +342,6 @@ inline engine::engine()
 }
 
 inline engine::~engine() {
-    a::audioShutdown(&m_audio);
     delete CTX(m_context);
 }
 
@@ -1023,13 +1022,12 @@ static int entryPoint(int argc, char **argv) {
 
     u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
 
-    // initialize the audio
-    gEngine.m_audio.init(8, 44100, 4096*2, 1);
-    a::audioInit(&gEngine.m_audio);
-
+    a::audio audio;
+    a::audioInit(&audio);
     // Launch the game
-    const int status = neoMain(gEngine.m_frameTimer, gEngine.m_audio, argc, argv, (bool &)gShutdown);
+    const int status = neoMain(gEngine.m_frameTimer, audio, argc, argv, (bool &)gShutdown);
     writeConfig(gEngine.userPath());
+    a::audioShutdown(&audio);
 
     // Instance must be released before OpenGL context is lost
     r::geomMethods::instance().release();

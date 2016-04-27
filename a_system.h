@@ -7,9 +7,6 @@ namespace a {
 
 struct audio;
 
-void audioInit(a::audio *system);
-void audioShutdown(a::audio *system);
-
 struct fader {
     fader();
 
@@ -59,6 +56,7 @@ protected:
     fader m_panFader;
     fader m_volumeFader;
     fader m_relativePlaySpeedFader;
+    int m_sourceID;
 };
 
 struct source {
@@ -79,6 +77,8 @@ protected:
 
     int m_flags;
     float m_baseSampleRate;
+    int m_sourceID;
+    audio *m_owner;
 };
 
 struct audio {
@@ -123,12 +123,16 @@ struct audio {
     void fadeGlobalVolume(float from, float to, float time);
 
 protected:
+    friend struct source;
+
     int findFreeChannel();
     int getChannelFromHandle(int channelHandle) const;
 
+    void stopSound(source &sound);
     void stopChannel(int channel);
     void setChannelPan(int channel, float panning);
     void setChannelVolume(int channel, float volume);
+    void setChannelPaused(int channel, bool paused);
     void setChannelRelativePlaySpeed(int channel, float speed);
 
 private:
@@ -143,10 +147,15 @@ private:
     unsigned int m_playIndex;
     fader m_globalVolumeFader;
     float m_streamTime;
+    int m_sourceID;
 
 public:
+    void *m_mutex;
     float *m_mixerData;
 };
+
+void audioInit(a::audio *system, int channels = 32, int flags = audio::kClipRoundOff, int sampleRate = 44100, int bufferSize = 2048);
+void audioShutdown(a::audio *system);
 
 }
 

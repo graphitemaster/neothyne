@@ -111,7 +111,6 @@ struct engine {
     textState textInput(u::string &what);
 
     frameTimer m_frameTimer; // TODO: private
-    a::audio m_audio; // TODO: private
 
 protected:
     bool initContext();
