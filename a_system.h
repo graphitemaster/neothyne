@@ -59,6 +59,11 @@ protected:
     fader m_pauseScheduler;
     fader m_stopScheduler;
     int m_sourceID;
+
+    // if there is an active fader
+    int m_activeFader;
+    // fader-affected l/r volume
+    float m_faderVolume[2 * 2];
 };
 
 struct source {

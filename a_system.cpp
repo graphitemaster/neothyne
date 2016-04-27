@@ -109,10 +109,12 @@ instance::instance()
     , m_relativePlaySpeed(1.0f)
     , m_streamTime(0.0f)
     , m_sourceID(0)
+    , m_activeFader(0)
 {
     m_volume.x = 1.0f / m::sqrt(2.0f);
     m_volume.y = 1.0f / m::sqrt(2.0f);
     m_volume.z = 1.0f;
+    memset(m_faderVolume, 0, sizeof m_faderVolume);
 }
 
 instance::~instance() {
@@ -609,25 +611,48 @@ void audio::mix(float *buffer, size_t samples) {
     m_streamTime += bufferTime;
 
     // process global faders
+    m::vec2 globalVolume;
+    globalVolume.x = m_globalVolume;
     if (m_globalVolumeFader.m_active)
         m_globalVolume = m_globalVolumeFader.get(m_streamTime);
+    globalVolume.y = m_globalVolume;
 
     LOCK();
 
     // process per-channel faders
     for (size_t i = 0; i < m_channels.size(); i++) {
         if (m_channels[i] && !(m_channels[i]->m_flags & instance::kPaused)) {
+            m_channels[i]->m_activeFader = 0;
+            if (m_globalVolumeFader.m_active)
+                m_channels[i]->m_activeFader = 1;
+
             m_channels[i]->m_streamTime += bufferTime;
-            if (m_channels[i]->m_volumeFader.m_active == 1)
-                m_channels[i]->m_volume.z = m_channels[i]->m_volumeFader.get(m_channels[i]->m_streamTime);
+
             if (m_channels[i]->m_relativePlaySpeedFader.m_active == 1) {
                 const float speed = m_channels[i]->m_relativePlaySpeedFader.get(m_channels[i]->m_streamTime);
                 setChannelRelativePlaySpeed(i, speed);
             }
+
+            m::vec2 volume;
+            volume.x = m_channels[i]->m_volume.z;
+            if (m_channels[i]->m_volumeFader.m_active == 1) {
+                m_channels[i]->m_volume.z = m_channels[i]->m_volumeFader.get(m_channels[i]->m_streamTime);
+                m_channels[i]->m_activeFader = 1;
+            }
+            volume.y = m_channels[i]->m_volume.z;
+
+            m::vec2 panL;
+            m::vec2 panR;
+            panL.x = m_channels[i]->m_volume.x;
+            panR.x = m_channels[i]->m_volume.y;
             if (m_channels[i]->m_panFader.m_active == 1) {
                 const float pan = m_channels[i]->m_panFader.get(m_channels[i]->m_streamTime);
                 setChannelPan(i, pan);
+                m_channels[i]->m_activeFader = 1;
             }
+            panL.y = m_channels[i]->m_volume.x;
+            panR.y = m_channels[i]->m_volume.y;
+
             if (m_channels[i]->m_pauseScheduler.m_active) {
                 m_channels[i]->m_pauseScheduler.get(m_channels[i]->m_streamTime);
                 if (m_channels[i]->m_pauseScheduler.m_active == -1) {
@@ -635,6 +660,14 @@ void audio::mix(float *buffer, size_t samples) {
                     setChannelPaused(i, true);
                 }
             }
+
+            if (m_channels[i]->m_activeFader) {
+                m_channels[i]->m_faderVolume[0*2+0] = panL.x * volume.x * globalVolume.x;
+                m_channels[i]->m_faderVolume[0*2+1] = panL.y * volume.y * globalVolume.y;
+                m_channels[i]->m_faderVolume[1*2+0] = panR.x * volume.x * globalVolume.x;
+                m_channels[i]->m_faderVolume[1*2+1] = panR.y * volume.y * globalVolume.y;
+            }
+
             if (m_channels[i]->m_stopScheduler.m_active) {
                 m_channels[i]->m_stopScheduler.get(m_channels[i]->m_streamTime);
                 if (m_channels[i]->m_stopScheduler.m_active == -1) {
@@ -656,26 +689,47 @@ void audio::mix(float *buffer, size_t samples) {
     // accumulate active sound sources
     for (size_t i = 0; i < m_channels.size(); i++) {
         if (m_channels[i] && !(m_channels[i]->m_flags & instance::kPaused)) {
-            const float panL = m_channels[i]->m_volume.x * m_channels[i]->m_volume.z * m_globalVolume;
-            const float panR = m_channels[i]->m_volume.y * m_channels[i]->m_volume.z * m_globalVolume;
             const float next = m_channels[i]->m_sampleRate / m_sampleRate;
+            float step = 0.0f;
 
             // get the audio from the source into our scratch buffer
             m_channels[i]->getAudio(&m_scratch[0], m::ceil(samples * next));
 
-            float step = 0.0f;
-            if (m_channels[i]->m_flags & instance::kStereo) {
-                for (size_t j = 0; j < samples; j++, step += next) {
-                    const float sampleL = m_scratch[(int)m::floor(step) *2 + 0];
-                    const float sampleR = m_scratch[(int)m::floor(step) *2 + 1];
-                    buffer[j * 2 + 0] += sampleL * panL;
-                    buffer[j * 2 + 1] += sampleR * panR;
+            if (m_channels[i]->m_activeFader) {
+                float panL = m_channels[i]->m_faderVolume[0];
+                float panR = m_channels[i]->m_faderVolume[2];
+                const float panLi = (m_channels[i]->m_faderVolume[1] - m_channels[i]->m_faderVolume[0]) / samples;
+                const float panRi = (m_channels[i]->m_faderVolume[3] - m_channels[i]->m_faderVolume[2]) / samples;
+                if (m_channels[i]->m_flags & instance::kStereo) {
+                    for (size_t j = 0; j < samples; j++, step += next, panL += panLi, panR += panRi) {
+                        const float sampleL = m_scratch[(int)m::floor(step) * 2 + 0];
+                        const float sampleR = m_scratch[(int)m::floor(step) * 2 + 1];
+                        buffer[j * 2 + 0] += sampleL * panL;
+                        buffer[j * 2 + 1] += sampleR * panR;
+                    }
+                } else {
+                    for (size_t j = 0; j < samples; j++, step += next, panL += panLi, panR += panRi) {
+                        const float sampleM = m_scratch[(int)m::floor(step)];
+                        buffer[j * 2 + 0] += sampleM * panL;
+                        buffer[j * 2 + 1] += sampleM * panR;
+                    }
                 }
             } else {
-                for (size_t j = 0; j < samples; j++, step += next) {
-                    const float sampleM = m_scratch[(int)m::floor(step)];
-                    buffer[j * 2 + 0] += sampleM * panL;
-                    buffer[j * 2 + 1] += sampleM * panR;
+                const float panL = m_channels[i]->m_volume.x * m_channels[i]->m_volume.z * m_globalVolume;
+                const float panR = m_channels[i]->m_volume.y * m_channels[i]->m_volume.z * m_globalVolume;
+                if (m_channels[i]->m_flags & instance::kStereo) {
+                    for (size_t j = 0; j < samples; j++, step += next) {
+                        const float sampleL = m_scratch[(int)m::floor(step) * 2 + 0];
+                        const float sampleR = m_scratch[(int)m::floor(step) * 2 + 1];
+                        buffer[j * 2 + 0] += sampleL * panL;
+                        buffer[j * 2 + 1] += sampleR * panR;
+                    }
+                } else {
+                    for (size_t j = 0; j < samples; j++, step += next) {
+                        const float sampleM = m_scratch[(int)m::floor(step)];
+                        buffer[j * 2 + 0] += sampleM * panL;
+                        buffer[j * 2 + 1] += sampleM * panR;
+                    }
                 }
             }
 
