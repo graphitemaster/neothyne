@@ -93,13 +93,13 @@ that the waveform is no longer centered about the zero point.
 #### Problem
 Here's what a sine wave looks like with a constant offset
 
-![Constant DC Offset](img/dc_offset.svg)
+![Constant DC Offset](/docs/img/dc_offset.svg)
 
 This is of importance especially when adding several sounds together as
 signals with a constant offset waste the range and can lead to clipping
 more easily. This is what it should look like with no DC component
 
-![Proper Waveform Centered on 0](img/dc_proper.svg)
+![Proper Waveform Centered on 0](/docs/img/dc_proper.svg)
 
 #### Solution
 It's easy to just subtract a constant amount from every sample, however
@@ -109,13 +109,13 @@ is to filter out low frequencies.
 Neothyne uses the easiest DC blocking filter for efficiency reasons, it
 looks like this
 
-![DC Blocking Filter](img/dc_blocking_filter.svg)
+![DC Blocking Filter](/docs/img/dc_blocking_filter.svg)
 
 The flow graph above describes what happens to the input signal as it is
 filtered. There are three paths the input and output to the DC blocking
 filter make when passing through the filter
 
-![DC Blocking Filter Paths](img/dc_blocking_filter_paths.svg)
+![DC Blocking Filter Paths](/docs/img/dc_blocking_filter_paths.svg)
 
 Represented as a difference equation
 
@@ -130,16 +130,16 @@ If you're curious about numerical stability, consider the approach
 taken here
 
 ##### Difference Equation
-![Difference Equation](img/difference_eq.svg)
+![Difference Equation](/docs/img/difference_eq.svg)
 
 ##### Z-transform
-![Z-transform](img/ztransform_eq.svg)
+![Z-transform](/docs/img/ztransform_eq.svg)
 
 ##### Transfer Function
-![Transfer Function](img/transfer_function_eq.svg)
+![Transfer Function](/docs/img/transfer_function_eq.svg)
 
 ##### Frequency Response
-![Frequency Response](img/frequency_response_eq.svg)
+![Frequency Response](/docs/img/frequency_response_eq.svg)
 
 Where the frequency response for `a` is `~1.0`. Nothing too bad should
 happen. Neothyne in particular averages samples over a relatively long
