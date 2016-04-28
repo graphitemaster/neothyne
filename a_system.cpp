@@ -258,14 +258,17 @@ void audio::init(int channels, int sampleRate, int bufferSize, int flags) {
 }
 
 float audio::getPostClipScaler() const {
+    lockGuard lock(m_mutex);
     return m_postClipScaler;
 }
 
 void audio::setPostClipScaler(float scaler) {
+    lockGuard lock(m_mutex);
     m_postClipScaler = scaler;
 }
 
 void audio::setGlobalVolume(float volume) {
+    lockGuard lock(m_mutex);
     m_globalVolumeFader.m_active = 0;
     m_globalVolume = volume;
 }

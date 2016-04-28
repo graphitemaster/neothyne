@@ -5,8 +5,6 @@
 
 #include "u_misc.h"
 
-#include <stdio.h>
-
 namespace a {
 
 ///! filter
@@ -79,24 +77,17 @@ static void calcBQRParams(int type,
     const m::vec2 omega = m::sincos((2.0f * m::kPi * frequency) / sampleRate);
     const float alpha = omega.x / (2.0f * resonance);
     const float scalar = 1.0f / (1.0f + alpha);
-
     switch (type) {
     case BQRFilter::kLowPass:
-        a.x = 0.5f * (1.0f - omega.y) * scalar;
-        a.y = (1.0f - omega.y) * scalar;
-        a.z = a.x;
+        a = { 0.5f * (1.0f - omega.y) * scalar, (1.0f - omega.y) * scalar, 0.5f * (1.0f - omega.y) * scalar };
         b = { -2.0f * omega.y * scalar, (1.0f - alpha) * scalar };
         break;
     case BQRFilter::kHighPass:
-        a.x = 0.5f * (1.0f + omega.y) * scalar;
-        a.y = -(1.0f + omega.y) * scalar;
-        a.z = a.x;
+        a = { 0.5f * (1.0f + omega.y) * scalar, -(1.0f + omega.y) * scalar, 0.5f * (1.0f + omega.y) * scalar };
         b = { -2.0f * omega.y * scalar, (1.0f - alpha) * scalar };
         break;
     case BQRFilter::kBandPass:
-        a.x = alpha * scalar;
-        a.y = 0.0f;
-        a.z = -a.x;
+        a = { alpha * scalar, 0.0f, -(alpha * scalar) };
         b = { -2.0f * omega.y * scalar, (1.0f - alpha) * scalar };
         break;
     }
