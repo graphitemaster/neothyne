@@ -13,8 +13,19 @@
 
 namespace a {
 
-#define LOCK()   SDL_LockMutex((SDL_mutex *)m_mutex)
-#define UNLOCK() SDL_UnlockMutex((SDL_mutex *)m_mutex)
+struct lockGuard {
+    lockGuard(void *opaque)
+        : m((SDL_mutex *)opaque)
+    {
+        SDL_LockMutex(m);
+    }
+
+    ~lockGuard() {
+        SDL_UnlockMutex(m);
+    }
+
+    SDL_mutex *m;
+};
 
 static void audioMixer(void *user, Uint8 *stream, int length) {
     const int samples = length / 4;
@@ -274,12 +285,11 @@ int audio::findFreeChannel() {
 }
 
 int audio::play(source &sound, float volume, float pan, bool paused) {
-    LOCK();
+    lockGuard lock(m_mutex);
+
     const int channel = findFreeChannel();
-    if (channel < 0) {
-        UNLOCK();
+    if (channel < 0)
         return -1;
-    }
 
     if (sound.m_sourceID == 0) {
         sound.m_sourceID = m_sourceID++;
@@ -308,7 +318,6 @@ int audio::play(source &sound, float volume, float pan, bool paused) {
         m_scratchNeeded = next;
     }
 
-    UNLOCK();
     return handle;
 }
 
@@ -323,39 +332,21 @@ int audio::getChannelFromHandle(int handle) const {
 }
 
 float audio::getVolume(int channelHandle) const {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return 0.0f;
-    }
-    const float value = m_channels[channel]->m_volume.z;
-    UNLOCK();
-    return value;
+    return channel == -1 ? 0.0f : m_channels[channel]->m_volume.z;
 }
 
 float audio::getStreamTime(int channelHandle) const {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return 0.0f;
-    }
-    const float value = m_channels[channel]->m_streamTime;
-    UNLOCK();
-    return value;
+    return channel == -1 ? 0.0f : m_channels[channel]->m_streamTime;
 }
 
 float audio::getRelativePlaySpeed(int channelHandle) const {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return 1.0f;
-    }
-    const float value = m_channels[channel]->m_relativePlaySpeed;
-    UNLOCK();
-    return value;
+    return channel == -1 ? 1.0f : m_channels[channel]->m_relativePlaySpeed;
 }
 
 void audio::setChannelRelativePlaySpeed(int channel, float speed) {
@@ -373,106 +364,72 @@ void audio::setChannelRelativePlaySpeed(int channel, float speed) {
 }
 
 void audio::setRelativePlaySpeed(int channelHandle, float speed) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     m_channels[channel]->m_relativePlaySpeedFader.m_active = 0;
     setChannelRelativePlaySpeed(channel, speed);
-    UNLOCK();
 }
 
 float audio::getSampleRate(int channelHandle) const {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return 0.0f;
-    }
-    const float value = m_channels[channel]->m_baseSampleRate;
-    UNLOCK();
-    return value;
+    return channel == -1 ? 0.0f : m_channels[channel]->m_baseSampleRate;
 }
 
 void audio::setSampleRate(int channelHandle, float sampleRate) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     m_channels[channel]->m_baseSampleRate = sampleRate;
     m_channels[channel]->m_sampleRate = sampleRate * m_channels[channel]->m_relativePlaySpeed;
-    UNLOCK();
 }
 
 void audio::seek(int channelHandle, float seconds) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     m_channels[channel]->seek(seconds, &m_scratch[0], m_scratch.size());
-    UNLOCK();
 }
 
 void audio::setPaused(int channelHandle, bool paused) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     setChannelPaused(channel, paused);
-    UNLOCK();
 }
 
 void audio::setPausedAll(bool paused) {
-    LOCK();
+    lockGuard lock(m_mutex);
     for (size_t i = 0; i < m_channels.size(); i++)
         setChannelPaused(i, paused);
-    UNLOCK();
 }
 
 bool audio::getPaused(int channelHandle) const {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return false;
-    }
-    const bool value = !!(m_channels[channel]->m_flags & instance::kPaused);
-    UNLOCK();
-    return value;
+    return channel == -1 ? false : !!(m_channels[channel]->m_flags & instance::kPaused);
 }
 
 bool audio::getProtected(int channelHandle) const {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return false;
-    }
-    const bool value = !!(m_channels[channel]->m_flags & instance::kProtected);
-    UNLOCK();
-    return value;
+    return channel == -1 ? false : !!(m_channels[channel]->m_flags & instance::kProtected);
 }
 
 void audio::setProtected(int channelHandle, bool protect) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     if (protect)
         m_channels[channel]->m_flags |= instance::kProtected;
     else
         m_channels[channel]->m_flags &= ~instance::kProtected;
-    UNLOCK();
 }
 
 void audio::setChannelPaused(int channel, bool paused) {
@@ -489,25 +446,19 @@ void audio::setChannelPaused(int channel, bool paused) {
     (m_channels[channel]->FADER.set(fader::TYPE, (FROM), (TO), (TIME), m_channels[channel]->m_streamTime))
 
 void audio::schedulePause(int channelHandle, float time) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     FadeSetRelative(m_pauseScheduler, kLERP, 1.0f, 0.0f, time);
-    UNLOCK();
 }
 
 void audio::scheduleStop(int channelHandle, float time) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     FadeSetRelative(m_stopScheduler, kLERP, 1.0f, 0.0f, time);
-    UNLOCK();
 }
 
 void audio::setChannelPan(int channel, float pan) {
@@ -519,27 +470,21 @@ void audio::setChannelPan(int channel, float pan) {
 }
 
 void audio::setPan(int channelHandle, float pan) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     setChannelPan(channel, pan);
-    UNLOCK();
 }
 
 void audio::setPanAbsolute(int channelHandle, const m::vec2 &panning) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     m_channels[channel]->m_panFader.m_active = 0;
     m_channels[channel]->m_volume.x = panning.x;
     m_channels[channel]->m_volume.y = panning.y;
-    UNLOCK();
 }
 
 void audio::setChannelVolume(int channel, float volume) {
@@ -548,39 +493,31 @@ void audio::setChannelVolume(int channel, float volume) {
 }
 
 void audio::setVolume(int channelHandle, float volume) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     m_channels[channel]->m_volumeFader.m_active = 0;
     setChannelVolume(channel, volume);
-    UNLOCK();
 }
 
 void audio::setGlobalFilter(filter *filter_) {
-    LOCK();
+    lockGuard lock(m_mutex);
     delete m_filterInstance;
     m_filterInstance = nullptr;
-
     m_filter = filter_;
     if (m_filter) {
         m_filter->init(nullptr);
         m_filterInstance = m_filter->create();
     }
-    UNLOCK();
 }
 
 void audio::stop(int channelHandle) {
-    LOCK();
+    lockGuard lock(m_mutex);
     const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
+    if (channel == -1)
         return;
-    }
     stopChannel(channel);
-    UNLOCK();
 }
 
 void audio::stopChannel(int channel) {
@@ -591,132 +528,118 @@ void audio::stopChannel(int channel) {
 }
 
 void audio::stopSound(source &sound) {
+    lockGuard lock(m_mutex);
     if (sound.m_sourceID) {
-        LOCK();
         for (size_t i = 0; i < m_channels.size(); i++)
             if (m_channels[i] && m_channels[i]->m_sourceID == sound.m_sourceID)
                 stopChannel(i);
-        UNLOCK();
     }
 }
 
 void audio::stopAll() {
-    LOCK();
+    lockGuard lock(m_mutex);
     for (size_t i = 0; i < m_channels.size(); i++)
         stopChannel(i);
-    UNLOCK();
 }
 
 void audio::fadeVolume(int channelHandle, float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setVolume(channelHandle, to);
         return;
+    } else {
+        lockGuard lock(m_mutex);
+        const int channel = getChannelFromHandle(channelHandle);
+        if (channel == -1)
+            return;
+        FadeSetRelative(m_volumeFader, kLERP, from, to, time);
     }
-    LOCK();
-    const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return;
-    }
-    FadeSetRelative(m_volumeFader, kLERP, from, to, time);
-    UNLOCK();
 }
 
 void audio::fadePan(int channelHandle, float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setPan(channelHandle, to);
         return;
+    } else {
+        lockGuard lock(m_mutex);
+        const int channel = getChannelFromHandle(channelHandle);
+        if (channel == -1)
+            return;
+        FadeSetRelative(m_panFader, kLERP, from, to, time);
     }
-    LOCK();
-    const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return;
-    }
-    FadeSetRelative(m_panFader, kLERP, from, to, time);
-    UNLOCK();
 }
 
 void audio::fadeRelativePlaySpeed(int channelHandle, float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setRelativePlaySpeed(channelHandle, to);
         return;
+    } else {
+        lockGuard lock(m_mutex);
+        const int channel = getChannelFromHandle(channelHandle);
+        if (channel == -1)
+            return;
+        FadeSetRelative(m_relativePlaySpeedFader, kLERP, from, to, time);
     }
-    LOCK();
-    const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return;
-    }
-    FadeSetRelative(m_relativePlaySpeedFader, kLERP, from, to, time);
-    UNLOCK();
 }
 
 void audio::fadeGlobalVolume(float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setGlobalVolume(to);
         return;
+    } else {
+        lockGuard lock(m_mutex);
+        m_streamTime = 0.0f; // avoid ~6 day rollover
+        m_globalVolumeFader.set(fader::kLERP, from, to, time, m_streamTime);
     }
-    LOCK();
-    m_streamTime = 0.0f; // avoid ~6 day rollover
-    m_globalVolumeFader.set(fader::kLERP, from, to, time, m_streamTime);
-    UNLOCK();
 }
 
 void audio::oscVolume(int channelHandle, float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setVolume(channelHandle, to);
         return;
+    } else {
+        lockGuard lock(m_mutex);
+        const int channel = getChannelFromHandle(channelHandle);
+        if (channel == -1)
+            return;
+        FadeSetRelative(m_volumeFader, kLFO, from, to, time);
     }
-    LOCK();
-    const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return;
-    }
-    FadeSetRelative(m_volumeFader, kLFO, from, to, time);
-    UNLOCK();
 }
 
 void audio::oscPan(int channelHandle, float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setPan(channelHandle, to);
         return;
+    } else {
+        lockGuard lock(m_mutex);
+        const int channel = getChannelFromHandle(channelHandle);
+        if (channel == -1)
+            return;
+        FadeSetRelative(m_panFader, kLFO, from, to, time);
     }
-    LOCK();
-    const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return;
-    }
-    FadeSetRelative(m_panFader, kLFO, from, to, time);
-    UNLOCK();
 }
 
 void audio::oscRelativePlaySpeed(int channelHandle, float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setRelativePlaySpeed(channelHandle, to);
         return;
+    } else {
+        lockGuard lock(m_mutex);
+        const int channel = getChannelFromHandle(channelHandle);
+        if (channel == -1)
+            return;
+        FadeSetRelative(m_relativePlaySpeedFader, kLFO, from, to, time);
     }
-    LOCK();
-    const int channel = getChannelFromHandle(channelHandle);
-    if (channel == -1) {
-        UNLOCK();
-        return;
-    }
-    FadeSetRelative(m_relativePlaySpeedFader, kLFO, from, to, time);
-    UNLOCK();
 }
 
 void audio::oscGlobalVolume(float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setGlobalVolume(to);
         return;
+    } else {
+        lockGuard lock(m_mutex);
+        m_streamTime = 0.0f; // avoid ~6 day rollover
+        m_globalVolumeFader.set(fader::kLFO, from, to, time, m_streamTime);
     }
-    LOCK();
-    m_streamTime = 0.0f; // avoid ~6 day rollover
-    m_globalVolumeFader.set(fader::kLFO, from, to, time, m_streamTime);
-    UNLOCK();
 }
 
 void audio::mix(float *buffer, size_t samples) {
@@ -730,11 +653,14 @@ void audio::mix(float *buffer, size_t samples) {
         m_globalVolume = m_globalVolumeFader(m_streamTime);
     globalVolume.y = m_globalVolume;
 
-    LOCK();
+    // lock guard scope
+    {
+        lockGuard lock(m_mutex);
+        // process per-channel faders
+        for (size_t i = 0; i < m_channels.size(); i++) {
+            if (!m_channels[i] || (m_channels[i]->m_flags & instance::kPaused))
+                continue;
 
-    // process per-channel faders
-    for (size_t i = 0; i < m_channels.size(); i++) {
-        if (m_channels[i] && !(m_channels[i]->m_flags & instance::kPaused)) {
             m_channels[i]->m_activeFader = 0;
             if (m_globalVolumeFader.m_active > 0)
                 m_channels[i]->m_activeFader = 1;
@@ -789,19 +715,20 @@ void audio::mix(float *buffer, size_t samples) {
                 }
             }
         }
-    }
 
-    // resize the scratch buffer if required
-    if (m_scratch.size() < m_scratchNeeded)
-        m_scratch.resize(m_scratchNeeded);
+        // resize the scratch buffer if required
+        if (m_scratch.size() < m_scratchNeeded)
+            m_scratch.resize(m_scratchNeeded);
 
-    // clear accumulation
-    for (size_t i = 0; i < samples << 1; i++)
-        buffer[i] = 0.0f;
+        // clear accumulation
+        for (size_t i = 0; i < samples << 1; i++)
+            buffer[i] = 0.0f;
 
-    // accumulate active sound sources
-    for (size_t i = 0; i < m_channels.size(); i++) {
-        if (m_channels[i] && !(m_channels[i]->m_flags & instance::kPaused)) {
+        // accumulate active sound sources
+        for (size_t i = 0; i < m_channels.size(); i++) {
+            if (!m_channels[i] || (m_channels[i]->m_flags & instance::kPaused))
+                continue;
+
             const float next = m_channels[i]->m_sampleRate / m_sampleRate;
             float step = 0.0f;
 
@@ -857,18 +784,14 @@ void audio::mix(float *buffer, size_t samples) {
                     }
                 }
             }
-
             // clear the channel if the sound is complete
             if (!(m_channels[i]->m_flags & instance::kLooping) && m_channels[i]->hasEnded())
                 stopChannel(i);
         }
+        // global filter
+        if (m_filterInstance)
+            m_filterInstance->filter(&buffer[0], samples, true, m_sampleRate);
     }
-
-    // global filter
-    if (m_filterInstance)
-        m_filterInstance->filter(&buffer[0], samples, true, m_sampleRate);
-
-    UNLOCK();
 
     // clip
     if (m_flags & kClipRoundOff) {
