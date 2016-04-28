@@ -12,6 +12,8 @@
 #include "u_file.h"
 #include "u_misc.h"
 
+#include "a_filter.h" // audio filtering
+
 // Game globals
 bool gRunning = true;
 bool gPlaying = false;
@@ -133,10 +135,17 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
         neoFatal("failed to load theme music\n");
     theme.setLooping(true);
 
+    a::echoFilter filter;
+    filter.setParams(1.0f, 0.5f);
+
+    audio.setPostClipScaler(0.75f);
+    audio.setGlobalFilter(&filter);
+    audio.setGlobalVolume(1.0f);
 
     // fire and forget!
-    int handle = audio.play(theme, 1.0f, 0.0f); // middle
-    audio.fadeVolume(handle, 0.0f, 1.0f, 15.0f);
+    int handle = audio.play(theme, 0.1f, 0.0f); // middle
+    //audio.fadeVolume(handle, 0.0f, 1.0f, 15.0f);
+
     //audio.scheduleStop(handle, 100.0f);
     //audio.fadeVolume(handle, 1.0f, 0.0f, 100.0f);
     // come in from right to left

@@ -6,6 +6,8 @@
 namespace a {
 
 struct audio;
+struct filter;
+struct filterInstance;
 
 struct fader {
     fader();
@@ -59,6 +61,7 @@ protected:
     fader m_pauseScheduler;
     fader m_stopScheduler;
     int m_sourceID;
+    filterInstance *m_filter;
 
     // if there is an active fader
     int m_activeFader;
@@ -75,6 +78,7 @@ struct source {
     source();
 
     void setLooping(bool looping);
+    void setFilter(filter *filter_);
 
     virtual ~source();
     virtual instance *create() = 0;
@@ -85,6 +89,7 @@ protected:
     int m_flags;
     float m_baseSampleRate;
     int m_sourceID;
+    filter *m_filter;
     audio *m_owner;
 };
 
@@ -123,6 +128,7 @@ struct audio {
     void setPan(int channelHandle, float panning);
     void setPanAbsolute(int channelHandle, const m::vec2 &panning);
     void setVolume(int channelHandle, float volume);
+    void setGlobalFilter(filter *filter_);
 
     void fadeVolume(int channelHandle, float from, float to, float time);
     void fadePan(int channelHandle, float from, float to, float time);
@@ -158,6 +164,8 @@ private:
     fader m_globalVolumeFader;
     float m_streamTime;
     int m_sourceID;
+    filter *m_filter;
+    filterInstance *m_filterInstance;
 
 public:
     void *m_mutex;

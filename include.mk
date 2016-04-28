@@ -34,6 +34,7 @@ RENDERER_SOURCES = \
 	r_particles.cpp
 
 AUDIO_SOURCES = \
+	a_filter.cpp \
 	a_system.cpp \
 	a_wav.cpp
 

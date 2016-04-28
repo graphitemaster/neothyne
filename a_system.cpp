@@ -1,6 +1,7 @@
 #include <SDL.h>
 
 #include "a_system.h"
+#include "a_filter.h"
 
 #include "m_const.h"
 #include "m_trig.h"
@@ -109,6 +110,7 @@ instance::instance()
     , m_relativePlaySpeed(1.0f)
     , m_streamTime(0.0f)
     , m_sourceID(0)
+    , m_filter(nullptr)
     , m_activeFader(0)
 {
     m_volume.x = 1.0f / m::sqrt(2.0f);
@@ -118,7 +120,7 @@ instance::instance()
 }
 
 instance::~instance() {
-    // Empty
+    delete m_filter;
 }
 
 void instance::init(size_t playIndex, float baseSampleRate, int sourceFlags) {
@@ -160,6 +162,7 @@ source::source()
     : m_flags(0)
     , m_baseSampleRate(44100.0f)
     , m_sourceID(0)
+    , m_filter(nullptr)
     , m_owner(nullptr)
 {
 }
@@ -176,6 +179,12 @@ void source::setLooping(bool looping) {
         m_flags &= ~kLoop;
 }
 
+void source::setFilter(filter *filter_) {
+    m_filter = filter_;
+    if (m_filter)
+        m_filter->init(this);
+}
+
 ///! audio
 audio::audio()
     : m_scratchNeeded(0)
@@ -187,6 +196,8 @@ audio::audio()
     , m_playIndex(0)
     , m_streamTime(0)
     , m_sourceID(1)
+    , m_filter(nullptr)
+    , m_filterInstance(nullptr)
     , m_mutex(nullptr)
     , m_mixerData(nullptr)
 {
@@ -194,6 +205,7 @@ audio::audio()
 
 audio::~audio() {
     stopAll();
+    delete m_filterInstance;
 }
 
 void audio::init(int channels, int sampleRate, int bufferSize, int flags) {
@@ -259,6 +271,9 @@ int audio::play(source &sound, float volume, float pan, bool paused) {
     setChannelPan(channel, pan);
     setChannelVolume(channel, volume);
     setChannelRelativePlaySpeed(channel, 1.0f);
+
+    if (sound.m_filter)
+        m_channels[channel]->m_filter = sound.m_filter->create();
 
     m_playIndex++;
     const size_t scratchNeeded = size_t(m::ceil((m_channels[channel]->m_sampleRate / m_sampleRate) * m_bufferSize));
@@ -517,6 +532,19 @@ void audio::setVolume(int channelHandle, float volume) {
     UNLOCK();
 }
 
+void audio::setGlobalFilter(filter *filter_) {
+    LOCK();
+    delete m_filterInstance;
+    m_filterInstance = nullptr;
+
+    m_filter = filter_;
+    if (m_filter) {
+        m_filter->init(nullptr);
+        m_filterInstance = m_filter->create();
+    }
+    UNLOCK();
+}
+
 void audio::stop(int channelHandle) {
     LOCK();
     const int channel = getChannelFromHandle(channelHandle);
@@ -692,8 +720,16 @@ void audio::mix(float *buffer, size_t samples) {
             const float next = m_channels[i]->m_sampleRate / m_sampleRate;
             float step = 0.0f;
 
+            const size_t readSamples = m::ceil(samples * next);
             // get the audio from the source into our scratch buffer
-            m_channels[i]->getAudio(&m_scratch[0], m::ceil(samples * next));
+            m_channels[i]->getAudio(&m_scratch[0], readSamples);
+
+            if (m_channels[i]->m_filter) {
+                m_channels[i]->m_filter->filter(&m_scratch[0],
+                                                readSamples,
+                                                m_channels[i]->m_flags & instance::kStereo,
+                                                m_channels[i]->m_sampleRate);
+            }
 
             if (m_channels[i]->m_activeFader) {
                 float panL = m_channels[i]->m_faderVolume[0];
@@ -738,6 +774,10 @@ void audio::mix(float *buffer, size_t samples) {
                 stopChannel(i);
         }
     }
+
+    // global filter
+    if (m_filterInstance)
+        m_filterInstance->filter(&buffer[0], samples, true, m_sampleRate);
 
     UNLOCK();
 
