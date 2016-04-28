@@ -68,4 +68,85 @@ filterInstance *echoFilter::create() {
     return new echoFilterInstance(this);
 }
 
+///! BQRFilterInstance
+BQRFilterInstance::BQRFilterInstance(BQRFilter *parent)
+    : m_parent(parent)
+{
+}
+
+void BQRFilterInstance::filter(float *buffer, size_t samples, bool stereo, float) {
+    size_t pitch = stereo ? 2 : 1;
+    for (size_t s = 0; s < pitch; s++) {
+        for (size_t i = 0; i < samples; i += 2) {
+            // filter the inputs
+            float x = buffer[i * pitch + s];
+            m_y2[s] = (m_parent->m_a.x * x) + (m_parent->m_a.y * m_x1[s])
+                                            + (m_parent->m_a.z * m_x2[s])
+                                            - (m_parent->m_b.x * m_y1[s])
+                                            - (m_parent->m_b.y * m_y2[s]);
+            buffer[i * pitch + s] = m_y2[s];
+
+            // permute filter ops to reduce movement
+            m_x2[s] = buffer[(i + 1) * pitch + s];
+            m_y1[s] = (m_parent->m_a.x * m_x2[s]) + (m_parent->m_a.y * x)
+                                                  + (m_parent->m_a.z * m_x1[s])
+                                                  - (m_parent->m_b.x * m_y2[s])
+                                                  - (m_parent->m_b.y * m_y1[s]);
+
+            // move it a little
+            m_x1[s] = m_x2[s];
+            m_x2[s] = x;
+        }
+
+        // apply a very small impulse to prevent underflow
+        m_y1[s] += 1.0e-26f;
+    }
+}
+
+BQRFilterInstance::~BQRFilterInstance() {
+    // Empty
+}
+
+void BQRFilter::init(source *) {
+    // Empty
+}
+
+BQRFilter::BQRFilter() {
+    setParams(kLowPass, 44100, 1000, 2);
+}
+
+void BQRFilter::setParams(int type, float sampleRate, float frequency, float resonance) {
+    const m::vec2 omega = m::sincos((2.0f * m::kPi * frequency) / sampleRate);
+    const float alpha = omega.x / (2.0f * resonance);
+    const float scalar = 1.0f / (1.0f + alpha);
+    switch (type) {
+    case kLowPass:
+        m_a.x = 0.5f * (1.0f - omega.y) * scalar;
+        m_a.y = (1.0f - omega.y) * scalar;
+        m_a.z = m_a.x;
+        m_b = { -2.0f * omega.y * scalar, (1.0f - alpha) * scalar };
+        break;
+    case kHighPass:
+        m_a.x = 0.5f * (1.0f + omega.y) * scalar;
+        m_a.y = -(1.0f + omega.y) * scalar;
+        m_a.z = m_a.x;
+        m_b = { -2.0f * omega.y * scalar, (1.0f - alpha) * scalar };
+        break;
+    case kBandPass:
+        m_a.x = alpha * scalar;
+        m_a.y = 0.0f;
+        m_a.z = -m_a.x;
+        m_b = { -2.0f * omega.y * scalar, (1.0f - alpha) * scalar };
+        break;
+    }
+}
+
+BQRFilter::~BQRFilter() {
+    // Empty
+}
+
+BQRFilterInstance *BQRFilter::create() {
+    return new BQRFilterInstance(this);
+}
+
 }

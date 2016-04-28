@@ -135,11 +135,13 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
         neoFatal("failed to load theme music\n");
     theme.setLooping(true);
 
-    a::echoFilter filter;
-    filter.setParams(1.0f, 0.5f);
+    //a::echoFilter filter;
+    //filter.setParams(1.0f, 0.5f);
+    //a::BQRFilter filter;
+    //filter.setParams(a::BQRFilter::kLowPass, 44100, 1000, 8);
 
     audio.setPostClipScaler(0.75f);
-    audio.setGlobalFilter(&filter);
+    //audio.setGlobalFilter(&filter);
     audio.setGlobalVolume(1.0f);
 
     // fire and forget!
