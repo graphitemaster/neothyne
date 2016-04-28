@@ -23,7 +23,7 @@ static void audioMixer(void *user, Uint8 *stream, int length) {
     float *data = (float *)system->m_mixerData;
     system->mix(data, samples);
     for (int i = 0; i < samples*2; i++)
-        buffer[i] = (short)(data[i] * 0x7fff);
+        buffer[i] = (short)m::floor(data[i] * 0x7fff);
 }
 
 void init(a::audio *system, int channels, int flags, int sampleRate, int bufferSize) {
@@ -104,8 +104,7 @@ float fader::operator()(float currentTime) {
             m_startTime = currentTime;
         }
         const float delta = m_startTime - currentTime;
-        m_current += delta;
-        return m::sin(m_current * m_endTime) * m_delta + (m_from + m_delta);
+        return m::sin(delta * m_endTime) * m_delta + (m_from + m_delta);
     }
 
     if (m_startTime > currentTime) {
