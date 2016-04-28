@@ -228,7 +228,7 @@ audio::audio()
     , m_bufferSize(0)
     , m_flags(0)
     , m_globalVolume(0)
-    , m_postClipScaler(0.0f)
+    , m_postClipScaler(0.95f)
     , m_playIndex(0)
     , m_streamTime(0)
     , m_sourceID(1)
@@ -252,7 +252,7 @@ void audio::init(int channels, int sampleRate, int bufferSize, int flags) {
     m_scratch.resize(2048);
     m_bufferSize = bufferSize;
     m_flags = flags;
-    m_postClipScaler = 0.5f;
+    m_postClipScaler = 0.95f;
     u::print("[audio] => initialized for %d channels @ %dHz with %s buffer\n",
         channels, sampleRate, u::sizeMetric(bufferSize));
 }
