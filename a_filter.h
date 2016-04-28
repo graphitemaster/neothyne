@@ -12,7 +12,7 @@ struct filterInstance {
 };
 
 struct filter {
-    virtual void init(source *audioSource);
+    virtual void init(source *);
     virtual filterInstance *create() = 0;
     virtual ~filter();
 };
