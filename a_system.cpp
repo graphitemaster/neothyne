@@ -287,6 +287,7 @@ int audio::findFreeChannel() {
 
 int audio::play(source &sound, float volume, float pan, bool paused) {
     u::unique_ptr<instance> instance(sound.create());
+    sound.m_owner = this;
     // lock guard scope
     {
         lockGuard lock(m_mutex);
@@ -294,10 +295,8 @@ int audio::play(source &sound, float volume, float pan, bool paused) {
         if (channel < 0)
             return -1;
 
-        if (sound.m_sourceID == 0) {
+        if (sound.m_sourceID == 0)
             sound.m_sourceID = m_sourceID++;
-            sound.m_owner = this;
-        }
         m_channels[channel] = instance.release();
         m_channels[channel]->m_sourceID = sound.m_sourceID;
         int handle = channel | (m_playIndex << 8);
