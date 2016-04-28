@@ -806,8 +806,12 @@ void audio::mix(float *buffer, size_t samples) {
             float step = 0.0f;
 
             const size_t readSamples = m::ceil(samples * next);
+
             // get the audio from the source into our scratch buffer
-            m_channels[i]->getAudio(&m_scratch[0], readSamples);
+            if (m_channels[i]->hasEnded())
+                memset(&m_scratch[0], 0, sizeof(float) * m_scratch.size());
+            else
+                m_channels[i]->getAudio(&m_scratch[0], readSamples);
 
             if (m_channels[i]->m_filter) {
                 m_channels[i]->m_filter->filter(&m_scratch[0],
