@@ -8,6 +8,7 @@
 
 #include "u_new.h"
 #include "u_misc.h"
+#include "u_memory.h"
 
 #include "engine.h"
 
@@ -285,40 +286,44 @@ int audio::findFreeChannel() {
 }
 
 int audio::play(source &sound, float volume, float pan, bool paused) {
-    lockGuard lock(m_mutex);
+    u::unique_ptr<instance> instance(sound.create());
+    // lock guard scope
+    {
+        lockGuard lock(m_mutex);
+        const int channel = findFreeChannel();
+        if (channel < 0)
+            return -1;
 
-    const int channel = findFreeChannel();
-    if (channel < 0)
-        return -1;
+        if (sound.m_sourceID == 0) {
+            sound.m_sourceID = m_sourceID++;
+            sound.m_owner = this;
+        }
+        m_channels[channel] = instance.release();
+        m_channels[channel]->m_sourceID = sound.m_sourceID;
+        int handle = channel | (m_playIndex << 8);
+        m_channels[channel]->init(m_playIndex, sound.m_baseSampleRate, sound.m_flags);
+        if (paused)
+            m_channels[channel]->m_flags |= instance::kPaused;
 
-    if (sound.m_sourceID == 0) {
-        sound.m_sourceID = m_sourceID++;
-        sound.m_owner = this;
+        setChannelPan(channel, pan);
+        setChannelVolume(channel, volume);
+        setChannelRelativePlaySpeed(channel, 1.0f);
+
+        if (sound.m_filter)
+            m_channels[channel]->m_filter = sound.m_filter->create();
+
+        m_playIndex++;
+        const size_t scratchNeeded = size_t(m::ceil((m_channels[channel]->m_sampleRate / m_sampleRate) * m_bufferSize));
+        if (m_scratchNeeded < scratchNeeded) {
+            // calculate 1024 byte chunks needed for the scratch space
+            size_t next = 1024;
+            while (next < scratchNeeded) next <<= 1;
+            m_scratchNeeded = next;
+        }
+        return handle;
     }
-    m_channels[channel] = sound.create();
-    m_channels[channel]->m_sourceID = sound.m_sourceID;
-    int handle = channel | (m_playIndex << 8);
-    m_channels[channel]->init(m_playIndex, sound.m_baseSampleRate, sound.m_flags);
-    if (paused)
-        m_channels[channel]->m_flags |= instance::kPaused;
 
-    setChannelPan(channel, pan);
-    setChannelVolume(channel, volume);
-    setChannelRelativePlaySpeed(channel, 1.0f);
-
-    if (sound.m_filter)
-        m_channels[channel]->m_filter = sound.m_filter->create();
-
-    m_playIndex++;
-    const size_t scratchNeeded = size_t(m::ceil((m_channels[channel]->m_sampleRate / m_sampleRate) * m_bufferSize));
-    if (m_scratchNeeded < scratchNeeded) {
-        // calculate 1024 byte chunks needed for the scratch space
-        size_t next = 1024;
-        while (next < scratchNeeded) next <<= 1;
-        m_scratchNeeded = next;
-    }
-
-    return handle;
+    return -1;
 }
 
 int audio::getChannelFromHandle(int handle) const {
