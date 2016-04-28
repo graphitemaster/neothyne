@@ -12,8 +12,16 @@ struct filterInstance;
 struct fader {
     fader();
 
-    void set(float from, float to, float time, float startTime);
-    float get(float time);
+    enum {
+        // linear interpolation
+        kLERP,
+        // low-frequency oscillation
+        kLFO
+    };
+
+    void set(int type, float from, float to, float time, float startTime);
+
+    float operator()(float time);
 
 private:
     friend struct audio;
@@ -25,6 +33,7 @@ private:
     float m_time;
     float m_startTime;
     float m_endTime;
+    // 0: disabled, 1: active, 2: LFO, -1: was active but stopped recently
     int m_active;
 };
 
@@ -137,6 +146,11 @@ struct audio {
 
     void schedulePause(int channelHandle, float time);
     void scheduleStop(int channelHandle, float time);
+
+    void oscVolume(int channelHandle, float from, float to, float time);
+    void oscPan(int channelHandle, float from, float to, float time);
+    void oscRelativePlaySpeed(int channelHandle, float from, float to, float time);
+    void oscGlobalVolume(float from, float to, float time);
 
 protected:
     friend struct source;

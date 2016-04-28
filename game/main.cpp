@@ -141,12 +141,15 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
     //filter.setParams(a::BQRFilter::kLowPass, 44100, 1000, 8);
 
     audio.setPostClipScaler(0.75f);
+    //audio.oscGlobalVolume(0.0f, 1.0f, 10.0f);
     //audio.setGlobalFilter(&filter);
     audio.setGlobalVolume(1.0f);
 
     // fire and forget!
     int handle = audio.play(theme, 0.1f, 0.0f); // middle
     //audio.fadeVolume(handle, 0.0f, 1.0f, 15.0f);
+
+    audio.oscRelativePlaySpeed(handle, 0.5f, 1.0f, 10.0f);
 
     //audio.scheduleStop(handle, 100.0f);
     //audio.fadeVolume(handle, 1.0f, 0.0f, 100.0f);

@@ -71,18 +71,43 @@ fader::fader()
 {
 }
 
-void fader::set(float from, float to, float time, float startTime) {
-    m_current = from;
-    m_from = from;
-    m_to = to;
-    m_time = time;
-    m_startTime = startTime;
-    m_delta = to - from;
-    m_endTime = m_startTime + time;
-    m_active = 1;
+void fader::set(int type, float from, float to, float time, float startTime) {
+    switch (type) {
+    case kLERP:
+        m_current = from;
+        m_from = from;
+        m_to = to;
+        m_time = time;
+        m_startTime = startTime;
+        m_delta = to - from;
+        m_endTime = m_startTime + time;
+        m_active = 1;
+        break;
+    case kLFO:
+        m_active = 2;
+        m_current = 0.0f;
+        m_from = from;
+        m_to = to;
+        m_time = time;
+        m_delta = m::abs(to - from) / 2.0f;
+        m_startTime = startTime;
+        m_endTime = m::kPi * 2.0f / m_time;
+        break;
+    }
 }
 
-float fader::get(float currentTime) {
+float fader::operator()(float currentTime) {
+    if (m_active == 2) {
+        // LFO
+        if (m_startTime > currentTime) {
+            // time rolled over
+            m_startTime = currentTime;
+        }
+        const float delta = m_startTime - currentTime;
+        m_current += delta;
+        return m::sin(m_current * m_endTime) * m_delta + (m_from + m_delta);
+    }
+
     if (m_startTime > currentTime) {
         // time rolled over
         float delta = (m_current - m_from) / m_delta;
@@ -461,6 +486,9 @@ void audio::setChannelPaused(int channel, bool paused) {
     }
 }
 
+#define FadeSetRelative(FADER, TYPE, FROM, TO, TIME) \
+    (m_channels[channel]->FADER.set(fader::TYPE, (FROM), (TO), (TIME), m_channels[channel]->m_streamTime))
+
 void audio::schedulePause(int channelHandle, float time) {
     LOCK();
     const int channel = getChannelFromHandle(channelHandle);
@@ -468,7 +496,7 @@ void audio::schedulePause(int channelHandle, float time) {
         UNLOCK();
         return;
     }
-    m_channels[channel]->m_pauseScheduler.set(1.0f, 0.0f, time, m_channels[channel]->m_streamTime);
+    FadeSetRelative(m_pauseScheduler, kLERP, 1.0f, 0.0f, time);
     UNLOCK();
 }
 
@@ -479,7 +507,7 @@ void audio::scheduleStop(int channelHandle, float time) {
         UNLOCK();
         return;
     }
-    m_channels[channel]->m_stopScheduler.set(1.0f, 0.0f, time, m_channels[channel]->m_streamTime);
+    FadeSetRelative(m_stopScheduler, kLERP, 1.0f, 0.0f, time);
     UNLOCK();
 }
 
@@ -591,7 +619,7 @@ void audio::fadeVolume(int channelHandle, float from, float to, float time) {
         UNLOCK();
         return;
     }
-    m_channels[channel]->m_volumeFader.set(from, to, time, m_channels[channel]->m_streamTime);
+    FadeSetRelative(m_volumeFader, kLERP, from, to, time);
     UNLOCK();
 }
 
@@ -606,7 +634,7 @@ void audio::fadePan(int channelHandle, float from, float to, float time) {
         UNLOCK();
         return;
     }
-    m_channels[channel]->m_panFader.set(from, to, time, m_channels[channel]->m_streamTime);
+    FadeSetRelative(m_panFader, kLERP, from, to, time);
     UNLOCK();
 }
 
@@ -621,7 +649,7 @@ void audio::fadeRelativePlaySpeed(int channelHandle, float from, float to, float
         UNLOCK();
         return;
     }
-    m_channels[channel]->m_relativePlaySpeedFader.set(from, to, time, m_channels[channel]->m_streamTime);
+    FadeSetRelative(m_relativePlaySpeedFader, kLERP, from, to, time);
     UNLOCK();
 }
 
@@ -630,8 +658,66 @@ void audio::fadeGlobalVolume(float from, float to, float time) {
         setGlobalVolume(to);
         return;
     }
+    LOCK();
     m_streamTime = 0.0f; // avoid ~6 day rollover
-    m_globalVolumeFader.set(from, to, time, m_streamTime);
+    m_globalVolumeFader.set(fader::kLERP, from, to, time, m_streamTime);
+    UNLOCK();
+}
+
+void audio::oscVolume(int channelHandle, float from, float to, float time) {
+    if (time <= 0.0f || to == from) {
+        setVolume(channelHandle, to);
+        return;
+    }
+    LOCK();
+    const int channel = getChannelFromHandle(channelHandle);
+    if (channel == -1) {
+        UNLOCK();
+        return;
+    }
+    FadeSetRelative(m_volumeFader, kLFO, from, to, time);
+    UNLOCK();
+}
+
+void audio::oscPan(int channelHandle, float from, float to, float time) {
+    if (time <= 0.0f || to == from) {
+        setPan(channelHandle, to);
+        return;
+    }
+    LOCK();
+    const int channel = getChannelFromHandle(channelHandle);
+    if (channel == -1) {
+        UNLOCK();
+        return;
+    }
+    FadeSetRelative(m_panFader, kLFO, from, to, time);
+    UNLOCK();
+}
+
+void audio::oscRelativePlaySpeed(int channelHandle, float from, float to, float time) {
+    if (time <= 0.0f || to == from) {
+        setRelativePlaySpeed(channelHandle, to);
+        return;
+    }
+    LOCK();
+    const int channel = getChannelFromHandle(channelHandle);
+    if (channel == -1) {
+        UNLOCK();
+        return;
+    }
+    FadeSetRelative(m_relativePlaySpeedFader, kLFO, from, to, time);
+    UNLOCK();
+}
+
+void audio::oscGlobalVolume(float from, float to, float time) {
+    if (time <= 0.0f || to == from) {
+        setGlobalVolume(to);
+        return;
+    }
+    LOCK();
+    m_streamTime = 0.0f; // avoid ~6 day rollover
+    m_globalVolumeFader.set(fader::kLFO, from, to, time, m_streamTime);
+    UNLOCK();
 }
 
 void audio::mix(float *buffer, size_t samples) {
@@ -642,7 +728,7 @@ void audio::mix(float *buffer, size_t samples) {
     m::vec2 globalVolume;
     globalVolume.x = m_globalVolume;
     if (m_globalVolumeFader.m_active)
-        m_globalVolume = m_globalVolumeFader.get(m_streamTime);
+        m_globalVolume = m_globalVolumeFader(m_streamTime);
     globalVolume.y = m_globalVolume;
 
     LOCK();
@@ -651,20 +737,20 @@ void audio::mix(float *buffer, size_t samples) {
     for (size_t i = 0; i < m_channels.size(); i++) {
         if (m_channels[i] && !(m_channels[i]->m_flags & instance::kPaused)) {
             m_channels[i]->m_activeFader = 0;
-            if (m_globalVolumeFader.m_active)
+            if (m_globalVolumeFader.m_active > 0)
                 m_channels[i]->m_activeFader = 1;
 
             m_channels[i]->m_streamTime += bufferTime;
 
-            if (m_channels[i]->m_relativePlaySpeedFader.m_active == 1) {
-                const float speed = m_channels[i]->m_relativePlaySpeedFader.get(m_channels[i]->m_streamTime);
+            if (m_channels[i]->m_relativePlaySpeedFader.m_active > 0) {
+                const float speed = m_channels[i]->m_relativePlaySpeedFader(m_channels[i]->m_streamTime);
                 setChannelRelativePlaySpeed(i, speed);
             }
 
             m::vec2 volume;
             volume.x = m_channels[i]->m_volume.z;
-            if (m_channels[i]->m_volumeFader.m_active == 1) {
-                m_channels[i]->m_volume.z = m_channels[i]->m_volumeFader.get(m_channels[i]->m_streamTime);
+            if (m_channels[i]->m_volumeFader.m_active > 0) {
+                m_channels[i]->m_volume.z = m_channels[i]->m_volumeFader(m_channels[i]->m_streamTime);
                 m_channels[i]->m_activeFader = 1;
             }
             volume.y = m_channels[i]->m_volume.z;
@@ -673,8 +759,8 @@ void audio::mix(float *buffer, size_t samples) {
             m::vec2 panR;
             panL.x = m_channels[i]->m_volume.x;
             panR.x = m_channels[i]->m_volume.y;
-            if (m_channels[i]->m_panFader.m_active == 1) {
-                const float pan = m_channels[i]->m_panFader.get(m_channels[i]->m_streamTime);
+            if (m_channels[i]->m_panFader.m_active > 0) {
+                const float pan = m_channels[i]->m_panFader(m_channels[i]->m_streamTime);
                 setChannelPan(i, pan);
                 m_channels[i]->m_activeFader = 1;
             }
@@ -682,7 +768,7 @@ void audio::mix(float *buffer, size_t samples) {
             panR.y = m_channels[i]->m_volume.y;
 
             if (m_channels[i]->m_pauseScheduler.m_active) {
-                m_channels[i]->m_pauseScheduler.get(m_channels[i]->m_streamTime);
+                m_channels[i]->m_pauseScheduler(m_channels[i]->m_streamTime);
                 if (m_channels[i]->m_pauseScheduler.m_active == -1) {
                     m_channels[i]->m_pauseScheduler.m_active = 0;
                     setChannelPaused(i, true);
@@ -697,7 +783,7 @@ void audio::mix(float *buffer, size_t samples) {
             }
 
             if (m_channels[i]->m_stopScheduler.m_active) {
-                m_channels[i]->m_stopScheduler.get(m_channels[i]->m_streamTime);
+                m_channels[i]->m_stopScheduler(m_channels[i]->m_streamTime);
                 if (m_channels[i]->m_stopScheduler.m_active == -1) {
                     m_channels[i]->m_stopScheduler.m_active = 0;
                     stopChannel(i);

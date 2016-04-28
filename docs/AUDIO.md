@@ -47,6 +47,10 @@ There are faders to do the following
 - Fade global volume over specified time
 - After specified time stop a channel of audio
 - After specified time pause a channel of audio
+- Oscillate volume at specified frequency
+- Oscillate panning at specified frequency
+- Oscillate relative play speed at specified frequency
+- Oscillate global volume at specified frequency
 
 ## Filters
 Filters are used to modify sound in some fashion or another. Typical
