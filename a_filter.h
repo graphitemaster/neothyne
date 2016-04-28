@@ -79,6 +79,30 @@ private:
     m::vec2 m_b;
 };
 
+// check docs/AUDIO.md for explanation of how this does what it does
+struct DCRemovalFilter;
+
+struct DCRemovalFilterInstance : filterInstance {
+    virtual void filter(float *buffer, size_t samples, bool stereo, float sampleRate);
+    virtual ~DCRemovalFilterInstance();
+    DCRemovalFilterInstance(DCRemovalFilter *parent);
+private:
+    u::vector<float> m_buffer;
+    u::vector<float> m_totals;
+    size_t m_offset;
+    DCRemovalFilter *m_parent;
+};
+
+struct DCRemovalFilter : filter {
+    virtual filterInstance *create();
+    DCRemovalFilter();
+    void setParams(float length = 0.1f);
+
+private:
+    friend struct DCRemovalFilterInstance;
+    float m_length;
+};
+
 }
 
 #endif

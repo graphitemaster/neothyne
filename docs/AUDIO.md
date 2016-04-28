@@ -63,8 +63,10 @@ There exists a variety of filters
   - High pass filter
   - Band pass filter
 - Echo filter
+- DC blocking filter
 - *More to come*
 
+### Biquadratic Resonance Filters
 Biquadratic Resonance filters are a cheap approximate solution to achieving
 the common low-pass, hi-pass and band-pass filters.
 
@@ -75,10 +77,70 @@ effect they have on the samples
 - cut off frequency
 - cut off resonance
 
+### Echo Filter
 The echo filter is as the name suggests, a way to produce an echo.
 At it's core it just records and replays samples based on two parameters
 
 - delay
 - decay
 
-There are more filters to come so stay tuned!
+
+### DC Blocking Filter
+The DC blocking filter is used to fix "constant voltage offset" issues
+with cheap audio recordings or audio which has been processed so much
+that the waveform is no longer centered about the zero point.
+
+#### Problem
+Here's what a sine wave looks like with a constant offset
+
+![Constant DC Offset](img/dc_offset.svg)
+
+This is of importance especially when adding several sounds together as
+signals with a constant offset waste the range and can lead to clipping
+more easily. This is what it should look like with no DC component
+
+![Proper Waveform Centered on 0](img/dc_proper.svg)
+
+#### Solution
+It's easy to just subtract a constant amount from every sample, however
+a more generalized solution would work in more situations, that solution
+is to filter out low frequencies.
+
+Neothyne uses the easiest DC blocking filter for efficiency reasons, it
+looks like this
+
+![DC Blocking Filter](img/dc_blocking_filter.svg)
+
+The flow graph above describes what happens to the input signal as it is
+filtered. There are three paths the input and output to the DC blocking
+filter make when passing through the filter
+
+![DC Blocking Filter Paths](img/dc_blocking_filter_paths.svg)
+
+Represented as a difference equation
+
+```
+y[n] = x[n] - x[n - 1] + a * y[n - 1]
+```
+
+Where `y[n]` is the output at the current time `n`, and `x[n]` is the
+input at the current time `n` respectively.
+
+If you're curious about numerical stability, consider the approach
+taken here
+
+##### Difference Equation
+![Difference Equation](img/difference_eq.svg)
+
+##### Z-transform
+![Z-transform](img/ztransform_eq.svg)
+
+##### Transfer Function
+![Transfer Function](img/transfer_function_eq.svg)
+
+##### Frequency Response
+![Frequency Response](img/frequency_response_eq.svg)
+
+Where the frequency response for `a` is `~1.0`. Nothing too bad should
+happen. Neothyne in particular averages samples over a relatively long
+period and subtracts this from the output.

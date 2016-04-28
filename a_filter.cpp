@@ -152,4 +152,49 @@ BQRFilterInstance *BQRFilter::create() {
     return new BQRFilterInstance(this);
 }
 
+///! DCRemovalFilterInstance
+DCRemovalFilterInstance::DCRemovalFilterInstance(DCRemovalFilter *parent)
+    : m_offset(0)
+    , m_parent(parent)
+{
+}
+
+void DCRemovalFilterInstance::filter(float *buffer, size_t samples, bool stereo, float sampleRate) {
+    if (m_buffer.empty()) {
+        m_buffer.resize(size_t(m::ceil(m_parent->m_length * sampleRate)) * (stereo ? 2 : 1));
+        m_totals.resize(stereo ? 2 : 1);
+    }
+    size_t bufferLength = m_buffer.size() / (stereo ? 2 : 1);
+    for (size_t i = 0; i < samples; i++) {
+        for (size_t j = 0; j < (stereo ? 2 : 1); j++) {
+            const int c = j * bufferLength;
+            const int b = j * samples;
+            float n = buffer[i + b];
+            m_totals[j] -= m_buffer[m_offset + c];
+            m_totals[j] += n;
+            m_buffer[m_offset + c] = n;
+            n -= m_totals[j] / bufferLength;
+            buffer[i + b] += (n - buffer[i + b]) * m_parent->m_length;
+        }
+        m_offset = (m_offset + 1) % bufferLength;
+    }
+}
+
+DCRemovalFilterInstance::~DCRemovalFilterInstance() {
+    // Empty
+}
+
+DCRemovalFilter::DCRemovalFilter()
+    : m_length(0.1f)
+{
+}
+
+void DCRemovalFilter::setParams(float length) {
+    m_length = length;
+}
+
+filterInstance *DCRemovalFilter::create() {
+    return new DCRemovalFilterInstance(this);
+}
+
 }
