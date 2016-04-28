@@ -4,44 +4,77 @@ Sound mixing in Neothyne occurs on its own thread independent from the
 rest of the engine. The engine exposes functionality for constructing
 "fire and forget" audio sources which can then be manipulated by reference.
 
-The engine exposes a rich interface for querying and manipulating sound
-sources.
+# Definitions
 
-## Separation
-The concept of sound is broken into two layers: global and local.
-Local options affect the sound locally while global options are applied
-after all sound sources (and their respective options) have been mixed
-into the final output.
+## Sources
+Audio sources contain the information related to "sound". This typically
+includes things like the sample data, stream duration, etc. Think of this
+as the engine's representation of the "source asset". Hence the name.
 
-## Global options
-Global options include the ability to manipulate volume, post clipping
-scale factor, and a filter.
+## Instance
+Audio instances are "voices". You can have a maximum of 64 instances
+playing at any given time. Instances reference audio source(s). Note the
+plural, an instance can sample many sources at once. This is to allow
+grouping of audio for synchronization purposes.
 
-## Local options
-Local options include the ability to manipulate volume, relative play
-speed, sampling rate, panning, and a filter. Similarly, local sources
-can be manipulated with faders.
+## Post clip scalar
+Since volume is applied before clipping, it may be hard to eliminate
+sound distortion by lowering volume. The post clip scalar is basically
+a way to control volume after clipping has occurred. Take note that this
+is potentially dangerous and must be used with caution since most uses
+of it will completely distort the final samples. The scale is not limited
+to `0..1` and negative values will produce very strange behavior.
+
+# Options and Features
+
+There are a variety of options that can be configured for sound instances
+or globally as a whole these include
+
+- volume
+- panning
+- relative play speed
+- filters
+- faders
 
 ## Faders
-Faders are a way to schedule a change repeatedly, starting from an
-initial value and interpolating the change to a maximal value. For example
-they can be used to increase or decrease volume over time, among other
-things.
+Faders are a convenient way to perform tasks per-mix. Their name comes
+from fading volume in or out. But they can be used to do much more.
+There are faders to do the following
 
-## Schedulers
-Schedulers are a more immediate form of faders. They can be used to
-schedule an action to occur in the future. For instance "stop this
-sound in 5 seconds."
+- Fade volume in or out over specified time
+- Fade panning from left/right channel in or out over specified time
+- Fade relative play speed over specified time
+- Fade global volume over specified time
+- After specified time stop a channel of audio
+- After specified time pause a channel of audio
 
 ## Filters
-You can attach a filter to any sound source or globally. Filters are
-executed on a per-sample basis and currently the following filters are
-supported.
+Filters are used to modify sound in some fashion or another. Typical
+uses for them include creating environmental effects such as echoing.
 
-### Biquadratic Resonance
-- LowPass
-- HighPass
-- BandPass
+There exists a variety of filters
 
-### Miscellaneous
-- Echo
+- Biquadratic Resonance
+  - Low pass filter
+  - High pass filter
+  - Band pass filter
+- Echo filter
+- *More to come*
+
+Biquadratic Resonance filters are a cheap approximate solution to achieving
+the common low-pass, hi-pass and band-pass filters.
+
+All Biquadratic resonance filters have three parameters that affect the
+effect they have on the samples
+
+- sample rate
+- cut off frequency
+- cut off resonance
+
+The echo filter is as the name suggests, a way to produce an echo.
+At it's core it just records and replays samples based on two parameters
+
+- delay
+- decay
+
+There are more filters to come so stay tuned!
