@@ -50,11 +50,16 @@ struct BQRFilterInstance : filterInstance {
     virtual void filter(float *buffer, size_t samples, bool stereo, float sampleRate);
     virtual ~BQRFilterInstance();
 private:
+    void calcParams();
     BQRFilter *m_parent;
     m::vec3 m_a;
-    m::vec2 m_b;
+    m::vec3 m_b;
     m::vec2 m_x1, m_x2;
     m::vec2 m_y1, m_y2;
+    int m_filterType;
+    float m_sampleRate;
+    float m_frequency;
+    float m_resonance;
     bool m_active;
 };
 
@@ -74,9 +79,10 @@ struct BQRFilter : filter {
 
 private:
     friend struct BQRFilterInstance;
-    bool m_active;
-    m::vec3 m_a;
-    m::vec2 m_b;
+    int m_filterType;
+    float m_sampleRate;
+    float m_frequency;
+    float m_resonance;
 };
 
 // check docs/AUDIO.md for explanation of how this does what it does

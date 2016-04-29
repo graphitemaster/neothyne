@@ -67,43 +67,19 @@ filterInstance *echoFilter::create() {
 }
 
 ///! BQRFilterInstance
-static void calcBQRParams(int type,
-                          float sampleRate,
-                          float frequency,
-                          float resonance,
-                          m::vec3 &a,
-                          m::vec2 &b)
-{
-    const m::vec2 omega = m::sincos((2.0f * m::kPi * frequency) / sampleRate);
-    const float alpha = omega.x / (2.0f * resonance);
-    const float scalar = 1.0f / (1.0f + alpha);
-    switch (type) {
-    case BQRFilter::kLowPass:
-        a = { 0.5f * (1.0f - omega.y) * scalar, (1.0f - omega.y) * scalar, 0.5f * (1.0f - omega.y) * scalar };
-        b = { -2.0f * omega.y * scalar, (1.0f - alpha) * scalar };
-        break;
-    case BQRFilter::kHighPass:
-        a = { 0.5f * (1.0f + omega.y) * scalar, -(1.0f + omega.y) * scalar, 0.5f * (1.0f + omega.y) * scalar };
-        b = { -2.0f * omega.y * scalar, (1.0f - alpha) * scalar };
-        break;
-    case BQRFilter::kBandPass:
-        a = { alpha * scalar, 0.0f, -(alpha * scalar) };
-        b = { -2.0f * omega.y * scalar, (1.0f - alpha) * scalar };
-        break;
-    }
-}
-
 BQRFilterInstance::BQRFilterInstance(BQRFilter *parent)
     : m_parent(parent)
-    , m_a(m_parent->m_a)
-    , m_b(m_parent->m_b)
-    , m_active(m_parent->m_active)
+    , m_filterType(m_parent->m_filterType)
+    , m_sampleRate(m_parent->m_sampleRate)
+    , m_frequency(m_parent->m_frequency)
+    , m_resonance(m_parent->m_resonance)
+    , m_active(false)
 {
+    calcParams();
 }
 
 void BQRFilterInstance::filter(float *buffer, size_t samples, bool stereo, float) {
-    if (!m_active)
-        return;
+    if (!m_active) return;
     size_t pitch = stereo ? 2 : 1;
     for (size_t s = 0; s < pitch; s++) {
         for (size_t i = 0; i < samples; i += 2) {
@@ -129,19 +105,55 @@ BQRFilterInstance::~BQRFilterInstance() {
     // Empty
 }
 
+void BQRFilterInstance::calcParams() {
+    const m::vec2 omega = m::sincos((2.0f * m::kPi * m_frequency) / m_sampleRate);
+    const float alpha = omega.x / (2.0f * m_resonance);
+    const float scalar = 1.0f / (1.0f + alpha);
+    switch (m_filterType) {
+    case BQRFilter::kNone:
+        m_active = false;
+        break;
+    case BQRFilter::kLowPass:
+        m_a.x = 0.5f * (1.0f - omega.y) * scalar;
+        m_a.y = (1.0f - omega.y) * scalar;
+        m_a.z = m_a.x;
+        m_b.x = -2.0f * omega.y * scalar;
+        m_b.y = (1.0f - alpha) * scalar;
+        m_active = true;
+        break;
+    case BQRFilter::kHighPass:
+        m_a.x = 0.5f * (1.0f + omega.y) * scalar;
+        m_a.y = -(1.0f + omega.y) * scalar;
+        m_a.z = m_a.x;
+        m_b.x = -2.0f * omega.y * scalar;
+        m_b.y = (1.0f - alpha) * scalar;
+        m_active = true;
+        break;
+    case BQRFilter::kBandPass:
+        m_a.x = alpha * scalar;
+        m_a.y = 0.0f;
+        m_a.z = -m_a.x;
+        m_b.x = -2.0f * omega.y * scalar;
+        m_b.y = (1.0f - alpha) * scalar;
+        m_active = true;
+        break;
+    }
+}
+
 void BQRFilter::init(source *) {
     // Empty
 }
 
 BQRFilter::BQRFilter()
-    : m_active(false)
 {
     // Empty
 }
 
 void BQRFilter::setParams(int type, float sampleRate, float frequency, float resonance) {
-    calcBQRParams(type, sampleRate, frequency, resonance, m_a, m_b);
-    m_active = true;
+    m_filterType = type;
+    m_sampleRate = sampleRate;
+    m_frequency = frequency;
+    m_resonance = resonance;
 }
 
 BQRFilter::~BQRFilter() {
