@@ -8,14 +8,11 @@ Here's what it looks like currently
 
 ## Philosphy
 
-Neothyne is a game/engine with a focus on matching that of idTech3/Q3A in terms
-of visual fidelity. At its core, Neothyne is a relatively simple engine with a
-focus on providing a minimum set of features to make a twitch shooter.
+A modern dependency free game engine to make a twitch shooter with
 
 ## Status
 
-As of late Neothyne is just a piece of tech which, while primitive in nature,
-embodies the following:
+As of late Neothyne is just an engine offering
 
 * Efficent KD-tree (which allows for)
   * Efficent static and sweeping collision detection
@@ -41,6 +38,22 @@ embodies the following:
     * Color balance (shadows, midtones and highlights)
     * Hue, lightness and saturation
     * Brightness and contrast
+
+* Fire and forget audio mixer (which can do)
+  * Multiple sound sources (global and local)
+  * Faders (adjust volume, speed, panning over time)
+  * Dynamic audio control
+    * Fade volume, speed, panning, etc.
+    * Panning
+    * Speed
+    * Filters
+      * Echo
+      * Biquadratic Resonance Filters
+        * Low pass
+        * Hi pass
+        * Band pass
+      * DC Blocking
+    * Audio grouping
 
 * Immediate-mode graphical user interface (which can do)
   * Buttons
