@@ -16,17 +16,25 @@ namespace a {
 
 struct lockGuard {
     lockGuard(void *opaque)
-        : m((SDL_mutex *)opaque)
+        : m_mutex((SDL_mutex *)opaque)
+        , m_once(false)
     {
-        SDL_LockMutex(m);
+        SDL_LockMutex(m_mutex);
     }
 
     ~lockGuard() {
-        SDL_UnlockMutex(m);
+        SDL_UnlockMutex(m_mutex);
     }
 
-    SDL_mutex *m;
+    bool once() {
+        return m_once = !m_once;
+    }
+
+    SDL_mutex *m_mutex;
+    bool m_once;
 };
+
+#define locked(X) for (lockGuard lock(X); lock.once(); )
 
 static void audioMixer(void *user, Uint8 *stream, int length) {
     const int samples = length / 4;
@@ -70,73 +78,6 @@ void stop(a::audio *system) {
     SDL_DestroyMutex((SDL_mutex*)system->m_mutex);
 }
 
-///! fader
-fader::fader()
-    : m_current(0.0f)
-    , m_from(0.0f)
-    , m_to(0.0f)
-    , m_delta(0.0f)
-    , m_time(0.0f)
-    , m_startTime(0.0f)
-    , m_endTime(0.0f)
-    , m_active(0)
-{
-}
-
-void fader::set(int type, float from, float to, float time, float startTime) {
-    switch (type) {
-    case kLERP:
-        m_current = from;
-        m_from = from;
-        m_to = to;
-        m_time = time;
-        m_startTime = startTime;
-        m_delta = to - from;
-        m_endTime = m_startTime + time;
-        m_active = 1;
-        break;
-    case kLFO:
-        m_active = 2;
-        m_current = 0.0f;
-        m_from = from;
-        m_to = to;
-        m_time = time;
-        m_delta = m::abs(to - from) / 2.0f;
-        m_startTime = startTime;
-        m_endTime = m::kPi * 2.0f / m_time;
-        break;
-    }
-}
-
-float fader::operator()(float currentTime) {
-    if (m_active == 2) {
-        // LFO
-        if (m_startTime > currentTime) {
-            // time rolled over
-            m_startTime = currentTime;
-        }
-        const float delta = m_startTime - currentTime;
-        return m::sin(delta * m_endTime) * m_delta + (m_from + m_delta);
-    }
-
-    if (m_startTime > currentTime) {
-        // time rolled over
-        float delta = (m_current - m_from) / m_delta;
-        m_from = m_current;
-        m_startTime = currentTime;
-        m_time = m_time * (1.0f - delta); // time left
-        m_delta = m_to - m_from;
-        m_endTime = m_startTime + m_time;
-    }
-
-    if (currentTime > m_endTime) {
-        m_active = -1;
-        return m_to;
-    }
-    m_current = m_from + m_delta * ((currentTime - m_startTime) / m_time);
-    return m_current;
-}
-
 ///! instance
 instance::instance()
     : m_playIndex(0)
@@ -146,17 +87,18 @@ instance::instance()
     , m_relativePlaySpeed(1.0f)
     , m_streamTime(0.0f)
     , m_sourceID(0)
-    , m_filter(nullptr)
     , m_activeFader(0)
 {
     m_volume.x = 1.0f / m::sqrt(2.0f);
     m_volume.y = 1.0f / m::sqrt(2.0f);
     m_volume.z = 1.0f;
     memset(m_faderVolume, 0, sizeof m_faderVolume);
+    memset(m_filters, 0, sizeof m_filters);
 }
 
 instance::~instance() {
-    delete m_filter;
+    for (auto *it : m_filters)
+        delete it;
 }
 
 void instance::init(size_t playIndex, float baseSampleRate, int sourceFlags) {
@@ -198,9 +140,9 @@ source::source()
     : m_flags(0)
     , m_baseSampleRate(44100.0f)
     , m_sourceID(0)
-    , m_filter(nullptr)
     , m_owner(nullptr)
 {
+    memset(m_filters, 0, sizeof m_filters);
 }
 
 source::~source() {
@@ -215,10 +157,10 @@ void source::setLooping(bool looping) {
         m_flags &= ~kLoop;
 }
 
-void source::setFilter(filter *filter_) {
-    m_filter = filter_;
-    if (m_filter)
-        m_filter->init(this);
+void source::setFilter(int filterHandle, filter *filter_) {
+    if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
+        return;
+    m_filters[filterHandle] = filter_;
 }
 
 ///! audio
@@ -232,16 +174,17 @@ audio::audio()
     , m_playIndex(0)
     , m_streamTime(0)
     , m_sourceID(1)
-    , m_filter(nullptr)
-    , m_filterInstance(nullptr)
     , m_mutex(nullptr)
     , m_mixerData(nullptr)
 {
+    memset(m_filters, 0, sizeof m_filters);
+    memset(m_filterInstances, 0, sizeof m_filterInstances);
 }
 
 audio::~audio() {
     stopAll();
-    delete m_filterInstance;
+    for (auto *it : m_filterInstances)
+        delete it;
 }
 
 void audio::init(int channels, int sampleRate, int bufferSize, int flags) {
@@ -291,9 +234,8 @@ int audio::findFreeChannel() {
 int audio::play(source &sound, float volume, float pan, bool paused) {
     u::unique_ptr<instance> instance(sound.create());
     sound.m_owner = this;
-    // lock guard scope
-    {
-        lockGuard lock(m_mutex);
+
+    locked(m_mutex) {
         const int channel = findFreeChannel();
         if (channel < 0)
             return -1;
@@ -302,7 +244,7 @@ int audio::play(source &sound, float volume, float pan, bool paused) {
             sound.m_sourceID = m_sourceID++;
         m_channels[channel] = instance.release();
         m_channels[channel]->m_sourceID = sound.m_sourceID;
-        int handle = channel | (m_playIndex << 8);
+        int handle = channel | (m_playIndex << 12);
         m_channels[channel]->init(m_playIndex, sound.m_baseSampleRate, sound.m_flags);
         if (paused)
             m_channels[channel]->m_flags |= instance::kPaused;
@@ -311,8 +253,9 @@ int audio::play(source &sound, float volume, float pan, bool paused) {
         setChannelVolume(channel, volume);
         setChannelRelativePlaySpeed(channel, 1.0f);
 
-        if (sound.m_filter)
-            m_channels[channel]->m_filter = sound.m_filter->create();
+        for (size_t i = 0; i < kMaxStreamFilters; i++)
+            if (sound.m_filters[i])
+                m_channels[channel]->m_filters[i] = sound.m_filters[i]->create();
 
         m_playIndex++;
         const size_t scratchNeeded = size_t(m::ceil((m_channels[channel]->m_sampleRate / m_sampleRate) * m_bufferSize));
@@ -332,8 +275,8 @@ int audio::getChannelFromHandle(int handle) const {
     if (handle < 0)
         return -1;
     const int channel = handle & 0xFF;
-    const size_t index = handle >> 8;
-    if (m_channels[index] && (m_channels[index]->m_playIndex & 0xFFFFFF) == index)
+    const size_t index = handle >> 12;
+    if (m_channels[index] && (m_channels[index]->m_playIndex & 0xFFFFF) == index)
         return channel;
     return -1;
 }
@@ -508,14 +451,17 @@ void audio::setVolume(int channelHandle, float volume) {
     setChannelVolume(channel, volume);
 }
 
-void audio::setGlobalFilter(filter *filter_) {
-    lockGuard lock(m_mutex);
-    delete m_filterInstance;
-    m_filterInstance = nullptr;
-    m_filter = filter_;
-    if (m_filter) {
-        m_filter->init(nullptr);
-        m_filterInstance = m_filter->create();
+void audio::setGlobalFilter(int filterHandle, filter *filter_) {
+    if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
+        return;
+
+    locked(m_mutex) {
+        delete m_filterInstances[filterHandle];
+        m_filterInstances[filterHandle] = nullptr;
+
+        m_filters[filterHandle] = filter_;
+        if (filter_)
+            m_filterInstances[filterHandle] = m_filters[filterHandle]->create();
     }
 }
 
@@ -540,6 +486,75 @@ void audio::stopSound(source &sound) {
         for (size_t i = 0; i < m_channels.size(); i++)
             if (m_channels[i] && m_channels[i]->m_sourceID == sound.m_sourceID)
                 stopChannel(i);
+    }
+}
+
+void audio::setFilterParam(int channelHandle, int filterHandle, int attrib, float value) {
+    if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
+        return;
+    if (channelHandle == 0) {
+        lockGuard lock(m_mutex);
+        if (m_filterInstances[filterHandle])
+            m_filterInstances[filterHandle]->setFilterParam(attrib, value);
+        return;
+    }
+    const int channel = getChannelFromHandle(channelHandle);
+    if (channel == -1)
+        return;
+
+    locked(m_mutex) {
+        if (m_channels[channel] && m_channels[channel]->m_filters[filterHandle])
+            m_channels[channel]->m_filters[filterHandle]->setFilterParam(attrib, value);
+    }
+}
+
+void audio::fadeFilterParam(int channelHandle,
+                            int filterHandle,
+                            int attrib,
+                            float from,
+                            float to,
+                            float time)
+{
+    if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
+        return;
+    if (channelHandle == 0) {
+        lockGuard lock(m_mutex);
+        if (m_filterInstances[filterHandle])
+            m_filterInstances[filterHandle]->fadeFilterParam(attrib, from, to, time, m_streamTime);
+        return;
+    }
+    const int channel = getChannelFromHandle(channelHandle);
+    if (channel == -1)
+        return;
+
+    locked(m_mutex) {
+        if (m_channels[channel] && m_channels[channel]->m_filters[filterHandle])
+            m_channels[channel]->m_filters[filterHandle]->fadeFilterParam(attrib, from, to, time, m_streamTime);
+    }
+}
+
+void audio::oscFilterParam(int channelHandle,
+                           int filterHandle,
+                           int attrib,
+                           float from,
+                           float to,
+                           float time)
+{
+    if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
+        return;
+    if (channelHandle == 0) {
+        lockGuard lock(m_mutex);
+        if (m_filterInstances[filterHandle])
+            m_filterInstances[filterHandle]->oscFilterParam(attrib, from, to, time, m_streamTime);
+        return;
+    }
+    const int channel = getChannelFromHandle(channelHandle);
+    if (channel == -1)
+        return;
+
+    locked(m_mutex) {
+        if (m_channels[channel] && m_channels[channel]->m_filters[filterHandle])
+            m_channels[channel]->m_filters[filterHandle]->oscFilterParam(attrib, from, to, time, m_streamTime);
     }
 }
 
@@ -661,8 +676,7 @@ void audio::mix(float *buffer, size_t samples) {
     globalVolume.y = m_globalVolume;
 
     // lock guard scope
-    {
-        lockGuard lock(m_mutex);
+    locked(m_mutex) {
         // process per-channel faders
         for (size_t i = 0; i < m_channels.size(); i++) {
             if (!m_channels[i] || (m_channels[i]->m_flags & instance::kPaused))
@@ -747,11 +761,14 @@ void audio::mix(float *buffer, size_t samples) {
             else
                 m_channels[i]->getAudio(&m_scratch[0], readSamples);
 
-            if (m_channels[i]->m_filter) {
-                m_channels[i]->m_filter->filter(&m_scratch[0],
-                                                readSamples,
-                                                m_channels[i]->m_flags & instance::kStereo,
-                                                m_channels[i]->m_sampleRate);
+            for (size_t j = 0; j < kMaxStreamFilters; j++) {
+                if (m_channels[i]->m_filters[j]) {
+                    m_channels[i]->m_filters[j]->filter(&m_scratch[0],
+                                                        readSamples,
+                                                        m_channels[i]->m_flags & instance::kStereo,
+                                                        m_channels[i]->m_sampleRate,
+                                                        m_streamTime);
+                }
             }
 
             if (m_channels[i]->m_activeFader) {
@@ -796,8 +813,9 @@ void audio::mix(float *buffer, size_t samples) {
                 stopChannel(i);
         }
         // global filter
-        if (m_filterInstance)
-            m_filterInstance->filter(&buffer[0], samples, true, m_sampleRate);
+        for (size_t i = 0; i < kMaxStreamFilters; i++)
+            if (m_filterInstances[i])
+                m_filterInstances[i]->filter(&buffer[0], samples, true, m_sampleRate, m_streamTime);
     }
 
     // clip

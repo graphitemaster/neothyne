@@ -8,16 +8,21 @@
 namespace a {
 
 ///! filter
-void filter::init(source *) {
-    // Empty
-}
-
 filter::~filter() {
     // Empty
 }
 
 ///! filterInstance
 filterInstance::~filterInstance() {
+    // Empty
+}
+void filterInstance::setFilterParam(int, float) {
+    // Empty
+}
+void filterInstance::fadeFilterParam(int, float, float, float, float) {
+    // Rmpty
+}
+void filterInstance::oscFilterParam(int, float, float, float, float) {
     // Empty
 }
 
@@ -28,7 +33,7 @@ echoFilterInstance::echoFilterInstance(echoFilter *parent)
 {
 }
 
-void echoFilterInstance::filter(float *buffer, size_t samples, bool stereo, float sampleRate) {
+void echoFilterInstance::filter(float *buffer, size_t samples, bool stereo, float sampleRate, float) {
     if (m_buffer.empty()) {
         const size_t length = m::ceil(m_parent->m_delay * sampleRate) * (stereo ? 2 : 1);
         m_buffer.resize(length);
@@ -44,10 +49,6 @@ void echoFilterInstance::filter(float *buffer, size_t samples, bool stereo, floa
 }
 
 echoFilterInstance::~echoFilterInstance() {
-    // Empty
-}
-
-void echoFilter::init(source *) {
     // Empty
 }
 
@@ -78,8 +79,27 @@ BQRFilterInstance::BQRFilterInstance(BQRFilter *parent)
     calcParams();
 }
 
-void BQRFilterInstance::filter(float *buffer, size_t samples, bool stereo, float) {
+void BQRFilterInstance::filter(float *buffer, size_t samples, bool stereo, float time, float) {
     if (!m_active) return;
+
+    if (m_frequencyFader.m_active > 0) {
+        m_dirty = true;
+        m_frequency = m_frequencyFader(time);
+    }
+
+    if (m_resonanceFader.m_active > 0) {
+        m_dirty = true;
+        m_resonance = m_resonanceFader(time);
+    }
+
+    if (m_sampleRateFader.m_active > 0) {
+        m_dirty = true;
+        m_sampleRate = m_sampleRateFader(time);
+    }
+
+    if (m_dirty)
+        calcParams();
+
     size_t pitch = stereo ? 2 : 1;
     for (size_t s = 0; s < pitch; s++) {
         for (size_t i = 0; i < samples; i += 2) {
@@ -98,6 +118,59 @@ void BQRFilterInstance::filter(float *buffer, size_t samples, bool stereo, float
         }
         // apply a very small impulse to prevent underflow
         m_y1[s] += 1.0e-26f;
+    }
+}
+
+
+void BQRFilterInstance::setFilterParam(int attrib, float value) {
+    switch (attrib) {
+    case BQRFilter::kFrequency:
+        m_dirty = true;
+        m_frequencyFader.m_active = 0;
+        m_frequency = value;
+        break;
+    case BQRFilter::kSampleRate:
+        m_dirty = true;
+        m_sampleRateFader.m_active = 0;
+        m_sampleRate = value;
+        break;
+    case BQRFilter::kResonance:
+        m_dirty = true;
+        m_resonanceFader.m_active = 0;
+        m_resonance = value;
+        break;
+    }
+}
+
+void BQRFilterInstance::fadeFilterParam(int attrib, float from, float to, float time, float startTime) {
+    if (from == to || time <= 0.0f)
+        return;
+    switch (attrib) {
+    case BQRFilter::kFrequency:
+        m_frequencyFader.set(fader::kLERP, from, to, time, startTime);
+        break;
+    case BQRFilter::kSampleRate:
+        m_sampleRateFader.set(fader::kLERP, from, to, time, startTime);
+        break;
+    case BQRFilter::kResonance:
+        m_sampleRateFader.set(fader::kLERP, from, to, time, startTime);
+        break;
+    }
+}
+
+void BQRFilterInstance::oscFilterParam(int attrib, float from, float to, float time, float startTime) {
+    if (from == to || time <= 0.0f)
+        return;
+    switch (attrib) {
+    case BQRFilter::kFrequency:
+        m_frequencyFader.set(fader::kLFO, from, to, time, startTime);
+        break;
+    case BQRFilter::kSampleRate:
+        m_sampleRateFader.set(fader::kLFO, from, to, time, startTime);
+        break;
+    case BQRFilter::kResonance:
+        m_resonanceFader.set(fader::kLFO, from, to, time, startTime);
+        break;
     }
 }
 
@@ -140,10 +213,6 @@ void BQRFilterInstance::calcParams() {
     }
 }
 
-void BQRFilter::init(source *) {
-    // Empty
-}
-
 BQRFilter::BQRFilter()
 {
     // Empty
@@ -171,7 +240,7 @@ DCRemovalFilterInstance::DCRemovalFilterInstance(DCRemovalFilter *parent)
 {
 }
 
-void DCRemovalFilterInstance::filter(float *buffer, size_t samples, bool stereo, float sampleRate) {
+void DCRemovalFilterInstance::filter(float *buffer, size_t samples, bool stereo, float sampleRate, float) {
     if (m_buffer.empty()) {
         m_buffer.resize(size_t(m::ceil(m_parent->m_length * sampleRate)) * (stereo ? 2 : 1));
         m_totals.resize(stereo ? 2 : 1);

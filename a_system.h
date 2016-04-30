@@ -2,6 +2,7 @@
 #define A_SYSTEM_HDR
 #include "m_vec.h"
 #include "u_vector.h"
+#include "a_fader.h"
 
 namespace a {
 
@@ -9,33 +10,8 @@ struct audio;
 struct filter;
 struct filterInstance;
 
-struct fader {
-    fader();
-
-    enum {
-        // linear interpolation
-        kLERP,
-        // low-frequency oscillation
-        kLFO
-    };
-
-    void set(int type, float from, float to, float time, float startTime);
-
-    float operator()(float time);
-
-private:
-    friend struct audio;
-
-    float m_current;
-    float m_from;
-    float m_to;
-    float m_delta;
-    float m_time;
-    float m_startTime;
-    float m_endTime;
-    // 0: disabled, 1: active, 2: LFO, -1: was active but stopped recently
-    int m_active;
-};
+/// maximum filters per stream
+static constexpr int kMaxStreamFilters = 4;
 
 struct instance {
     enum {
@@ -70,7 +46,7 @@ protected:
     fader m_pauseScheduler;
     fader m_stopScheduler;
     int m_sourceID;
-    filterInstance *m_filter;
+    filterInstance *m_filters[kMaxStreamFilters];
 
     // if there is an active fader
     int m_activeFader;
@@ -87,7 +63,7 @@ struct source {
     source();
 
     void setLooping(bool looping);
-    void setFilter(filter *filter_);
+    void setFilter(int filterHandle, filter *filter_);
 
     virtual ~source();
     virtual instance *create() = 0;
@@ -98,7 +74,7 @@ protected:
     int m_flags;
     float m_baseSampleRate;
     int m_sourceID;
-    filter *m_filter;
+    filter *m_filters[kMaxStreamFilters];
     audio *m_owner;
 };
 
@@ -137,7 +113,7 @@ struct audio {
     void setPan(int channelHandle, float panning);
     void setPanAbsolute(int channelHandle, const m::vec2 &panning);
     void setVolume(int channelHandle, float volume);
-    void setGlobalFilter(filter *filter_);
+    void setGlobalFilter(int filterHandle, filter *filter_);
 
     void fadeVolume(int channelHandle, float from, float to, float time);
     void fadePan(int channelHandle, float from, float to, float time);
@@ -160,10 +136,15 @@ protected:
 
     void stopSound(source &sound);
     void stopChannel(int channel);
+
     void setChannelPan(int channel, float panning);
     void setChannelVolume(int channel, float volume);
     void setChannelPaused(int channel, bool paused);
     void setChannelRelativePlaySpeed(int channel, float speed);
+
+    void setFilterParam(int channelHandle, int filterHandle, int attrib, float value);
+    void fadeFilterParam(int channelHandle, int filterHandle, int attrib, float from, float to, float time);
+    void oscFilterParam(int channelHandle, int filterHandle, int attrib, float from, float to, float time);
 
 private:
     u::vector<float> m_scratch;
@@ -178,8 +159,8 @@ private:
     fader m_globalVolumeFader;
     float m_streamTime;
     int m_sourceID;
-    filter *m_filter;
-    filterInstance *m_filterInstance;
+    filter *m_filters[kMaxStreamFilters];
+    filterInstance *m_filterInstances[kMaxStreamFilters];
 
 public:
     void *m_mutex;
