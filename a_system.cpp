@@ -34,7 +34,9 @@ struct lockGuard {
     bool m_once;
 };
 
-#define locked(X) for (lockGuard lock(X); lock.once(); )
+// Clever technique to make a scope that locks a mutex
+#define locked(X) \
+    for (lockGuard lock(X); lock.once(); )
 
 static void audioMixer(void *user, Uint8 *stream, int length) {
     const int samples = length / 4;

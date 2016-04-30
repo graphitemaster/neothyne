@@ -36,7 +36,7 @@ void fader::set(int type, float from, float to, float time, float startTime) {
         m_time = time;
         m_delta = m::abs(to - from) / 2.0f;
         m_startTime = startTime;
-        m_endTime = m::kPi * 2.0f / (m_time * 1000.0f);
+        m_endTime = m::kPi * 2.0f / m_time;
         break;
     }
 }
