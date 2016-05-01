@@ -500,8 +500,7 @@ void audio::stopSound(source &sound) {
 void audio::setFilterParam(int channelHandle, int filterHandle, int attrib, float value) {
     if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
         return;
-    if (channelHandle == 0) {
-        lockGuard lock(m_mutex);
+    if (channelHandle == 0) locked(m_mutex) {
         if (m_filterInstances[filterHandle])
             m_filterInstances[filterHandle]->setFilterParam(attrib, value);
         return;
@@ -525,8 +524,7 @@ void audio::fadeFilterParam(int channelHandle,
 {
     if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
         return;
-    if (channelHandle == 0) {
-        lockGuard lock(m_mutex);
+    if (channelHandle == 0) locked(m_mutex) {
         if (m_filterInstances[filterHandle])
             m_filterInstances[filterHandle]->fadeFilterParam(attrib, from, to, time, m_streamTime);
         return;
@@ -550,8 +548,7 @@ void audio::oscFilterParam(int channelHandle,
 {
     if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
         return;
-    if (channelHandle == 0) {
-        lockGuard lock(m_mutex);
+    if (channelHandle == 0) locked(m_mutex) {
         if (m_filterInstances[filterHandle])
             m_filterInstances[filterHandle]->oscFilterParam(attrib, from, to, time, m_streamTime);
         return;
@@ -612,8 +609,7 @@ void audio::fadeGlobalVolume(float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setGlobalVolume(to);
         return;
-    } else {
-        lockGuard lock(m_mutex);
+    } else locked(m_mutex) {
         m_streamTime = 0.0f; // avoid ~6 day rollover
         m_globalVolumeFader.set(fader::kLERP, from, to, time, m_streamTime);
     }
@@ -846,8 +842,7 @@ void audio::clip(const float *U_RESTRICT src,
         }
     } else {
         for (size_t j = 0, c = 0; j < 2; j++) {
-            // standard clipping may introduce noise and aliasing - need proper
-            // hi-pass filter to prevent this
+            // standard clipping may introduce noise and aliasing
             v = volume.x;
             for (size_t i = 0; i < samples; i++, c++, v += d)
                 dst[c] = m::clamp(src[i] * v, -1.0f, 1.0f) * m_postClipScaler;
@@ -860,7 +855,7 @@ void audio::interlace(const float *U_RESTRICT src,
                       size_t samples,
                       size_t channels)
 {
-    // converts deinterlaced audio samples from 111222 to 121212
+    // converts deinterlaced audio samples into interlaced ones
     for (size_t j = 0, k = 0; j < channels; j++)
         for (size_t i = j; i < samples * channels; i += channels, k++)
             dst[i] = src[k];
