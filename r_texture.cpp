@@ -12,6 +12,7 @@
 
 VAR(int, r_tex_compress, "texture compression", 0, 1, 1);
 VAR(int, r_tex_compress_cache, "cache compressed textures", 0, 1, 1);
+VAR(int, r_tex_compress_cache_zlib, "compress cached textures with deflate", 0, 1, 1);
 VAR(int, r_aniso, "anisotropic filtering", 0, 16, 4);
 VAR(int, r_bilinear, "bilinear filtering", 0, 1, 1);
 VAR(int, r_trilinear, "trilinear filtering", 0, 1, 1);
