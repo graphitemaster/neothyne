@@ -16,13 +16,14 @@ static constexpr int kMaxStreamFilters = 4;
 struct instance {
     enum {
         kLooping = 1 << 0,
+        kStereo = 1 << 1,
         kProtected = 1 << 2,
         kPaused = 1 << 3
     };
 
     instance();
     virtual ~instance();
-    void init(size_t playIndex, float baseSampleRate, size_t channels, int sourceFlags);
+    void init(size_t playIndex, float baseSampleRate, int sourceFlags);
 
 protected:
     virtual void getAudio(float *buffer, size_t samples) = 0;
@@ -51,13 +52,12 @@ protected:
     int m_activeFader;
     // fader-affected l/r volume
     float m_faderVolume[2 * 2];
-
-    size_t m_channels;
 };
 
 struct source {
     enum {
-        kLoop = 1 << 0
+        kLoop = 1 << 0,
+        kStereo = 1 << 1
     };
 
     source();
@@ -76,7 +76,6 @@ protected:
     int m_sourceID;
     filter *m_filters[kMaxStreamFilters];
     audio *m_owner;
-    size_t m_channels;
 };
 
 struct audio {
@@ -147,10 +146,8 @@ protected:
     void fadeFilterParam(int channelHandle, int filterHandle, int attrib, float from, float to, float time);
     void oscFilterParam(int channelHandle, int filterHandle, int attrib, float from, float to, float time);
 
-    void clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, const m::vec2 &volume);
+    void clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples);
     void interlace(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, size_t channels);
-
-    void mixSamples(float *U_RESTRICT buffer, size_t samples, float *U_RESTRICT scratch);
 
 private:
     u::vector<float> m_scratch;

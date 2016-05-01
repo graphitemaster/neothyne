@@ -95,7 +95,6 @@ instance::instance()
     , m_streamTime(0.0f)
     , m_sourceID(0)
     , m_activeFader(0)
-    , m_channels(1)
 {
     m_volume.x = 1.0f / m::sqrt(2.0f);
     m_volume.y = 1.0f / m::sqrt(2.0f);
@@ -109,15 +108,16 @@ instance::~instance() {
         delete it;
 }
 
-void instance::init(size_t playIndex, float baseSampleRate, size_t channels, int sourceFlags) {
+void instance::init(size_t playIndex, float baseSampleRate, int sourceFlags) {
     m_playIndex = playIndex;
     m_baseSampleRate = baseSampleRate;
     m_sampleRate = m_baseSampleRate;
-    m_channels = channels;
     m_streamTime = 0.0f;
     m_flags = 0;
     if (sourceFlags & source::kLoop)
         m_flags |= instance::kLooping;
+    if (sourceFlags & source::kStereo)
+        m_flags |= instance::kStereo;
 }
 
 bool instance::rewind() {
@@ -148,7 +148,6 @@ source::source()
     , m_baseSampleRate(44100.0f)
     , m_sourceID(0)
     , m_owner(nullptr)
-    , m_channels(1)
 {
     memset(m_filters, 0, sizeof m_filters);
 }
@@ -253,7 +252,7 @@ int audio::play(source &sound, float volume, float pan, bool paused) {
         m_channels[channel] = instance.release();
         m_channels[channel]->m_sourceID = sound.m_sourceID;
         int handle = channel | (m_playIndex << 12);
-        m_channels[channel]->init(m_playIndex, sound.m_baseSampleRate, sound.m_channels, sound.m_flags);
+        m_channels[channel]->init(m_playIndex, sound.m_baseSampleRate, sound.m_flags);
         if (paused)
             m_channels[channel]->m_flags |= instance::kPaused;
 
@@ -500,7 +499,8 @@ void audio::stopSound(source &sound) {
 void audio::setFilterParam(int channelHandle, int filterHandle, int attrib, float value) {
     if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
         return;
-    if (channelHandle == 0) locked(m_mutex) {
+    if (channelHandle == 0) {
+        lockGuard lock(m_mutex);
         if (m_filterInstances[filterHandle])
             m_filterInstances[filterHandle]->setFilterParam(attrib, value);
         return;
@@ -524,7 +524,8 @@ void audio::fadeFilterParam(int channelHandle,
 {
     if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
         return;
-    if (channelHandle == 0) locked(m_mutex) {
+    if (channelHandle == 0) {
+        lockGuard lock(m_mutex);
         if (m_filterInstances[filterHandle])
             m_filterInstances[filterHandle]->fadeFilterParam(attrib, from, to, time, m_streamTime);
         return;
@@ -548,7 +549,8 @@ void audio::oscFilterParam(int channelHandle,
 {
     if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
         return;
-    if (channelHandle == 0) locked(m_mutex) {
+    if (channelHandle == 0) {
+        lockGuard lock(m_mutex);
         if (m_filterInstances[filterHandle])
             m_filterInstances[filterHandle]->oscFilterParam(attrib, from, to, time, m_streamTime);
         return;
@@ -609,7 +611,8 @@ void audio::fadeGlobalVolume(float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setGlobalVolume(to);
         return;
-    } else locked(m_mutex) {
+    } else {
+        lockGuard lock(m_mutex);
         m_streamTime = 0.0f; // avoid ~6 day rollover
         m_globalVolumeFader.set(fader::kLERP, from, to, time, m_streamTime);
     }
@@ -719,10 +722,10 @@ void audio::mix(float *buffer, size_t samples) {
             }
 
             if (m_channels[i]->m_activeFader) {
-                m_channels[i]->m_faderVolume[0*2+0] = panL.x * volume.x;
-                m_channels[i]->m_faderVolume[0*2+1] = panL.y * volume.y;
-                m_channels[i]->m_faderVolume[1*2+0] = panR.x * volume.x;
-                m_channels[i]->m_faderVolume[1*2+1] = panR.y * volume.y;
+                m_channels[i]->m_faderVolume[0*2+0] = panL.x * volume.x * globalVolume.x;
+                m_channels[i]->m_faderVolume[0*2+1] = panL.y * volume.y * globalVolume.y;
+                m_channels[i]->m_faderVolume[1*2+0] = panR.x * volume.x * globalVolume.x;
+                m_channels[i]->m_faderVolume[1*2+1] = panR.y * volume.y * globalVolume.y;
             }
 
             if (m_channels[i]->m_stopScheduler.m_active) {
@@ -738,115 +741,103 @@ void audio::mix(float *buffer, size_t samples) {
         if (m_scratch.size() < m_scratchNeeded)
             m_scratch.resize(m_scratchNeeded);
 
-        mixSamples(buffer, samples, &m_scratch[0]);
+        // clear accumulation
+        for (size_t i = 0; i < samples << 1; i++)
+            buffer[i] = 0.0f;
 
-        // global filter
-        for (size_t i = 0; i < kMaxStreamFilters; i++) {
-            if (!m_filterInstances[i])
+        // accumulate active sound sources
+        for (size_t i = 0; i < m_channels.size(); i++) {
+            if (!m_channels[i] || (m_channels[i]->m_flags & instance::kPaused))
                 continue;
-            m_filterInstances[i]->filter(&buffer[0],
-                                         samples,
-                                         true,
-                                         m_sampleRate,
-                                        m_streamTime);
+
+            const float next = m_channels[i]->m_sampleRate / m_sampleRate;
+            float step = 0.0f;
+
+            const size_t readSamples = m::ceil(samples * next);
+
+            // get the audio from the source into our scratch buffer
+            if (m_channels[i]->hasEnded())
+                memset(&m_scratch[0], 0, sizeof(float) * m_scratch.size());
+            else
+                m_channels[i]->getAudio(&m_scratch[0], readSamples);
+
+            for (size_t j = 0; j < kMaxStreamFilters; j++) {
+                if (m_channels[i]->m_filters[j]) {
+                    m_channels[i]->m_filters[j]->filter(&m_scratch[0],
+                                                        readSamples,
+                                                        m_channels[i]->m_flags & instance::kStereo,
+                                                        m_channels[i]->m_sampleRate,
+                                                        m_streamTime);
+                }
+            }
+
+            if (m_channels[i]->m_activeFader) {
+                float panL = m_channels[i]->m_faderVolume[0];
+                float panR = m_channels[i]->m_faderVolume[2];
+                const float panLi = (m_channels[i]->m_faderVolume[1] - m_channels[i]->m_faderVolume[0]) / samples;
+                const float panRi = (m_channels[i]->m_faderVolume[3] - m_channels[i]->m_faderVolume[2]) / samples;
+                if (m_channels[i]->m_flags & instance::kStereo) {
+                    for (size_t j = 0; j < samples; j++, step += next, panL += panLi, panR += panRi) {
+                        const float sampleL = m_scratch[(int)m::floor(step)];
+                        const float sampleR = m_scratch[(int)m::floor(step) + samples];
+                        buffer[j] += sampleL * panL;
+                        buffer[j + samples] += sampleR * panR;
+                    }
+                } else {
+                    for (size_t j = 0; j < samples; j++, step += next, panL += panLi, panR += panRi) {
+                        const float sampleM = m_scratch[(int)m::floor(step)];
+                        buffer[j] += sampleM * panL;
+                        buffer[j + samples] += sampleM * panR;
+                    }
+                }
+            } else {
+                const float panL = m_channels[i]->m_volume.x * m_channels[i]->m_volume.z * m_globalVolume;
+                const float panR = m_channels[i]->m_volume.y * m_channels[i]->m_volume.z * m_globalVolume;
+                if (m_channels[i]->m_flags & instance::kStereo) {
+                    for (size_t j = 0; j < samples; j++, step += next) {
+                        const float sampleL = m_scratch[(int)m::floor(step)];
+                        const float sampleR = m_scratch[(int)m::floor(step) + samples];
+                        buffer[j] += sampleL * panL;
+                        buffer[j + samples] += sampleR * panR;
+                    }
+                } else {
+                    for (size_t j = 0; j < samples; j++, step += next) {
+                        const float sampleM = m_scratch[(int)m::floor(step)];
+                        buffer[j] += sampleM * panL;
+                        buffer[j + samples] += sampleM * panR;
+                    }
+                }
+            }
+            // clear the channel if the sound is complete
+            if (!(m_channels[i]->m_flags & instance::kLooping) && m_channels[i]->hasEnded())
+                stopChannel(i);
         }
+        // global filter
+        for (size_t i = 0; i < kMaxStreamFilters; i++)
+            if (m_filterInstances[i])
+                m_filterInstances[i]->filter(&buffer[0], samples, true, m_sampleRate, m_streamTime);
     }
 
-    clip(buffer, &m_scratch[0], samples, m_globalVolume);
+    clip(buffer, &m_scratch[0], samples);
     interlace(&m_scratch[0], buffer, samples, 2);
 }
 
-void audio::mixSamples(float *U_RESTRICT buffer, size_t samples, float *U_RESTRICT scratch) {
-    // clear accumulation buffer
-    memset(buffer, 0, sizeof(float) * (samples << 1));
-
-    // accumulate sounds
-    for (size_t i = 0; i < m_channels.size(); i++) {
-        if (!m_channels[i] || (m_channels[i]->m_flags & instance::kPaused))
-            continue;
-
-        float step = 0.0f;
-        const float next = m_channels[i]->m_sampleRate / m_sampleRate;
-
-        const size_t readSamples = size_t(m::ceil(samples * next));
-        m_channels[i]->getAudio(scratch, readSamples);
-
-        for (size_t j = 0; j < kMaxStreamFilters; j++) {
-            if (!m_channels[i]->m_filters[j])
-                continue;
-            m_channels[i]->m_filters[j]->filter(scratch,
-                                                readSamples,
-                                                m_channels[i]->m_channels,
-                                                m_channels[i]->m_sampleRate,
-                                                m_streamTime);
-        }
-        if (m_channels[i]->m_activeFader) {
-            m::vec2 pan = { m_channels[i]->m_faderVolume[0], m_channels[i]->m_faderVolume[2] };
-            const m::vec2 inc = {
-                (m_channels[i]->m_faderVolume[1] - m_channels[i]->m_faderVolume[0]) / samples,
-                (m_channels[i]->m_faderVolume[3] - m_channels[i]->m_faderVolume[2]) / samples
-            };
-            if (m_channels[i]->m_channels == 2) {
-                for (size_t j = 0; j < samples; j++, step += next, pan += inc) {
-                    buffer[j] += scratch[(int)m::floor(step)] * pan.x;
-                    buffer[j + samples] += scratch[(int)m::floor(step)+samples] * pan.y;
-                }
-            } else {
-                for (size_t j = 0; j < samples; j++, step += next, pan += inc) {
-                    const float sample = scratch[(int)m::floor(step)];
-                    buffer[j] += sample * pan.x;
-                    buffer[j + samples] += sample * pan.y;
-                }
-            }
-        } else {
-            m::vec2 pan = { m_channels[i]->m_volume.x * m_channels[i]->m_volume.z,
-                            m_channels[i]->m_volume.y * m_channels[i]->m_volume.z };
-            if (m_channels[i]->m_channels == 2) {
-                for (size_t j = 0; j < samples; j++, step += next) {
-                    buffer[j] += scratch[(int)m::floor(step)] * pan.x;
-                    buffer[j + samples] += scratch[(int)m::floor(step)+samples] * pan.y;
-                }
-            } else {
-                for (size_t j = 0; j < samples; j++, step += next) {
-                    const float sample = scratch[(int)m::floor(step)];
-                    buffer[j] += sample * pan.x;
-                    buffer[j + samples] += sample * pan.y;
-                }
-            }
-        }
-
-        if (!(m_channels[i]->m_flags & instance::kLooping) && m_channels[i]->hasEnded())
-            stopChannel(i);
-    }
-}
-
-void audio::clip(const float *U_RESTRICT src,
-                 float *U_RESTRICT dst,
-                 size_t samples,
-                 const m::vec2 &volume)
-{
+void audio::clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples) {
     // clip
-    float d = (volume.x - volume.y) / samples;
-    float v = 0.0f;
     if (m_flags & kClipRoundOff) {
         // round off clipping is less aggressive
-        for (size_t j = 0, c = 0; j < 2; j++) {
-            v = volume.x;
-            for (size_t i = 0; i < samples; i++, c++, v += d) {
-                float sample = src[i] * v;
-                /**/ if (sample <= -1.65f) sample = -0.9862875f;
-                else if (sample >=  1.65f) sample =  0.9862875f;
-                else                       sample =  0.87f * sample - 0.1f * sample * sample * sample;
-                dst[c] = sample * m_postClipScaler;
-            }
+        for (size_t i = 0; i < samples << 1; i++) {
+            float sample = src[i];
+            /**/ if (sample <= -1.65f) sample = -0.9862875f;
+            else if (sample >=  1.65f) sample =  0.9862875f;
+            else                       sample =  0.87f * sample - 0.1f * sample * sample * sample;
+            dst[i] = sample * m_postClipScaler;
         }
     } else {
-        for (size_t j = 0, c = 0; j < 2; j++) {
-            // standard clipping may introduce noise and aliasing
-            v = volume.x;
-            for (size_t i = 0; i < samples; i++, c++, v += d)
-                dst[c] = m::clamp(src[i] * v, -1.0f, 1.0f) * m_postClipScaler;
-        }
+        // standard clipping may introduce noise and aliasing - need proper
+        // hi-pass filter to prevent this
+        for (size_t i = 0; i < samples; i++)
+            dst[i] = m::clamp(src[i], -1.65f, 1.65f) * m_postClipScaler;
     }
 }
 
@@ -855,7 +846,7 @@ void audio::interlace(const float *U_RESTRICT src,
                       size_t samples,
                       size_t channels)
 {
-    // converts deinterlaced audio samples into interlaced ones
+    // converts deinterlaced audio samples from 111222 to 121212
     for (size_t j = 0, k = 0; j < channels; j++)
         for (size_t i = j; i < samples * channels; i += channels, k++)
             dst[i] = src[k];
