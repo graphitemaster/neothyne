@@ -723,10 +723,10 @@ void audio::mix(float *buffer, size_t samples) {
             }
 
             if (m_channels[i]->m_activeFader) {
-                m_channels[i]->m_faderVolume[0*2+0] = panL.x * volume.x * globalVolume.x;
-                m_channels[i]->m_faderVolume[0*2+1] = panL.y * volume.y * globalVolume.y;
-                m_channels[i]->m_faderVolume[1*2+0] = panR.x * volume.x * globalVolume.x;
-                m_channels[i]->m_faderVolume[1*2+1] = panR.y * volume.y * globalVolume.y;
+                m_channels[i]->m_faderVolume[0*2+0] = panL.x * volume.x;
+                m_channels[i]->m_faderVolume[0*2+1] = panL.y * volume.y;
+                m_channels[i]->m_faderVolume[1*2+0] = panR.x * volume.x;
+                m_channels[i]->m_faderVolume[1*2+1] = panR.y * volume.y;
             }
 
             if (m_channels[i]->m_stopScheduler.m_active) {
@@ -792,8 +792,8 @@ void audio::mix(float *buffer, size_t samples) {
                     }
                 }
             } else {
-                const float panL = m_channels[i]->m_volume.x * m_channels[i]->m_volume.z * m_globalVolume;
-                const float panR = m_channels[i]->m_volume.y * m_channels[i]->m_volume.z * m_globalVolume;
+                const float panL = m_channels[i]->m_volume.x * m_channels[i]->m_volume.z;
+                const float panR = m_channels[i]->m_volume.y * m_channels[i]->m_volume.z;
                 if (m_channels[i]->m_channels == 2) {
                     for (size_t j = 0; j < samples; j++, step += next) {
                         const float sampleL = m_scratch[(int)m::floor(step)];
