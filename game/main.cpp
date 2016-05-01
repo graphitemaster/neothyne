@@ -131,7 +131,7 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
     neoCenterMouse();
 
     a::wav theme;
-    if (!theme.load("theme.wav", 0))
+    if (!theme.load("theme.wav"))
         neoFatal("failed to load theme music\n");
     theme.setLooping(true);
 

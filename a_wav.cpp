@@ -7,146 +7,168 @@ namespace a {
 
 wavInstance::wavInstance(wav *parent)
     : m_parent(parent)
+    , m_file(u::fopen(m_parent->m_fileName, "rb"))
     , m_offset(0)
 {
+    if (m_file)
+        fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
+}
+
+wavInstance::~wavInstance() {
+    // Empty
+}
+
+template <typename T>
+static inline T read(u::file &fp) {
+    T value;
+    fread(&value, 1, sizeof value, fp);
+    return value;
+}
+
+// convenience function for reading stream data
+static void readData(u::file &fp,
+                     float *buffer,
+                     size_t samples,
+                     size_t channels,
+                     size_t srcChannels,
+                     size_t channelOffset,
+                     size_t bits)
+{
+    switch (bits) {
+    case 8:
+        for (size_t i = 0; i < samples; i++) {
+            for (size_t j = 0; j < srcChannels; j++) {
+                const auto sample = read<int8_t>(fp) / float(0x80);
+                if (j == channelOffset)
+                    buffer[i * channels] = sample;
+                else if (channels > 1 && j == channelOffset + 1)
+                    buffer[i * channels + 1] = sample;
+            }
+        }
+        break;
+    case 16:
+        for (size_t i = 0; i < samples; i++) {
+            for (size_t j = 0; j < srcChannels; j++) {
+                const auto sample = read<int16_t>(fp) / float(0x8000);
+                if (j == channelOffset)
+                    buffer[i * channels] = sample;
+                else if (channels > 1 && j == channelOffset + 1)
+                    buffer[i * channels + 1] = sample;
+            }
+        }
+        break;
+    }
 }
 
 void wavInstance::getAudio(float *buffer, size_t samples) {
-    if (!m_parent->m_data)
-        return;
+    if (!m_file) return;
 
     const size_t channels = m_flags & kStereo ? 2 : 1;
-
     size_t copySize = samples;
-    if (copySize + m_offset > m_parent->m_samples)
-        copySize = m_parent->m_samples - m_offset;
+    if (copySize + m_offset > m_parent->m_sampleCount)
+        copySize = m_parent->m_sampleCount - m_offset;
 
-    memcpy(buffer, m_parent->m_data + m_offset * channels, sizeof(float) * copySize * channels);
-    if (copySize != samples) {
-        if (m_flags & instance::kLooping) {
-            memcpy(buffer + copySize * channels, m_parent->m_data, sizeof(float) * (samples - copySize) * channels);
-            m_offset = samples - copySize;
-            m_streamTime = m_offset / m_sampleRate;
-        } else {
-            memset(buffer + copySize * channels, 0, sizeof(float) * (samples - copySize) * channels);
-            m_offset += samples - copySize;
-        }
-    } else {
-        m_offset += samples;
+    readData(m_file, buffer, copySize, channels, m_parent->m_channels,
+        m_parent->m_channelOffset, m_parent->m_bits);
+
+    if (copySize == samples) {
+        m_offset = samples;
+        return;
     }
-}
 
-bool wavInstance::hasEnded() const {
-    return m_offset >= m_parent->m_samples;
+    if (m_flags & instance::kLooping) {
+        fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
+        readData(m_file, buffer + copySize * channels, samples - copySize,
+            channels, m_parent->m_channels, m_parent->m_channelOffset, m_parent->m_bits);
+        m_offset = samples - copySize;
+        m_streamTime = m_offset / m_sampleRate;
+    } else {
+        memset(buffer + copySize * channels, 0, sizeof(float) * (samples - copySize) * channels);
+        m_offset += samples - copySize;
+    }
 }
 
 bool wavInstance::rewind() {
+    if (m_file)
+        fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
     m_offset = 0;
     m_streamTime = 0.0f;
     return true;
-    return true;
 }
 
+bool wavInstance::hasEnded() const {
+    return m_offset >= m_parent->m_sampleCount;
+}
+
+///! wav
 wav::wav()
-    : m_data(nullptr)
+    : m_sampleCount(0)
 {
 }
 
+
 wav::~wav() {
-    neoFree(m_data);
+    // Empty
 }
 
-bool wav::load(const char *file, int channel) {
-    m_samples = 0;
-    auto read = u::read(neoGamePath() + file, "rb");
-    if (!read) {
-        u::print("NOT FOUND!\n");
+bool wav::load(u::file &fp, bool stereo, size_t channel_) {
+    read<int32_t>(fp);
+
+    if (read<int32_t>(fp) != u::fourCC<int32_t>("WAVE"))
         return false;
+    if (read<int32_t>(fp) != u::fourCC<int32_t>("fmt "))
+        return false;
+
+    const auto subFirstChunkSize = read<int32_t>(fp);
+    const auto audioFormat = read<int16_t>(fp);
+    const auto channels = read<int16_t>(fp);
+    const auto sampleRate = read<int32_t>(fp);
+
+    read<int32_t>(fp);
+    read<int16_t>(fp);
+
+    const auto bitsPerSample = read<int16_t>(fp);
+
+    if (audioFormat != 1 || subFirstChunkSize != 16
+        || (bitsPerSample != 8 && bitsPerSample != 16))
+        return false;
+
+    auto chunk = read<int32_t>(fp);
+    if (chunk == u::fourCC<int32_t>("LIST")) {
+        const auto listSize = read<int32_t>(fp);
+        for (int32_t i = 0; i < listSize; i++)
+            read<int8_t>(fp);
+        chunk = read<int32_t>(fp);
     }
 
-    const auto &data = *read;
-    const unsigned char *cursor = &data[0];
-
-    // TODO: util
-    auto fourCC = [](const char (&abcd)[5]) -> int32_t {
-        return (abcd[3] << 24) | (abcd[2] << 16) | (abcd[1] << 8) | abcd[0];
-    };
-
-    // TODO: utilify
-    auto read32 = [](const unsigned char **cursor) { int32_t i; memcpy(&i, *cursor, sizeof i); *cursor += sizeof i; return i; };
-    auto read16 = [](const unsigned char **cursor) { int16_t i; memcpy(&i, *cursor, sizeof i); *cursor += sizeof i; return i; };
-    auto read8  = [](const unsigned char **cursor) { int8_t i;  memcpy(&i, *cursor, sizeof i); *cursor += sizeof i; return i; };
-
-    if (read32(&cursor) != fourCC("RIFF"))
-        return false;
-    read32(&cursor);
-    if (read32(&cursor) != fourCC("WAVE"))
-        return false;
-    if (read32(&cursor) != fourCC("fmt "))
-        return false;
-    int subChunkSize = read32(&cursor);
-    int audioFormat = read16(&cursor);
-    int channels = read16(&cursor);
-    int sampleRate = read32(&cursor);
-    read32(&cursor);
-    read16(&cursor);
-    int bitsPerSample = read16(&cursor);
-    if (audioFormat != 1 || subChunkSize != 16 || (bitsPerSample != 8 && bitsPerSample != 16)) {
-        // Unsupported
-        return false;
-    }
-    int chunk = read32(&cursor);
-    if (chunk == fourCC("LIST")) {
-        size_t size = read32(&cursor);
-        for (size_t i = 0; i < size; i++)
-            read8(&cursor);
-        chunk = read32(&cursor);
-    }
-    if (chunk != fourCC("data"))
+    if (chunk != u::fourCC<int32_t>("data"))
         return false;
 
-    int readChannels = 1;
-
-    if (channels > 1) {
-        readChannels = 2;
+    if (stereo && channels > 1)
         m_flags |= kStereo;
-    }
 
-    int subDataChunkSize = read32(&cursor);
-    size_t samples = (subDataChunkSize / (bitsPerSample / 8)) / channels;
-    m_data = neoMalloc(sizeof(float) * samples * readChannels);
-    if (bitsPerSample == 8) {
-        for (size_t i = 0; i < samples; i++) {
-            for (int j = 0; j < channels; j++) {
-                if (j == channel) {
-                    m_data[i * readChannels] = read8(&cursor) / float(0x80);
-                } else {
-                    if (readChannels > 1 && j == channel + 1) {
-                        m_data[i * readChannels + 1] = read8(&cursor) / float(0x80);
-                    } else {
-                        read8(&cursor);
-                    }
-                }
-            }
-        }
-    } else if (bitsPerSample == 16) {
-        for (size_t i = 0; i < samples; i++) {
-            for (int j = 0; j < channels; j++) {
-                if (j == channel) {
-                    m_data[i * readChannels] = read16(&cursor) / float(0x8000);
-                } else {
-                    if (readChannels > 1 && j == channel + 1) {
-                        m_data[i * readChannels + 1] = read16(&cursor) / float(0x8000);
-                    } else {
-                        read16(&cursor);
-                    }
-                }
-            }
-        }
-    }
+    const auto subSecondChunkSize = read<int32_t>(fp);
+    const auto samples = (subSecondChunkSize / (bitsPerSample / 8)) / channels;
+
+    m_dataOffset = ftell(fp);
+    m_channelOffset = channel_;
+    m_bits = bitsPerSample;
+    m_channels = channels;
     m_baseSampleRate = sampleRate;
-    m_samples = samples;
-    return true;
+    m_sampleCount = samples;
+}
+
+bool wav::load(const char *fileName, bool stereo, size_t channel) {
+    m_sampleCount = 0;
+    m_fileName = neoGamePath() + fileName;
+    u::file fp = u::fopen(m_fileName, "rb");
+    if (fp) {
+        const int32_t tag = read<int32_t>(fp);
+        if (tag != u::fourCC<int32_t>("RIFF"))
+            return false;
+        return load(fp, stereo, channel);
+    }
+    return false;
 }
 
 instance *wav::create() {

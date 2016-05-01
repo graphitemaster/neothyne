@@ -2,6 +2,7 @@
 #define A_WAV_HDR
 
 #include "a_system.h"
+#include "u_file.h"
 
 namespace a {
 
@@ -9,22 +10,31 @@ struct wav;
 struct wavInstance : instance {
     wavInstance(wav *parent);
     virtual void getAudio(float *buffer, size_t samples);
-    virtual bool hasEnded() const;
     virtual bool rewind();
+    virtual bool hasEnded() const;
+    virtual ~wavInstance();
 private:
     wav *m_parent;
+    u::file m_file;
     size_t m_offset;
 };
 
 struct wav : source {
     wav();
     virtual ~wav();
+    bool load(const char *fileName, bool stereo = true, size_t channel_ = 0);
     virtual instance *create();
-    bool load(const char *file, int channel);
+
 private:
     friend struct wavInstance;
-    float *m_data;
-    size_t m_samples;
+
+    bool load(u::file &fp, bool stereo = true, size_t channel_ = 0);
+    u::string m_fileName;
+    size_t m_dataOffset;
+    size_t m_bits;
+    size_t m_channels;
+    size_t m_channelOffset;
+    size_t m_sampleCount;
 };
 
 }

@@ -154,5 +154,11 @@ static inline bool isspace(int ch) {
     return ch == ' ' || (unsigned)ch-'\t' < 5;
 }
 
+template <typename T>
+static inline constexpr T fourCC(const char (&four)[5]) {
+    return ((four[3] << 24) & 0xFF000000) | ((four[2] << 16) & 0x00FF0000) |
+           ((four[1] << 8) & 0x0000FF00) | ((four[0] << 0) & 0x000000FF);
+}
+
 }
 #endif

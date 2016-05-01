@@ -1790,11 +1790,6 @@ private:
     u::vector<unsigned char> m_data;
 };
 
-static inline constexpr uint32_t fourCC(const char (&four)[5]) {
-    return ((four[3] << 24) & 0xFF000000) | ((four[2] << 16) & 0x00FF0000) |
-           ((four[1] << 8) & 0x0000FF00) | ((four[0] << 0) & 0x000000FF);
-}
-
 struct dds : decoder {
     static bool test(const u::vector<unsigned char> &data) {
         return !memcmp(&data[0], (const void *)"DDS ", 4);
@@ -1808,15 +1803,15 @@ struct dds : decoder {
         return u::move(m_data);
     }
 
-    static constexpr uint32_t kDXT1 = fourCC("DXT1");
-    static constexpr uint32_t kDXT3 = fourCC("DXT3");
-    static constexpr uint32_t kDXT5 = fourCC("DXT5");
-    static constexpr uint32_t kBC4U = fourCC("BC4U");
-    static constexpr uint32_t kBC4S = fourCC("BC4S");
-    static constexpr uint32_t kBC5U = fourCC("BC5U");
-    static constexpr uint32_t kBC5S = fourCC("BC5S");
-    static constexpr uint32_t kATI1 = fourCC("ATI1");
-    static constexpr uint32_t kATI2 = fourCC("ATI2");
+    static constexpr uint32_t kDXT1 = u::fourCC<uint32_t>("DXT1");
+    static constexpr uint32_t kDXT3 = u::fourCC<uint32_t>("DXT3");
+    static constexpr uint32_t kDXT5 = u::fourCC<uint32_t>("DXT5");
+    static constexpr uint32_t kBC4U = u::fourCC<uint32_t>("BC4U");
+    static constexpr uint32_t kBC4S = u::fourCC<uint32_t>("BC4S");
+    static constexpr uint32_t kBC5U = u::fourCC<uint32_t>("BC5U");
+    static constexpr uint32_t kBC5S = u::fourCC<uint32_t>("BC5S");
+    static constexpr uint32_t kATI1 = u::fourCC<uint32_t>("ATI1");
+    static constexpr uint32_t kATI2 = u::fourCC<uint32_t>("ATI2");
 
 private:
     void read(unsigned char *dest, size_t size) {
