@@ -158,6 +158,8 @@ bool wav::load(u::file &fp, bool stereo, size_t channel_) {
     m_channels = channels;
     m_baseSampleRate = sampleRate;
     m_sampleCount = samples;
+
+    return true;
 }
 
 bool wav::load(const char *fileName, bool stereo, size_t channel) {

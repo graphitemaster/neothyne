@@ -575,8 +575,7 @@ void audio::fadeVolume(int channelHandle, float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setVolume(channelHandle, to);
         return;
-    } else {
-        lockGuard lock(m_mutex);
+    } else locked(m_mutex) {
         const int channel = getChannelFromHandle(channelHandle);
         if (channel == -1)
             return;
@@ -588,8 +587,7 @@ void audio::fadePan(int channelHandle, float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setPan(channelHandle, to);
         return;
-    } else {
-        lockGuard lock(m_mutex);
+    } else locked(m_mutex) {
         const int channel = getChannelFromHandle(channelHandle);
         if (channel == -1)
             return;
@@ -601,8 +599,7 @@ void audio::fadeRelativePlaySpeed(int channelHandle, float from, float to, float
     if (time <= 0.0f || to == from) {
         setRelativePlaySpeed(channelHandle, to);
         return;
-    } else {
-        lockGuard lock(m_mutex);
+    } else locked(m_mutex) {
         const int channel = getChannelFromHandle(channelHandle);
         if (channel == -1)
             return;
@@ -625,8 +622,7 @@ void audio::oscVolume(int channelHandle, float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setVolume(channelHandle, to);
         return;
-    } else {
-        lockGuard lock(m_mutex);
+    } else locked(m_mutex) {
         const int channel = getChannelFromHandle(channelHandle);
         if (channel == -1)
             return;
@@ -638,8 +634,7 @@ void audio::oscPan(int channelHandle, float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setPan(channelHandle, to);
         return;
-    } else {
-        lockGuard lock(m_mutex);
+    } else locked(m_mutex) {
         const int channel = getChannelFromHandle(channelHandle);
         if (channel == -1)
             return;
@@ -651,8 +646,7 @@ void audio::oscRelativePlaySpeed(int channelHandle, float from, float to, float 
     if (time <= 0.0f || to == from) {
         setRelativePlaySpeed(channelHandle, to);
         return;
-    } else {
-        lockGuard lock(m_mutex);
+    } else locked(m_mutex) {
         const int channel = getChannelFromHandle(channelHandle);
         if (channel == -1)
             return;
@@ -664,8 +658,7 @@ void audio::oscGlobalVolume(float from, float to, float time) {
     if (time <= 0.0f || to == from) {
         setGlobalVolume(to);
         return;
-    } else {
-        lockGuard lock(m_mutex);
+    } else locked(m_mutex) {
         m_streamTime = 0.0f; // avoid ~6 day rollover
         m_globalVolumeFader.set(fader::kLFO, from, to, time, m_streamTime);
     }
