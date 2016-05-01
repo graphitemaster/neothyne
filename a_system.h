@@ -147,7 +147,7 @@ protected:
     void fadeFilterParam(int channelHandle, int filterHandle, int attrib, float from, float to, float time);
     void oscFilterParam(int channelHandle, int filterHandle, int attrib, float from, float to, float time);
 
-    void clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples);
+    void clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, const m::vec2 &volume);
     void interlace(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, size_t channels);
 
 private:
