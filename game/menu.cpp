@@ -213,7 +213,6 @@ static void menuDeveloper() {
     auto &fog = varGet<int>("r_fog");
     auto &spec = varGet<int>("r_spec");
     auto &texcompcache = varGet<int>("r_tex_compress_cache");
-    auto &texcompcachezlib = varGet<int>("r_tex_compress_cache_zlib");
     auto &mipmaps = varGet<int>("r_mipmaps");
     auto &fov = varGet<float>("cl_fov");
     auto &nearp = varGet<float>("cl_nearp");
@@ -225,8 +224,6 @@ static void menuDeveloper() {
         gui::indent();
             if (gui::check("Texture compression cache", texcompcache))
                 texcompcache.toggle();
-            if (gui::check("Texture compression cache (on disk compression)", texcompcachezlib))
-                texcompcachezlib.toggle();
             if (gui::button("Clear texture cache")) {
                 const u::string cachePath = neoUserPath() + "cache";
                 for (const auto &it : u::dir(cachePath)) {
