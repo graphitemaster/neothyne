@@ -785,16 +785,16 @@ void audio::mix(float *buffer, size_t samples) {
                 const float panRi = (m_channels[i]->m_faderVolume[3] - m_channels[i]->m_faderVolume[2]) / samples;
                 if (m_channels[i]->m_flags & instance::kStereo) {
                     for (size_t j = 0; j < samples; j++, step += next, panL += panLi, panR += panRi) {
-                        const float sampleL = m_scratch[(int)m::floor(step) * 2 + 0];
-                        const float sampleR = m_scratch[(int)m::floor(step) * 2 + 1];
-                        buffer[j * 2 + 0] += sampleL * panL;
-                        buffer[j * 2 + 1] += sampleR * panR;
+                        const float sampleL = m_scratch[(int)m::floor(step)];
+                        const float sampleR = m_scratch[(int)m::floor(step) + samples];
+                        buffer[j] += sampleL * panL;
+                        buffer[j + samples] += sampleR * panR;
                     }
                 } else {
                     for (size_t j = 0; j < samples; j++, step += next, panL += panLi, panR += panRi) {
                         const float sampleM = m_scratch[(int)m::floor(step)];
-                        buffer[j * 2 + 0] += sampleM * panL;
-                        buffer[j * 2 + 1] += sampleM * panR;
+                        buffer[j] += sampleM * panL;
+                        buffer[j + samples] += sampleM * panR;
                     }
                 }
             } else {
@@ -802,16 +802,16 @@ void audio::mix(float *buffer, size_t samples) {
                 const float panR = m_channels[i]->m_volume.y * m_channels[i]->m_volume.z * m_globalVolume;
                 if (m_channels[i]->m_flags & instance::kStereo) {
                     for (size_t j = 0; j < samples; j++, step += next) {
-                        const float sampleL = m_scratch[(int)m::floor(step) * 2 + 0];
-                        const float sampleR = m_scratch[(int)m::floor(step) * 2 + 1];
-                        buffer[j * 2 + 0] += sampleL * panL;
-                        buffer[j * 2 + 1] += sampleR * panR;
+                        const float sampleL = m_scratch[(int)m::floor(step)];
+                        const float sampleR = m_scratch[(int)m::floor(step) + samples];
+                        buffer[j] += sampleL * panL;
+                        buffer[j + samples] += sampleR * panR;
                     }
                 } else {
                     for (size_t j = 0; j < samples; j++, step += next) {
                         const float sampleM = m_scratch[(int)m::floor(step)];
-                        buffer[j * 2 + 0] += sampleM * panL;
-                        buffer[j * 2 + 1] += sampleM * panR;
+                        buffer[j] += sampleM * panL;
+                        buffer[j + samples] += sampleM * panR;
                     }
                 }
             }
@@ -825,22 +825,38 @@ void audio::mix(float *buffer, size_t samples) {
                 m_filterInstances[i]->filter(&buffer[0], samples, true, m_sampleRate, m_streamTime);
     }
 
+    clip(buffer, &m_scratch[0], samples);
+    interlace(&m_scratch[0], buffer, samples, 2);
+}
+
+void audio::clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples) {
     // clip
     if (m_flags & kClipRoundOff) {
         // round off clipping is less aggressive
         for (size_t i = 0; i < samples << 1; i++) {
-            float sample = buffer[i];
+            float sample = src[i];
             /**/ if (sample <= -1.65f) sample = -0.9862875f;
             else if (sample >=  1.65f) sample =  0.9862875f;
             else                       sample =  0.87f * sample - 0.1f * sample * sample * sample;
-            buffer[i] = sample * m_postClipScaler;
+            dst[i] = sample * m_postClipScaler;
         }
     } else {
         // standard clipping may introduce noise and aliasing - need proper
         // hi-pass filter to prevent this
         for (size_t i = 0; i < samples; i++)
-            buffer[i] = m::clamp(buffer[i], -1.0f, 1.0f) * m_postClipScaler;
+            dst[i] = m::clamp(src[i], -1.0f, 1.0f) * m_postClipScaler;
     }
+}
+
+void audio::interlace(const float *U_RESTRICT src,
+                      float *U_RESTRICT dst,
+                      size_t samples,
+                      size_t channels)
+{
+    // converts deinterlaced audio samples from 111222 to 121212
+    for (size_t j = 0, k = 0; j < channels; j++)
+        for (size_t i = j; i < samples * channels; i += channels, k++)
+            dst[i] = src[k];
 }
 
 }

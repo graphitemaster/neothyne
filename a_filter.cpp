@@ -34,17 +34,22 @@ echoFilterInstance::echoFilterInstance(echoFilter *parent)
 }
 
 void echoFilterInstance::filter(float *buffer, size_t samples, bool stereo, float sampleRate, float) {
+    const size_t channels = stereo ? 2 : 1;
     if (m_buffer.empty()) {
-        const size_t length = m::ceil(m_parent->m_delay * sampleRate) * (stereo ? 2 : 1);
+        const size_t length = m::ceil(m_parent->m_delay * sampleRate) * channels;
         m_buffer.resize(length);
     }
-    const size_t process = samples * (stereo ? 2 : 1);
+    const size_t bufferLength = m_buffer.size() / channels;
     const float decay = m_parent->m_decay;
-    for (size_t i = 0; i < process; i++) {
-        const float sample = buffer[i] + m_buffer[m_offset] * decay;
-        m_buffer[m_offset] = sample;
-        buffer[i] = sample;
-        m_offset = (m_offset + 1) % m_buffer.size();
+    for (size_t i = 0; i < samples; i++) {
+        for (size_t j = 0; j < channels; j++) {
+            const size_t c = j * bufferLength;
+            const size_t b = j * samples;
+            float sample = buffer[i + b] + m_buffer[m_offset + c] * decay;
+            m_buffer[m_offset + c] = sample;
+            buffer[i + b] = sample;
+        }
+        m_offset = (m_offset + 1) % bufferLength;
     }
 }
 
@@ -100,18 +105,19 @@ void BQRFilterInstance::filter(float *buffer, size_t samples, bool stereo, float
     if (m_dirty)
         calcParams();
 
-    size_t pitch = stereo ? 2 : 1;
-    for (size_t s = 0; s < pitch; s++) {
-        for (size_t i = 0; i < samples; i += 2) {
+    size_t channels = stereo ? 2 : 1;
+    for (size_t s = 0, c = 0; s < channels; s++) {
+        for (size_t i = 0; i < samples; i += 2, c++) {
             // filter the inputs
-            float x = buffer[i * pitch + s];
+            float x = buffer[c];
             m_y2[s] = (m_a.x * x) + (m_a.y * m_x1[s]) + (m_a.z * m_x2[s])
                                   - (m_b.x * m_y1[s]) - (m_b.y * m_y2[s]);
-            buffer[i * pitch + s] = m_y2[s];
+            buffer[c++] = m_y2[s];
             // permute filter ops to reduce movement
-            m_x2[s] = buffer[(i + 1) * pitch + s];
+            m_x2[s] = buffer[c];
             m_y1[s] = (m_a.y * x) + (m_a.x * m_x2[s]) + (m_a.z * m_x1[s])
                                   - (m_b.x * m_y2[s]) - (m_b.y * m_y1[s]);
+            buffer[c] = m_y1[s];
             // move it a little
             m_x1[s] = m_x2[s];
             m_x2[s] = x;
@@ -241,13 +247,14 @@ DCRemovalFilterInstance::DCRemovalFilterInstance(DCRemovalFilter *parent)
 }
 
 void DCRemovalFilterInstance::filter(float *buffer, size_t samples, bool stereo, float sampleRate, float) {
+    const size_t channels = stereo ? 2 : 1;
     if (m_buffer.empty()) {
-        m_buffer.resize(size_t(m::ceil(m_parent->m_length * sampleRate)) * (stereo ? 2 : 1));
-        m_totals.resize(stereo ? 2 : 1);
+        m_buffer.resize(size_t(m::ceil(m_parent->m_length * sampleRate)) * channels);
+        m_totals.resize(channels);
     }
-    size_t bufferLength = m_buffer.size() / (stereo ? 2 : 1);
+    size_t bufferLength = m_buffer.size() / channels;
     for (size_t i = 0; i < samples; i++) {
-        for (size_t j = 0; j < (stereo ? 2 : 1); j++) {
+        for (size_t j = 0; j < channels; j++) {
             const int c = j * bufferLength;
             const int b = j * samples;
             float n = buffer[i + b];

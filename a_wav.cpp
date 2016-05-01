@@ -29,6 +29,7 @@ static inline T read(u::file &fp) {
 static void readData(u::file &fp,
                      float *buffer,
                      size_t samples,
+                     size_t pitch,
                      size_t channels,
                      size_t srcChannels,
                      size_t channelOffset,
@@ -40,9 +41,9 @@ static void readData(u::file &fp,
             for (size_t j = 0; j < srcChannels; j++) {
                 const auto sample = read<int8_t>(fp) / float(0x80);
                 if (j == channelOffset)
-                    buffer[i * channels] = sample;
+                    buffer[i] = sample;
                 else if (channels > 1 && j == channelOffset + 1)
-                    buffer[i * channels + 1] = sample;
+                    buffer[i + pitch] = sample;
             }
         }
         break;
@@ -51,9 +52,9 @@ static void readData(u::file &fp,
             for (size_t j = 0; j < srcChannels; j++) {
                 const auto sample = read<int16_t>(fp) / float(0x8000);
                 if (j == channelOffset)
-                    buffer[i * channels] = sample;
+                    buffer[i] = sample;
                 else if (channels > 1 && j == channelOffset + 1)
-                    buffer[i * channels + 1] = sample;
+                    buffer[i + pitch] = sample;
             }
         }
         break;
@@ -68,7 +69,7 @@ void wavInstance::getAudio(float *buffer, size_t samples) {
     if (copySize + m_offset > m_parent->m_sampleCount)
         copySize = m_parent->m_sampleCount - m_offset;
 
-    readData(m_file, buffer, copySize, channels, m_parent->m_channels,
+    readData(m_file, buffer, copySize, samples, channels, m_parent->m_channels,
         m_parent->m_channelOffset, m_parent->m_bits);
 
     if (copySize == samples) {
@@ -78,12 +79,13 @@ void wavInstance::getAudio(float *buffer, size_t samples) {
 
     if (m_flags & instance::kLooping) {
         fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
-        readData(m_file, buffer + copySize * channels, samples - copySize,
+        readData(m_file, buffer + copySize, samples - copySize, samples,
             channels, m_parent->m_channels, m_parent->m_channelOffset, m_parent->m_bits);
         m_offset = samples - copySize;
         m_streamTime = m_offset / m_sampleRate;
     } else {
-        memset(buffer + copySize * channels, 0, sizeof(float) * (samples - copySize) * channels);
+        for (size_t i = 0; i < channels; i++)
+            memset(buffer + copySize + i * samples, 0, sizeof(float) * (samples - copySize));
         m_offset += samples - copySize;
     }
 }
