@@ -150,6 +150,8 @@ protected:
     void clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, const m::vec2 &volume);
     void interlace(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, size_t channels);
 
+    void mixSamples(float *U_RESTRICT buffer, size_t samples, float *U_RESTRICT scratch);
+
 private:
     u::vector<float> m_scratch;
     size_t m_scratchNeeded;

@@ -24,6 +24,7 @@ struct vec2 {
     constexpr vec2(float a);
     float operator[](size_t index) const;
     float &operator[](size_t index);
+    vec2 &operator+=(const vec2 &inc);
 
     void endianSwap();
 };
@@ -58,6 +59,12 @@ inline float vec2::operator[](size_t index) const {
 
 inline float &vec2::operator[](size_t index) {
     return m[index];
+}
+
+inline vec2 &vec2::operator+=(const vec2 &inc) {
+    x += inc.x;
+    y += inc.y;
+    return *this;
 }
 
 vec2 sincos(float x);
