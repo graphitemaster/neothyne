@@ -95,6 +95,7 @@ instance::instance()
     , m_streamTime(0.0f)
     , m_sourceID(0)
     , m_activeFader(0)
+    , m_channels(1)
 {
     m_volume.x = 1.0f / m::sqrt(2.0f);
     m_volume.y = 1.0f / m::sqrt(2.0f);
@@ -108,16 +109,15 @@ instance::~instance() {
         delete it;
 }
 
-void instance::init(size_t playIndex, float baseSampleRate, int sourceFlags) {
+void instance::init(size_t playIndex, float baseSampleRate, size_t channels, int sourceFlags) {
     m_playIndex = playIndex;
     m_baseSampleRate = baseSampleRate;
     m_sampleRate = m_baseSampleRate;
+    m_channels = channels;
     m_streamTime = 0.0f;
     m_flags = 0;
     if (sourceFlags & source::kLoop)
         m_flags |= instance::kLooping;
-    if (sourceFlags & source::kStereo)
-        m_flags |= instance::kStereo;
 }
 
 bool instance::rewind() {
@@ -148,6 +148,7 @@ source::source()
     , m_baseSampleRate(44100.0f)
     , m_sourceID(0)
     , m_owner(nullptr)
+    , m_channels(1)
 {
     memset(m_filters, 0, sizeof m_filters);
 }
@@ -252,7 +253,7 @@ int audio::play(source &sound, float volume, float pan, bool paused) {
         m_channels[channel] = instance.release();
         m_channels[channel]->m_sourceID = sound.m_sourceID;
         int handle = channel | (m_playIndex << 12);
-        m_channels[channel]->init(m_playIndex, sound.m_baseSampleRate, sound.m_flags);
+        m_channels[channel]->init(m_playIndex, sound.m_baseSampleRate, sound.m_channels, sound.m_flags);
         if (paused)
             m_channels[channel]->m_flags |= instance::kPaused;
 
@@ -765,7 +766,7 @@ void audio::mix(float *buffer, size_t samples) {
                 if (m_channels[i]->m_filters[j]) {
                     m_channels[i]->m_filters[j]->filter(&m_scratch[0],
                                                         readSamples,
-                                                        m_channels[i]->m_flags & instance::kStereo,
+                                                        m_channels[i]->m_channels,
                                                         m_channels[i]->m_sampleRate,
                                                         m_streamTime);
                 }
@@ -776,7 +777,7 @@ void audio::mix(float *buffer, size_t samples) {
                 float panR = m_channels[i]->m_faderVolume[2];
                 const float panLi = (m_channels[i]->m_faderVolume[1] - m_channels[i]->m_faderVolume[0]) / samples;
                 const float panRi = (m_channels[i]->m_faderVolume[3] - m_channels[i]->m_faderVolume[2]) / samples;
-                if (m_channels[i]->m_flags & instance::kStereo) {
+                if (m_channels[i]->m_channels == 2) {
                     for (size_t j = 0; j < samples; j++, step += next, panL += panLi, panR += panRi) {
                         const float sampleL = m_scratch[(int)m::floor(step)];
                         const float sampleR = m_scratch[(int)m::floor(step) + samples];
@@ -793,7 +794,7 @@ void audio::mix(float *buffer, size_t samples) {
             } else {
                 const float panL = m_channels[i]->m_volume.x * m_channels[i]->m_volume.z * m_globalVolume;
                 const float panR = m_channels[i]->m_volume.y * m_channels[i]->m_volume.z * m_globalVolume;
-                if (m_channels[i]->m_flags & instance::kStereo) {
+                if (m_channels[i]->m_channels == 2) {
                     for (size_t j = 0; j < samples; j++, step += next) {
                         const float sampleL = m_scratch[(int)m::floor(step)];
                         const float sampleR = m_scratch[(int)m::floor(step) + samples];

@@ -16,14 +16,13 @@ static constexpr int kMaxStreamFilters = 4;
 struct instance {
     enum {
         kLooping = 1 << 0,
-        kStereo = 1 << 1,
         kProtected = 1 << 2,
         kPaused = 1 << 3
     };
 
     instance();
     virtual ~instance();
-    void init(size_t playIndex, float baseSampleRate, int sourceFlags);
+    void init(size_t playIndex, float baseSampleRate, size_t channels, int sourceFlags);
 
 protected:
     virtual void getAudio(float *buffer, size_t samples) = 0;
@@ -52,12 +51,13 @@ protected:
     int m_activeFader;
     // fader-affected l/r volume
     float m_faderVolume[2 * 2];
+
+    size_t m_channels;
 };
 
 struct source {
     enum {
-        kLoop = 1 << 0,
-        kStereo = 1 << 1
+        kLoop = 1 << 0
     };
 
     source();
@@ -76,6 +76,7 @@ protected:
     int m_sourceID;
     filter *m_filters[kMaxStreamFilters];
     audio *m_owner;
+    size_t m_channels;
 };
 
 struct audio {

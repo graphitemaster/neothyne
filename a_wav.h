@@ -22,18 +22,17 @@ private:
 struct wav : source {
     wav();
     virtual ~wav();
-    bool load(const char *fileName, bool stereo = true, size_t channel_ = 0);
+    bool load(const char *fileName);
     virtual instance *create();
 
 private:
     friend struct wavInstance;
 
-    bool load(u::file &fp, bool stereo = true, size_t channel_ = 0);
+    bool load(u::file &fp);
     u::string m_fileName;
     size_t m_dataOffset;
     size_t m_bits;
     size_t m_channels;
-    size_t m_channelOffset;
     size_t m_sampleCount;
 };
 
