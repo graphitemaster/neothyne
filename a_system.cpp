@@ -837,7 +837,7 @@ void audio::clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samp
         // standard clipping may introduce noise and aliasing - need proper
         // hi-pass filter to prevent this
         for (size_t i = 0; i < samples; i++)
-            dst[i] = m::clamp(src[i], -1.0f, 1.0f) * m_postClipScaler;
+            dst[i] = m::clamp(src[i], -1.65f, 1.65f) * m_postClipScaler;
     }
 }
 
