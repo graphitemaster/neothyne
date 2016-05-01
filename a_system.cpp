@@ -814,16 +814,26 @@ void audio::mix(float *buffer, size_t samples) {
                 stopChannel(i);
         }
         // global filter
-        for (size_t i = 0; i < kMaxStreamFilters; i++)
-            if (m_filterInstances[i])
-                m_filterInstances[i]->filter(&buffer[0], samples, true, m_sampleRate, m_streamTime);
+        for (size_t i = 0; i < kMaxStreamFilters; i++) {
+            if (m_filterInstances[i]) {
+                m_filterInstances[i]->filter(&buffer[0],
+                                             samples,
+                                             true,
+                                             m_sampleRate,
+                                             m_streamTime);
+            }
+        }
     }
 
     clip(buffer, &m_scratch[0], samples, m_globalVolume);
     interlace(&m_scratch[0], buffer, samples, 2);
 }
 
-void audio::clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, const m::vec2 &volume) {
+void audio::clip(const float *U_RESTRICT src,
+                 float *U_RESTRICT dst,
+                 size_t samples,
+                 const m::vec2 &volume)
+{
     // clip
     float d = (volume.x - volume.y) / samples;
     float v = 0.0f;
