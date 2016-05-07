@@ -13,15 +13,15 @@ struct filterInstance;
 /// maximum filters per stream
 static constexpr int kMaxStreamFilters = 4;
 
-struct instance {
+struct sourceInstance {
     enum {
         kLooping = 1 << 0,
         kProtected = 1 << 1,
         kPaused = 1 << 2
     };
 
-    instance();
-    virtual ~instance();
+    sourceInstance();
+    virtual ~sourceInstance();
     void init(size_t playIndex, float baseSampleRate, size_t channels, int sourceFlags);
 
 protected:
@@ -65,7 +65,7 @@ struct source {
     void setFilter(int filterHandle, filter *filter_);
 
     virtual ~source();
-    virtual instance *create() = 0;
+    virtual sourceInstance *create() = 0;
 
 protected:
     friend struct audio;
@@ -152,7 +152,7 @@ protected:
 private:
     u::vector<float> m_scratch;
     size_t m_scratchNeeded;
-    u::vector<instance *> m_voices;
+    u::vector<sourceInstance *> m_voices;
     int m_sampleRate;
     int m_bufferSize;
     int m_flags;

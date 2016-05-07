@@ -7,7 +7,7 @@
 namespace a {
 
 struct wav;
-struct wavInstance final : instance {
+struct wavInstance final : sourceInstance {
     wavInstance(wav *parent);
     virtual void getAudio(float *buffer, size_t samples) final;
     virtual bool rewind() final;
@@ -23,7 +23,7 @@ struct wav final : source {
     wav();
     virtual ~wav() final;
     bool load(const char *fileName);
-    virtual instance *create() final;
+    virtual sourceInstance *create() final;
 
 private:
     friend struct wavInstance;

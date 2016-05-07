@@ -75,7 +75,7 @@ void wavInstance::getAudio(float *buffer, size_t samples) {
         return;
     }
 
-    if (m_flags & instance::kLooping) {
+    if (m_flags & sourceInstance::kLooping) {
         fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
         readData(m_file, buffer + copySize, samples - copySize, samples,
             channels, m_parent->m_channels, m_parent->m_bits);
@@ -97,7 +97,7 @@ bool wavInstance::rewind() {
 }
 
 bool wavInstance::hasEnded() const {
-    return !(m_flags & instance::kLooping) && m_offset >= m_parent->m_sampleCount;
+    return !(m_flags & sourceInstance::kLooping) && m_offset >= m_parent->m_sampleCount;
 }
 
 ///! wav
@@ -172,7 +172,7 @@ bool wav::load(const char *fileName) {
     return false;
 }
 
-instance *wav::create() {
+sourceInstance *wav::create() {
     return new wavInstance(this);
 }
 

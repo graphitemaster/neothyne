@@ -85,8 +85,8 @@ void stop(a::audio *system) {
     SDL_DestroyMutex((SDL_mutex*)system->m_mutex);
 }
 
-///! instance
-instance::instance()
+///! sourceInstance
+sourceInstance::sourceInstance()
     : m_playIndex(0)
     , m_flags(0)
     , m_channels(1)
@@ -104,12 +104,12 @@ instance::instance()
     memset(m_filters, 0, sizeof m_filters);
 }
 
-instance::~instance() {
+sourceInstance::~sourceInstance() {
     for (auto *it : m_filters)
         delete it;
 }
 
-void instance::init(size_t playIndex, float baseSampleRate, size_t channels, int sourceFlags) {
+void sourceInstance::init(size_t playIndex, float baseSampleRate, size_t channels, int sourceFlags) {
     m_playIndex = playIndex;
     m_baseSampleRate = baseSampleRate;
     m_sampleRate = m_baseSampleRate;
@@ -117,15 +117,14 @@ void instance::init(size_t playIndex, float baseSampleRate, size_t channels, int
     m_streamTime = 0.0f;
     m_flags = 0;
     if (sourceFlags & source::kLoop)
-        m_flags |= instance::kLooping;
+        m_flags |= sourceInstance::kLooping;
 }
 
-bool instance::rewind() {
-    // TODO
+bool sourceInstance::rewind() {
     return false;
 }
 
-void instance::seek(float seconds, float *scratch, size_t scratchSize) {
+void sourceInstance::seek(float seconds, float *scratch, size_t scratchSize) {
     float offset = seconds - m_streamTime;
     if (offset < 0.0f) {
         if (!rewind()) {
@@ -230,7 +229,7 @@ int audio::findFreeVoice() {
     for (size_t i = 0; i < m_voices.size(); i++) {
         if (!m_voices[i])
             return i;
-        if (!(m_voices[i]->m_flags & instance::kProtected) && m_voices[i]->m_playIndex < slat) {
+        if (!(m_voices[i]->m_flags & sourceInstance::kProtected) && m_voices[i]->m_playIndex < slat) {
             slat = m_voices[i]->m_playIndex;
             next = int(i);
         }
@@ -240,7 +239,7 @@ int audio::findFreeVoice() {
 }
 
 int audio::play(source &sound, float volume, float pan, bool paused) {
-    u::unique_ptr<instance> instance(sound.create());
+    u::unique_ptr<sourceInstance> instance(sound.create());
     sound.m_owner = this;
 
     locked(m_mutex) {
@@ -255,7 +254,7 @@ int audio::play(source &sound, float volume, float pan, bool paused) {
         int handle = voice | (m_playIndex << 12);
         m_voices[voice]->init(m_playIndex, sound.m_baseSampleRate, sound.m_channels, sound.m_flags);
         if (paused)
-            m_voices[voice]->m_flags |= instance::kPaused;
+            m_voices[voice]->m_flags |= sourceInstance::kPaused;
 
         setVoicePan(voice, pan);
         setVoiceVolume(voice, volume);
@@ -370,13 +369,13 @@ void audio::setPausedAll(bool paused) {
 bool audio::getPaused(int voiceHandle) const {
     lockGuard lock(m_mutex);
     const int voice = getVoiceFromHandle(voiceHandle);
-    return voice == -1 ? false : !!(m_voices[voice]->m_flags & instance::kPaused);
+    return voice == -1 ? false : !!(m_voices[voice]->m_flags & sourceInstance::kPaused);
 }
 
 bool audio::getProtected(int voiceHandle) const {
     lockGuard lock(m_mutex);
     const int voice = getVoiceFromHandle(voiceHandle);
-    return voice == -1 ? false : !!(m_voices[voice]->m_flags & instance::kProtected);
+    return voice == -1 ? false : !!(m_voices[voice]->m_flags & sourceInstance::kProtected);
 }
 
 void audio::setProtected(int voiceHandle, bool protect) {
@@ -385,18 +384,18 @@ void audio::setProtected(int voiceHandle, bool protect) {
     if (voice == -1)
         return;
     if (protect)
-        m_voices[voice]->m_flags |= instance::kProtected;
+        m_voices[voice]->m_flags |= sourceInstance::kProtected;
     else
-        m_voices[voice]->m_flags &= ~instance::kProtected;
+        m_voices[voice]->m_flags &= ~sourceInstance::kProtected;
 }
 
 void audio::setVoicePaused(int voice, bool paused) {
     if (m_voices[voice]) {
         m_voices[voice]->m_pauseScheduler.m_active = 0;
         if (paused)
-            m_voices[voice]->m_flags |= instance::kPaused;
+            m_voices[voice]->m_flags |= sourceInstance::kPaused;
         else
-            m_voices[voice]->m_flags &= ~instance::kPaused;
+            m_voices[voice]->m_flags &= ~sourceInstance::kPaused;
     }
 }
 
@@ -680,7 +679,7 @@ void audio::mix(float *buffer, size_t samples) {
     locked(m_mutex) {
         // process per-voice faders
         for (size_t i = 0; i < m_voices.size(); i++) {
-            if (!m_voices[i] || (m_voices[i]->m_flags & instance::kPaused))
+            if (!m_voices[i] || (m_voices[i]->m_flags & sourceInstance::kPaused))
                 continue;
 
             m_voices[i]->m_activeFader = 0;
@@ -748,7 +747,7 @@ void audio::mix(float *buffer, size_t samples) {
 
         // accumulate active sound sources
         for (size_t i = 0; i < m_voices.size(); i++) {
-            if (!m_voices[i] || (m_voices[i]->m_flags & instance::kPaused))
+            if (!m_voices[i] || (m_voices[i]->m_flags & sourceInstance::kPaused))
                 continue;
 
             const float next = m_voices[i]->m_sampleRate / m_sampleRate;
@@ -810,7 +809,7 @@ void audio::mix(float *buffer, size_t samples) {
                 }
             }
             // clear the channel if the sound is complete
-            if (!(m_voices[i]->m_flags & instance::kLooping) && m_voices[i]->hasEnded())
+            if (!(m_voices[i]->m_flags & sourceInstance::kLooping) && m_voices[i]->hasEnded())
                 stopVoice(i);
         }
         // global filter
