@@ -15,6 +15,7 @@ GAME_BIN = neothyne
 
 CXXFLAGS = \
 	-std=c++11 \
+	-march=native \
 	-Wall \
 	-Wextra \
 	-fno-exceptions \

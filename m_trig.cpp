@@ -514,9 +514,7 @@ float fmod(float x, float y) {
     const __m128 ret = _mm_sub_ps(a, base);
     return _mm_cvtss_f32(ret);
 }
-
 #else
-
 float floor(float x) {
     floatShape shape = { x };
     const int e = int(shape.asInt >> 23 & 0xFF) - 0x7F;

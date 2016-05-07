@@ -1,4 +1,5 @@
-#include <SDL.h>
+#include <SDL_audio.h>
+#include <SDL_mutex.h>
 
 #include "a_system.h"
 #include "a_filter.h"

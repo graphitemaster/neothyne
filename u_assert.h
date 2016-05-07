@@ -37,8 +37,6 @@ namespace detail {
 
 }
 
-
-
 #define assert(EXPRESSION) \
     detail::assertCheck(!!(EXPRESSION), #EXPRESSION, __FILE__, U_ASSERT_FUNCTION, __LINE__)
 
