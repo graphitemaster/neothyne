@@ -13,6 +13,7 @@
 #include "u_misc.h"
 
 #include "a_filter.h" // audio filtering
+#include "a_lane.h" // audio lanes
 
 // Game globals
 bool gRunning = true;
@@ -130,39 +131,24 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
     neoSetWindowTitle("Neothyne");
     neoCenterMouse();
 
-    a::wav theme;
-    if (!theme.load("theme.wav"))
+#if 0
+    a::wav theme[2];
+    if (!theme[0].load("a.wav") || !theme[1].load("theme.wav"))
         neoFatal("failed to load theme music\n");
-    theme.setLooping(true);
+    theme[0].setLooping(true);
+    theme[1].setLooping(true);
 
-    a::echoFilter echo;
-    echo.setParams(1.0f, 0.5f);
-    //a::BQRFilter filter;
-    //filter.setParams(a::BQRFilter::kLowPass, 44100, 1000, 8);
-
-    //a::DCRemovalFilter filter;
-    //filter.setParams(0.0000001f);
-    //audio.setPostClipScaler(-10.0f);
-    //audio.oscGlobalVolume(0.0f, 1.0f, 10.0f);
-    //audio.setGlobalFilter(0, &echo);
-
-    theme.setFilter(0, &echo);
     audio.setGlobalVolume(1.0f);
 
+    a::lane lane;
+
     // fire and forget!
-    int handle = audio.play(theme, 0.1f, 0.0f); // middle
-    audio.fadeVolume(handle, 1.0f, 15.0f);
+    int handle = audio.play(lane);
+    lane.play(theme[0], 0.5f);
+    lane.play(theme[1], 0.5f);
 
-    //theme.setFilter(&filter);
-    //audio.oscRelativePlaySpeed(handle, 0.5f, 1.0f, 1.0f);
-    audio.oscVolume(handle, 0.5f, 1.0f, 1.0f);
-
-    //audio.scheduleStop(handle, 100.0f);
-    //audio.fadeVolume(handle, 1.0f, 0.0f, 100.0f);
-    // come in from right to left
-    //audio.fadePan(handle, -1.0f, 1.0f, 15.0f);
-    // speed up playback from 0 to 1 within the first 5 seconds
-    //audio.fadeRelativePlaySpeed(handle, 0.0f, 1.0f, 5.0f);
+    audio.setRelativePlaySpeed(handle, 0.5f);
+#endif
 
 #if 1
     // Setup some lights
@@ -399,7 +385,7 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
 
         m::vec3 direction;
         gClient.getDirection(&direction, nullptr, nullptr);
-        audio.setPan(handle, direction.x);
+        //audio.setPan(handle, direction.x);
     }
 
     return 0;

@@ -25,6 +25,9 @@ struct sourceInstance {
     void init(size_t playIndex, float baseSampleRate, size_t channels, int sourceFlags);
 
 protected:
+    friend struct laneInstance;
+    friend struct lane;
+
     virtual void getAudio(float *buffer, size_t samples) = 0;
     virtual bool hasEnded() const = 0;
     virtual void seek(float seconds, float *scratch, size_t samples);
@@ -47,6 +50,7 @@ protected:
     fader m_pauseScheduler;
     fader m_stopScheduler;
     int m_sourceID;
+    int m_laneHandle;
     filterInstance *m_filters[kMaxStreamFilters];
 
     // if there is an active fader
@@ -69,6 +73,9 @@ struct source {
     virtual sourceInstance *create() = 0;
 
 protected:
+    friend struct laneInstance;
+    friend struct lane;
+
     friend struct audio;
 
     int m_flags;
@@ -90,7 +97,7 @@ struct audio {
     void init(int channels, int sampleRate, int bufferSize, int flags);
     void mix(float *buffer, size_t samples);
 
-    int play(source &sound, float volume = 1.0f, float pan = 0.0f, bool paused = false);
+    int play(source &sound, float volume = 1.0f, float pan = 0.0f, bool paused = false, int lane = 0);
 
     void seek(int voiceHandle, float seconds);
     void stop(int voiceHandle);
@@ -131,10 +138,16 @@ struct audio {
     void oscRelativePlaySpeed(int voiceHandle, float from, float to, float time);
     void oscGlobalVolume(float from, float to, float time);
 
-protected:
+private:
+    friend struct laneInstance;
+    friend struct lane;
+
+    void mixLane(float *buffer, size_t samples, float *scratch, int lane);
+
     friend struct source;
 
     int findFreeVoice();
+    int getHandleFromVoice(int voice) const;
     int getVoiceFromHandle(int voiceHandle) const;
 
     void stopSound(source &sound);
@@ -149,10 +162,9 @@ protected:
     void fadeFilterParam(int voiceHandle, int filterHandle, int attrib, float from, float to, float time);
     void oscFilterParam(int voiceHandle, int filterHandle, int attrib, float from, float to, float time);
 
-    void clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples);
+    void clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, const m::vec2 &volume);
     void interlace(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, size_t channels);
 
-private:
     u::vector<float> m_scratch;
     size_t m_scratchNeeded;
     u::vector<sourceInstance *> m_voices;

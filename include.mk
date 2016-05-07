@@ -36,6 +36,7 @@ RENDERER_SOURCES = \
 AUDIO_SOURCES = \
 	a_fader.cpp \
 	a_filter.cpp \
+	a_lane.cpp \
 	a_system.cpp \
 	a_wav.cpp
 
