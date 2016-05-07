@@ -8,7 +8,7 @@
 #include "u_traits.h"
 
 #ifdef __SSE2__
-#include <xmmintrin.h>
+#include <emmintrin.h>
 #endif
 
 namespace m {
@@ -396,47 +396,6 @@ void sincos(float x, float &s, float &c) {
     }
 }
 
-float floor(float x) {
-    floatShape shape = { x };
-    const int e = int(shape.asInt >> 23 & 0xFF) - 0x7F;
-    if (e >= 23)
-        return x;
-    if (e >= 0) {
-        const uint32_t m = 0x007FFFFF >> e;
-        if ((shape.asInt & m) == 0)
-            return x;
-        if ((shape.asInt >> 31))
-            shape.asInt += m;
-        shape.asInt &= ~m;
-    } else {
-        if ((shape.asInt >> 31) == 0)
-            shape.asInt = 0;
-        else if ((shape.asInt << 1))
-            shape.asFloat = -1.0f;
-    }
-    return shape.asFloat;
-}
-
-float ceil(float x) {
-    floatShape shape = { x };
-    const int e = int(shape.asInt >> 23 & 0xFF) - 0x7F;
-    if (e >= 23)
-        return x;
-    if (e >= 0) {
-        const uint32_t m = 0x007FFFFF >> e;
-        if ((shape.asInt & m) == 0)
-            return x;
-        if ((shape.asInt >> 31) == 0)
-            shape.asInt += m;
-        shape.asInt &= ~m;
-    } else {
-        if ((shape.asInt >> 31))
-            shape.asFloat = -0.0f;
-        else if ((shape.asInt << 1))
-            shape.asFloat = 1.0f;
-    }
-    return shape.asFloat;
-}
 
 // |(log(1+s)-log(1-s))/s - Lg(s)| < 2**-34.24 (~[-4.95e-11, 4.97e-11])
 static const float kIvLn2Hi = 1.4428710938e+00; // 0x3fb8b000
@@ -485,6 +444,109 @@ float log2(float x) {
     hi = shape.asFloat;
     const f32 lo = f - hi - hfsq + s*(hfsq+R);
     return (lo+hi)*kIvLn2Lo + lo*kIvLn2Hi + hi*kIvLn2Hi + k;
+}
+
+#ifdef __SSE2__
+
+float sqrt(float x) {
+    // The use of inverse square root is actually faster than a full
+    // sqrtss instruction which would be issued if we called sqrtf(x)
+    // like we do below. This only has ~11 bits of precision and has
+    // 1/4th the latency.
+    //
+    // We can actually survive with ~11 bits of precision without much
+    // concern for accuracy since we favor techniques which avoid sqrt
+    // where precision matters.
+    const __m128 a = _mm_set1_ps(x);   // shufps $0x0,%xmm0,%xmm0
+                                       // movaps %xmm0,%xmm1
+    const __m128 b = _mm_rsqrt_ss(a);  // rsqrtss %xmm0,%xmm1
+    const __m128 c = _mm_mul_ps(a, b); // mulps %xmm1, %xmm0
+    return _mm_cvtss_f32(c);           // retq
+}
+
+float floor(float in) {
+    const __m128 x = _mm_set1_ps(in);
+    const __m128i v0 = _mm_setzero_si128();
+    const __m128i v1 = _mm_cmpeq_epi32(v0, v0);
+    const __m128i ji = _mm_srli_epi32(v1, 25);
+    const __m128i z1 = _mm_slli_epi32(ji, 23);
+    __m128 j = *(__m128*)&z1;
+    const __m128i i = _mm_cvttps_epi32(x);
+    const __m128 fi = _mm_cvtepi32_ps(i);
+    const __m128 igx = _mm_cmpgt_ps(fi, x);
+    j = _mm_and_ps(igx, j);
+    const __m128 ret = _mm_sub_ps(fi, j);
+    return _mm_cvtss_f32(ret);
+}
+
+float ceil(float in) {
+    const __m128 x = _mm_set1_ps(in);
+    const __m128i v0 = _mm_setzero_si128();
+    const __m128i v1 = _mm_cmpeq_epi32(v0, v0);
+    const __m128i ji = _mm_srli_epi32(v1, 25);
+    const __m128i z1 = _mm_slli_epi32(ji, 23);
+    __m128 j = *(__m128*)&z1;
+    const __m128i i = _mm_cvttps_epi32(x);
+    const __m128 fi = _mm_cvtepi32_ps(i);
+    const __m128 igx = _mm_cmplt_ps(fi, x);
+    j = _mm_and_ps(igx, j);
+    const __m128 ret = _mm_add_ps(fi, j);
+    return _mm_cvtss_f32(ret);
+}
+
+float fmod(float x, float y) {
+    const __m128 a = _mm_set1_ps(x);
+    const __m128 div = _mm_set1_ps(y);
+    const __m128 c = _mm_div_ps(a, div);
+    const __m128i i = _mm_cvttps_epi32(c);
+    const __m128 trunc = _mm_cvtepi32_ps(i);
+    const __m128 base = _mm_mul_ps(trunc, div);
+    const __m128 ret = _mm_sub_ps(a, base);
+    return _mm_cvtss_f32(ret);
+}
+
+#else
+
+float floor(float x) {
+    floatShape shape = { x };
+    const int e = int(shape.asInt >> 23 & 0xFF) - 0x7F;
+    if (e >= 23)
+        return x;
+    if (e >= 0) {
+        const uint32_t m = 0x007FFFFF >> e;
+        if ((shape.asInt & m) == 0)
+            return x;
+        if ((shape.asInt >> 31))
+            shape.asInt += m;
+        shape.asInt &= ~m;
+    } else {
+        if ((shape.asInt >> 31) == 0)
+            shape.asInt = 0;
+        else if ((shape.asInt << 1))
+            shape.asFloat = -1.0f;
+    }
+    return shape.asFloat;
+}
+
+float ceil(float x) {
+    floatShape shape = { x };
+    const int e = int(shape.asInt >> 23 & 0xFF) - 0x7F;
+    if (e >= 23)
+        return x;
+    if (e >= 0) {
+        const uint32_t m = 0x007FFFFF >> e;
+        if ((shape.asInt & m) == 0)
+            return x;
+        if ((shape.asInt >> 31) == 0)
+            shape.asInt += m;
+        shape.asInt &= ~m;
+    } else {
+        if ((shape.asInt >> 31))
+            shape.asFloat = -0.0f;
+        else if ((shape.asInt << 1))
+            shape.asFloat = 1.0f;
+    }
+    return shape.asFloat;
 }
 
 float fmod(float x, float y) {
@@ -545,23 +607,9 @@ float fmod(float x, float y) {
 }
 
 float sqrt(float x) {
-#ifdef __SSE2__
-    // The use of inverse square root is actually faster than a full
-    // sqrtss instruction which would be issued if we called sqrtf(x)
-    // like we do below. This only has ~11 bits of precision and has
-    // 1/4th the latency.
-    //
-    // We can actually survive with ~11 bits of precision without much
-    // concern for accuracy since we favor techniques which avoid sqrt
-    // where precision matters.
-    const __m128 a = _mm_set1_ps(x);   // shufps $0x0,%xmm0,%xmm0
-                                       // movaps %xmm0,%xmm1
-    const __m128 b = _mm_rsqrt_ss(a);  // rsqrtss %xmm0,%xmm1
-    const __m128 c = _mm_mul_ps(a, b); // mulps %xmm1, %xmm0
-    return _mm_cvtss_f32(c);           // retq
-#else
     return sqrtf(x);
-#endif
 }
+
+#endif
 
 }
