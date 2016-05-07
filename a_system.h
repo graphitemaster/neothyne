@@ -91,60 +91,60 @@ struct audio {
 
     int play(source &sound, float volume = 1.0f, float pan = 0.0f, bool paused = false);
 
-    void seek(int channelHandle, float seconds);
-    void stop(int channelHandle);
+    void seek(int voiceHandle, float seconds);
+    void stop(int voiceHandle);
     void stopAll();
 
-    float getStreamTime(int channelHandle) const;
-    bool getPaused(int channelHandle) const;
-    float getVolume(int channelHandle) const;
-    float getSampleRate(int channelHandle) const;
-    bool getProtected(int channelHandle) const;
+    float getStreamTime(int voiceHandle) const;
+    bool getPaused(int voiceHandle) const;
+    float getVolume(int voiceHandle) const;
+    float getSampleRate(int voiceHandle) const;
+    bool getProtected(int voiceHandle) const;
     float getPostClipScaler() const;
-    float getRelativePlaySpeed(int channelHandle) const;
+    float getRelativePlaySpeed(int voiceHandle) const;
 
     void setGlobalVolume(float volume);
-    void setPaused(int channelHandle, bool paused);
+    void setPaused(int voiceHandle, bool paused);
     void setPausedAll(bool paused);
-    void setRelativePlaySpeed(int channelHandle, float speed);
+    void setRelativePlaySpeed(int voiceHandle, float speed);
     void setPostClipScaler(float scaler);
-    void setProtected(int channelHandle, bool protect);
-    void setSampleRate(int channelHandle, float sampleRate);
-    void setPan(int channelHandle, float panning);
-    void setPanAbsolute(int channelHandle, const m::vec2 &panning);
-    void setVolume(int channelHandle, float volume);
+    void setProtected(int voiceHandle, bool protect);
+    void setSampleRate(int voiceHandle, float sampleRate);
+    void setPan(int voiceHandle, float panning);
+    void setPanAbsolute(int voiceHandle, const m::vec2 &panning);
+    void setVolume(int voiceHandle, float volume);
     void setGlobalFilter(int filterHandle, filter *filter_);
 
-    void fadeVolume(int channelHandle, float from, float to, float time);
-    void fadePan(int channelHandle, float from, float to, float time);
-    void fadeRelativePlaySpeed(int channelHandle, float from, float to, float time);
+    void fadeVolume(int voiceHandle, float from, float to, float time);
+    void fadePan(int voiceHandle, float from, float to, float time);
+    void fadeRelativePlaySpeed(int voiceHandle, float from, float to, float time);
     void fadeGlobalVolume(float from, float to, float time);
 
-    void schedulePause(int channelHandle, float time);
-    void scheduleStop(int channelHandle, float time);
+    void schedulePause(int voiceHandle, float time);
+    void scheduleStop(int voiceHandle, float time);
 
-    void oscVolume(int channelHandle, float from, float to, float time);
-    void oscPan(int channelHandle, float from, float to, float time);
-    void oscRelativePlaySpeed(int channelHandle, float from, float to, float time);
+    void oscVolume(int voiceHandle, float from, float to, float time);
+    void oscPan(int voiceHandle, float from, float to, float time);
+    void oscRelativePlaySpeed(int voiceHandle, float from, float to, float time);
     void oscGlobalVolume(float from, float to, float time);
 
 protected:
     friend struct source;
 
-    int findFreeChannel();
-    int getChannelFromHandle(int channelHandle) const;
+    int findFreeVoice();
+    int getVoiceFromHandle(int voiceHandle) const;
 
     void stopSound(source &sound);
-    void stopChannel(int channel);
+    void stopVoice(int channel);
 
-    void setChannelPan(int channel, float panning);
-    void setChannelVolume(int channel, float volume);
-    void setChannelPaused(int channel, bool paused);
-    void setChannelRelativePlaySpeed(int channel, float speed);
+    void setVoicePan(int channel, float panning);
+    void setVoiceVolume(int channel, float volume);
+    void setVoicePaused(int channel, bool paused);
+    void setVoiceRelativePlaySpeed(int channel, float speed);
 
-    void setFilterParam(int channelHandle, int filterHandle, int attrib, float value);
-    void fadeFilterParam(int channelHandle, int filterHandle, int attrib, float from, float to, float time);
-    void oscFilterParam(int channelHandle, int filterHandle, int attrib, float from, float to, float time);
+    void setFilterParam(int voiceHandle, int filterHandle, int attrib, float value);
+    void fadeFilterParam(int voiceHandle, int filterHandle, int attrib, float from, float to, float time);
+    void oscFilterParam(int voiceHandle, int filterHandle, int attrib, float from, float to, float time);
 
     void clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples);
     void interlace(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, size_t channels);
@@ -152,7 +152,7 @@ protected:
 private:
     u::vector<float> m_scratch;
     size_t m_scratchNeeded;
-    u::vector<instance *> m_channels;
+    u::vector<instance *> m_voices;
     int m_sampleRate;
     int m_bufferSize;
     int m_flags;
