@@ -151,13 +151,13 @@ void BQRFilterInstance::fadeFilterParam(int attrib, float from, float to, float 
         return;
     switch (attrib) {
     case BQRFilter::kFrequency:
-        m_frequencyFader.set(fader::kLERP, from, to, time, startTime);
+        m_frequencyFader.lerp(from, to, time, startTime);
         break;
     case BQRFilter::kSampleRate:
-        m_sampleRateFader.set(fader::kLERP, from, to, time, startTime);
+        m_sampleRateFader.lerp(from, to, time, startTime);
         break;
     case BQRFilter::kResonance:
-        m_sampleRateFader.set(fader::kLERP, from, to, time, startTime);
+        m_sampleRateFader.lerp(from, to, time, startTime);
         break;
     }
 }
@@ -167,13 +167,13 @@ void BQRFilterInstance::oscFilterParam(int attrib, float from, float to, float t
         return;
     switch (attrib) {
     case BQRFilter::kFrequency:
-        m_frequencyFader.set(fader::kLFO, from, to, time, startTime);
+        m_frequencyFader.lfo(from, to, time, startTime);
         break;
     case BQRFilter::kSampleRate:
-        m_sampleRateFader.set(fader::kLFO, from, to, time, startTime);
+        m_sampleRateFader.lfo(from, to, time, startTime);
         break;
     case BQRFilter::kResonance:
-        m_resonanceFader.set(fader::kLFO, from, to, time, startTime);
+        m_resonanceFader.lfo(from, to, time, startTime);
         break;
     }
 }

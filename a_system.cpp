@@ -405,15 +405,12 @@ void audio::setVoicePaused(int voice, bool paused) {
     }
 }
 
-#define FadeSetRelative(FADER, TYPE, FROM, TO, TIME) \
-    (m_voices[voice]->FADER.set(fader::TYPE, (FROM), (TO), (TIME), m_voices[voice]->m_streamTime))
-
 void audio::schedulePause(int voiceHandle, float time) {
     lockGuard lock(m_mutex);
     const int voice = getVoiceFromHandle(voiceHandle);
     if (voice == -1)
         return;
-    FadeSetRelative(m_pauseScheduler, kLERP, 1.0f, 0.0f, time);
+    m_voices[voice]->m_pauseScheduler.lerp(1.0f, 0.0f, time, m_voices[voice]->m_streamTime);
 }
 
 void audio::scheduleStop(int voiceHandle, float time) {
@@ -421,7 +418,7 @@ void audio::scheduleStop(int voiceHandle, float time) {
     const int voice = getVoiceFromHandle(voiceHandle);
     if (voice == -1)
         return;
-    FadeSetRelative(m_stopScheduler, kLERP, 1.0f, 0.0f, time);
+    m_voices[voice]->m_stopScheduler.lerp(1.0f, 0.0f, time, m_voices[voice]->m_streamTime);
 }
 
 void audio::setVoicePan(int voice, float pan) {
@@ -595,7 +592,7 @@ void audio::fadeVolume(int voiceHandle, float to, float time) {
         const int voice = getVoiceFromHandle(voiceHandle);
         if (voice == -1)
             return;
-        FadeSetRelative(m_volumeFader, kLERP, from, to, time);
+        m_voices[voice]->m_volumeFader.lerp(from, to, time, m_voices[voice]->m_streamTime);
     }
 }
 
@@ -608,7 +605,7 @@ void audio::fadePan(int voiceHandle, float to, float time) {
         const int voice = getVoiceFromHandle(voiceHandle);
         if (voice == -1)
             return;
-        FadeSetRelative(m_panFader, kLERP, from, to, time);
+        m_voices[voice]->m_panFader.lerp(from, to, time, m_voices[voice]->m_streamTime);
     }
 }
 
@@ -621,7 +618,7 @@ void audio::fadeRelativePlaySpeed(int voiceHandle, float to, float time) {
         const int voice = getVoiceFromHandle(voiceHandle);
         if (voice == -1)
             return;
-        FadeSetRelative(m_relativePlaySpeedFader, kLERP, from, to, time);
+        m_voices[voice]->m_relativePlaySpeedFader.lerp(from, to, time, m_voices[voice]->m_streamTime);
     }
 }
 
@@ -633,7 +630,7 @@ void audio::fadeGlobalVolume(float to, float time) {
     } else {
         lockGuard lock(m_mutex);
         m_streamTime = 0.0f; // avoid ~6 day rollover
-        m_globalVolumeFader.set(fader::kLERP, from, to, time, m_streamTime);
+        m_globalVolumeFader.lerp(from, to, time, m_streamTime);
     }
 }
 
@@ -645,7 +642,7 @@ void audio::oscVolume(int voiceHandle, float from, float to, float time) {
         const int voice = getVoiceFromHandle(voiceHandle);
         if (voice == -1)
             return;
-        FadeSetRelative(m_volumeFader, kLFO, from, to, time);
+        m_voices[voice]->m_volumeFader.lfo(from, to, time, m_voices[voice]->m_streamTime);
     }
 }
 
@@ -657,7 +654,7 @@ void audio::oscPan(int voiceHandle, float from, float to, float time) {
         const int voice = getVoiceFromHandle(voiceHandle);
         if (voice == -1)
             return;
-        FadeSetRelative(m_panFader, kLFO, from, to, time);
+        m_voices[voice]->m_panFader.lfo(from, to, time, m_voices[voice]->m_streamTime);
     }
 }
 
@@ -669,7 +666,7 @@ void audio::oscRelativePlaySpeed(int voiceHandle, float from, float to, float ti
         const int voice = getVoiceFromHandle(voiceHandle);
         if (voice == -1)
             return;
-        FadeSetRelative(m_relativePlaySpeedFader, kLFO, from, to, time);
+        m_voices[voice]->m_relativePlaySpeedFader.lfo(from, to, time, m_voices[voice]->m_streamTime);
     }
 }
 
@@ -679,7 +676,7 @@ void audio::oscGlobalVolume(float from, float to, float time) {
         return;
     } else locked(m_mutex) {
         m_streamTime = 0.0f; // avoid ~6 day rollover
-        m_globalVolumeFader.set(fader::kLFO, from, to, time, m_streamTime);
+        m_globalVolumeFader.lfo(from, to, time, m_streamTime);
     }
 }
 

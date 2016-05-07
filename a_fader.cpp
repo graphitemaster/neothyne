@@ -16,29 +16,26 @@ fader::fader()
 {
 }
 
-void fader::set(int type, float from, float to, float time, float startTime) {
-    switch (type) {
-    case kLERP:
-        m_current = from;
-        m_from = from;
-        m_to = to;
-        m_time = time;
-        m_startTime = startTime;
-        m_delta = to - from;
-        m_endTime = m_startTime + time;
-        m_active = 1;
-        break;
-    case kLFO:
-        m_active = 2;
-        m_current = 0.0f;
-        m_from = from;
-        m_to = to;
-        m_time = time;
-        m_delta = m::abs(to - from) / 2.0f;
-        m_startTime = startTime;
-        m_endTime = m::kPi * 2.0f / m_time;
-        break;
-    }
+void fader::lerp(float from, float to, float time, float startTime) {
+    m_current = from;
+    m_from = from;
+    m_to = to;
+    m_time = time;
+    m_startTime = startTime;
+    m_delta = to - from;
+    m_endTime = m_startTime + time;
+    m_active = 1;
+}
+
+void fader::lfo(float from, float to, float time, float startTime) {
+    m_active = 2;
+    m_current = 0.0f;
+    m_from = from;
+    m_to = to;
+    m_time = time;
+    m_delta = m::abs(to - from) / 2.0f;
+    m_startTime = startTime;
+    m_endTime = m::kPi * 2.0f / m_time;
 }
 
 float fader::operator()(float currentTime) {

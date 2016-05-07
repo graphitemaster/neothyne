@@ -6,14 +6,8 @@ namespace a {
 struct fader {
     fader();
 
-    enum {
-        // linear interpolation
-        kLERP,
-        // low-frequency oscillation
-        kLFO
-    };
-
-    void set(int type, float from, float to, float time, float startTime);
+    void lerp(float from, float to, float time, float startTime);
+    void lfo(float from, float to, float time, float startTime);
 
     float operator()(float time);
 
