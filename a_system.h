@@ -16,14 +16,13 @@ static constexpr int kMaxStreamFilters = 4;
 struct instance {
     enum {
         kLooping = 1 << 0,
-        kStereo = 1 << 1,
-        kProtected = 1 << 2,
-        kPaused = 1 << 3
+        kProtected = 1 << 1,
+        kPaused = 1 << 2
     };
 
     instance();
     virtual ~instance();
-    void init(size_t playIndex, float baseSampleRate, int sourceFlags);
+    void init(size_t playIndex, float baseSampleRate, size_t channels, int sourceFlags);
 
 protected:
     virtual void getAudio(float *buffer, size_t samples) = 0;
@@ -35,6 +34,7 @@ protected:
 
     unsigned int m_playIndex;
     int m_flags;
+    size_t m_channels;
     m::vec3 m_volume; // left, right, global scale
     float m_baseSampleRate;
     float m_sampleRate;
@@ -56,8 +56,7 @@ protected:
 
 struct source {
     enum {
-        kLoop = 1 << 0,
-        kStereo = 1 << 1
+        kLoop = 1 << 0
     };
 
     source();
@@ -73,6 +72,7 @@ protected:
 
     int m_flags;
     float m_baseSampleRate;
+    size_t m_channels;
     int m_sourceID;
     filter *m_filters[kMaxStreamFilters];
     audio *m_owner;

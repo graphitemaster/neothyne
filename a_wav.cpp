@@ -63,7 +63,7 @@ static void readData(u::file &fp,
 void wavInstance::getAudio(float *buffer, size_t samples) {
     if (!m_file) return;
 
-    const size_t channels = m_flags & kStereo ? 2 : 1;
+    const size_t channels = m_channels;
     size_t copySize = samples;
     if (copySize + m_offset > m_parent->m_sampleCount)
         copySize = m_parent->m_sampleCount - m_offset;
@@ -97,7 +97,7 @@ bool wavInstance::rewind() {
 }
 
 bool wavInstance::hasEnded() const {
-    return m_offset >= m_parent->m_sampleCount;
+    return !(m_flags & instance::kLooping) && m_offset >= m_parent->m_sampleCount;
 }
 
 ///! wav
@@ -145,7 +145,7 @@ bool wav::load(u::file &fp) {
         return false;
 
     if (channels > 1)
-        m_flags |= kStereo;
+        m_channels = 2;
 
     const auto subSecondChunkSize = read<int32_t>(fp);
     const auto samples = (subSecondChunkSize / (bitsPerSample / 8)) / channels;
