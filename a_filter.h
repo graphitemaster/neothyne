@@ -9,7 +9,7 @@ namespace a {
 struct source;
 
 struct filterInstance {
-    virtual void filter(float *buffer, size_t samples, bool strero, float sampleRate, float time) = 0;
+    virtual void filter(float *buffer, size_t samples, size_t channels, float sampleRate, float time) = 0;
 
     virtual void setFilterParam(int attrib, float value);
     virtual void fadeFilterParam(int attrib, float from, float to, float time, float startTime);
@@ -26,7 +26,7 @@ struct filter {
 struct echoFilter;
 
 struct echoFilterInstance : filterInstance {
-    virtual void filter(float *buffer, size_t samples, bool stereo, float sampleRate, float streamTime);
+    virtual void filter(float *buffer, size_t samples, size_t channels, float sampleRate, float streamTime);
     virtual ~echoFilterInstance();
     echoFilterInstance(echoFilter *parent);
 
@@ -52,7 +52,7 @@ struct BQRFilter;
 struct BQRFilterInstance : filterInstance {
     BQRFilterInstance(BQRFilter *parent);
 
-    virtual void filter(float *buffer, size_t samples, bool stereo, float sampleRate, float time);
+    virtual void filter(float *buffer, size_t samples, size_t channels, float sampleRate, float time);
 
     virtual void setFilterParam(int attrib, float value);
     virtual void fadeFilterParam(int attrib, float from, float to, float time, float startTime);
@@ -117,7 +117,7 @@ private:
 struct DCRemovalFilter;
 
 struct DCRemovalFilterInstance : filterInstance {
-    virtual void filter(float *buffer, size_t samples, bool stereo, float sampleRate, float streamTime);
+    virtual void filter(float *buffer, size_t samples, size_t channels, float sampleRate, float streamTime);
 
     virtual ~DCRemovalFilterInstance();
 

@@ -765,7 +765,7 @@ void audio::mix(float *buffer, size_t samples) {
                 if (m_channels[i]->m_filters[j]) {
                     m_channels[i]->m_filters[j]->filter(&m_scratch[0],
                                                         readSamples,
-                                                        m_channels[i]->m_flags & instance::kStereo,
+                                                        m_channels[i]->m_flags & instance::kStereo ? 2  : 1,
                                                         m_channels[i]->m_sampleRate,
                                                         m_streamTime);
                 }
@@ -813,9 +813,10 @@ void audio::mix(float *buffer, size_t samples) {
                 stopChannel(i);
         }
         // global filter
-        for (size_t i = 0; i < kMaxStreamFilters; i++)
+        for (size_t i = 0; i < kMaxStreamFilters; i++) {
             if (m_filterInstances[i])
-                m_filterInstances[i]->filter(&buffer[0], samples, true, m_sampleRate, m_streamTime);
+                m_filterInstances[i]->filter(&buffer[0], samples, 2, m_sampleRate, m_streamTime);
+        }
     }
 
     clip(buffer, &m_scratch[0], samples);

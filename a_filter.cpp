@@ -33,8 +33,7 @@ echoFilterInstance::echoFilterInstance(echoFilter *parent)
 {
 }
 
-void echoFilterInstance::filter(float *buffer, size_t samples, bool stereo, float sampleRate, float) {
-    const size_t channels = stereo ? 2 : 1;
+void echoFilterInstance::filter(float *buffer, size_t samples, size_t channels, float sampleRate, float) {
     if (m_buffer.empty()) {
         const size_t length = m::ceil(m_parent->m_delay * sampleRate) * channels;
         m_buffer.resize(length);
@@ -84,7 +83,7 @@ BQRFilterInstance::BQRFilterInstance(BQRFilter *parent)
     calcParams();
 }
 
-void BQRFilterInstance::filter(float *buffer, size_t samples, bool stereo, float time, float) {
+void BQRFilterInstance::filter(float *buffer, size_t samples, size_t channels, float time, float) {
     if (!m_active) return;
 
     if (m_frequencyFader.m_active > 0) {
@@ -105,7 +104,6 @@ void BQRFilterInstance::filter(float *buffer, size_t samples, bool stereo, float
     if (m_dirty)
         calcParams();
 
-    size_t channels = stereo ? 2 : 1;
     for (size_t s = 0, c = 0; s < channels; s++) {
         for (size_t i = 0; i < samples; i += 2, c++) {
             // filter the inputs
@@ -246,8 +244,7 @@ DCRemovalFilterInstance::DCRemovalFilterInstance(DCRemovalFilter *parent)
 {
 }
 
-void DCRemovalFilterInstance::filter(float *buffer, size_t samples, bool stereo, float sampleRate, float) {
-    const size_t channels = stereo ? 2 : 1;
+void DCRemovalFilterInstance::filter(float *buffer, size_t samples, size_t channels, float sampleRate, float) {
     if (m_buffer.empty()) {
         m_buffer.resize(size_t(m::ceil(m_parent->m_length * sampleRate)) * channels);
         m_totals.resize(channels);
