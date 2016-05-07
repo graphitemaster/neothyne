@@ -90,6 +90,7 @@ sourceInstance::sourceInstance()
     : m_playIndex(0)
     , m_flags(0)
     , m_channels(1)
+    , m_pan(0.0f)
     , m_baseSampleRate(44100.0f)
     , m_sampleRate(44100.0f)
     , m_relativePlaySpeed(1.0f)
@@ -215,6 +216,11 @@ float audio::getPostClipScaler() const {
 void audio::setPostClipScaler(float scaler) {
     lockGuard lock(m_mutex);
     m_postClipScaler = scaler;
+}
+
+float audio::getGlobalVolume() const {
+    lockGuard lock(m_mutex);
+    return m_globalVolume;
 }
 
 void audio::setGlobalVolume(float volume) {
@@ -421,9 +427,16 @@ void audio::scheduleStop(int voiceHandle, float time) {
 void audio::setVoicePan(int voice, float pan) {
     if (m_voices[voice]) {
         const m::vec2 panning = m::sincos((pan + 1.0f) * m::kPi / 4.0f);
+        m_voices[voice]->m_pan = pan;
         m_voices[voice]->m_volume.x = panning.x;
         m_voices[voice]->m_volume.y = panning.y;
     }
+}
+
+float audio::getPan(int voiceHandle) const {
+    lockGuard lock(m_mutex);
+    const int voice = getVoiceFromHandle(voiceHandle);
+    return voice == -1 ? 0.0f : m_voices[voice]->m_pan;
 }
 
 void audio::setPan(int voiceHandle, float pan) {
@@ -573,7 +586,8 @@ void audio::stopAll() {
         stopVoice(i);
 }
 
-void audio::fadeVolume(int voiceHandle, float from, float to, float time) {
+void audio::fadeVolume(int voiceHandle, float to, float time) {
+    const float from = getVolume(voiceHandle);
     if (time <= 0.0f || to == from) {
         setVolume(voiceHandle, to);
         return;
@@ -585,7 +599,8 @@ void audio::fadeVolume(int voiceHandle, float from, float to, float time) {
     }
 }
 
-void audio::fadePan(int voiceHandle, float from, float to, float time) {
+void audio::fadePan(int voiceHandle, float to, float time) {
+    const float from = getPan(voiceHandle);
     if (time <= 0.0f || to == from) {
         setPan(voiceHandle, to);
         return;
@@ -597,7 +612,8 @@ void audio::fadePan(int voiceHandle, float from, float to, float time) {
     }
 }
 
-void audio::fadeRelativePlaySpeed(int voiceHandle, float from, float to, float time) {
+void audio::fadeRelativePlaySpeed(int voiceHandle, float to, float time) {
+    const float from = getRelativePlaySpeed(voiceHandle);
     if (time <= 0.0f || to == from) {
         setRelativePlaySpeed(voiceHandle, to);
         return;
@@ -609,7 +625,8 @@ void audio::fadeRelativePlaySpeed(int voiceHandle, float from, float to, float t
     }
 }
 
-void audio::fadeGlobalVolume(float from, float to, float time) {
+void audio::fadeGlobalVolume(float to, float time) {
+    const float from = getGlobalVolume();
     if (time <= 0.0f || to == from) {
         setGlobalVolume(to);
         return;

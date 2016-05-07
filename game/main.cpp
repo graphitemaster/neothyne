@@ -151,7 +151,7 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
 
     // fire and forget!
     int handle = audio.play(theme, 0.1f, 0.0f); // middle
-    audio.fadeVolume(handle, 0.0f, 1.0f, 15.0f);
+    audio.fadeVolume(handle, 1.0f, 15.0f);
 
     //theme.setFilter(&filter);
     //audio.oscRelativePlaySpeed(handle, 0.5f, 1.0f, 1.0f);

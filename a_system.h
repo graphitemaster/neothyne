@@ -36,6 +36,7 @@ protected:
     int m_flags;
     size_t m_channels;
     m::vec3 m_volume; // left, right, global scale
+    float m_pan;
     float m_baseSampleRate;
     float m_sampleRate;
     float m_relativePlaySpeed;
@@ -98,9 +99,11 @@ struct audio {
     float getStreamTime(int voiceHandle) const;
     bool getPaused(int voiceHandle) const;
     float getVolume(int voiceHandle) const;
+    float getPan(int voiceHandle) const;
     float getSampleRate(int voiceHandle) const;
     bool getProtected(int voiceHandle) const;
     float getPostClipScaler() const;
+    float getGlobalVolume() const;
     float getRelativePlaySpeed(int voiceHandle) const;
 
     void setGlobalVolume(float volume);
@@ -115,10 +118,10 @@ struct audio {
     void setVolume(int voiceHandle, float volume);
     void setGlobalFilter(int filterHandle, filter *filter_);
 
-    void fadeVolume(int voiceHandle, float from, float to, float time);
-    void fadePan(int voiceHandle, float from, float to, float time);
-    void fadeRelativePlaySpeed(int voiceHandle, float from, float to, float time);
-    void fadeGlobalVolume(float from, float to, float time);
+    void fadeVolume(int voiceHandle, float to, float time);
+    void fadePan(int voiceHandle, float to, float time);
+    void fadeRelativePlaySpeed(int voiceHandle, float to, float time);
+    void fadeGlobalVolume(float to, float time);
 
     void schedulePause(int voiceHandle, float time);
     void scheduleStop(int voiceHandle, float time);
