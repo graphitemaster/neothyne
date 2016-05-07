@@ -482,8 +482,10 @@ void audio::stop(int voiceHandle) {
 
 void audio::stopVoice(int voice) {
     if (m_voices[voice]) {
-        delete m_voices[voice];
+        // To prevent recursion issues: load into temporary first
+        sourceInstance *instance = m_voices[voice];
         m_voices[voice] = nullptr;
+        delete instance;
     }
 }
 
