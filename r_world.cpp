@@ -280,11 +280,11 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
 }
 
 /// NOTE: Testing only
-struct dustSystem : particleSystem {
+struct dustSystem final : particleSystem {
     dustSystem(const m::vec3 &ownerPosition);
 protected:
     void initParticle(particle &p, const m::vec3 &ownerPosition);
-    virtual float gravity() { return 98.0f; }
+    virtual float gravity() final { return 98.0f; }
 private:
     m::vec3 m_direction;
 };
