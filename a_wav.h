@@ -7,23 +7,23 @@
 namespace a {
 
 struct wav;
-struct wavInstance : instance {
+struct wavInstance final : instance {
     wavInstance(wav *parent);
-    virtual void getAudio(float *buffer, size_t samples);
-    virtual bool rewind();
-    virtual bool hasEnded() const;
-    virtual ~wavInstance();
+    virtual void getAudio(float *buffer, size_t samples) final;
+    virtual bool rewind() final;
+    virtual bool hasEnded() const final;
+    virtual ~wavInstance() final;
 private:
     wav *m_parent;
     u::file m_file;
     size_t m_offset;
 };
 
-struct wav : source {
+struct wav final : source {
     wav();
-    virtual ~wav();
+    virtual ~wav() final;
     bool load(const char *fileName);
-    virtual instance *create();
+    virtual instance *create() final;
 
 private:
     friend struct wavInstance;

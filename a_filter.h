@@ -25,9 +25,9 @@ struct filter {
 
 struct echoFilter;
 
-struct echoFilterInstance : filterInstance {
-    virtual void filter(float *buffer, size_t samples, size_t channels, float sampleRate, float streamTime);
-    virtual ~echoFilterInstance();
+struct echoFilterInstance final : filterInstance {
+    virtual void filter(float *buffer, size_t samples, size_t channels, float sampleRate, float streamTime) final;
+    virtual ~echoFilterInstance() final;
     echoFilterInstance(echoFilter *parent);
 
 private:
@@ -36,8 +36,8 @@ private:
     size_t m_offset;
 };
 
-struct echoFilter : filter {
-    virtual filterInstance *create();
+struct echoFilter final : filter {
+    virtual filterInstance *create() final;
     echoFilter();
     void setParams(float delay, float decay);
 
@@ -49,16 +49,16 @@ private:
 
 struct BQRFilter;
 
-struct BQRFilterInstance : filterInstance {
+struct BQRFilterInstance final : filterInstance {
     BQRFilterInstance(BQRFilter *parent);
 
-    virtual void filter(float *buffer, size_t samples, size_t channels, float sampleRate, float time);
+    virtual void filter(float *buffer, size_t samples, size_t channels, float sampleRate, float time) final;
 
-    virtual void setFilterParam(int attrib, float value);
-    virtual void fadeFilterParam(int attrib, float from, float to, float time, float startTime);
-    virtual void oscFilterParam(int attrib, float from, float to, float time, float startTime);
+    virtual void setFilterParam(int attrib, float value) final;
+    virtual void fadeFilterParam(int attrib, float from, float to, float time, float startTime) final;
+    virtual void oscFilterParam(int attrib, float from, float to, float time, float startTime) final;
 
-    virtual ~BQRFilterInstance();
+    virtual ~BQRFilterInstance() final;
 
 private:
     void calcParams();
@@ -84,7 +84,7 @@ private:
     bool m_dirty;
 };
 
-struct BQRFilter : filter {
+struct BQRFilter final : filter {
     // type
     enum {
         kNone,
@@ -100,10 +100,10 @@ struct BQRFilter : filter {
         kResonance
     };
 
-    virtual BQRFilterInstance *create();
+    virtual BQRFilterInstance *create() final;
     BQRFilter();
     void setParams(int type, float sampleRate, float frequency, float resonance);
-    virtual ~BQRFilter();
+    virtual ~BQRFilter() final;
 
 private:
     friend struct BQRFilterInstance;
@@ -116,10 +116,10 @@ private:
 // check docs/AUDIO.md for explanation of how this does what it does
 struct DCRemovalFilter;
 
-struct DCRemovalFilterInstance : filterInstance {
-    virtual void filter(float *buffer, size_t samples, size_t channels, float sampleRate, float streamTime);
+struct DCRemovalFilterInstance final : filterInstance {
+    virtual void filter(float *buffer, size_t samples, size_t channels, float sampleRate, float streamTime) final;
 
-    virtual ~DCRemovalFilterInstance();
+    virtual ~DCRemovalFilterInstance() final;
 
     DCRemovalFilterInstance(DCRemovalFilter *parent);
 private:
@@ -129,8 +129,8 @@ private:
     DCRemovalFilter *m_parent;
 };
 
-struct DCRemovalFilter : filter {
-    virtual filterInstance *create();
+struct DCRemovalFilter final : filter {
+    virtual filterInstance *create() final;
     DCRemovalFilter();
     void setParams(float length = 0.1f);
 
