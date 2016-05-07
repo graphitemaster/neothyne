@@ -80,7 +80,6 @@ void wavInstance::getAudio(float *buffer, size_t samples) {
         readData(m_file, buffer + copySize, samples - copySize, samples,
             channels, m_parent->m_channels, m_parent->m_bits);
         m_offset = samples - copySize;
-        m_streamTime = m_offset / m_sampleRate;
     } else {
         for (size_t i = 0; i < channels; i++)
             memset(buffer + copySize + i * samples, 0, sizeof(float) * (samples - copySize));
@@ -105,7 +104,6 @@ wav::wav()
     : m_sampleCount(0)
 {
 }
-
 
 wav::~wav() {
     // Empty
