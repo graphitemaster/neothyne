@@ -10,6 +10,9 @@
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif
+#ifdef __SSE4_1__
+#include <smmintrin.h>
+#endif
 
 namespace m {
 
@@ -447,7 +450,6 @@ float log2(float x) {
 }
 
 #ifdef __SSE2__
-
 float sqrt(float x) {
     // The use of inverse square root is actually faster than a full
     // sqrtss instruction which would be issued if we called sqrtf(x)
@@ -466,6 +468,9 @@ float sqrt(float x) {
 
 float floor(float in) {
     const __m128 x = _mm_set1_ps(in);
+#ifdef __SSE4_1__
+    const __m128 ret = _mm_floor_ps(x);
+#else
     const __m128i v0 = _mm_setzero_si128();
     const __m128i v1 = _mm_cmpeq_epi32(v0, v0);
     const __m128i ji = _mm_srli_epi32(v1, 25);
@@ -476,11 +481,15 @@ float floor(float in) {
     const __m128 igx = _mm_cmpgt_ps(fi, x);
     j = _mm_and_ps(igx, j);
     const __m128 ret = _mm_sub_ps(fi, j);
+#endif
     return _mm_cvtss_f32(ret);
 }
 
 float ceil(float in) {
     const __m128 x = _mm_set1_ps(in);
+#ifdef __SSE4_1__
+    const __m128 ret = _mm_ceil_ps(x);
+#else
     const __m128i v0 = _mm_setzero_si128();
     const __m128i v1 = _mm_cmpeq_epi32(v0, v0);
     const __m128i ji = _mm_srli_epi32(v1, 25);
@@ -491,6 +500,7 @@ float ceil(float in) {
     const __m128 igx = _mm_cmplt_ps(fi, x);
     j = _mm_and_ps(igx, j);
     const __m128 ret = _mm_add_ps(fi, j);
+#endif
     return _mm_cvtss_f32(ret);
 }
 
@@ -609,7 +619,6 @@ float fmod(float x, float y) {
 float sqrt(float x) {
     return sqrtf(x);
 }
-
 #endif
 
 }
