@@ -20,6 +20,7 @@ private:
 struct lane final : source {
     lane();
     virtual laneInstance *create() final;
+    virtual void setFilter(int filterHandle, filter *filter_) final;
     int play(source &sound, float volume = 1.0f, float pan = 0.0f, bool paused = false);
 
 private:

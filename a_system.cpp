@@ -15,34 +15,21 @@
 
 namespace a {
 
-struct lockGuard {
-    lockGuard(void *opaque)
-        : m_mutex((SDL_mutex *)opaque)
-    {
-        SDL_LockMutex(m_mutex);
-    }
+lockGuard::lockGuard(void *opaque)
+    : m_mutex(opaque)
+{
+    SDL_LockMutex((SDL_mutex *)m_mutex);
+}
 
-    ~lockGuard() {
-        if (m_mutex)
-            SDL_UnlockMutex(m_mutex);
-    }
+lockGuard::~lockGuard() {
+    if (m_mutex)
+        SDL_UnlockMutex((SDL_mutex *)m_mutex);
+}
 
-    void unlock() {
-        SDL_UnlockMutex(m_mutex);
-        m_mutex = nullptr;
-    }
-
-    operator bool() const {
-        return m_mutex;
-    }
-
-private:
-    SDL_mutex *m_mutex;
-};
-
-// Clever technique to make a scope that locks a mutex
-#define locked(X) \
-    for (lockGuard lock(X); lock; lock.unlock())
+void lockGuard::unlock() {
+    SDL_UnlockMutex((SDL_mutex *)m_mutex);
+    m_mutex = nullptr;
+}
 
 static void audioMixer(void *user, Uint8 *stream, int length) {
     const int samples = length / 4;

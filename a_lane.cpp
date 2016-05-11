@@ -1,3 +1,4 @@
+#include "a_filter.h"
 #include "a_lane.h"
 
 namespace a {
@@ -64,6 +65,18 @@ int lane::play(source &sound, float volume, float pan, bool paused) {
             return 0;
     }
     return m_owner->play(sound, volume, pan, paused, m_channelHandle);
+}
+
+void lane::setFilter(int filterHandle, filter *filter_) {
+    if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
+        return;
+    m_filters[filterHandle] = filter_;
+    if (m_instance) locked(m_owner->m_mutex) {
+        delete m_instance->m_filters[filterHandle];
+        m_instance->m_filters[filterHandle] = nullptr;
+        if (filter_)
+            m_instance->m_filters[filterHandle] = m_filters[filterHandle]->create();
+    }
 }
 
 }

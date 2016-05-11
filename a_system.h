@@ -10,6 +10,23 @@ struct audio;
 struct filter;
 struct filterInstance;
 
+struct lockGuard {
+    lockGuard(void *opaque);
+    ~lockGuard();
+    void unlock();
+    operator bool() const;
+private:
+    void *m_mutex;
+};
+
+inline lockGuard::operator bool() const {
+    return m_mutex;
+}
+
+// Clever technique to make a scope that locks a mutex
+#define locked(X) \
+    for (lockGuard lock(X); lock; lock.unlock())
+
 /// maximum filters per stream
 static constexpr int kMaxStreamFilters = 4;
 
@@ -67,7 +84,7 @@ struct source {
     source();
 
     void setLooping(bool looping);
-    void setFilter(int filterHandle, filter *filter_);
+    virtual void setFilter(int filterHandle, filter *filter_);
 
     virtual ~source();
     virtual sourceInstance *create() = 0;
