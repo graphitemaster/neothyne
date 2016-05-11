@@ -276,7 +276,7 @@ int audio::getHandleFromVoice(int voice) const {
 }
 
 int audio::getVoiceFromHandle(int voiceHandle) const {
-    if (voiceHandle < 0)
+    if (voiceHandle <= 0)
         return -1;
     const int voice = (voiceHandle & 0xFFFF) - 1;
     const size_t index = voiceHandle >> 12;
