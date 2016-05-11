@@ -83,7 +83,7 @@ void wavInstance::getAudio(float *buffer, size_t samples) {
     } else {
         for (size_t i = 0; i < channels; i++)
             memset(buffer + copySize + i * samples, 0, sizeof(float) * (samples - copySize));
-        m_offset += samples - copySize;
+        m_offset += samples;
     }
 }
 
@@ -114,7 +114,19 @@ bool wav::load(u::file &fp) {
 
     if (read<int32_t>(fp) != u::fourCC<int32_t>("WAVE"))
         return false;
-    if (read<int32_t>(fp) != u::fourCC<int32_t>("fmt "))
+    int32_t chunk = read<int32_t>(fp);
+
+    // may be aligned with a JUNK section
+    if (chunk == u::fourCC<int32_t>("JUNK")) {
+        int32_t size = read<int32_t>(fp);
+        if (size & 1)
+            size++;
+        for (int32_t i = 0; i < size; i++)
+            read<int8_t>(fp);
+        chunk = read<int32_t>(fp);
+    }
+
+    if (chunk != u::fourCC<int32_t>("fmt "))
         return false;
 
     const auto subFirstChunkSize = read<int32_t>(fp);
@@ -131,7 +143,7 @@ bool wav::load(u::file &fp) {
         || (bitsPerSample != 8 && bitsPerSample != 16))
         return false;
 
-    auto chunk = read<int32_t>(fp);
+    chunk = read<int32_t>(fp);
     if (chunk == u::fourCC<int32_t>("LIST")) {
         const auto listSize = read<int32_t>(fp);
         for (int32_t i = 0; i < listSize; i++)
@@ -142,6 +154,7 @@ bool wav::load(u::file &fp) {
     if (chunk != u::fourCC<int32_t>("data"))
         return false;
 
+    m_channels = channels;
     if (channels > 1)
         m_channels = 2;
 
@@ -150,7 +163,6 @@ bool wav::load(u::file &fp) {
 
     m_dataOffset = ftell(fp);
     m_bits = bitsPerSample;
-    m_channels = channels;
     m_baseSampleRate = sampleRate;
     m_sampleCount = samples;
 

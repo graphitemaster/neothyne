@@ -32,7 +32,6 @@ private:
     u::string m_fileName;
     size_t m_dataOffset;
     size_t m_bits;
-    size_t m_channels;
     size_t m_sampleCount;
 };
 
