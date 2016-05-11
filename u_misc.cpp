@@ -355,3 +355,19 @@ uint32_t crc32(const unsigned char *buffer, size_t length) {
 }
 
 }
+
+#if defined(_MSC_VER)
+// Visual Studio 2015+ adds telemetry calls into the resulting binary which
+// can only be disabled by linking an object or adding some empty stubs to
+// the code.
+//
+// The optimizer should eliminate these calls.
+//
+// https://www.reddit.com/r/cpp/comments/4ibauu/visual_studio_adding_telemetry_function_calls_to
+extern "C" {
+    void _cdecl __vcrt_initialize_telemetry_provider() { }
+    void _cdecl __telemetry_main_invoke_trigger() { }
+    void _cdecl __telemetry_main_return_trigger() { }
+    void _cdecl __vcrt_uninitialize_telemetry_provider() { }
+};
+#endif
