@@ -213,7 +213,9 @@ bool zip::open(const u::string &fileName) {
             return false;
         if (fseek(m_file, head.fileCommentLength, SEEK_CUR) != 0)
             return false;
-        const size_t next = ftell(m_file);
+        const long next = ftell(m_file);
+        if (next == -1)
+            return false;
 
         localFileHeader local;
         if (fseek(m_file, head.offset, SEEK_SET) != 0)
