@@ -88,8 +88,10 @@ void wavInstance::getAudio(float *buffer, size_t samples) {
 }
 
 bool wavInstance::rewind() {
-    if (m_file)
-        fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
+    if (m_file) {
+        if (fseek(m_file, m_parent->m_dataOffset, SEEK_SET) != 0)
+            return false;
+    }
     m_offset = 0;
     m_streamTime = 0.0f;
     return true;
