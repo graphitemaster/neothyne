@@ -38,6 +38,7 @@ lane::lane()
     : m_channelHandle(0)
     , m_instance(nullptr)
 {
+    m_channels = 2;
 }
 
 laneInstance *lane::create() {
