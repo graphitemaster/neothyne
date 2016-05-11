@@ -96,7 +96,8 @@ bool zip::findCentralDirectory(unsigned char *store) {
     if (length < 22)
         return false;
     // Find the end of the central directory
-    fseek(m_file, length - 22, SEEK_SET);
+    if (fseek(m_file, length - 22, SEEK_SET) != 0)
+        return false;
     for (;;) {
         long consumed = 0;
         uint32_t signature = 0;
