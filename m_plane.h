@@ -14,7 +14,7 @@ struct plane {
         kFront
     };
 
-    plane() = default;
+    plane();
     plane(const m::vec3 &p1, const m::vec3 &p2, const m::vec3 &p3);
     plane(const m::vec3 &pp, const m::vec3 &nn);
 
@@ -26,6 +26,11 @@ struct plane {
     vec3 n;
     float d;
 };
+
+inline plane::plane()
+    : d(0.0f)
+{
+}
 
 inline plane::plane(const m::vec3 &p1, const m::vec3 &p2, const m::vec3 &p3)
     : n(((p2 - p1) ^ (p3 - p1)).normalized())
