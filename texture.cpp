@@ -2681,8 +2681,13 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
         m_bpp = 1;
         break;
     default:
-        // m_bpp and m_pitch don't get assigned values for compressed
-        // textures
+        // m_bpp and m_pitch get assigned zero here since compressed textures
+        // don't really have them. If a compressed texture is operated on
+        // as if it were not compressed, multiplications by m_bpp or m_pitch
+        // will result in values of zero which will prevent those paths from
+        // running.
+        m_bpp = 0;
+        m_pitch = 0;
         return;
     }
     m_pitch = m_width * m_bpp;
