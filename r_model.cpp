@@ -258,6 +258,9 @@ material::material()
     , m_animFlipU(false)
     , m_animFlipV(false)
     , m_animMillis(0)
+    , m_scrollRateU(0)
+    , m_scrollRateV(0)
+    , m_scrollMillis(0)
     , m_geomMethods(&geomMethods::instance())
 {
 }
