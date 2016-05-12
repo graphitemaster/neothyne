@@ -106,7 +106,9 @@ bool wavInstance::hasEnded() const {
 
 ///! wav
 wav::wav()
-    : m_sampleCount(0)
+    : m_dataOffset(0)
+    , m_bits(0)
+    , m_sampleCount(0)
 {
 }
 
