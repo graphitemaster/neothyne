@@ -537,8 +537,8 @@ void zlib::deflator::deflate(u::vector<unsigned char> &out,
         if (bestLocation) {
             // distance back
             const int distance = int(&in[0]+i-bestLocation);
-            u::assert(distance <= 32767);
-            u::assert(best <= 258);
+            U_ASSERT(distance <= 32767);
+            U_ASSERT(best <= 258);
             int j;
             for (j = 0; best > kLengthBases[j+1]-1; ++j);
             huff(j+257);

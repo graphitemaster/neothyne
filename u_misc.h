@@ -120,7 +120,7 @@ static inline u::string sizeMetric(size_t size) {
         r = size % 1024;
         size /= 1024;
     }
-    u::assert(i != sizeof kSizes / sizeof *kSizes);
+    U_ASSERT(i != sizeof kSizes / sizeof *kSizes);
     return u::format("%.2f %s", float(size) + float(r) / 1024.0f, kSizes[i]);
 }
 

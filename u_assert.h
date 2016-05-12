@@ -1,6 +1,6 @@
 #ifndef U_ASSERT_HDR
 #define U_ASSERT_HDR
-#include <stdarg.h>
+#include <stddef.h>
 
 #if defined(assert)
 #   undef assert
@@ -14,30 +14,15 @@
 
 namespace u {
 
-namespace detail {
+[[noreturn]] void assert(const char *expression, const char *file, const char *func, size_t line);
+
+}
+
 #if defined(NDEBUG)
-    template <typename... V>
-    static inline void assertCheck(bool, const V &...) {
-        // Do nothing
-    }
+#   define U_ASSERT(X) (void)0
 #else
-    void assertFail(const char *fmt, va_list va);
-
-    template <typename... V>
-    static inline void assertCheck(bool expr, ...) {
-        if (!expr) {
-            va_list va;
-            va_start(va, expr);
-            assertFail("Assertion failure: %s (%s: %s %d)", va);
-            va_end(va);
-        }
-    }
+#   define U_ASSERT(EXPRESSION) \
+        ((void)((EXPRESSION) || (u::assert(#EXPRESSION, __FILE__, U_ASSERT_FUNCTION, __LINE__), 0)))
 #endif
-}
-
-}
-
-#define assert(EXPRESSION) \
-    detail::assertCheck(!!(EXPRESSION), #EXPRESSION, __FILE__, U_ASSERT_FUNCTION, __LINE__)
 
 #endif

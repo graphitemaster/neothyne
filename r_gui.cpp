@@ -402,7 +402,7 @@ gui::atlas::node *gui::atlasPack(const u::string &file) {
                 *beg++ = *data++;
                 break;
             default:
-                u::assert(0 && "invalid texture format for UI atlas");
+                U_ASSERT(0 && "invalid texture format for UI atlas");
                 break;
             }
         }
@@ -519,7 +519,7 @@ void gui::render(const pipeline &pl) {
     m_methods[kMethodImage].setPerspective(perspective);
 
     for (const auto &it : ::gui::commands()()) {
-        u::assert(it.type != -1);
+        U_ASSERT(it.type != -1);
 #if defined(DEBUG_GUI)
         printCommand(it);
 #endif

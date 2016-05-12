@@ -130,10 +130,10 @@ static inline int rempio2(float x, uint32_t ix, double &y) {
         return n;
     }
 
-    u::assert(ix < 0x7F800000 && "NaN");
+    U_ASSERT(ix < 0x7F800000 && "NaN");
 
     // value is far too large, something is pathologically wrong
-    u::assert(0 && "function called with a huge value");
+    U_ASSERT(0 && "function called with a huge value");
     return 0;
 }
 
@@ -153,7 +153,7 @@ float cos(float x) {
             return cosdf(sign ? x+kC4PIO2 : x-kC4PIO2);
         return sindf(sign ? -x-kC3PIO2 : x-kC3PIO2);
     }
-    u::assert(ix < 0x7F800000 && "NaN");
+    U_ASSERT(ix < 0x7F800000 && "NaN");
     double y = 0.0;
     const int n = rempio2(x, ix, y);
     switch (n&3) {
@@ -173,7 +173,7 @@ float acos(float x) {
     if (ix >= 0x3F800000) { // |x| >= 1 or NaN
         if (ix == 0x3F800000)
             return sign ? 2*kPIO2Hi + 7.52316384526264005e-37f : 0.0f;
-        u::assert(0 && "NaN");
+        U_ASSERT(0 && "NaN");
     }
     if (ix < 0x3F000000) { // |x| < 0.5
         return ix <= 0x32800000
@@ -211,7 +211,7 @@ float sin(float x) {
             return sign ? cosdf(x + kC3PIO2) : -cosdf(x - kC3PIO2);
         return sindf(sign ? x+kC4PIO2 : x-kC4PIO2);
     }
-    u::assert(ix < 0x7F800000 && "NaN");
+    U_ASSERT(ix < 0x7F800000 && "NaN");
     double y = 0.0;
     const int n = rempio2(x, ix, y);
     switch (n&3) {
@@ -231,7 +231,7 @@ float asin(float x) {
     if (ix >= 0x3F800000) { // |x| >= 1
         if (ix == 0x3F800000)
             return x*kPIO2 + 7.52316384526264005e-37f; // asin(+-1) = +-pi/2 with inexact
-        u::assert(0 && "NaN"); // asin(|x|>1) is NaN
+        U_ASSERT(0 && "NaN"); // asin(|x|>1) is NaN
     }
     if (ix < 0x3F000000) { // |x| < 0.5
         // if 0x1p-126 <= |x| < 0x1p-120
@@ -262,7 +262,7 @@ float tan(float x) {
             return tandf((sign ? x+kC3PIO2 : x-kC3PIO2), true);
         return tandf((sign ? x+kC4PIO2 : x-kC4PIO2), false);
     }
-    u::assert(ix < 0x7F800000);
+    U_ASSERT(ix < 0x7F800000);
     double y = 0.0;
     const int n = rempio2(x, ix, y);
     return tandf(y, n&1);
@@ -375,7 +375,7 @@ void sincos(float x, float &s, float &c) {
         sincosdf<0>(sign ? x+kC4PIO2 : x-kC4PIO2, s, c);
         return;
     }
-    u::assert(ix < 0x7F800000);
+    U_ASSERT(ix < 0x7F800000);
     double y = 0.0;
     // argument reduction
     const int n = rempio2(x, ix, y);

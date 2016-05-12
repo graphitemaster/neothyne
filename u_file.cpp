@@ -250,7 +250,7 @@ inline findContext::findContext(const char *where)
 {
     static constexpr const char kPathExtra[] = "\\*";
     const size_t length = strlen(where);
-    u::assert(length + sizeof kPathExtra < MAX_PATH);
+    U_ASSERT(length + sizeof kPathExtra < MAX_PATH);
     char path[MAX_PATH];
     memcpy((void *)path, (const void *)where, length);
     memcpy((void *)&path[length], (const void *)kPathExtra, sizeof kPathExtra);

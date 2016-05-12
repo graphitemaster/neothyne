@@ -545,12 +545,12 @@ private:
             if (c->ssy > ssymax)
                 ssymax = c->ssy;
         }
-        u::assert(ssxmax);
-        u::assert(ssymax);
+        U_ASSERT(ssxmax);
+        U_ASSERT(ssymax);
         m_mbsizex = ssxmax << 3;
         m_mbsizey = ssymax << 3;
-        u::assert(m_mbsizex);
-        u::assert(m_mbsizey);
+        U_ASSERT(m_mbsizex);
+        U_ASSERT(m_mbsizey);
         m_mbwidth = (m_width + m_mbsizex - 1) / m_mbsizex;
         m_mbheight = (m_height + m_mbsizey - 1) / m_mbsizey;
         for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
@@ -982,7 +982,7 @@ private:
             }
             break;
         default:
-            u::assert(0 && "unknown chroma filter");
+            U_ASSERT(0 && "unknown chroma filter");
             break;
         }
 
@@ -1461,7 +1461,7 @@ private:
     }
 
     void setBitReversed(size_t &bitp, unsigned char *const bits, size_t bit) {
-        u::assert(bits);
+        U_ASSERT(bits);
         bits[bitp >> 3] |=  (bit << (7 - (bitp & 0x7)));
         bitp++;
     }
@@ -1573,7 +1573,7 @@ struct tga : decoder {
             m_format = kTexFormatRGBA;
             break;
         default:
-            u::assert(0 && "unsupported bpp");
+            U_ASSERT(0 && "unsupported bpp");
             break;
         }
 
@@ -2043,7 +2043,7 @@ protected:
             m_format = kTexFormatRGB;
             break;
         default:
-            u::assert(0 && "unsupported bpp");
+            U_ASSERT(0 && "unsupported bpp");
             break;
         }
 
@@ -2558,7 +2558,7 @@ void texture::colorize(uint32_t color) {
         return ((rb1 | rb2) & 0xFF00FF) + ((g1 | g2) & 0x00FF00);
     };
 
-    u::assert(m_format == kTexFormatBGR || m_format == kTexFormatBGRA ||
+    U_ASSERT(m_format == kTexFormatBGR || m_format == kTexFormatBGRA ||
               m_format == kTexFormatRGB || m_format == kTexFormatRGBA);
 
     for (size_t i = 0; i < m_data.size(); i += m_bpp) {

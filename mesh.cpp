@@ -16,7 +16,7 @@ size_t vertexCacheData::findTriangle(size_t triangle) {
 
 void vertexCacheData::moveTriangle(size_t triangle) {
     const size_t index = findTriangle(triangle);
-    u::assert(index != -1_z);
+    U_ASSERT(index != -1_z);
 
     // Erase the index and add it to the end
     indices.erase(indices.begin() + index,

@@ -869,7 +869,7 @@ static inline void getTexParams(bool bilinear, bool mipmaps, bool trilinear, GLe
         GL_NEAREST, GL_LINEAR, GL_NEAREST_MIPMAP_LINEAR, GL_LINEAR_MIPMAP_LINEAR
     };
 
-    u::assert(index < sizeof kMinLookup / sizeof *kMinLookup);
+    U_ASSERT(index < sizeof kMinLookup / sizeof *kMinLookup);
     min = kMinLookup[index];
 }
 

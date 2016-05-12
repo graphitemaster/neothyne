@@ -130,7 +130,7 @@ void operator delete[](void *ptr) noexcept {
 // These are part of the C++ ABI on all systems except MSVC.
 #if !defined(_MSC_VER)
 extern "C" void __cxa_pure_virtual() {
-    u::assert(0 && "pure virtual function call");
+    U_ASSERT(0 && "pure virtual function call");
 }
 
 extern "C" void __cxa_guard_acquire(...) {

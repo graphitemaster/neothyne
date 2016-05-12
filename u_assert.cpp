@@ -1,10 +1,13 @@
 #include "engine.h"
-#include "u_assert.h"
 
 namespace u {
-namespace detail {
-void assertFail(const char *fmt, va_list va) {
-    neoFatal(u::format(fmt, va).c_str());
+
+[[noreturn]] void assert(const char *expression,
+                         const char *file,
+                         const char *func,
+                         size_t line)
+{
+    neoFatal("Assertion failed: %s (%s: %s: %d)", expression, file, func, line);
 }
-}
+
 }

@@ -77,7 +77,7 @@ set<K> &set<K>::operator=(const set<K> &other) {
 template <typename K>
 set<K> &set<K>::operator=(set<K> &&other) {
     using base = detail::hash_base<hash_elem<K, void>>;
-    u::assert(this != &other);
+    U_ASSERT(this != &other);
     detail::hash_free(m_base);
     m_base.~base();
     new (&m_base) base(u::move(other));
