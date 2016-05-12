@@ -84,6 +84,7 @@ sourceInstance::sourceInstance()
     , m_relativePlaySpeed(1.0f)
     , m_streamTime(0.0f)
     , m_sourceID(0)
+    , m_laneHandle(0)
     , m_activeFader(0)
 {
     m_volume.x = 1.0f / m::sqrt(2.0f);
