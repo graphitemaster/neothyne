@@ -156,15 +156,15 @@ u::optional<u::vector<unsigned char>> read(const u::string &file, const char *mo
     auto fp = u::fopen(file, mode);
     if (!fp)
         return u::none;
-
     u::vector<unsigned char> data;
-    fseek(fp.get(), 0, SEEK_END);
+    if (fseek(fp.get(), 0, SEEK_END) != 0)
+        return u::none;
     const auto size = ftell(fp.get());
     if (size <= 0)
         return u::none;
     data.resize(size);
-    fseek(fp.get(), 0, SEEK_SET);
-
+    if (fseek(fp.get(), 0, SEEK_SET) != 0)
+        return u::none;
     if (fread(&data[0], data.size(), 1, fp.get()) != 1)
         return u::none;
     return data;

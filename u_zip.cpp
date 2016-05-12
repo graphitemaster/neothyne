@@ -89,9 +89,11 @@ inline void centralDirectoryTail::endianSwap() {
 
 bool zip::findCentralDirectory(unsigned char *store) {
     // Calculate size of ZIP
-    fseek(m_file, 0, SEEK_END);
+    if (fseek(m_file, 0, SEEK_END) != 0)
+        return false;
     const size_t length = ftell(m_file);
-    fseek(m_file, 0, SEEK_SET);
+    if (fseek(m_file, 0, SEEK_SET) != 0)
+        return false;
     // Smallest legal ZIP file contains only the end of a central directory
     if (length < 22)
         return false;
