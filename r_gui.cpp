@@ -138,6 +138,8 @@ guiModelMethod::guiModelMethod()
     , m_world(nullptr)
     , m_colorTextureUnit(nullptr)
     , m_eyeWorldPosition(nullptr)
+    , m_scrollRate(nullptr)
+    , m_scrollMillis(nullptr)
 {
 }
 
