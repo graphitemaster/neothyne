@@ -59,7 +59,6 @@ private:
     };
 
     struct entry {
-        entry() = default;
         m::vec3 position;
         int flags;
         m::vec3 side;
