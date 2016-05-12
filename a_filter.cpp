@@ -219,8 +219,11 @@ void BQRFilterInstance::calcParams() {
 }
 
 BQRFilter::BQRFilter()
+    : m_filterType(kNone)
+    , m_sampleRate(44100.0f)
+    , m_frequency(1.0f)
+    , m_resonance(0.0f)
 {
-    // Empty
 }
 
 void BQRFilter::setParams(int type, float sampleRate, float frequency, float resonance) {
