@@ -79,6 +79,7 @@ BQRFilterInstance::BQRFilterInstance(BQRFilter *parent)
     , m_frequency(m_parent->m_frequency)
     , m_resonance(m_parent->m_resonance)
     , m_active(false)
+    , m_dirty(false)
 {
     calcParams();
 }
