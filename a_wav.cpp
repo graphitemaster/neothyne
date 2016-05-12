@@ -10,8 +10,10 @@ wavInstance::wavInstance(wav *parent)
     , m_file(u::fopen(m_parent->m_fileName, "rb"))
     , m_offset(0)
 {
-    if (m_file)
-        fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
+    if (m_file) {
+        int seek = fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
+        U_ASSERT(seek == 0);
+    }
 }
 
 wavInstance::~wavInstance() {
@@ -21,7 +23,7 @@ wavInstance::~wavInstance() {
 template <typename T>
 static inline T read(u::file &fp) {
     T value;
-    fread(&value, 1, sizeof value, fp);
+    (void)fread(&value, 1, sizeof value, fp);
     return value;
 }
 
@@ -76,7 +78,8 @@ void wavInstance::getAudio(float *buffer, size_t samples) {
     }
 
     if (m_flags & sourceInstance::kLooping) {
-        fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
+        int seek = fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
+        U_ASSERT(seek == 0);
         readData(m_file, buffer + copySize, samples - copySize, samples,
             channels, m_parent->m_channels, m_parent->m_bits);
         m_offset = samples - copySize;

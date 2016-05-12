@@ -228,6 +228,7 @@ int audio::findFreeVoice() {
             next = int(i);
         }
     }
+    U_ASSERT(next != -1);
     stopVoice(next);
     return next;
 }

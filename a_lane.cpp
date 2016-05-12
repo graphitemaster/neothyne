@@ -1,6 +1,8 @@
 #include "a_filter.h"
 #include "a_lane.h"
 
+#include "u_assert.h"
+
 namespace a {
 
 ///! laneInstance
@@ -44,7 +46,9 @@ lane::lane()
 
 laneInstance *lane::create() {
     if (m_channelHandle) {
-        m_owner->stopVoice(m_owner->getVoiceFromHandle(m_channelHandle));
+        int voice = m_owner->getVoiceFromHandle(m_channelHandle);
+        U_ASSERT(voice != -1);
+        m_owner->stopVoice(voice);
         m_channelHandle = 0;
         m_instance = nullptr;
     }
