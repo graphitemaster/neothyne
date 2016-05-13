@@ -77,22 +77,18 @@ inline const vec3 &bbox::max() const {
 }
 
 inline bbox &bbox::transform(const m::mat4 &mat) {
-    const m::vec3 min = m_min;
-    const m::vec3 max = m_max;
-
-    bbox temp;
-
-    temp.expand(m::vec3(min.x, min.y, min.z).transform(mat));
-    temp.expand(m::vec3(max.x, min.y, min.z).transform(mat));
-    temp.expand(m::vec3(max.x, max.y, min.z).transform(mat));
-    temp.expand(m::vec3(min.x, max.y, min.z).transform(mat));
-
-    temp.expand(m::vec3(min.x, min.y, max.z).transform(mat));
-    temp.expand(m::vec3(max.x, min.y, max.z).transform(mat));
-    temp.expand(m::vec3(max.x, max.y, max.z).transform(mat));
-    temp.expand(m::vec3(min.x, max.y, max.z).transform(mat));
-
-    *this = temp;
+    const m::vec3 x = { mat.a.x, mat.b.x, mat.c.x };
+    const m::vec3 y = { mat.a.y, mat.b.y, mat.c.y };
+    const m::vec3 z = { mat.a.z, mat.b.z, mat.c.z };
+    const m::vec3 w = { mat.a.w, mat.b.w, mat.c.w };
+    const m::vec3 minx = m::vec3::min(x * m_min.x, x * m_max.x);
+    const m::vec3 maxx = m::vec3::max(x * m_min.x, x * m_max.x);
+    const m::vec3 miny = m::vec3::min(y * m_min.y, y * m_max.y);
+    const m::vec3 maxy = m::vec3::max(y * m_min.y, y * m_max.y);
+    const m::vec3 minz = m::vec3::min(z * m_min.z, z * m_max.z);
+    const m::vec3 maxz = m::vec3::max(z * m_min.z, z * m_max.z);
+    m_min = minx + miny + minz + w;
+    m_max = maxx + maxy + maxz + w;
     return *this;
 }
 
