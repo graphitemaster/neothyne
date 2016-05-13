@@ -80,17 +80,17 @@ inline bbox &bbox::transform(const m::mat4 &mat) {
     const m::vec3 min = m_min;
     const m::vec3 max = m_max;
 
-    bbox temp( FLT_MIN, FLT_MAX );
+    bbox temp;
 
     temp.expand(m::vec3(min.x, min.y, min.z).transform(mat));
     temp.expand(m::vec3(max.x, min.y, min.z).transform(mat));
-    temp.expand(m::vec3(min.x, max.y, min.z).transform(mat));
     temp.expand(m::vec3(max.x, max.y, min.z).transform(mat));
+    temp.expand(m::vec3(min.x, max.y, min.z).transform(mat));
 
     temp.expand(m::vec3(min.x, min.y, max.z).transform(mat));
     temp.expand(m::vec3(max.x, min.y, max.z).transform(mat));
-    temp.expand(m::vec3(min.x, max.y, max.z).transform(mat));
     temp.expand(m::vec3(max.x, max.y, max.z).transform(mat));
+    temp.expand(m::vec3(min.x, max.y, max.z).transform(mat));
 
     *this = temp;
     return *this;

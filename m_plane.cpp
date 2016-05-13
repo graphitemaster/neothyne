@@ -6,7 +6,6 @@
 namespace m {
 
 void frustum::update(const m::mat4 &wvp) {
-    // TODO transpose!
     // left plane
     m_planes[0].n = { wvp.a.w + wvp.a.x, wvp.b.w + wvp.b.x, wvp.c.w + wvp.c.x };
     m_planes[0].d = wvp.d.w + wvp.d.x;
@@ -42,7 +41,23 @@ bool frustum::testSphere(const m::vec3 &position, float radius) {
 }
 
 bool frustum::testBox(const m::bbox& box) {
-    // TODO: figure out what the fuck is going on here
+    const m::vec3 &min = box.min();
+    const m::vec3 &max = box.max();
+    for (size_t i = 0; i < 6; i++) {
+        bool outSide = true;
+        for (size_t j = 0; j < 8; j++) {
+            m::vec3 v = min;
+            if (j & 1) v.x = max.x;
+            if (j & 2) v.y = max.y;
+            if (j & 4) v.z = max.z;
+            if (m_planes[i].distance(v) >= 0.0f) {
+                outSide = false;
+                break;
+            }
+        }
+        if (outSide)
+            return false;
+    }
     return true;
 }
 

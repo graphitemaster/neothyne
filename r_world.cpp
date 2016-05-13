@@ -735,10 +735,8 @@ void world::geometryPass(const pipeline &pl) {
             m::mat4 rotate = (rz * ry * rx).getMatrix();
             pm.setRotate(rotate);
 
-            if (!m_frustum.testBox(mdl->bounds().transform(pm.world()))) {
-                printf("CULLED!\n");
+            if (!m_frustum.testBox(mdl->bounds().transform(pm.world())))
                 continue;
-            }
 
             if (mdl->animated()) {
                 // HACK: Testing only
