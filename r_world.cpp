@@ -650,8 +650,8 @@ void world::cullPass(const pipeline &pl) {
     for (auto &it : m_culledSpotLights) {
         const auto &light = it.light;
         const float scale = light->radius * kLightRadiusTweak;
-        m_frustum.setup(light->position, pl.rotation(), pl.perspective());
-        it.visible = m_frustum.testSphere(pl.position(), scale);
+        // TODO: frustum cull
+        it.visible = true;
         const auto hash = light->hash();
         if (it.visible && it.hash != hash) {
             it.buildMesh(m_kdWorld);
@@ -670,8 +670,8 @@ void world::cullPass(const pipeline &pl) {
     for (auto &it : m_culledPointLights) {
         const auto &light = it.light;
         const float scale = light->radius * kLightRadiusTweak;
-        m_frustum.setup(light->position, pl.rotation(), pl.perspective());
-        it.visible = m_frustum.testSphere(pl.position(), scale);
+        // TODO: frustum cull
+        it.visible = true;
         const auto hash = light->hash();
         if (it.visible && it.hash != hash) {
             it.buildMesh(m_kdWorld);

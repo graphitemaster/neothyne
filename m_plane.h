@@ -62,38 +62,6 @@ inline plane::point plane::classify(const m::vec3 &p, float epsilon) const {
     return dist > epsilon ? kFront : dist < -epsilon ? kBack : kOn;
 }
 
-struct frustum {
-    void setup(const m::vec3 &origin, const m::quat &orient, const m::perspective &project);
-    bool testSphere(const m::vec3 &point, float radius) const;
-    bool testPoint(const m::vec3 &point) const;
-private:
-    enum {
-        kPlaneNear,
-        kPlaneLeft,
-        kPlaneRight,
-        kPlaneUp,
-        kPlaneDown,
-        kPlaneFar,
-        kPlanes
-    };
-    plane m_planes[kPlanes];
-};
-
-inline bool frustum::testSphere(const m::vec3 &point, float radius) const {
-    radius = -radius;
-    for (size_t i = 0; i < 6; i++)
-        if (m_planes[i].distance(point) < radius)
-            return false;
-    return true;
-}
-
-inline bool frustum::testPoint(const m::vec3 &point) const {
-    for (size_t i = 0; i < 6; i++)
-        if (m_planes[i].distance(point) <= 0.0f)
-            return false;
-    return true;
-}
-
 }
 
 #endif

@@ -163,12 +163,7 @@ void particleSystem::render(const pipeline &pl) {
     m_indices.destroy();
     m_indices.reserve(m_particles.size() * 6);
 
-    // Kick off a point in view frustum test for every particle (TODO: schedule job for this)
-    m::frustum frustum;
-    for (auto &it : m_particles) {
-        frustum.setup(it.origin, pl.rotation(), pl.perspective());
-        it.visible = frustum.testPoint(pl.position());
-    }
+    // TODO: kick off point in view frustum test for every particle
 
     // sort particles by ones closest to camera
     u::sort(m_particles.begin(), m_particles.end(),
