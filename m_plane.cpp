@@ -7,23 +7,23 @@ namespace m {
 
 void frustum::update(const m::mat4 &wvp) {
     // left plane
-    m_planes[0].n = { wvp.a.w + wvp.a.x, wvp.b.w + wvp.b.x, wvp.c.w + wvp.c.x };
-    m_planes[0].d = wvp.d.w + wvp.d.x;
+    m_planes[0].n = { wvp.d.x + wvp.a.x, wvp.d.y + wvp.a.y, wvp.d.z + wvp.a.z };
+    m_planes[0].d = wvp.d.w + wvp.a.w;
     // right plane
-    m_planes[1].n = { wvp.a.w - wvp.a.x, wvp.b.w - wvp.b.x, wvp.c.w - wvp.c.x };
-    m_planes[1].d = wvp.d.w - wvp.d.x;
+    m_planes[1].n = { wvp.d.x - wvp.a.x, wvp.d.y - wvp.a.y, wvp.d.z - wvp.a.z };
+    m_planes[1].d = wvp.d.w - wvp.a.w;
     // top plane
-    m_planes[2].n = { wvp.a.w - wvp.a.y, wvp.b.w - wvp.b.y, wvp.c.w - wvp.c.y };
-    m_planes[2].d = wvp.d.w - wvp.d.y;
+    m_planes[2].n = { wvp.d.x - wvp.b.x, wvp.d.y - wvp.b.y, wvp.d.z - wvp.b.z };
+    m_planes[2].d = wvp.d.w - wvp.b.w;
     // bottom plane
-    m_planes[3].n = { wvp.a.w + wvp.a.y, wvp.b.w + wvp.b.y, wvp.c.w + wvp.c.y };
-    m_planes[3].d = wvp.d.w + wvp.d.y;
+    m_planes[3].n = { wvp.d.x + wvp.b.x, wvp.d.y + wvp.b.y, wvp.d.z + wvp.b.z };
+    m_planes[3].d = wvp.d.w + wvp.b.w;
     // far plane
-    m_planes[4].n = { wvp.a.w - wvp.a.z, wvp.b.w - wvp.b.z, wvp.c.w - wvp.c.z };
-    m_planes[4].d = wvp.d.w - wvp.d.z;
+    m_planes[4].n = { wvp.d.x - wvp.c.x, wvp.d.y - wvp.c.y, wvp.d.z - wvp.c.z };
+    m_planes[4].d = wvp.d.w - wvp.c.w;
     // near plane
-    m_planes[5].n = { wvp.a.w + wvp.a.z, wvp.b.w + wvp.b.z, wvp.c.w + wvp.c.z };
-    m_planes[5].d = wvp.d.w + wvp.d.z;
+    m_planes[5].n = { wvp.d.x + wvp.c.x, wvp.d.y + wvp.c.y, wvp.d.z + wvp.c.z };
+    m_planes[5].d = wvp.d.w + wvp.c.w;
     // normalize
     for (size_t i = 0; i < 6; i++) {
         const float magnitude = m_planes[i].n.abs();

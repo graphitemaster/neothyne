@@ -99,12 +99,6 @@ vec3 vec3::rand(float mx, float my, float mz) {
              mz * ((float)(u::randu() % 20000) * 0.0001f - 1.0f) };
 }
 
-vec3 vec3::transform(const m::mat4 &mat) const {
-    return { mat.a.x * x + mat.a.y * y + mat.a.z * z + mat.a.w,
-             mat.b.x * x + mat.b.y * y + mat.b.z * z + mat.b.w,
-             mat.c.x * x + mat.c.y * y + mat.c.z * z + mat.c.w };
-}
-
 void vec4::endianSwap() {
     x = u::endianSwap(x);
     y = u::endianSwap(y);

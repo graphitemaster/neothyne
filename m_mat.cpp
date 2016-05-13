@@ -227,15 +227,6 @@ mat4 mat4::inverse() const {
 }
 #endif
 
-mat4 mat4::transpose() const {
-    mat4 m;
-    m.a = { a.x, b.x, c.x, d.x };
-    m.b = { a.y, b.y, c.y, d.y };
-    m.c = { a.z, b.z, c.z, d.z };
-    m.d = { a.w, b.w, c.w, d.w };
-    return m;
-}
-
 ///! mat3x3
 void mat3x3::convertQuaternion(const quat &q) {
     const float x = q.x;

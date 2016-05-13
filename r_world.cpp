@@ -591,7 +591,7 @@ void world::unload(bool destroy) {
 
 void world::render(const pipeline &pl) {
     pipeline p = pl;
-    m_frustum.update((p.projection() * p.view()).transpose());
+    m_frustum.update(p.projection() * p.view() * p.world());
 
     // TODO: rewrite world manager such that this hack is not needed
     if (m_map->m_needSync) {
