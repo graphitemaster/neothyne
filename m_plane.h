@@ -4,8 +4,8 @@
 
 namespace m {
 
-struct quat;
-struct perspective;
+struct mat4;
+struct bbox;
 
 struct plane {
     enum point {
@@ -61,6 +61,17 @@ inline plane::point plane::classify(const m::vec3 &p, float epsilon) const {
     const float dist = distance(p);
     return dist > epsilon ? kFront : dist < -epsilon ? kBack : kOn;
 }
+
+struct frustum {
+    void update(const m::mat4 &wvp);
+
+    bool testSphere(const m::vec3 &position, float radius);
+    bool testBox(const m::bbox& box);
+    bool testPoint(const m::vec3 &point);
+
+private:
+    plane m_planes[6];
+};
 
 }
 

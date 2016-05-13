@@ -41,6 +41,7 @@ struct mat4 {
     static mat4 translate(const vec3 &t);
     static mat4 lookat(const vec3 &target, const vec3 &up);
     static mat4 lookat(const vec3 &position, const quat &q);
+    mat4 transpose() const;
 
     void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
 

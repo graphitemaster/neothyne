@@ -12,6 +12,8 @@
 
 namespace m {
 
+struct mat4;
+
 struct vec2 {
     union {
         struct { float x, y; };
@@ -101,6 +103,8 @@ struct vec3 {
     vec3 operator-() const;
     float operator[](size_t index) const;
     float &operator[](size_t index);
+
+    vec3 transform(const m::mat4 &mat) const;
 
     static inline const vec3 getAxis(axis a) {
         return kAxis[a];

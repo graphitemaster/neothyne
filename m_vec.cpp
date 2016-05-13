@@ -2,6 +2,7 @@
 #include "u_algorithm.h"
 
 #include "m_vec.h"
+#include "m_mat.h"
 #include "m_quat.h"
 
 namespace m {
@@ -96,6 +97,13 @@ vec3 vec3::rand(float mx, float my, float mz) {
     return { mx * ((float)(u::randu() % 20000) * 0.0001f - 1.0f),
              my * ((float)(u::randu() % 20000) * 0.0001f - 1.0f),
              mz * ((float)(u::randu() % 20000) * 0.0001f - 1.0f) };
+}
+
+vec3 vec3::transform(const m::mat4 &mat) const {
+    return vec3(mat.a.x, mat.a.y, mat.a.z) * x +
+           vec3(mat.b.x, mat.b.y, mat.b.z) * y +
+           vec3(mat.c.x, mat.c.y, mat.c.z) * z +
+           vec3(mat.d.x, mat.d.y, mat.d.z);
 }
 
 void vec4::endianSwap() {

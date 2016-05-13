@@ -121,6 +121,7 @@ private:
     grader m_colorGrader;
 
     m::mat4 m_identity;
+    m::frustum m_frustum;
 
     u::vector<spotLightChunk> m_culledSpotLights;
     u::vector<pointLightChunk> m_culledPointLights;

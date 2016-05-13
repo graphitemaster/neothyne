@@ -1,6 +1,9 @@
 #ifndef M_BBOX_HDR
 #define M_BBOX_HDR
+#include <float.h>
+
 #include "m_vec.h"
+#include "m_mat.h"
 
 namespace m {
 
@@ -15,6 +18,10 @@ struct bbox {
     float area() const;
     vec3 center() const;
     vec3 size() const;
+    const vec3 &min() const;
+    const vec3 &max() const;
+
+    bbox &transform(const m::mat4 &mat);
 
 private:
     vec3 m_min;
@@ -59,6 +66,34 @@ inline vec3 bbox::center() const {
 
 inline vec3 bbox::size() const {
     return m_extent;
+}
+
+inline const vec3 &bbox::min() const {
+    return m_min;
+}
+
+inline const vec3 &bbox::max() const {
+    return m_max;
+}
+
+inline bbox &bbox::transform(const m::mat4 &mat) {
+    const m::vec3 min = m_min;
+    const m::vec3 max = m_max;
+
+    bbox temp( FLT_MIN, FLT_MAX );
+
+    temp.expand(m::vec3(min.x, min.y, min.z).transform(mat));
+    temp.expand(m::vec3(max.x, min.y, min.z).transform(mat));
+    temp.expand(m::vec3(min.x, max.y, min.z).transform(mat));
+    temp.expand(m::vec3(max.x, max.y, min.z).transform(mat));
+
+    temp.expand(m::vec3(min.x, min.y, max.z).transform(mat));
+    temp.expand(m::vec3(max.x, min.y, max.z).transform(mat));
+    temp.expand(m::vec3(min.x, max.y, max.z).transform(mat));
+    temp.expand(m::vec3(max.x, max.y, max.z).transform(mat));
+
+    *this = temp;
+    return *this;
 }
 
 }

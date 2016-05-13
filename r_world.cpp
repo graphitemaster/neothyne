@@ -590,6 +590,9 @@ void world::unload(bool destroy) {
 }
 
 void world::render(const pipeline &pl) {
+    pipeline p = pl;
+    m_frustum.update((p.projection() * p.view()).transpose());
+
     // TODO: rewrite world manager such that this hack is not needed
     if (m_map->m_needSync) {
         for (auto it = m_culledSpotLights.begin(), end = m_culledSpotLights.end(); it != end; ) {
@@ -647,11 +650,11 @@ void world::cullPass(const pipeline &pl) {
     const float widthScale = 0.5f * m_shadowMap.widthScale(r_smsize - r_smborder);
     const float heightScale = 0.5f * m_shadowMap.heightScale(r_smsize - r_smborder);
 
+    //pipeline p = pl;
     for (auto &it : m_culledSpotLights) {
         const auto &light = it.light;
         const float scale = light->radius * kLightRadiusTweak;
-        // TODO: frustum cull
-        it.visible = true;
+        it.visible = m_frustum.testSphere(light->position, scale);
         const auto hash = light->hash();
         if (it.visible && it.hash != hash) {
             it.buildMesh(m_kdWorld);
@@ -670,8 +673,7 @@ void world::cullPass(const pipeline &pl) {
     for (auto &it : m_culledPointLights) {
         const auto &light = it.light;
         const float scale = light->radius * kLightRadiusTweak;
-        // TODO: frustum cull
-        it.visible = true;
+        it.visible = m_frustum.testSphere(light->position, scale);
         const auto hash = light->hash();
         if (it.visible && it.hash != hash) {
             it.buildMesh(m_kdWorld);
@@ -732,6 +734,11 @@ void world::geometryPass(const pipeline &pl) {
             const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
             m::mat4 rotate = (rz * ry * rx).getMatrix();
             pm.setRotate(rotate);
+
+            if (!m_frustum.testBox(mdl->bounds().transform(pm.world()))) {
+                printf("CULLED!\n");
+                continue;
+            }
 
             if (mdl->animated()) {
                 // HACK: Testing only
@@ -1044,20 +1051,28 @@ void world::forwardPass(const pipeline &pl) {
         // Shadow EBO memory
         size_t slShadowEBO = 0,
                plShadowEBO = 0;
-        for (auto &it : m_culledSpotLights)
+        size_t slCount = 0;
+        size_t plCount = 0;
+        for (auto &it : m_culledSpotLights) {
             slShadowEBO += it.count * sizeof(GLuint);
-        for (auto &it : m_culledPointLights)
+            if (it.visible) slCount++;
+        }
+        for (auto &it : m_culledPointLights) {
             plShadowEBO += it.count * sizeof(GLuint);
+            if (it.visible) plCount++;
+        }
         if (slShadowEBO || plShadowEBO) {
             gui::drawText(10, y, gui::kAlignLeft, "SHADOW EBO", gui::RGBA(255, 255, 255));
             y -= 20;
             if (slShadowEBO) {
-                const auto format = u::format("Spot Lights: %s", u::sizeMetric(slShadowEBO));
+                const auto format = u::format("Spot Lights: %zu %s",
+                    slCount, u::sizeMetric(slShadowEBO));
                 gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
                 y -= 20;
             }
             if (plShadowEBO) {
-                const auto format = u::format("Point Lights: %s", u::sizeMetric(plShadowEBO));
+                const auto format = u::format("Point Lights: %zu %s",
+                    plCount, u::sizeMetric(plShadowEBO));
                 gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
                 y -= 20;
             }
