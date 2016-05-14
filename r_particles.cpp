@@ -141,8 +141,7 @@ bool particleSystem::upload() {
 }
 
 void particleSystem::render(const pipeline &pl) {
-    pipeline p = pl;
-    const m::quat rotation = p.rotation();
+    const m::quat rotation = pl.rotation();
     m::vec3 side;
     m::vec3 up;
     rotation.getOrient(nullptr, &up, &side);
@@ -256,8 +255,8 @@ void particleSystem::render(const pipeline &pl) {
     m_texture.bind(GL_TEXTURE0);
 
     m_method.enable();
-    m_method.setPerspective(p.perspective());
-    m_method.setVP(p.projection() * p.view());
+    m_method.setPerspective(pl.perspective());
+    m_method.setVP(pl.projection() * pl.view());
     m_method.setPower(power());
 
     gl::Disable(GL_CULL_FACE);

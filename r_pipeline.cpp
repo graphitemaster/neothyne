@@ -44,18 +44,18 @@ void pipeline::setDelta(float delta) {
     m_delta = delta;
 }
 
-const m::mat4 &pipeline::world() {
-    return m_matrices[kWorld] = m::mat4::translate(m_world) * m_rotate * m::mat4::scale(m_scale);
+const m::mat4 pipeline::world() const {
+    return m::mat4::translate(m_world) * m_rotate * m::mat4::scale(m_scale);
 }
 
-const m::mat4 &pipeline::view() {
+const m::mat4 pipeline::view() const {
     m::vec3 target, up;
     m_rotation.getOrient(&target, &up, nullptr);
-    return m_matrices[kView] = m::mat4::lookat(target, up) * m::mat4::translate(-m_position);
+    return m::mat4::lookat(target, up) * m::mat4::translate(-m_position);
 }
 
-const m::mat4 &pipeline::projection() {
-    return m_matrices[kProjection] = m::mat4::project(m_perspective);
+const m::mat4 pipeline::projection() const {
+    return m::mat4::project(m_perspective);
 }
 
 const m::perspective &pipeline::perspective() const {

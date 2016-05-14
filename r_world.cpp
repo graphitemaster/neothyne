@@ -604,8 +604,7 @@ void world::unload(bool destroy) {
 }
 
 void world::render(const pipeline &pl) {
-    pipeline p = pl;
-    m_frustum.update(p.projection() * p.view() * p.world());
+    m_frustum.update(pl.projection() * pl.view() * pl.world());
 
     // TODO: rewrite world manager such that this hack is not needed
     if (m_map->m_needSync) {
@@ -651,20 +650,19 @@ void world::render(const pipeline &pl) {
         r_reload.set(0);
     }
 
-    cullPass(pl);
+    cullPass();
     geometryPass(pl);
     lightingPass(pl);
     forwardPass(pl);
     compositePass(pl);
 }
 
-void world::cullPass(const pipeline &pl) {
+void world::cullPass() {
     const float widthOffset = 0.5f * m_shadowMap.widthScale(r_smsize);
     const float heightOffset = 0.5f * m_shadowMap.heightScale(r_smsize);
     const float widthScale = 0.5f * m_shadowMap.widthScale(r_smsize - r_smborder);
     const float heightScale = 0.5f * m_shadowMap.heightScale(r_smsize - r_smborder);
 
-    //pipeline p = pl;
     for (auto &it : m_culledSpotLights) {
         const auto &light = it.light;
         const float scale = light->radius * kLightRadiusTweak;
@@ -703,10 +701,8 @@ void world::cullPass(const pipeline &pl) {
 }
 
 void world::geometryPass(const pipeline &pl) {
-    auto p = pl;
-
     // The scene pass will be writing into the gbuffer
-    m_gBuffer.update(p.perspective());
+    m_gBuffer.update(pl.perspective());
     m_gBuffer.bindWriting();
 
     // Clear the depth and color buffers. This is a new scene pass.
@@ -717,10 +713,9 @@ void world::geometryPass(const pipeline &pl) {
     gl::Disable(GL_BLEND);
 
     // Render the map
-    const m::mat4 &rw = p.world();
     gl::BindVertexArray(vao);
     for (auto &it : m_textureBatches) {
-        it.mat.bind(p, rw);
+        it.mat.bind(pl, pl.world());
         gl::DrawElements(GL_TRIANGLES, it.count, GL_UNSIGNED_INT,
             (const GLvoid*)(it.start * sizeof m_indices[0]));
     }
@@ -738,18 +733,18 @@ void world::geometryPass(const pipeline &pl) {
         } else {
             const auto &mdl = m_models[it->name];
 
-            pipeline pm = p;
-            pm.setWorld(it->position);
-            pm.setScale(it->scale + mdl->scale);
+            pipeline p = pl;
+            p.setWorld(it->position);
+            p.setScale(it->scale + mdl->scale);
 
             const m::vec3 rot = mdl->rotate + it->rotate;
             const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
             const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
             const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
             m::mat4 rotate = (rz * ry * rx).getMatrix();
-            pm.setRotate(rotate);
+            p.setRotate(rotate);
 
-            if (!m_frustum.testBox(mdl->bounds().transform(pm.world())))
+            if (!m_frustum.testBox(mdl->bounds().transform(p.world())))
                 continue;
 
             if (mdl->animated()) {
@@ -757,7 +752,7 @@ void world::geometryPass(const pipeline &pl) {
                 mdl->animate(it->curFrame);
                 it->curFrame += 0.25f;
             }
-            mdl->render(pm, rw);
+            mdl->render(p, pl.world());
         }
     }
 
@@ -783,8 +778,8 @@ void world::geometryPass(const pipeline &pl) {
         gl::BindTexture(format, m_ssao.texture(ssao::kRandom));
 
         m_ssaoMethod.enable();
-        m_ssaoMethod.setPerspective(p.perspective());
-        m_ssaoMethod.setInverse((p.projection() * p.view()).inverse());
+        m_ssaoMethod.setPerspective(pl.perspective());
+        m_ssaoMethod.setInverse((pl.projection() * pl.view()).inverse());
 
         m_quad.render();
 
@@ -805,6 +800,7 @@ void world::geometryPass(const pipeline &pl) {
 #if 1
         // NOTE: Testing Only
         {
+            pipeline p = pl;
             p.setRotation(m::quat());
             const m::vec3 rot = m::vec3(0, 180, 0);
             const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
@@ -815,7 +811,7 @@ void world::geometryPass(const pipeline &pl) {
             p.setScale({0.1, 0.1, 0.1});
             p.setPosition({-0.15, 0.2, -0.35});
             p.setWorld({0, 0, 0});
-            m_gun.render(p, rw);
+            m_gun.render(p, pl.world());
         }
 #endif
 
@@ -825,10 +821,8 @@ void world::geometryPass(const pipeline &pl) {
 }
 
 void world::lightingPass(const pipeline &pl) {
-    auto p = pl;
-
     // Write to the final composite
-    m_final.update(p.perspective());
+    m_final.update(pl.perspective());
     m_final.bindWriting();
 
     // Lighting will require blending
@@ -1127,8 +1121,6 @@ void world::compositePass(const pipeline &pl) {
 }
 
 void world::pointLightPass(const pipeline &pl) {
-    pipeline p = pl;
-
     gl::DepthMask(GL_FALSE);
 
     for (const auto &plc : m_culledPointLights) {
@@ -1158,8 +1150,9 @@ void world::pointLightPass(const pipeline &pl) {
 
         method->setPerspective(pl.perspective());
         method->setEyeWorldPos(pl.position());
-        method->setInverse((p.projection() * p.view()).inverse());
+        method->setInverse((pl.projection() * pl.view()).inverse());
 
+        pipeline p = pl;
         p.setWorld(it->position);
         p.setScale({scale, scale, scale});
 
@@ -1168,7 +1161,7 @@ void world::pointLightPass(const pipeline &pl) {
         method->setWVP(wvp);
 
         const m::vec3 dist = it->position - p.position();
-        scale += p.perspective().nearp + 1.0f;
+        scale += pl.perspective().nearp + 1.0f;
         if (dist*dist >= scale*scale) {
             gl::DepthFunc(GL_LESS);
             gl::CullFace(GL_BACK);
@@ -1264,8 +1257,6 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 }
 
 void world::spotLightPass(const pipeline &pl) {
-    pipeline p = pl;
-
     gl::DepthMask(GL_FALSE);
 
     for (const auto &slc : m_culledSpotLights) {
@@ -1295,8 +1286,9 @@ void world::spotLightPass(const pipeline &pl) {
 
         method->setPerspective(pl.perspective());
         method->setEyeWorldPos(pl.position());
-        method->setInverse((p.projection() * p.view()).inverse());
+        method->setInverse((pl.projection() * pl.view()).inverse());
 
+        pipeline p = pl;
         p.setWorld(sl->position);
         p.setScale({scale, scale, scale});
 
@@ -1305,7 +1297,7 @@ void world::spotLightPass(const pipeline &pl) {
         method->setWVP(wvp);
 
         const m::vec3 dist = sl->position - p.position();
-        scale += p.perspective().nearp + 1.0f;
+        scale += pl.perspective().nearp + 1.0f;
         if (dist*dist >= scale*scale) {
             gl::DepthFunc(GL_LESS);
             gl::CullFace(GL_BACK);
@@ -1364,8 +1356,6 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
 }
 
 void world::directionalLightPass(const pipeline &pl, bool stencil) {
-    auto p = pl;
-
     GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 
@@ -1381,7 +1371,7 @@ void world::directionalLightPass(const pipeline &pl, bool stencil) {
     method.setLight(m_map->getDirectionalLight());
     method.setPerspective(pl.perspective());
     method.setEyeWorldPos(pl.position());
-    method.setInverse((p.projection() * p.view()).inverse());
+    method.setInverse((pl.projection() * pl.view()).inverse());
     if (r_fog)
         method.setFog(m_map->m_fog);
     m_quad.render();

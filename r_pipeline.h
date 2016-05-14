@@ -18,9 +18,9 @@ struct pipeline {
     void setTime(float time);
     void setDelta(float delta);
 
-    const m::mat4 &world();
-    const m::mat4 &view();
-    const m::mat4 &projection();
+    const m::mat4 world() const;
+    const m::mat4 view() const;
+    const m::mat4 projection() const;
 
     // camera accessors.
     const m::vec3 &position() const;
@@ -32,13 +32,6 @@ struct pipeline {
     float delta() const;
 
 private:
-    enum {
-        kWorld,
-        kView,
-        kProjection,
-        kCount
-    };
-    m::mat4 m_matrices[kCount];
     m::perspective m_perspective;
 
     m::vec3 m_scale;

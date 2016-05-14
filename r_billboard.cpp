@@ -83,9 +83,7 @@ bool billboard::upload() {
 }
 
 void billboard::render(const pipeline &pl, float size) {
-    pipeline p = pl;
-
-    const m::quat rotation = p.rotation();
+    const m::quat rotation = pl.rotation();
     m::vec3 up;
     m::vec3 side;
     rotation.getOrient(nullptr, &up, &side);
@@ -144,7 +142,7 @@ void billboard::render(const pipeline &pl, float size) {
     m_stats->adjustIBOMemory(sizeof(GLuint) * m_indices.size());
 
     m_method.enable();
-    m_method.setVP(p.projection() * p.view());
+    m_method.setVP(pl.projection() * pl.view());
     m_texture.bind(GL_TEXTURE0);
     gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, nullptr);
     m_entries.clear();

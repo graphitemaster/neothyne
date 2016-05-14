@@ -40,7 +40,7 @@ struct world : geom {
     void render(const pipeline &pl);
 
 private:
-    void cullPass(const pipeline &pl);
+    void cullPass();
     void geometryPass(const pipeline &pl);
     void lightingPass(const pipeline &pl);
     void forwardPass(const pipeline &pl);

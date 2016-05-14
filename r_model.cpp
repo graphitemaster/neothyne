@@ -456,14 +456,13 @@ void material::calculatePermutation(bool skeletal) {
 
 geomMethod *material::bind(const r::pipeline &pl, const m::mat4 &rw, bool skeletal) {
     calculatePermutation(skeletal);
-    r::pipeline p = pl;
     auto &permutation = kGeomPermutations[permute];
     auto &method = (*m_geomMethods)[permute];
     method.enable();
-    method.setWVP(p.projection() * p.view() * p.world());
+    method.setWVP(pl.projection() * pl.view() * pl.world());
     method.setWorld(rw);
     if (permutation.permute & kGeomPermParallax) {
-        method.setEyeWorldPos(p.position());
+        method.setEyeWorldPos(pl.position());
         method.setParallax(dispScale, dispBias);
     }
     if (permutation.permute & kGeomPermSpecParams) {

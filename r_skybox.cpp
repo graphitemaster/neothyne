@@ -192,7 +192,6 @@ bool skybox::upload() {
 
 void skybox::render(const pipeline &pl, const fog &f) {
     // Construct the matrix for the skybox
-    pipeline wpl = pl;
     pipeline p;
     p.setWorld(pl.position());
     p.setPosition(pl.position());
@@ -210,7 +209,7 @@ void skybox::render(const pipeline &pl, const fog &f) {
     }
 
     renderMethod->setWVP(p.projection() * p.view() * p.world());
-    renderMethod->setWorld(wpl.world());
+    renderMethod->setWorld(pl.world());
 
     // render skybox cube
     gl::DepthRange(1, 1);
