@@ -43,16 +43,15 @@ struct billboard : geom {
 
     enum {
         kSide = 1 << 1,
-        kUp = 1 << 2
+        kUp = 1 << 2,
+        kHighlight = 1<< 3
     };
 
-    // you must add all positions for this billboard before calling `upload'
     void add(const m::vec3 &position,
              int flags = kSide | kUp,
              const m::vec3 &optionalSide = m::vec3::origin,
              const m::vec3 &optionalUp = m::vec3::origin);
 
-    const char *description() const;
     size_t memory() const;
 
 private:

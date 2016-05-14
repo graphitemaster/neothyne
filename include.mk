@@ -2,7 +2,8 @@ GAME_SOURCES = \
 	game/menu.cpp \
 	game/client.cpp \
 	game/main.cpp \
-	game/edit.cpp
+	game/edit.cpp \
+	game/world.cpp
 
 MATH_SOURCES = \
 	m_half.cpp \
@@ -58,7 +59,6 @@ ENGINE_SOURCES = \
 	engine.cpp \
 	kdmap.cpp \
 	kdtree.cpp \
-	world.cpp \
 	mesh.cpp \
 	model.cpp \
 	texture.cpp \

@@ -9,6 +9,11 @@
 namespace m {
 
 ///! mat4x4
+const mat4 mat4::kIdentity({ 1.0f, 0.0f, 0.0f, 0.0f },
+                           { 0.0f, 1.0f, 0.0f, 0.0f },
+                           { 0.0f, 0.0f, 1.0f, 0.0f },
+                           { 0.0f, 0.0f, 0.0f, 1.0f });
+
 mat4 mat4::identity() {
     return { { 1.0f, 0.0f, 0.0f, 0.0f },
              { 0.0f, 1.0f, 0.0f, 0.0f },

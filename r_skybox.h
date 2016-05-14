@@ -15,6 +15,12 @@ namespace m {
 namespace r {
 
 // fog
+enum {
+    kFogLinear,
+    kFogExp,
+    kFogExp2
+};
+
 struct fog {
     fog();
     m::vec3 color;

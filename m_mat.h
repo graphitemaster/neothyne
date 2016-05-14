@@ -26,6 +26,8 @@ inline perspective::perspective()
 
 ///! mat4x4
 struct mat4 {
+    static const mat4 kIdentity;
+
     vec4 a, b, c, d;
     constexpr mat4() = default;
     constexpr mat4(const vec4 &a, const vec4 &b, const vec4 &c, const vec4 &d);

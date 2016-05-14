@@ -8,6 +8,7 @@ struct stat {
     stat();
     stat(const char *name, const char *description);
 
+    void decInstances();
     void adjustVBOMemory(int amount);
     void adjustIBOMemory(int amount);
     void adjustTextureCount(int amount);
@@ -54,6 +55,11 @@ inline stat::stat(const char *name, const char *description)
     m_name = name;
     m_description = description;
     m_instances = 1;
+}
+
+inline void stat::decInstances() {
+    if (m_instances)
+        m_instances--;
 }
 
 inline void stat::adjustVBOMemory(int amount) {

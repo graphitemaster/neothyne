@@ -9,7 +9,7 @@ static constexpr size_t kSpace = 20u;
 
 void stat::render(size_t x) {
     // calculate total vertical space needed
-    size_t space = 0;
+    size_t space = kSpace;
     for (const auto &it : m_stats)
         space += it.second.space();
     // shift up by vertical space

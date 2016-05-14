@@ -1,16 +1,9 @@
 #include "engine.h"
-#include "world.h" // TODO: remove
 #include "cvar.h"
 #include "gui.h"
 
-#include "r_model.h"
-#include "r_pipeline.h"
 #include "r_stats.h"
-
-#include "u_algorithm.h"
-#include "u_memory.h"
-#include "u_misc.h"
-#include "u_file.h"
+#include "r_world.h"
 
 // Debug visualizations
 enum {
@@ -178,17 +171,26 @@ static uint8_t calcTriangleSideMask(const m::vec3 &p1,
 world::lightChunk::lightChunk()
     : hash(0)
     , count(0)
+    , memory(0)
+    , collect(false)
     , visible(false)
     , ebo(0)
+    , stats(nullptr)
 {
 }
 
 world::lightChunk::~lightChunk() {
     if (ebo)
         gl::DeleteBuffers(1, &ebo);
+    // adjust statistics accordingly
+    if (stats) {
+        stats->decInstances();
+        stats->adjustIBOMemory(-memory);
+    }
 }
 
-bool world::lightChunk::init() {
+bool world::lightChunk::init(const char *name, const char *description) {
+    stats = r::stat::add(name, description);
     gl::GenBuffers(1, &ebo);
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, 0, nullptr, GL_STATIC_DRAW);
@@ -201,12 +203,16 @@ world::spotLightChunk::spotLightChunk()
 {
 }
 
-world::spotLightChunk::spotLightChunk(spotLight *light)
+world::spotLightChunk::spotLightChunk(const spotLight *light)
     : light(light)
 {
 }
 
 bool world::spotLightChunk::buildMesh(kdMap *map) {
+    if (hash == 0 && !init("slshadow", "Spot Light Shadows"))
+        return false;
+    if (memory)
+        stats->adjustIBOMemory(-memory);
     u::vector<size_t> triangleIndices;
     u::vector<GLuint> indices;
     map->inSphere(triangleIndices, light->position, light->radius);
@@ -224,7 +230,9 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof indices[0],
         &indices[0], GL_STATIC_DRAW);
+    memory = indices.size() * sizeof indices[0];
     count = indices.size();
+    stats->adjustIBOMemory(memory);
     return true;
 }
 
@@ -235,13 +243,18 @@ world::pointLightChunk::pointLightChunk()
     memset(sideCounts, 0, sizeof sideCounts);
 }
 
-world::pointLightChunk::pointLightChunk(pointLight *light)
+world::pointLightChunk::pointLightChunk(const pointLight *light)
     : light(light)
 {
     memset(sideCounts, 0, sizeof sideCounts);
 }
 
 bool world::pointLightChunk::buildMesh(kdMap *map) {
+    if (hash == 0 && !init("plshadow", "Point Light Shadows"))
+        return false;
+    // rebuilding mesh: throw away old memory statistics
+    if (memory)
+        stats->adjustIBOMemory(-memory);
     u::vector<size_t> triangleIndices;
     u::vector<GLuint> indices[6];
     map->inSphere(triangleIndices, light->position, light->radius);
@@ -263,6 +276,7 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
         }
     }
     count = 0;
+    memory = 0;
     for (size_t side = 0; side < 6; ++side) {
         sideCounts[side] = indices[side].size();
         count += sideCounts[side];
@@ -274,10 +288,36 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
         if (sideCounts[side] > 0) {
             gl::BufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset * sizeof indices[0][0],
                 sideCounts[side] * sizeof indices[0][0], &indices[side][0]);
+            memory += sideCounts[side] * sizeof indices[0][0];
         }
         offset += sideCounts[side];
     }
+    stats->adjustIBOMemory(memory);
     return true;
+}
+
+///! modelChunk
+world::modelChunk::modelChunk()
+    : collect(false)
+    , highlight(false)
+    , visible(false)
+{
+}
+
+world::modelChunk::modelChunk(const r::model *model,
+                              bool highlight,
+                              const m::vec3 &position,
+                              const m::vec3 &scale,
+                              const m::vec3 &rotate)
+    : position(position)
+    , scale(scale)
+    , rotate(rotate)
+    , frame(0.0f)
+    , collect(false)
+    , highlight(highlight)
+    , visible(false)
+    , model(model)
+{
 }
 
 /// NOTE: Testing only
@@ -322,9 +362,74 @@ void dustSystem::initParticle(particle &p, const m::vec3 &ownerPosition) {
 ///! world
 static constexpr float kLightRadiusTweak = 1.11f;
 
+// light entities
+void world::addPointLight(r::pointLight *light) {
+    // ignore adding it again
+    auto find = m_culledPointLights.find(light);
+    if (find != m_culledPointLights.end()) {
+        find->second->collect = false;
+        return;
+    }
+    m_culledPointLights.insert( { light, new pointLightChunk(light) } );
+}
+
+void world::addSpotLight(r::spotLight *light) {
+    // ignore adding it again
+    auto find = m_culledSpotLights.find(light);
+    if (find != m_culledSpotLights.end()) {
+        find->second->collect = false;
+        return;
+    }
+    m_culledSpotLights.insert( { light, new spotLightChunk(light) } );
+}
+
+void world::addBillboard(r::billboard *billboard) {
+    auto find = m_billboards.find(billboard);
+    if (find != m_billboards.end()) {
+        find->second.first = false;
+        return;
+    }
+    // upload and insert the billboard
+    billboard->upload();
+    m_billboards.insert({ billboard, { false, billboard } });
+}
+
+void world::addModel(r::model *model,
+                     bool highlight,
+                     const m::vec3 &position,
+                     const m::vec3 &scale,
+                     const m::vec3 &rotate)
+{
+    auto find = m_models.find(model);
+    if (find != m_models.end()) {
+        find->second->collect = false;
+        // update properties of existing
+        find->second->highlight = highlight;
+        find->second->position = position;
+        find->second->rotate = rotate;
+        return;
+    }
+    // upload and insert the model
+    model->upload();
+    m_models.insert({ model, new modelChunk(model, highlight, position, scale, rotate) });
+}
+
+// global entities
+fog &world::getFog() {
+    return m_fog;
+}
+
+directionalLight &world::getDirectionalLight() {
+    return m_directionalLight;
+}
+
+colorGrader &world::getColorGrader() {
+    return m_grader;
+}
+
+///! world
 world::world()
     : m_geomMethods(&geomMethods::instance())
-    , m_map(nullptr)
     , m_kdWorld(nullptr)
     , m_uploaded(false)
 {
@@ -371,11 +476,9 @@ bool world::load(kdMap *map) {
     return true;
 }
 
-bool world::upload(const m::perspective &p, ::world *map) {
+bool world::upload(const m::perspective &p) {
     if (m_uploaded)
         return true;
-
-    m_identity = m::mat4::identity();
 
     // hack
     m_particleSystems.push_back(new dustSystem(m::vec3::origin));
@@ -415,8 +518,6 @@ bool world::upload(const m::perspective &p, ::world *map) {
         m_stats->adjustTextureMemory(it.second->memory());
     }
 
-    m_map = map;
-
     geom::upload();
 
     const auto &vertices = m_kdWorld->vertices;
@@ -446,14 +547,14 @@ bool world::upload(const m::perspective &p, ::world *map) {
     m_compositeMethod.enable();
     m_compositeMethod.setColorTextureUnit(0);
     m_compositeMethod.setColorGradingTextureUnit(1);
-    m_compositeMethod.setWVP(m_identity);
+    m_compositeMethod.setWVP(m::mat4::kIdentity);
 
     // aa shader
     if (!m_aaMethod.init())
         neoFatal("failed to initialize aa rendering method");
     m_aaMethod.enable();
     m_aaMethod.setColorTextureUnit(0);
-    m_aaMethod.setWVP(m_identity);
+    m_aaMethod.setWVP(m::mat4::kIdentity);
 
     if (!m_geomMethods->init())
         neoFatal("failed to initialize geometry rendering method");
@@ -466,7 +567,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
         if (!m_directionalLightMethods[i].init(generatePermutation(lightPermutationNames, p)))
             neoFatal("failed to initialize light rendering method");
         m_directionalLightMethods[i].enable();
-        m_directionalLightMethods[i].setWVP(m_identity);
+        m_directionalLightMethods[i].setWVP(m::mat4::kIdentity);
         m_directionalLightMethods[i].setColorTextureUnit(lightMethod::kColor);
         m_directionalLightMethods[i].setNormalTextureUnit(lightMethod::kNormal);
         m_directionalLightMethods[i].setDepthTextureUnit(lightMethod::kDepth);
@@ -523,7 +624,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     // Setup default uniforms for ssao
     m_ssaoMethod.enable();
-    m_ssaoMethod.setWVP(m_identity);
+    m_ssaoMethod.setWVP(m::mat4::kIdentity);
     m_ssaoMethod.setOccluderBias(0.05f);
     m_ssaoMethod.setSamplingRadius(15.0f);
     m_ssaoMethod.setAttenuation(1.5f, 0.0000005f);
@@ -537,7 +638,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
 
     // Setup default uniforms for vignette
     m_vignetteMethod.enable();
-    m_vignetteMethod.setWVP(m_identity);
+    m_vignetteMethod.setWVP(m::mat4::kIdentity);
     m_vignetteMethod.setColorTextureUnit(0);
 
     // render buffers
@@ -549,7 +650,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
         neoFatal("failed to initialize final composite render buffer");
     if (!m_aa.init(p))
         neoFatal("failed to initialize anti-aliasing render buffer");
-    if (!m_colorGrader.init(p, map->getColorGrader().data()))
+    if (!m_colorGrader.init(p, m_grader.data()))
         neoFatal("failed to initialize color grading render buffer");
     if (!m_vignette.init(p))
         neoFatal("failed to initialize vignette render buffer");
@@ -559,17 +660,7 @@ bool world::upload(const m::perspective &p, ::world *map) {
     if (!m_shadowMapMethod.init())
         neoFatal("failed to initialize shadow map method");
     m_shadowMapMethod.enable();
-    m_shadowMapMethod.setWVP(m_identity);
-
-    // Copy light entities into our rendering representation.
-    for (auto &it : map->m_pointLights)
-        m_culledPointLights.push_back({ it });
-    for (auto &it : map->m_spotLights)
-        m_culledSpotLights.push_back({ it });
-    for (auto &it : m_culledPointLights)
-        it.init();
-    for (auto &it : m_culledSpotLights)
-        it.init();
+    m_shadowMapMethod.setWVP(m::mat4::kIdentity);
 
     u::print("[world] => uploaded\n");
     return m_uploaded = true;
@@ -581,15 +672,11 @@ void world::unload(bool destroy) {
         m_stats->adjustTextureMemory(it.second->memory());
         delete it.second;
     }
-    for (auto &it : m_models)
-        delete it.second;
-    for (auto &it : m_billboards)
-        delete it.second;
+
     for (auto *it : m_particleSystems)
         delete it;
 
     if (destroy) {
-        m_models.clear();
         m_billboards.clear();
         m_indices.destroy();
         m_textureBatches.destroy();
@@ -606,31 +693,50 @@ void world::unload(bool destroy) {
 void world::render(const pipeline &pl) {
     m_frustum.update(pl.projection() * pl.view() * pl.world());
 
-    // TODO: rewrite world manager such that this hack is not needed
-    if (m_map->m_needSync) {
-        for (auto it = m_culledSpotLights.begin(), end = m_culledSpotLights.end(); it != end; ) {
-            auto find = u::find(m_map->m_spotLights.begin(),
-                                m_map->m_spotLights.end(),
-                                it->light);
-            if (find == m_map->m_spotLights.end()) {
-                it = m_culledSpotLights.erase(it);
-                end = m_culledSpotLights.end();
-            } else {
-                it++;
-            }
-        }
-        for (auto it = m_culledPointLights.begin(), end = m_culledPointLights.end(); it != end; ) {
-            auto find = u::find(m_map->m_pointLights.begin(),
-                                m_map->m_pointLights.end(),
-                                it->light);
-            if (find == m_map->m_pointLights.end()) {
-                it = m_culledPointLights.erase(it);
-                end = m_culledPointLights.end();
-            } else {
-                it++;
-            }
-        }
-        m_map->m_needSync = false;
+    // the job of the game code is to call reset before the start
+    // of every world frame and add all entities to the world
+    // before calling render.
+    //
+    // the world in a sense manages internal entities and doesn't actually
+    // remove entities during reset but rather marks them to be collected
+    // here.
+    //
+    // the idea is the game code will add the entities back which will
+    // unmark the collect flag preventing them from being removed
+    u::vector<u::map<r::model*, modelChunk*>::const_iterator> removeModels;
+    u::vector<u::map<r::spotLight*, spotLightChunk*>::const_iterator> removeSpotLights;
+    u::vector<u::map<r::pointLight*, pointLightChunk*>::const_iterator> removePointLights;
+    u::vector<u::map<r::billboard*, u::pair<bool, r::billboard*>>::const_iterator> removeBillboards;
+    for (auto it = m_models.begin(); it != m_models.end(); ++it)
+        if (it->second->collect)
+            removeModels.push_back(it);
+    for (auto it = m_culledSpotLights.begin(); it != m_culledSpotLights.end(); ++it)
+        if (it->second->collect)
+            removeSpotLights.push_back(it);
+    for (auto it = m_culledPointLights.begin(); it != m_culledPointLights.end(); ++it)
+        if (it->second->collect)
+            removePointLights.push_back(it);
+    for (auto it = m_billboards.begin(); it != m_billboards.end(); ++it)
+        if (it->second.first)
+            removeBillboards.push_back(it);
+    // we now have the iterators for which entities to remove, walk the
+    // lists and remove the internal state of them
+    for (const auto &it : removeModels) {
+        delete it->second;
+        m_models.erase(it);
+    }
+    for (const auto &it : removeSpotLights) {
+        delete it->second;
+        m_culledSpotLights.erase(it);
+    }
+    for (const auto &it : removePointLights) {
+        delete it->second;
+        m_culledPointLights.erase(it);
+    }
+    for (const auto &it : removeBillboards) {
+        // note: not deleted like others since this references the game's
+        // billboard state directly
+        m_billboards.erase(it);
     }
 
     // TODO: commands (u::function needs to be implemented)
@@ -650,21 +756,23 @@ void world::render(const pipeline &pl) {
         r_reload.set(0);
     }
 
-    cullPass();
+    cullPass(pl);
     geometryPass(pl);
     lightingPass(pl);
     forwardPass(pl);
     compositePass(pl);
 }
 
-void world::cullPass() {
+void world::cullPass(const pipeline &pl) {
     const float widthOffset = 0.5f * m_shadowMap.widthScale(r_smsize);
     const float heightOffset = 0.5f * m_shadowMap.heightScale(r_smsize);
     const float widthScale = 0.5f * m_shadowMap.widthScale(r_smsize - r_smborder);
     const float heightScale = 0.5f * m_shadowMap.heightScale(r_smsize - r_smborder);
 
-    for (auto &it : m_culledSpotLights) {
-        const auto &light = it.light;
+    // cull spot lights (and calculate theit transform)
+    for (auto &pair : m_culledSpotLights) {
+        auto &it = *pair.second;
+        const auto &light = pair.first;
         const float scale = light->radius * kLightRadiusTweak;
         it.visible = m_frustum.testSphere(light->position, scale);
         const auto hash = light->hash();
@@ -682,8 +790,10 @@ void world::cullPass() {
         }
     }
 
-    for (auto &it : m_culledPointLights) {
-        const auto &light = it.light;
+    // cull point lights (and calculate their transform)
+    for (auto &pair : m_culledPointLights) {
+        auto &it = *pair.second;
+        const auto &light = pair.first;
         const float scale = light->radius * kLightRadiusTweak;
         it.visible = m_frustum.testSphere(light->position, scale);
         const auto hash = light->hash();
@@ -697,6 +807,25 @@ void world::cullPass() {
                                m::mat4::scale(1.0f / light->radius);
             }
         }
+    }
+
+    // cull models (and calculate their pipeline)
+    for (auto &pair : m_models) {
+        auto &it = *pair.second;
+        auto &mdl = *pair.first;
+
+        it.pipeline = pl;
+        it.pipeline.setWorld(it.position);
+        it.pipeline.setScale(it.scale + mdl.scale);
+
+        const m::vec3 rot = it.rotate + mdl.rotate;
+        const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+        const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+        const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
+        m::mat4 rotate = (rz * ry * rx).getMatrix();
+        it.pipeline.setRotate(rotate);
+
+        it.visible = m_frustum.testBox(mdl.bounds().transform(it.pipeline.world()));
     }
 }
 
@@ -720,41 +849,28 @@ void world::geometryPass(const pipeline &pl) {
             (const GLvoid*)(it.start * sizeof m_indices[0]));
     }
 
+#if 0
     // Render map models
-    for (const auto &it : m_map->m_mapModels) {
-        // Load map models on demand
-        if (m_models.find(it->name) == m_models.end()) {
-            u::unique_ptr<model> next(new model);
-            if (!next->load(m_textures2D, it->name))
-                neoFatal("failed to load model '%s'\n", it->name);
-            if (!next->upload())
-                neoFatal("failed to upload model '%s'\n", it->name);
-            m_models[it->name] = next.release();
-        } else {
-            const auto &mdl = m_models[it->name];
+    for (const auto &pair : m_models) {
+        auto &it = *pair.second;
+        auto &mdl = *pair.first;
 
-            pipeline p = pl;
-            p.setWorld(it->position);
-            p.setScale(it->scale + mdl->scale);
+        it.pipeline = pl;
+        it.pipeline.setWorld(it.position);
+        it.pipeline.setScale(it.scale + mdl.scale);
 
-            const m::vec3 rot = mdl->rotate + it->rotate;
-            const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
-            const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
-            const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
-            m::mat4 rotate = (rz * ry * rx).getMatrix();
-            p.setRotate(rotate);
+        const m::vec3 rot = it.rotate + mdl.rotate;
+        const m::quat rx(m::toRadian(rot.x), m::vec3::xAxis);
+        const m::quat ry(m::toRadian(rot.y), m::vec3::yAxis);
+        const m::quat rz(m::toRadian(rot.z), m::vec3::zAxis);
+        m::mat4 rotate = (rz * ry * rx).getMatrix();
+        it.pipeline.setRotate(rotate);
 
-            if (!m_frustum.testBox(mdl->bounds().transform(p.world())))
-                continue;
+        //it.visible = m_frustum.testBox(mdl.bounds().transform(it.pipeline.world()));
 
-            if (mdl->animated()) {
-                // HACK: Testing only
-                mdl->animate(it->curFrame);
-                it->curFrame += 0.25f;
-            }
-            mdl->render(p, pl.world());
-        }
+        mdl.render(it.pipeline, pl.world());
     }
+#endif
 
     // Only the scene pass needs to write to the depth buffer
     gl::Disable(GL_DEPTH_TEST);
@@ -873,7 +989,7 @@ void world::forwardPass(const pipeline &pl) {
 
     // Skybox:
     //  Forwarded rendered and the last thing rendered to prevent overdraw.
-    m_skybox.render(pl, m_map->m_fog);
+    m_skybox.render(pl, m_fog);
 
     // Editing aids
     static constexpr m::vec3 kHighlighted = { 1.0f, 0.0f, 0.0f };
@@ -889,42 +1005,13 @@ void world::forwardPass(const pipeline &pl) {
         //  culling too
         gl::Disable(GL_CULL_FACE);
         gl::BlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-        for (auto &it : m_map->m_billboards) {
-            // Load billboards on demand
-            if (m_billboards.find(it.name) == m_billboards.end()) {
-                u::unique_ptr<billboard> next(new billboard);
-                if (!next->load(it.name))
-                    neoFatal("failed to load billboard '%s'\n", it.name);
-                if (!next->upload())
-                    neoFatal("failed to upload billboard '%s'\n", it.name);
-                m_billboards[it.name] = next.release();
-            }
-
-            if (it.bbox) {
-                for (const auto &jt : it.boards) {
-                    if (!jt.highlight)
-                        continue;
-
-                    pipeline p = pl;
-                    pipeline bp;
-                    bp.setWorld(jt.position);
-                    bp.setScale(it.size);
-                    m_bboxMethod.enable();
-                    m_bboxMethod.setColor(kOutline);
-                    m_bboxMethod.setWVP((p.projection() * p.view() * p.world()) * bp.world());
-                    m_bbox.render();
-                }
-            }
-
-            const auto &board = m_billboards[it.name];
-            for (const auto &jt : it.boards)
-                board->add(jt.position, billboard::kSide, m::vec3::origin, m::vec3::yAxis);
-            board->render(pl, it.size);
-        }
+        for (auto &board : m_billboards)
+            board.first->render(pl, 5.0f);
         gl::Enable(GL_CULL_FACE);
 
+#if 0
         // Map models
-        for (const auto &it : m_map->m_mapModels) {
+        for (auto &mdl : models) {
             const auto &mdl = m_models[it->name];
 
             pipeline p = pl;
@@ -946,6 +1033,7 @@ void world::forwardPass(const pipeline &pl) {
             m_bboxMethod.setWVP((p.projection() * p.view() * p.world()) * bp.world());
             m_bbox.render();
         }
+#endif
 
         // Lights
         gl::Disable(GL_CULL_FACE);
@@ -953,8 +1041,10 @@ void world::forwardPass(const pipeline &pl) {
 
         m_bboxMethod.enable();
         m_bboxMethod.setColor(kHighlighted);
-        for (const auto &it : m_map->m_pointLights) {
-            if (!it->highlight)
+        for (const auto &pair : m_culledPointLights) {
+            const auto &chunk = *pair.second;
+            const auto &it = pair.first;
+            if (!chunk.visible || !it->highlight)
                 continue;
             const float scale = it->radius * kLightRadiusTweak;
             pipeline p = pl;
@@ -964,8 +1054,10 @@ void world::forwardPass(const pipeline &pl) {
             m_sphere.render();
         }
 
-        for (const auto &it : m_map->m_spotLights) {
-            if (!it->highlight)
+        for (const auto &pair : m_culledSpotLights) {
+            const auto &chunk = *pair.second;
+            const auto &it = pair.first;
+            if (!chunk.visible || it->highlight)
                 continue;
             const float scale = it->radius * kLightRadiusTweak;
             pipeline p = pl;
@@ -1026,7 +1118,7 @@ void world::forwardPass(const pipeline &pl) {
 }
 
 void world::compositePass(const pipeline &pl) {
-    auto &colorGrading = m_map->getColorGrader();
+    auto &colorGrading = m_grader;
     if (colorGrading.updated()) {
         colorGrading.grade();
         m_colorGrader.update(pl.perspective(), colorGrading.data());
@@ -1123,7 +1215,8 @@ void world::compositePass(const pipeline &pl) {
 void world::pointLightPass(const pipeline &pl) {
     gl::DepthMask(GL_FALSE);
 
-    for (const auto &plc : m_culledPointLights) {
+    for (const auto &pair : m_culledPointLights) {
+        const auto &plc = *pair.second;
         if (!plc.visible)
             continue;
         const auto &it = plc.light;
@@ -1259,7 +1352,8 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 void world::spotLightPass(const pipeline &pl) {
     gl::DepthMask(GL_FALSE);
 
-    for (const auto &slc : m_culledSpotLights) {
+    for (const auto &pair : m_culledSpotLights) {
+        const auto &slc = *pair.second;
         if (!slc.visible)
             continue;
         const auto &sl = slc.light;
@@ -1368,12 +1462,12 @@ void world::directionalLightPass(const pipeline &pl, bool stencil) {
 
     auto &method = m_directionalLightMethods[lightCalculatePermutation(stencil)];
     method.enable();
-    method.setLight(m_map->getDirectionalLight());
+    method.setLight(m_directionalLight);
     method.setPerspective(pl.perspective());
     method.setEyeWorldPos(pl.position());
     method.setInverse((pl.projection() * pl.view()).inverse());
     if (r_fog)
-        method.setFog(m_map->m_fog);
+        method.setFog(m_fog);
     m_quad.render();
 }
 

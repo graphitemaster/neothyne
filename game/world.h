@@ -1,7 +1,5 @@
 #ifndef WORLD_HDR
 #define WORLD_HDR
-#include "grader.h"
-
 #include "r_light.h"
 #include "r_skybox.h"
 #include "r_world.h"
@@ -53,7 +51,6 @@ enum class entity {
 };
 
 struct world {
-    world();
     ~world();
 
     bool load(const u::string &map);
@@ -121,40 +118,21 @@ private:
 
     r::world m_renderer;
 
-    struct billboard {
-        struct board {
-            m::vec3 position;
-            bool highlight;
-        };
-        const char *name;
-        const char *description;
-        float size;
-        bool bbox;
-        u::vector<board> boards;
-        void add(const m::vec3 &position, const m::vec3 &adjust, bool highlight) {
-            boards.push_back({ position + adjust, highlight });
-        }
-    };
-
     u::vector<descriptor> m_entities;
-    u::vector<billboard> m_billboards;
 
     // The following are populated via insert/erase
-    r::directionalLight m_directionalLight;
+    u::vector<r::billboard*> m_billboards;
     u::vector<r::spotLight*> m_spotLights;
     u::vector<r::pointLight*> m_pointLights;
+
     u::vector<mapModel*> m_mapModels;
     u::vector<playerStart*> m_playerStarts;
     u::vector<teleport*> m_teleports;
     u::vector<jumppad*> m_jumppads;
-    r::fog m_fog; // The fog
-    colorGrader m_colorGrader;
-    bool m_needSync;
-};
 
-inline world::world()
-    : m_needSync(true)
-{
-}
+    // internal rendering state for the world
+    u::map<u::string, r::texture2D*> m_textures;
+    u::map<u::string, r::model*> m_models;
+};
 
 #endif
