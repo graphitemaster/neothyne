@@ -1,8 +1,18 @@
-#include "world.h"
 #include "r_light.h"
+#include "r_skybox.h"
+
 #include "m_mat.h"
+#include "m_trig.h"
 
 namespace r {
+
+size_t pointLight::hash() const {
+    return u::hash((const unsigned char *)this, sizeof *this);
+}
+
+size_t spotLight::hash() const {
+    return pointLight::hash() ^ u::hash((const unsigned char *)this, sizeof *this);
+}
 
 ///! Light Rendering Method
 lightMethod::lightMethod()

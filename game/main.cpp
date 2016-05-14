@@ -177,7 +177,7 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
         m::vec3(62.59, 101.02, -207.53)
     };
 
-    pointLight light;
+    r::pointLight light;
     light.diffuse = 1.0f;
     light.ambient = 0.10f;
     light.radius = 30.0f;
@@ -191,7 +191,7 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
     gWorld.insert(light);
 
     // World only has one directional light
-    directionalLight &dlight = gWorld.getDirectionalLight();
+    r::directionalLight &dlight = gWorld.getDirectionalLight();
     dlight.color = { 0.2, 0.2, 0.2 };
     dlight.ambient = 0.10f;
     dlight.diffuse = 0.50f;

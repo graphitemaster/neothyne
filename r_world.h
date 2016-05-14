@@ -61,7 +61,7 @@ private:
         spotLightChunk();
         spotLightChunk(spotLight *light);
         bool buildMesh(kdMap *map);
-        spotLight *light;
+        r::spotLight *light;
     };
 
     struct pointLightChunk : lightChunk {
@@ -69,7 +69,7 @@ private:
         pointLightChunk(pointLight *light);
         bool buildMesh(kdMap *map);
         size_t sideCounts[6];
-        pointLight *light;
+        r::pointLight *light;
     };
 
     void pointLightPass(const pipeline &pl);

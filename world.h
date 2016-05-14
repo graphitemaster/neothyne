@@ -1,80 +1,10 @@
 #ifndef WORLD_HDR
 #define WORLD_HDR
 #include "grader.h"
+
+#include "r_light.h"
+#include "r_skybox.h"
 #include "r_world.h"
-
-struct baseLight {
-    baseLight();
-    m::vec3 color;
-    float ambient;
-    union {
-        float diffuse;
-        float intensity;
-    };
-    bool highlight;
-    bool castShadows;
-};
-
-inline baseLight::baseLight()
-    : ambient(1.0f)
-    , highlight(false)
-    , castShadows(true)
-{
-}
-
-// a directional light (local ambiance and diffuse)
-struct directionalLight : baseLight {
-    m::vec3 direction;
-};
-
-// a point light
-struct pointLight : baseLight {
-    pointLight();
-    m::vec3 position;
-    float radius;
-    size_t hash() const;
-};
-
-inline pointLight::pointLight()
-    : radius(0.0f)
-{
-}
-
-// a spot light
-struct spotLight : pointLight {
-    spotLight();
-    m::vec3 direction;
-    float cutOff;
-    size_t hash() const;
-};
-
-inline spotLight::spotLight()
-    : cutOff(45.0f)
-{
-}
-
-// fog
-struct fog {
-    fog();
-    m::vec3 color;
-    float density; // Used for Exp, Exp2, and sky fog gradient
-    float start; // Starting range (linear only)
-    float end; // Ending range (linear only)
-    enum {
-        kLinear,
-        kExp,
-        kExp2
-    };
-    int equation;
-};
-
-inline fog::fog()
-    : density(0.0f)
-    , start(0.0f)
-    , end(0.0f)
-    , equation(fog::kLinear)
-{
-}
 
 // a map model
 struct mapModel {
@@ -130,7 +60,7 @@ struct world {
     bool upload(const m::perspective &p);
     void render(const r::pipeline &pl);
 
-    void setFog(const fog &f);
+    void setFog(const r::fog &f);
 
     void unload(bool destroy = true);
     bool isLoaded() const;
@@ -158,8 +88,8 @@ struct world {
 
     bool trace(const trace::query &q, trace::hit *result, float maxDistance, bool entities = true, descriptor *ignore = nullptr);
 
-    descriptor *insert(const spotLight &it);
-    descriptor *insert(const pointLight &it);
+    descriptor *insert(const r::spotLight &it);
+    descriptor *insert(const r::pointLight &it);
     descriptor *insert(const mapModel &it);
     descriptor *insert(const playerStart &it);
     descriptor *insert(const teleport &it);
@@ -167,9 +97,9 @@ struct world {
 
     void erase(size_t where); // Erase an entity
 
-    directionalLight &getDirectionalLight();
-    spotLight &getSpotLight(size_t index);
-    pointLight &getPointLight(size_t index);
+    r::directionalLight &getDirectionalLight();
+    r::spotLight &getSpotLight(size_t index);
+    r::pointLight &getPointLight(size_t index);
     mapModel &getMapModel(size_t index);
     playerStart &getPlayerStart(size_t index);
     teleport &getTeleport(size_t index);
@@ -210,14 +140,14 @@ private:
     u::vector<billboard> m_billboards;
 
     // The following are populated via insert/erase
-    directionalLight m_directionalLight;
-    u::vector<spotLight*> m_spotLights;
-    u::vector<pointLight*> m_pointLights;
+    r::directionalLight m_directionalLight;
+    u::vector<r::spotLight*> m_spotLights;
+    u::vector<r::pointLight*> m_pointLights;
     u::vector<mapModel*> m_mapModels;
     u::vector<playerStart*> m_playerStarts;
     u::vector<teleport*> m_teleports;
     u::vector<jumppad*> m_jumppads;
-    fog m_fog; // The fog
+    r::fog m_fog; // The fog
     colorGrader m_colorGrader;
     bool m_needSync;
 };

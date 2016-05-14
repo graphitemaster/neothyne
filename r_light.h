@@ -3,17 +3,64 @@
 #include "r_method.h"
 #include "r_gbuffer.h"
 
-struct directionalLight;
-struct pointLight;
-struct spotLight;
-struct fog;
-
 namespace m {
     struct mat4;
     struct perspective;
 }
 
 namespace r {
+
+struct fog;
+
+struct baseLight {
+    baseLight();
+    m::vec3 color;
+    float ambient;
+    union {
+        float diffuse;
+        float intensity;
+    };
+    bool highlight;
+    bool castShadows;
+};
+
+inline baseLight::baseLight()
+    : ambient(1.0f)
+    , highlight(false)
+    , castShadows(true)
+{
+}
+
+// a directional light (local ambiance and diffuse)
+struct directionalLight : baseLight {
+    m::vec3 direction;
+};
+
+// a point light
+struct pointLight : baseLight {
+    pointLight();
+    m::vec3 position;
+    float radius;
+    size_t hash() const;
+};
+
+inline pointLight::pointLight()
+    : radius(0.0f)
+{
+}
+
+// a spot light
+struct spotLight : pointLight {
+    spotLight();
+    m::vec3 direction;
+    float cutOff;
+    size_t hash() const;
+};
+
+inline spotLight::spotLight()
+    : cutOff(45.0f)
+{
+}
 
 struct lightMethod : method {
     lightMethod();

@@ -1,5 +1,5 @@
 #include "engine.h"
-#include "world.h"
+#include "world.h" // TODO: remove
 #include "cvar.h"
 #include "gui.h"
 

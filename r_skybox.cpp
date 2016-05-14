@@ -1,5 +1,4 @@
 #include "cvar.h"
-#include "world.h"
 
 #include "r_skybox.h"
 #include "r_pipeline.h"
@@ -8,7 +7,10 @@
 #include "u_vector.h"
 #include "u_misc.h"
 
+#include "m_half.h"
+
 namespace r {
+
 ///! method
 bool skyboxMethod::init(const u::vector<const char *> &defines) {
     if (!method::init("skybox"))

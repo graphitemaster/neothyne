@@ -1,5 +1,7 @@
 #ifndef TEXTURE_HDR
 #define TEXTURE_HDR
+#include <stdint.h>
+
 #include "u_string.h"
 #include "u_optional.h"
 #include "u_vector.h"

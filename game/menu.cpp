@@ -550,10 +550,10 @@ static void menuEdit() {
                     int G = (color.get() >> 8) & 0xFF;
                     int B = color.get() & 0xFF;
                     gui::label("Equation");
-                    static const int kEquations[] = { fog::kLinear, fog::kExp, fog::kExp2 };
+                    static const int kEquations[] = { r::fog::kLinear, r::fog::kExp, r::fog::kExp2 };
                     D(fogSelect) = gui::selector(nullptr, D(fogSelect), { "Linear", "Exp", "Exp2" });
                     equation.set(kEquations[D(fogSelect)]);
-                    if (equation.get() == fog::kLinear) {
+                    if (equation.get() == r::fog::kLinear) {
                         auto &start = varGet<float>("map_fog_range_start");
                         auto &end = varGet<float>("map_fog_range_end");
                         gui::label("Range");
@@ -582,7 +582,7 @@ static void menuEdit() {
                     if (gui::item("Model"))
                         D(model) = true;
                     else if (gui::item("Point light")) {
-                        pointLight pl;
+                        r::pointLight pl;
                         pl.position = looking();
                         pl.ambient = 0.5f;
                         pl.diffuse = 0.5f;
@@ -590,7 +590,7 @@ static void menuEdit() {
                         pl.color = randomColor();
                         gSelected = gWorld.insert(pl);
                     } else if (gui::item("Spot light")) {
-                        spotLight sl;
+                        r::spotLight sl;
                         sl.position = looking();
                         sl.ambient = 0.5f;
                         sl.diffuse = 0.5f;

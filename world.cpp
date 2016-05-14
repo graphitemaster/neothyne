@@ -17,14 +17,6 @@ NVAR(int, map_fog_equation, "map fog equation", 0, 2, 0);
 NVAR(float, map_fog_range_start, "map fog range start (for linear only)", 0.0f, 1.0f, 0.0f);
 NVAR(float, map_fog_range_end, "map fog range end (for linear only)", 0.0f, 1.0f, 1.0f);
 
-size_t pointLight::hash() const {
-    return u::hash((const unsigned char *)this, sizeof *this);
-}
-
-size_t spotLight::hash() const {
-    return pointLight::hash() ^ u::hash((const unsigned char *)this, sizeof *this);
-}
-
 enum {
     kFogLinear,
     kFogExp,
@@ -142,7 +134,7 @@ void world::render(const r::pipeline &pl) {
     m_renderer.render(pl);
 }
 
-void world::setFog(const fog &f) {
+void world::setFog(const r::fog &f) {
     m_fog = f;
 }
 
@@ -249,7 +241,7 @@ static inline T *copy(const T &other) {
     return o;
 }
 
-world::descriptor *world::insert(const pointLight &it) {
+world::descriptor *world::insert(const r::pointLight &it) {
     const size_t index = m_pointLights.size();
     m_pointLights.push_back(copy(it));
     m_entities.push_back({ entity::kPointLight, index, m_entities.size() });
@@ -257,7 +249,7 @@ world::descriptor *world::insert(const pointLight &it) {
     return &m_entities.back();
 }
 
-world::descriptor *world::insert(const spotLight &it) {
+world::descriptor *world::insert(const r::spotLight &it) {
     const size_t index = m_spotLights.size();
     m_spotLights.push_back(copy(it));
     m_entities.push_back({ entity::kSpotLight, index, m_entities.size() });
@@ -344,15 +336,15 @@ void world::erase(size_t where) {
     }
 }
 
-directionalLight &world::getDirectionalLight() {
+r::directionalLight &world::getDirectionalLight() {
     return m_directionalLight;
 }
 
-spotLight &world::getSpotLight(size_t index) {
+r::spotLight &world::getSpotLight(size_t index) {
     return *m_spotLights[index];
 }
 
-pointLight &world::getPointLight(size_t index) {
+r::pointLight &world::getPointLight(size_t index) {
     return *m_pointLights[index];
 }
 

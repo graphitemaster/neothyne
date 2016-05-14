@@ -3,8 +3,6 @@
 #include "r_texture.h"
 #include "r_method.h"
 
-struct fog;
-
 namespace u {
     struct string;
 }
@@ -15,6 +13,29 @@ namespace m {
 }
 
 namespace r {
+
+// fog
+struct fog {
+    fog();
+    m::vec3 color;
+    float density; // Used for Exp, Exp2, and sky fog gradient
+    float start; // Starting range (linear only)
+    float end; // Ending range (linear only)
+    enum {
+        kLinear,
+        kExp,
+        kExp2
+    };
+    int equation;
+};
+
+inline fog::fog()
+    : density(0.0f)
+    , start(0.0f)
+    , end(0.0f)
+    , equation(fog::kLinear)
+{
+}
 
 struct pipeline;
 
