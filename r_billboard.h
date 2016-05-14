@@ -3,6 +3,7 @@
 #include "r_geom.h"
 #include "r_texture.h"
 #include "r_method.h"
+#include "r_stats.h"
 
 #include "m_vec.h"
 
@@ -32,7 +33,9 @@ private:
 };
 
 struct billboard : geom {
-    billboard(const char *description);
+    billboard();
+    ~billboard();
+
     bool load(const u::string &billboardTexture);
     bool upload();
 
@@ -67,25 +70,11 @@ private:
 
     u::vector<entry> m_entries;
     u::vector<vertex> m_vertices;
+    u::vector<GLuint> m_indices;
     texture2D m_texture;
     billboardMethod m_method;
-    size_t m_memory;
-    const char *m_description;
+    r::stat *m_stats;
 };
-
-inline billboard::billboard(const char *description)
-    : m_memory(0)
-    , m_description(description)
-{
-}
-
-inline const char *billboard::description() const {
-    return m_description;
-}
-
-inline size_t billboard::memory() const {
-    return m_memory;
-}
 
 }
 

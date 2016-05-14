@@ -26,6 +26,7 @@ RENDERER_SOURCES = \
 	r_shadow.cpp \
 	r_skybox.cpp \
 	r_ssao.cpp \
+	r_stats.cpp \
 	r_texture.cpp \
 	r_vignette.cpp \
 	r_world.cpp \

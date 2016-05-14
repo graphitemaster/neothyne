@@ -3,6 +3,7 @@
 #include "r_geom.h"
 #include "r_method.h"
 #include "r_texture.h"
+#include "r_stats.h"
 
 #include "m_vec.h"
 #include "m_half.h"
@@ -36,16 +37,17 @@ struct particleSystemMethod : method {
     void setColorTextureUnit(int unit);
     void setDepthTextureUnit(int unit);
     void setPower(float power);
+    void setPerspective(const m::perspective &p);
 private:
     uniform *m_VP;
     uniform *m_colorTextureUnit;
     uniform *m_depthTextureUnit;
     uniform *m_power;
+    uniform *m_screenSize;
 };
 
 struct particleSystem {
     particleSystem();
-    particleSystem(const char *description);
     virtual ~particleSystem();
 
     bool load(const u::string &file);
@@ -55,9 +57,6 @@ struct particleSystem {
     virtual void update(const pipeline &p);
 
     void addParticle(particle &&p);
-
-    size_t memory() const;
-    const char *description() const;
 
 protected:
     virtual void initParticle(particle &p, const m::vec3 &ownerPosition) = 0;
@@ -82,8 +81,6 @@ private:
     particleSystemMethod m_method;
     texture2D m_texture;
     u::vector<GLushort> m_indices;
-    const char *m_description;
-    size_t m_memory;
     union {
         struct {
             GLuint m_vbos[2];
@@ -93,21 +90,8 @@ private:
     };
     GLuint m_vao;
     unsigned char m_bufferIndex;
+    r::stat *m_stats;
 };
-
-inline particleSystem::particleSystem(const char *description)
-    : particleSystem()
-{
-    m_description = description;
-}
-
-inline size_t particleSystem::memory() const {
-    return m_memory;
-}
-
-inline const char *particleSystem::description() const {
-    return m_description;
-}
 
 }
 

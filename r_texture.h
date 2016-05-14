@@ -37,8 +37,8 @@ private:
     GLuint m_textureHandle;
     texture m_texture;
     size_t m_mipmaps;
-    int m_filter;
     size_t m_memory;
+    int m_filter;
 };
 
 inline const texture &texture2D::get() const {
@@ -51,10 +51,6 @@ inline size_t texture2D::width() const {
 
 inline size_t texture2D::height() const {
     return m_texture.height();
-}
-
-inline size_t texture2D::memory() const {
-    return m_memory;
 }
 
 }

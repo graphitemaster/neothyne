@@ -35,7 +35,7 @@ float samplePixels(vec3 srcPosition, vec3 srcNormal, vec2 texCoord) {
 void main() {
     vec2 texCoord = calcScreenTexCoord() * 2.0f; // Half resultion adjustment
 
-    float depth = calcDepth(texCoord);
+    float depth = calcDepth(calcDepthCoord(texCoord));
     if (depth == 1.0f) {
         fragColor.r = 1.0f;
     } else {

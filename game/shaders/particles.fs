@@ -3,8 +3,6 @@
 
 in vec2 texCoord0;
 in vec4 color0;
-in vec2 position0;
-in float depth0;
 
 uniform sampler2D gColorMap;
 uniform float gPower;

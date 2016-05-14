@@ -37,6 +37,16 @@ void billboardMethod::setColorTextureUnit(int unit) {
 }
 
 ///! renderer
+billboard::billboard()
+    : m_stats(r::stat::add("billboard", "Billboards"))
+{
+}
+
+billboard::~billboard() {
+    m_stats->adjustTextureCount(-1);
+    m_stats->adjustTextureMemory(-m_texture.memory());
+}
+
 bool billboard::load(const u::string &billboardTexture) {
     if (!m_texture.load("<premul>" + billboardTexture))
         return false;
@@ -66,6 +76,9 @@ bool billboard::upload() {
     m_method.enable();
     m_method.setColorTextureUnit(0);
 
+    m_stats->adjustTextureCount(1);
+    m_stats->adjustTextureMemory(m_texture.memory());
+
     return true;
 }
 
@@ -77,9 +90,13 @@ void billboard::render(const pipeline &pl, float size) {
     m::vec3 side;
     rotation.getOrient(nullptr, &up, &side);
 
+    m_stats->adjustVBOMemory(-(sizeof m_vertices[0] * m_vertices.size()));
+    m_stats->adjustIBOMemory(-(sizeof m_indices[0] * m_indices.size()));
+
     m_vertices.destroy();
     m_vertices.reserve(m_entries.size() * 4);
-    u::vector<GLuint> indices(m_entries.size() * 6);
+    m_indices.destroy();
+    m_indices.reserve(m_entries.size() * 6);
 
     u::sort(m_entries.begin(), m_entries.end(),
         [&pl](const entry &lhs, const entry &rhs) {
@@ -104,31 +121,32 @@ void billboard::render(const pipeline &pl, float size) {
         m_vertices.push_back({q3, {1.0f, 1.0f}});
         m_vertices.push_back({q4, {0.0f, 1.0f}});
 
-        indices.push_back(index + 0);
-        indices.push_back(index + 1);
-        indices.push_back(index + 2);
-        indices.push_back(index + 2);
-        indices.push_back(index + 3);
-        indices.push_back(index + 0);
+        m_indices.push_back(index + 0);
+        m_indices.push_back(index + 1);
+        m_indices.push_back(index + 2);
+        m_indices.push_back(index + 2);
+        m_indices.push_back(index + 3);
+        m_indices.push_back(index + 0);
     }
-    if (indices.empty())
+    if (m_indices.empty())
         return;
 
-    m_memory = m_vertices.size() * sizeof(vertex);
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_vertices[0], GL_DYNAMIC_DRAW);
-    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::position));
-    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::coordinate));
+    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof m_vertices[0], &m_vertices[0], GL_DYNAMIC_DRAW);
+    gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], u::offset_of(&vertex::position));
+    gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof m_vertices[0], u::offset_of(&vertex::coordinate));
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof indices[0], &indices[0], GL_DYNAMIC_DRAW);
-    m_memory += indices.size() * sizeof indices[0];
+    gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof m_indices[0], &m_indices[0], GL_DYNAMIC_DRAW);
+
+    m_stats->adjustVBOMemory(sizeof(vertex) * m_vertices.size());
+    m_stats->adjustIBOMemory(sizeof(GLuint) * m_indices.size());
 
     m_method.enable();
     m_method.setVP(p.projection() * p.view());
     m_texture.bind(GL_TEXTURE0);
-    gl::DrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
+    gl::DrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, nullptr);
     m_entries.clear();
 }
 

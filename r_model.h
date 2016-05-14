@@ -4,6 +4,7 @@
 
 #include "r_geom.h"
 #include "r_method.h"
+#include "r_stats.h"
 
 #include "u_string.h"
 #include "u_map.h"
@@ -141,6 +142,7 @@ private:
 
 struct model : geom {
     model();
+    ~model();
 
     bool load(u::map<u::string, texture2D*> &textures, const u::string &file);
     bool upload();
@@ -163,6 +165,7 @@ private:
     size_t m_indices;
     ::model m_model;
     bool m_half;
+    r::stat *m_stats;
 };
 
 inline m::bbox model::bounds() const {

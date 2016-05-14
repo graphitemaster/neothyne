@@ -89,6 +89,7 @@ inline bbox &bbox::transform(const m::mat4 &mat) {
     const m::vec3 maxz = m::vec3::max(z * m_min.z, z * m_max.z);
     m_min = minx + miny + minz + w;
     m_max = maxx + maxy + maxz + w;
+    m_extent = m_max - m_min;
     return *this;
 }
 

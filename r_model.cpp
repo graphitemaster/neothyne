@@ -502,6 +502,53 @@ model::model()
 {
 }
 
+model::~model() {
+    if (!m_stats)
+        return;
+
+    const bool useHalf = (m_half || m_model.isHalf()) && gl::has(gl::ARB_half_float_vertex);
+    if (m_model.animated()) {
+        if (useHalf) {
+            const auto &vertices = m_model.animHalfVertices();
+            m_stats->adjustVBOMemory(-(sizeof(mesh::animHalfVertex) * vertices.size()));
+        } else {
+            const auto &vertices = m_model.animVertices();
+            m_stats->adjustVBOMemory(-(sizeof(mesh::animVertex) * vertices.size()));
+        }
+    } else {
+        if (useHalf) {
+            const auto &vertices = m_model.basicHalfVertices();
+            m_stats->adjustVBOMemory(-(sizeof(mesh::basicHalfVertex) * vertices.size()));
+        } else {
+            const auto &vertices = m_model.basicVertices();
+            m_stats->adjustVBOMemory(-(sizeof(mesh::basicVertex) * vertices.size()));
+        }
+    }
+
+    const auto &indices = m_model.indices();
+    m_stats->adjustIBOMemory(-(m_indices * sizeof indices[0]));
+
+    for (auto &mat : m_materials) {
+        if (mat.diffuse) {
+            m_stats->adjustTextureCount(-1);
+            m_stats->adjustTextureMemory(mat.diffuse->memory());
+        }
+        if (mat.normal) {
+            m_stats->adjustTextureCount(-1);
+            m_stats->adjustTextureMemory(mat.normal->memory());
+        }
+        if (mat.spec) {
+            m_stats->adjustTextureCount(-1);
+            m_stats->adjustTextureMemory(mat.spec->memory());
+        }
+        if (mat.displacement) {
+            m_stats->adjustTextureCount(-1);
+            m_stats->adjustTextureMemory(mat.displacement->memory());
+        }
+    }
+
+}
+
 bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file) {
     // Open the model file and look for a model configuration
     u::file fp = u::fopen(neoGamePath() + file + ".cfg", "r");
@@ -585,6 +632,7 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
         }
     }
 
+    m_stats = r::stat::add("model", "Auxiliary Models");
     return true;
 }
 
@@ -621,6 +669,7 @@ bool model::upload() {
             gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animHalfVertex), u::offset_of(&mesh::animHalfVertex::blendWeight)); // blend weight
             gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animHalfVertex), u::offset_of(&mesh::animHalfVertex::blendIndex)); // blend index
             precision = "half";
+            m_stats->adjustVBOMemory(sizeof(mesh::animHalfVertex) * vertices.size());
         } else {
             const auto &vertices = m_model.animVertices();
             gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::animVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
@@ -631,6 +680,7 @@ bool model::upload() {
             gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animVertex), u::offset_of(&mesh::animVertex::blendWeight)); // blend weight
             gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animVertex), u::offset_of(&mesh::animVertex::blendIndex)); // blend index
             precision = "single";
+            m_stats->adjustVBOMemory(sizeof(mesh::animVertex) * vertices.size());
         }
         gl::EnableVertexAttribArray(0);
         gl::EnableVertexAttribArray(1);
@@ -648,6 +698,7 @@ bool model::upload() {
             gl::VertexAttribPointer(2, 2, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), u::offset_of(&mesh::basicHalfVertex::coordinate));
             gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), u::offset_of(&mesh::basicHalfVertex::tangent));
             precision = "half";
+            m_stats->adjustVBOMemory(sizeof(mesh::basicHalfVertex) * vertices.size());
         } else {
             const auto &vertices = m_model.basicVertices();
             gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::basicVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
@@ -655,6 +706,7 @@ bool model::upload() {
             gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), u::offset_of(&mesh::basicVertex::normal));
             gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), u::offset_of(&mesh::basicVertex::coordinate));
             gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), u::offset_of(&mesh::basicVertex::tangent));
+            m_stats->adjustVBOMemory(sizeof(mesh::basicVertex) * vertices.size());
             precision = "single";
         }
         gl::EnableVertexAttribArray(0);
@@ -666,10 +718,29 @@ bool model::upload() {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof indices[0], &indices[0], GL_STATIC_DRAW);
 
+    m_stats->adjustIBOMemory(m_indices * sizeof indices[0]);
+
     // Upload materials
-    for (auto &mat : m_materials)
+    for (auto &mat : m_materials) {
         if (!mat.upload())
             return false;
+        if (mat.diffuse) {
+            m_stats->adjustTextureCount(1);
+            m_stats->adjustTextureMemory(mat.diffuse->memory());
+        }
+        if (mat.normal) {
+            m_stats->adjustTextureCount(1);
+            m_stats->adjustTextureMemory(mat.normal->memory());
+        }
+        if (mat.spec) {
+            m_stats->adjustTextureCount(1);
+            m_stats->adjustTextureMemory(mat.spec->memory());
+        }
+        if (mat.displacement) {
+            m_stats->adjustTextureCount(1);
+            m_stats->adjustTextureMemory(mat.displacement->memory());
+        }
+    }
 
     const size_t materials = m_model.meshNames().size();
     u::print("[model] => loaded %s model `%s' (containing %zu %s) using %s-precision float\n",

@@ -5,6 +5,7 @@
 
 #include "r_model.h"
 #include "r_pipeline.h"
+#include "r_stats.h"
 
 #include "u_algorithm.h"
 #include "u_memory.h"
@@ -290,10 +291,9 @@ private:
 };
 
 dustSystem::dustSystem(const m::vec3 &ownerPosition)
-    : particleSystem("Dust System")
 {
 #if 0
-    static constexpr size_t kParticles = 1024*2;
+    static constexpr size_t kParticles = 128;
     m_particles.reserve(kParticles);
     for (size_t i = 0; i < kParticles-1; i++) {
         particle p;
@@ -310,13 +310,13 @@ void dustSystem::initParticle(particle &p, const m::vec3 &ownerPosition) {
     p.totalLifeTime = 0.3f + u::randf() * 0.9f;
     p.lifeTime = p.totalLifeTime;
     p.origin = m::vec3::rand(0.05f, 0.0f, 0.05f) + ownerPosition;
-    p.origin.y = ownerPosition.y - 3.0f;;
+    p.origin.y = ownerPosition.y;
     p.size = 10.0f;
     p.startSize = 10.0f;
     p.velocity = (m_direction + m::vec3::rand(1.5f, 0.0f, 1.5f)).normalized() * 10.0f;
     p.velocity.y = 0.1f;
     p.respawn = true;
-    p.visible = false;
+    p.visible = true;
 }
 
 ///! world
@@ -326,7 +326,6 @@ world::world()
     : m_geomMethods(&geomMethods::instance())
     , m_map(nullptr)
     , m_kdWorld(nullptr)
-    , m_memory(0)
     , m_uploaded(false)
 {
 }
@@ -367,6 +366,7 @@ bool world::load(kdMap *map) {
     if (!m_gun.load(m_textures2D, "models/lg"))
         neoFatal("failed to load gun");
 
+    m_stats = r::stat::add("world", "Map");
     u::print("[world] => loaded\n");
     return true;
 }
@@ -409,15 +409,20 @@ bool world::upload(const m::perspective &p, ::world *map) {
         if (!it.mat.upload())
             neoFatal("failed to upload world materials");
 
+    // count textures and memory utilization for map
+    for (const auto &it : m_textures2D) {
+        m_stats->adjustTextureCount(1);
+        m_stats->adjustTextureMemory(it.second->memory());
+    }
+
     m_map = map;
 
     geom::upload();
 
     const auto &vertices = m_kdWorld->vertices;
-    m_memory = vertices.size() * sizeof(kdBinVertex);
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, m_memory, &vertices[0], GL_STATIC_DRAW);
+    gl::BufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(kdBinVertex), &vertices[0], GL_STATIC_DRAW);
     gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), u::offset_of(&kdBinVertex::vertex));  // vertex
     gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), u::offset_of(&kdBinVertex::normal));  // normals
     gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(kdBinVertex), u::offset_of(&kdBinVertex::coordinate));  // texCoord
@@ -427,10 +432,13 @@ bool world::upload(const m::perspective &p, ::world *map) {
     gl::EnableVertexAttribArray(2);
     gl::EnableVertexAttribArray(3);
 
+    m_stats->adjustVBOMemory(vertices.size() * sizeof(kdBinVertex));
+
     // upload data
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof m_indices[0], &m_indices[0], GL_STATIC_DRAW);
-    m_memory += m_indices.size() * sizeof m_indices[0];
+
+    m_stats->adjustIBOMemory(m_indices.size() * sizeof m_indices[0]);
 
     // composite shader
     if (!m_compositeMethod.init())
@@ -568,8 +576,11 @@ bool world::upload(const m::perspective &p, ::world *map) {
 }
 
 void world::unload(bool destroy) {
-    for (auto &it : m_textures2D)
+    for (auto &it : m_textures2D) {
+        m_stats->adjustTextureCount(-1);
+        m_stats->adjustTextureMemory(it.second->memory());
         delete it.second;
+    }
     for (auto &it : m_models)
         delete it.second;
     for (auto &it : m_billboards)
@@ -584,6 +595,9 @@ void world::unload(bool destroy) {
         m_textureBatches.destroy();
         m_textures2D.clear();
     }
+
+    m_stats->adjustIBOMemory(-(m_indices.size() * sizeof m_indices[0]));
+    m_stats->adjustVBOMemory(-(m_kdWorld->vertices.size() * sizeof(kdBinVertex)));
 
     m_uploaded = false;
     u::print("[world] => unloaded\n");
@@ -884,7 +898,7 @@ void world::forwardPass(const pipeline &pl) {
         for (auto &it : m_map->m_billboards) {
             // Load billboards on demand
             if (m_billboards.find(it.name) == m_billboards.end()) {
-                u::unique_ptr<billboard> next(new billboard(it.description));
+                u::unique_ptr<billboard> next(new billboard);
                 if (!next->load(it.name))
                     neoFatal("failed to load billboard '%s'\n", it.name);
                 if (!next->upload())
@@ -980,12 +994,11 @@ void world::forwardPass(const pipeline &pl) {
     }
 
     // Particles
+    // Bind the depth buffer for soft particles
+    gl::ActiveTexture(GL_TEXTURE1);
+    gl::BindTexture(GL_TEXTURE_RECTANGLE, m_gBuffer.texture(gBuffer::kDepth));
     for (auto *const it : m_particleSystems) {
         it->update(pl);
-
-        // Bind the depth buffer for soft particles
-        gl::ActiveTexture(GL_TEXTURE1);
-        gl::BindTexture(GL_TEXTURE_RECTANGLE, m_gBuffer.texture(gBuffer::kDepth));
         it->render(pl);
     }
     // Don't need depth testing or blending anymore
@@ -1013,82 +1026,9 @@ void world::forwardPass(const pipeline &pl) {
         break;
     }
 
-    // Render some memory statistics
-    if (r_stats) {
-        size_t y = neoHeight() / 2 + 20 * 2;
-        // Particle memory
-        gui::drawText(10, y, gui::kAlignLeft, "WORLD", gui::RGBA(255, 255, 255));
-        y -= 20;
-        const auto format = u::format("Geometry: %s", u::sizeMetric(m_memory));
-        gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
-        y -= 20;
-        if (m_particleSystems.size()) {
-            gui::drawText(10, y, gui::kAlignLeft, "PARTICLE", gui::RGBA(255, 255, 255));
-            y -= 20;
-            for (auto *const it : m_particleSystems) {
-                if (it->memory() == 0)
-                    continue;
-                const auto format = u::format("%s: %s", it->description(), u::sizeMetric(it->memory()));
-                gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
-                y -= 20;
-            }
-        }
-        // Billboard memory
-        if (m_billboards.size()) {
-            gui::drawText(10, y, gui::kAlignLeft, "BILLBOARD", gui::RGBA(255, 255, 255));
-            y -= 20;
-            for (const auto &it : m_billboards) {
-                const billboard *const b = it.second;
-                if (b->memory() == 0)
-                    continue;
-                const auto format = u::format("%s: %s", b->description(), u::sizeMetric(b->memory()));
-                gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
-                y -= 20;
-            }
-        }
-        // Shadow EBO memory
-        size_t slShadowEBO = 0,
-               plShadowEBO = 0;
-        size_t slCount = 0;
-        size_t plCount = 0;
-        for (auto &it : m_culledSpotLights) {
-            slShadowEBO += it.count * sizeof(GLuint);
-            if (it.visible) slCount++;
-        }
-        for (auto &it : m_culledPointLights) {
-            plShadowEBO += it.count * sizeof(GLuint);
-            if (it.visible) plCount++;
-        }
-        if (slShadowEBO || plShadowEBO) {
-            gui::drawText(10, y, gui::kAlignLeft, "SHADOW EBO", gui::RGBA(255, 255, 255));
-            y -= 20;
-            if (slShadowEBO) {
-                const auto format = u::format("Spot Lights: %zu %s",
-                    slCount, u::sizeMetric(slShadowEBO));
-                gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
-                y -= 20;
-            }
-            if (plShadowEBO) {
-                const auto format = u::format("Point Lights: %zu %s",
-                    plCount, u::sizeMetric(plShadowEBO));
-                gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
-                y -= 20;
-            }
-        }
-        // Texture memory
-        size_t textureMemory = 0;
-        for (const auto &it : m_textures2D) {
-            const texture2D *const tex = it.second;
-            textureMemory += tex->memory();
-        }
-        if (textureMemory) {
-            gui::drawText(10, y, gui::kAlignLeft, "TEXTURE", gui::RGBA(255, 255, 255));
-            y -= 20;
-            const auto format = u::format("2D Assets: %s", u::sizeMetric(textureMemory));
-            gui::drawText(20, y, gui::kAlignLeft, format.c_str(), gui::RGBA(255, 255, 255));
-            y -= 20;
-        }
-    }
+    // Render some statistics
+    if (r_stats)
+        r::stat::render(20);
 }
 
 void world::compositePass(const pipeline &pl) {

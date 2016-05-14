@@ -20,6 +20,7 @@ particleSystemMethod::particleSystemMethod()
     , m_colorTextureUnit(nullptr)
     , m_depthTextureUnit(nullptr)
     , m_power(nullptr)
+    , m_screenSize(nullptr)
 {
 }
 
@@ -38,6 +39,7 @@ bool particleSystemMethod::init() {
     m_colorTextureUnit = getUniform("gColorMap", uniform::kSampler);
     m_depthTextureUnit = getUniform("gDepthMap", uniform::kSampler);
     m_power = getUniform("gPower", uniform::kFloat);
+    m_screenSize = getUniform("gScreenSize", uniform::kVec2);
 
     post();
     return true;
@@ -55,21 +57,27 @@ void particleSystemMethod::setDepthTextureUnit(int unit) {
     m_depthTextureUnit->set(unit);
 }
 
+void particleSystemMethod::setPerspective(const m::perspective &p) {
+    m_screenSize->set(m::vec2(p.width, p.height));
+}
+
 void particleSystemMethod::setPower(float power) {
     m_power->set(power);
 }
 
 ///! particleSystem
 particleSystem::particleSystem()
-    : m_description("Particle System")
-    , m_memory(0)
-    , m_vao(0)
+    : m_vao(0)
     , m_bufferIndex(0)
+    , m_stats(r::stat::add("particle", "Particle Systems"))
 {
     memset(m_buffers, 0, sizeof m_buffers);
 
 }
 particleSystem::~particleSystem() {
+    m_stats->adjustTextureCount(-1);
+    m_stats->adjustTextureMemory(-m_texture.memory());
+
     if (m_buffers[0])
         gl::DeleteBuffers(sizeof m_buffers / sizeof *m_buffers, m_buffers);
     if (m_vao)
@@ -96,7 +104,6 @@ bool particleSystem::load(const u::string &file) {
 bool particleSystem::upload() {
     if (!m_texture.upload())
         return false;
-
     if (!m_method.init())
         return false;
 
@@ -127,6 +134,9 @@ bool particleSystem::upload() {
     m_method.setColorTextureUnit(0);
     m_method.setDepthTextureUnit(1);
 
+    m_stats->adjustTextureCount(1);
+    m_stats->adjustTextureMemory(m_texture.memory());
+
     return true;
 }
 
@@ -138,12 +148,16 @@ void particleSystem::render(const pipeline &pl) {
     rotation.getOrient(nullptr, &up, &side);
 
     if (gl::has(gl::ARB_half_float_vertex)) {
+        m_stats->adjustVBOMemory(-(sizeof m_halfVertices[0] * m_halfVertices.size()));
         m_halfVertices.destroy();
         m_halfVertices.reserve(m_particles.size() * 4);
     } else {
+        m_stats->adjustVBOMemory(-(sizeof m_singleVertices[0] * m_singleVertices.size()));
         m_singleVertices.destroy();
         m_singleVertices.reserve(m_particles.size() * 4);
     }
+
+    m_stats->adjustIBOMemory(-(sizeof m_indices[0] * m_indices.size()));
 
     GLuint &vbo = m_vbos[m_bufferIndex];
     GLuint &ibo = m_ibos[m_bufferIndex];
@@ -223,26 +237,28 @@ void particleSystem::render(const pipeline &pl) {
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
 
     if (gl::has(gl::ARB_half_float_vertex)) {
-        m_memory = m_halfVertices.size() * sizeof(halfVertex);
-        gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_halfVertices[0], GL_STREAM_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT,    GL_FALSE, sizeof(halfVertex), u::offset_of(&halfVertex::position)); // position
+        gl::BufferData(GL_ARRAY_BUFFER, m_halfVertices.size() * sizeof(halfVertex), &m_halfVertices[0], GL_STREAM_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_HALF_FLOAT, GL_FALSE, sizeof(halfVertex), u::offset_of(&halfVertex::position)); // position
         gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(halfVertex), u::offset_of(&halfVertex::color)); // color
+        m_stats->adjustVBOMemory(sizeof m_halfVertices[0] * m_halfVertices.size());
     } else {
-        m_memory = m_singleVertices.size() * sizeof(singleVertex);
-        gl::BufferData(GL_ARRAY_BUFFER, m_memory, &m_singleVertices[0], GL_STREAM_DRAW);
-        gl::VertexAttribPointer(0, 3, GL_FLOAT,         GL_FALSE, sizeof(singleVertex), u::offset_of(&singleVertex::position)); // position
+        gl::BufferData(GL_ARRAY_BUFFER, m_singleVertices.size() * sizeof(singleVertex), &m_singleVertices[0], GL_STREAM_DRAW);
+        gl::VertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(singleVertex), u::offset_of(&singleVertex::position)); // position
         gl::VertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(singleVertex), u::offset_of(&singleVertex::color)); // color
+        m_stats->adjustVBOMemory(sizeof m_singleVertices[0] * m_singleVertices.size());
     }
 
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof m_indices[0],
         &m_indices[0], GL_DYNAMIC_DRAW);
-    m_memory += m_indices.size() * sizeof m_indices[0];
+    m_stats->adjustIBOMemory(sizeof m_indices[0] * m_indices.size());
+
+    m_texture.bind(GL_TEXTURE0);
 
     m_method.enable();
+    m_method.setPerspective(p.perspective());
     m_method.setVP(p.projection() * p.view());
     m_method.setPower(power());
-    m_texture.bind(GL_TEXTURE0);
 
     gl::Disable(GL_CULL_FACE);
     gl::DepthFunc(GL_LESS);
