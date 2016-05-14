@@ -123,7 +123,7 @@ inline bool model::animated() const {
 }
 
 inline const float *model::bones() const {
-    return m_outFrame[0].a.m;
+    return m_outFrame[0].a.f;
 }
 
 inline size_t model::joints() const {

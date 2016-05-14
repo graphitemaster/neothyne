@@ -15,7 +15,7 @@ namespace m {
 struct vec2 {
     union {
         struct { float x, y; };
-        float m[2];
+        float f[2];
     };
 
     constexpr vec2();
@@ -53,11 +53,11 @@ inline constexpr vec2::vec2(float a)
 }
 
 inline float vec2::operator[](size_t index) const {
-    return m[index];
+    return f[index];
 }
 
 inline float &vec2::operator[](size_t index) {
-    return m[index];
+    return f[index];
 }
 
 vec2 sincos(float x);
@@ -65,7 +65,7 @@ vec2 sincos(float x);
 struct vec3 {
     union {
         struct { float x, y, z; };
-        float m[3];
+        float f[3];
     };
 
     constexpr vec3();
@@ -245,11 +245,11 @@ inline vec3 vec3::operator -() const {
 }
 
 inline float vec3::operator[](size_t index) const {
-    return m[index];
+    return f[index];
 }
 
 inline float &vec3::operator[](size_t index) {
-    return m[index];
+    return f[index];
 }
 
 inline vec3 operator+(const vec3 &a, const vec3 &b) {
@@ -312,7 +312,7 @@ inline vec3 clamp(const vec3 &current, const vec3 &min, const vec3 &max) {
 struct vec4 {
     union {
         struct { float x, y, z, w; };
-        float m[4];
+        float f[4];
         vec3 asVec3;
 #ifdef __SSE2__
         __m128 v;
@@ -395,11 +395,11 @@ inline constexpr vec4::vec4(float x, float y, float z, float w)
 }
 
 inline float &vec4::operator[](size_t index) {
-    return m[index];
+    return f[index];
 }
 
 inline const float &vec4::operator[](size_t index) const {
-    return m[index];
+    return f[index];
 }
 
 template <size_t N>
@@ -513,7 +513,7 @@ inline vec4 vec4::addw(float f) const {
 
 template <size_t X, size_t Y, size_t Z, size_t W>
 inline vec4 vec4::swizzle() const {
-    return { m[X], m[Y], m[Z], m[W] };
+    return { f[X], f[Y], f[Z], f[W] };
 }
 
 #endif
