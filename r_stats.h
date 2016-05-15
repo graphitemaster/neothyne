@@ -41,6 +41,7 @@ private:
     size_t m_instances;
 
     static u::map<const char *, stat> m_stats;
+    static u::vector<float> m_histogram;
 };
 
 inline stat::stat()

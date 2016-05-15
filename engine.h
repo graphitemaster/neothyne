@@ -145,6 +145,7 @@ template <typename... Ts>
 
 // Wrapper
 u::map<u::string, int> &neoKeyState(const u::string &key = "", bool keyDown = false, bool keyUp = false);
+const frameTimer &neoFrameTimer();
 mouseState neoMouseState();
 textState neoTextState(u::string &what);
 void neoMouseDelta(int *deltaX, int *deltaY);

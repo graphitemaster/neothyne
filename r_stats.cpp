@@ -1,12 +1,20 @@
+#include <float.h>
+
+#include "engine.h"
 #include "gui.h"
 #include "cvar.h"
+
 #include "r_stats.h"
 
 NVAR(int, r_stats, "rendering statistics", 0, 1, 1);
+NVAR(int, r_stats_histogram, "rendering statistics histogram", 0, 1, 1);
+NVAR(int, r_stats_histogram_duration, "duration in seconds to collect histogram samples", 1, 10, 2);
+NVAR(float, r_stats_histogram_size, "size of histogram in screen width percentage", 0.25f, 1.0f, 0.5f);
 
 namespace r {
 
 u::map<const char *, stat> stat::m_stats;
+u::vector<float> stat::m_histogram;
 
 static constexpr size_t kSpace = 20u;
 
@@ -16,10 +24,48 @@ void stat::render(size_t x) {
         size_t space = kSpace;
         for (const auto &it : m_stats)
             space += it.second.space();
+
+        if (r_stats_histogram) {
+            space += kSpace;   // 1 for "Histogram" test
+            space += kSpace*2; // 2 for "Histogram" bars
+        }
+
         // shift up by vertical space
         size_t next = space;
         for (const auto &it : m_stats)
             next = it.second.draw(x, next);
+
+        if (r_stats_histogram) {
+            // draw histogram
+            gui::drawText(x, next, gui::kAlignLeft, "Histogram", gui::RGBA(255, 255, 0));
+            next -= kSpace*2;
+            // get minimum and maximum value in histogram
+            static m::vec2 range(FLT_MIN, FLT_MAX);
+            for (auto &it : m_histogram) {
+                range.x = u::max(range.x, it);
+                range.y = u::min(range.y, it);
+            }
+            if (range.x != 0.0f && range.y != 0.0f) {
+                const m::vec3 red(1.0f, 0.0f, 0.0f);
+                const m::vec3 white(1.0f, 1.0f, 1.0f);
+                const float sampleWidth = ((neoWidth()-kSpace*4) * r_stats_histogram_size) / m_histogram.size(); // to the center of the screen
+                for (size_t i = 0; i < m_histogram.size(); i++) {
+                    const auto &it = m_histogram[i];
+                    const float scaledSample = it / range.x; // 16ms is max
+                    const m::vec3 color = red*scaledSample+white*(1.0f-scaledSample);
+                    const auto rgba = gui::RGBA(color.x*255.0f, color.y*255.0f, color.z*255.0f);
+                    // TODO: make faster by updating a texture instead of drawing thousands of tiny rectangles
+                    gui::drawRectangle(x + kSpace + sampleWidth*i, next-kSpace+5, sampleWidth, kSpace*2*scaledSample, rgba);
+                }
+            }
+        }
+        // always collect samples even if r_stats_histogram is not enabled
+        // this way if someone toggles it on the previous samples are immediately
+        // available.
+        const frameTimer &timer = neoFrameTimer();
+        m_histogram.push_back(timer.mspf());
+        if (m_histogram.size() > size_t(timer.fps()*r_stats_histogram_duration))
+            m_histogram.erase(m_histogram.begin(), m_histogram.begin()+1);
     }
 }
 

@@ -1090,6 +1090,10 @@ u::map<u::string, int> &neoKeyState(const u::string &key, bool keyDown, bool key
     return gEngine.keyState(key, keyDown, keyUp);
 }
 
+const frameTimer &neoFrameTimer() {
+    return gEngine.m_frameTimer;
+}
+
 mouseState neoMouseState() {
     return gEngine.mouse();
 }
