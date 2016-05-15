@@ -832,7 +832,7 @@ void begin(mouseState &mouse) {
     for (const auto &it : commands()()) {
         if (it.type != kCommandTexture)
             continue;
-        //delete[] it.asTexture.data;
+        delete[] it.asTexture.data;
     }
 
     G.m_queue.reset();
