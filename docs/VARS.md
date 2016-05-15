@@ -97,13 +97,6 @@ have slow on-driver texture compression like Intel.
 * 0 = disable
 * 1 = enable
 
-##### r_tex_compress_cache_zlib
-When caching of compressed textures to disk is enabled, this option will compress
-the texture data with deflate for smaller files on disk.
-
-* 0 = disable
-* 1 = enable
-
 ##### r_texquality
 Adjust texture quality
 
@@ -202,10 +195,40 @@ Debug visualizations of various renderer buffers
 * 4 = ambient occlusion buffer
 
 ##### r_stats
-Debug memory statistics for the world
+Enable rendering statistics; useful for debugging
 
 * 0 = disable
 * 1 = enable
+
+##### r_stats_histogram
+Enable histogram showing the change in MSPF over time
+
+* 0 = disable
+* 1 = enable
+
+##### r_stats_histogram_duration
+How long of a duration window to collect histogram samples in seconds.
+The larger the window the slower the histogram will update
+
+* any value in range [1.0, 10.0]
+
+##### r_stats_histogram_size
+How much horizontal screen space to utilize for the histogram in percentage.
+
+* any value in range [0.25, 1.0]
+
+##### r_stats_histogram_max
+Maximum amount of MSPF that is deemed acceptable, used as a scale for
+determining height and color of samples
+
+* any value in range [0.0, 100.0]
+
+##### r_stats_histogram_transparency
+How opaque the histogram is in rendering. Useful for seeing what's behind
+the histogram if r_stats_histogram_size is large. Values closer to zero
+are more transparent while values closer to one are more opaque.
+
+* any value in range [0.25, 1]
 
 ##### r_debug_tex
 The engine is allowed free reign to resize, reformat and adjust

@@ -62,6 +62,7 @@ protected:
     void drawLine(float x0, float y0, float x1, float y1, float r, float fth, uint32_t color);
     void drawText(float x, float y, const char *contents, int align, uint32_t color);
     void drawImage(float x, float y, float w, float h, const char *path);
+    void drawTexture(float x, float y, float w, float h, const unsigned char *data);
 
 private:
     struct glyphQuad {
@@ -162,6 +163,7 @@ private:
     atlas m_atlas;
     unsigned char *m_atlasData;
     GLuint m_atlasTexture;
+    GLuint m_miscTexture; // miscellaneous texture for drawTexture
 };
 
 }

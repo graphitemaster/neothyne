@@ -304,6 +304,7 @@ gui::gui()
     , m_notex(nullptr)
     , m_atlasData(new unsigned char[kAtlasSize*kAtlasSize*4])
     , m_atlasTexture(0)
+    , m_miscTexture(0)
 {
     memset(m_vbos, 0, sizeof m_vbos);
 
@@ -320,7 +321,6 @@ gui::gui()
     m_atlas.m_root.h = kAtlasSize;
 }
 
-
 gui::~gui() {
     if (m_vao)
         gl::DeleteVertexArrays(1, &m_vao);
@@ -332,6 +332,7 @@ gui::~gui() {
         delete it.second;
 
     gl::DeleteTextures(1, &m_atlasTexture);
+    gl::DeleteTextures(1, &m_miscTexture);
 
 #if defined(DEBUG_GUI)
     ::texture saveAtlas;
@@ -342,7 +343,6 @@ gui::~gui() {
 #endif
 
     delete [] m_atlasData;
-
 }
 
 gui::atlas::node *gui::atlasPack(const u::string &file) {
@@ -461,6 +461,15 @@ bool gui::upload() {
     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, kAtlasSize, kAtlasSize, 0, GL_RGBA,
         GL_UNSIGNED_BYTE, m_atlasData);
+
+    gl::GenTextures(1, &m_miscTexture);
+    gl::BindTexture(GL_TEXTURE_2D, m_miscTexture);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 0, 0, 0, GL_RGBA,
+        GL_UNSIGNED_BYTE, nullptr);
 
     gl::GenVertexArrays(1, &m_vao);
     gl::BindVertexArray(m_vao);
@@ -597,6 +606,15 @@ void gui::render(const pipeline &pl) {
                     m_models[it.asModel.path] = mdl.release();
             }
             break;
+        case ::gui::kCommandTexture:
+            m_methods[kMethodImage].enable();
+            m_methods[kMethodImage].setPerspective(perspective);
+            drawTexture(it.asTexture.x,
+                        it.asTexture.y,
+                        it.asTexture.w,
+                        it.asTexture.h,
+                        it.asTexture.data);
+            break;
         }
     }
 
@@ -638,6 +656,10 @@ void gui::render(const pipeline &pl) {
             }
             if (it.type == ::gui::kCommandText) {
                 m_font.bind(GL_TEXTURE0);
+                rebind = true;
+            } else if (it.type == ::gui::kCommandTexture) {
+                gl::ActiveTexture(GL_TEXTURE0);
+                gl::BindTexture(GL_TEXTURE_2D, m_miscTexture);
                 rebind = true;
             } else if (rebind) {
                 gl::ActiveTexture(GL_TEXTURE0);
@@ -937,5 +959,33 @@ void gui::drawImage(float x, float y, float w, float h, const char *path) {
     b.method = kMethodImage;
     m_batches.push_back(b);
 }
+
+void gui::drawTexture(float x, float y, float w, float h, const unsigned char *data) {
+    batch b;
+
+    // recreate texture
+    gl::BindTexture(GL_TEXTURE_2D, m_miscTexture);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA,
+        GL_UNSIGNED_BYTE, data);
+
+    b.start = m_vertices.size();
+    m_vertices.reserve(m_vertices.size() + 6);
+
+    m_vertices.push_back({{x,   y},   {0.0f, 1.0f}, {0,0,0,0}});
+    m_vertices.push_back({{x+w, y},   {1.0f, 1.0f}, {0,0,0,0}});
+    m_vertices.push_back({{x+w, y+h}, {1.0f, 0.0f}, {0,0,0,0}});
+    m_vertices.push_back({{x,   y},   {0.0f, 1.0f}, {0,0,0,0}});
+    m_vertices.push_back({{x+w, y+h}, {1.0f, 0.0f}, {0,0,0,0}});
+    m_vertices.push_back({{x,   y+h}, {0.0f, 0.0f}, {0,0,0,0}});
+
+    b.count = m_vertices.size() - b.start;
+    b.method = kMethodImage;
+    m_batches.push_back(b);
+}
+
 
 }

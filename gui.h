@@ -28,7 +28,8 @@ enum {
     kCommandText,
     kCommandScissor,
     kCommandImage,
-    kCommandModel
+    kCommandModel,
+    kCommandTexture
 };
 
 struct box {
@@ -47,6 +48,12 @@ struct scissor : box { };
 
 struct image : box {
     const char *path;
+};
+
+struct texture : box {
+    // note: all texture data for the GUI must be RGBA8, this code will
+    // automatically delete the memory referencing the data
+    unsigned char *data;
 };
 
 struct model : box {
@@ -84,6 +91,7 @@ struct command {
         text asText;
         image asImage;
         model asModel;
+        texture asTexture;
     };
 };
 
@@ -104,6 +112,7 @@ struct queue {
     void addRectangle(int x, int y, int w, int h, int r, uint32_t color);
     void addTriangle(int x, int y, int w, int h, int flags, uint32_t color);
     void addText(int x, int y, int align, const char *contents, uint32_t color);
+    void addTexture(int x, int y, int w, int h, const unsigned char *data);
     void addImage(int x, int y, int w, int h, const char *path);
     void addModel(int x, int y, int w, int h, const char *path, const r::pipeline &p, int su = 0, int sv = 0);
 private:
@@ -169,6 +178,7 @@ void drawText(int x, int y, int align, const char *contents, uint32_t color);
 void drawTriangle(int x, int y, int w, int h, int flags, uint32_t color);
 void drawImage(int x, int y, int w, int h, const char *path);
 void drawModel(int x, int y, int w, int h, const char *path, const r::pipeline &p, int su = 0, int sv = 0);
+void drawTexture(int x, int y, int w, int h, const u::vector<unsigned char> &rgba);
 
 const queue &commands();
 

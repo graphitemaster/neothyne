@@ -28,6 +28,7 @@ struct stat {
     static stat *get(const char *name);
 
 private:
+    static void drawHistogram(size_t x, size_t next);
     size_t draw(size_t x, size_t y) const;
     size_t space() const;
 
@@ -42,6 +43,7 @@ private:
 
     static u::map<const char *, stat> m_stats;
     static u::vector<float> m_histogram;
+    static u::vector<unsigned char> m_texture;
 };
 
 inline stat::stat()

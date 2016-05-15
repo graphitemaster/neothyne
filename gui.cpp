@@ -123,6 +123,17 @@ void queue::addModel(int x, int y, int w, int h, const char *path, const r::pipe
     cmd.asModel.sv = sv;
 }
 
+void queue::addTexture(int x, int y, int w, int h, const unsigned char *data) {
+    if (m_commands.full()) return;
+    auto &cmd = m_commands.next();
+    cmd.type = kCommandTexture;
+    cmd.asTexture.x = x;
+    cmd.asTexture.y = y;
+    cmd.asTexture.w = w;
+    cmd.asTexture.h = h;
+    cmd.asTexture.data = (unsigned char *)data;
+}
+
 // A reference to something in the gui
 typedef size_t ref;
 
@@ -335,6 +346,7 @@ static state gState;
 static constexpr int kButtonHeight = 17;
 static constexpr int kSliderHeight = 17;
 static constexpr int kSliderMarkerWidth = 12;
+
 static constexpr int kCollapseSize = 8;
 static constexpr int kCheckBoxSize = 17;
 static constexpr int kDefaultSpacing = 6;
@@ -792,6 +804,12 @@ void drawModel(int x, int y, int w, int h, const char *path, const r::pipeline &
     Q.addModel(x, y, w, h, path, p, su, sv);
 }
 
+void drawTexture(int x, int y, int w, int h, const u::vector<unsigned char> &data) {
+    unsigned char *copy = new unsigned char[data.size()];
+    memcpy(copy, &data[0], data.size());
+    Q.addTexture(x, y, w, h, copy);
+}
+
 const queue &commands() {
     return Q;
 }
@@ -809,6 +827,14 @@ void begin(mouseState &mouse) {
     G.m_isHot = false;
 
     G.m_widget.reset();
+
+    // be sure to free any texture data we copied
+    for (const auto &it : commands()()) {
+        if (it.type != kCommandTexture)
+            continue;
+        //delete[] it.asTexture.data;
+    }
+
     G.m_queue.reset();
 
     G.m_area = 1;
