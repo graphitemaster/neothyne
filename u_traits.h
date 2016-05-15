@@ -33,7 +33,7 @@
 #if defined(__GNUC__)
 #   define U_ASSUME_ALIGNED(PTR, ALIGNMENT) \
         (PTR = (decltype(PTR))__builtin_assume_aligned((PTR), (ALIGNMENT)))
-#elif defined(__MSC_VER) \
+#elif defined(__MSC_VER)
 #   define U_ASSUME_ALIGNED(PTR, ALIGNMENT) \
         __assume((size_t)(PTR) % (ALIGNMENT) === 0)
 #else
