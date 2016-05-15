@@ -93,7 +93,7 @@ void uniform::post() {
         gl::Uniform4fv(m_handle, 1, &asVec4.x);
         break;
     case kMat3x4Array:
-        gl::UniformMatrix3x4fv(m_handle, asMat3x4Array.count, GL_FALSE, asMat3x4Array.data);
+        gl::UniformMatrix3x4fv(m_handle, asMat3x4Array.count, GL_FALSE, (const GLfloat *)asMat3x4Array.data);
         break;
     case kMat4:
         gl::UniformMatrix4fv(m_handle, 1, GL_TRUE, asMat4.ptr());
@@ -259,7 +259,7 @@ uniform *method::getUniform(const u::string &name, uniform::type type) {
     auto *const value = &m_uniforms[name];
     value->m_type = type;
     if (type == uniform::kMat3x4Array)
-        value->asMat3x4Array.data = (float *)&m_mat3x4Scratch[0];
+        value->asMat3x4Array.data = m_mat3x4Scratch;
     return value;
 }
 

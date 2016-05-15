@@ -201,7 +201,7 @@ void particleSystem::render(const pipeline &pl) {
         size_t index = 0;
         if (gl::has(gl::ARB_half_float_vertex)) {
             index = m_halfVertices.size();
-            const auto &c = m::convertToHalf((const float *)q, 3*4);
+            const auto &c = m::convertToHalf(&q[0].x, 3*4);
             for (size_t i = 0; i < c.size(); i += 3) {
                 halfVertex newVertex;
                 for (size_t j = 0; j < 3; j++) {

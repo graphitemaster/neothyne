@@ -57,7 +57,7 @@ private:
         m::vec4 asVec4;
         m::mat4 asMat4;
         struct {
-            float *data;
+            m::mat3x4 *data;
             size_t count;
         } asMat3x4Array;
     };
