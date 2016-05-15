@@ -19,7 +19,8 @@
 #   define HAS_FEATURE(X) 0
 #endif
 
-// Restrict pointer
+// Compiler hint: indicate pointer argument does not alias contents of
+// another one to allow the compiler to eliminate redundant loads
 #if defined(_MSC_VER)
 #   define U_RESTRICT __restrict
 #elif defined(__GNUC__) && __GNUC__ > 3
@@ -28,8 +29,8 @@
 #   define U_RESTRICT
 #endif
 
-// To indicate when a pointer is aligned to allow the compiler to do
-// clever optimizations which would otherwise not occur
+// Compiler hint: indicate alignment of pointer to allow the compiler
+// to produce more optimal load and stores
 #if defined(__GNUC__)
 #   define U_ASSUME_ALIGNED(PTR, ALIGNMENT) \
         (PTR = (decltype(PTR))__builtin_assume_aligned((PTR), (ALIGNMENT)))
@@ -39,6 +40,31 @@
 #else
 #   define U_ASSUME_ALIGNED(PTR, ALIGNMENT) \
         (void)0;
+#endif
+
+// Compiler hint: indicate likeliness of something to allow for much
+// more optimal branching
+#if defined(__GNUC__)
+#   define U_LIKELY(X) \
+        __builtin_expect(!!(X), 1)
+#   define U_UNLIKELY(X) \
+        __builtin_expect(!!(X), 0)
+#else
+#   define U_LIKELY(X)      (X)
+#   define U_UNLIKELY(X)    (X)
+#endif
+
+// Compiler hint: indicate an unreachable path which is usually meant to
+// suppress warnings
+#if defined(__GNUC__)
+#   define U_UNREACHABLE() \
+        __builtin_unreachable()
+#elif defined(_MSC_VER)
+#   define U_UNREACHABLE() \
+        __assume(0)
+#else
+#   define U_UNREACHABLE() \
+        (void)0
 #endif
 
 namespace u {
@@ -560,33 +586,6 @@ inline constexpr void *offset_of(T1 T2::*member) {
     // way to implement this otherwise. Other techniques won't yield constant
     // expressions or don't work on all compilers.
     return (void *)&(((T2*)nullptr)->*member);
-}
-
-/// Convenience likely/unlikely "traits".
-template <typename T>
-inline bool likely(const T &value) {
-#if defined(__GNUC__)
-    return __builtin_expect(!!value, 1);
-#else
-    return !!value;
-#endif
-}
-
-template <typename T>
-inline bool unlikely(const T &value) {
-#if defined(__GNUC__)
-    return __builtin_expect(!!value, 0);
-#else
-    return !!value;
-#endif
-}
-
-[[noreturn]] inline void unreachable() {
-#if defined(_MSC_VER)
-    __assume(0);
-#else
-    __builtin_unreachable();
-#endif
 }
 
 }

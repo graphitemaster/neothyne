@@ -188,10 +188,12 @@ static __m128 convertToFloatSSE2(__m128i h) {
 }
 #endif
 
-u::vector<half> convertToHalf(const float *const in, size_t length) {
+u::vector<half> convertToHalf(const float *const input, size_t length) {
     u::vector<half> result(length);
 
+    const float *in = input;
     U_ASSERT(((uintptr_t)(const void *)in) % 16 == 0);
+    U_ASSUME_ALIGNED(in, 16);
 
 #if defined(__SSE2__)
     const int blocks = int(length) / 4;
@@ -214,10 +216,12 @@ u::vector<half> convertToHalf(const float *const in, size_t length) {
     return result;
 }
 
-u::vector<float> convertToFloat(const half *const in, size_t length) {
+u::vector<float> convertToFloat(const half *const input, size_t length) {
     u::vector<float> result(length);
 
 #if defined(__SSE2__)
+    const half *in = input;
+    U_ASSUME_ALIGNED(in, 16);
     const int blocks = int(length) / 4;
     const int remainder = int(length) % 4;
     int where = 0;

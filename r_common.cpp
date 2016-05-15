@@ -490,7 +490,7 @@ const char *glslVersionString() {
     case 150: return "3.2";
     case 330: return "3.3";
     }
-    u::unreachable();
+    U_UNREACHABLE();
 }
 
 const char *extensionString(size_t what) {

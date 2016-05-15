@@ -192,7 +192,7 @@ struct jpeg : decoder {
             m_format = kTexFormatRGBA;
             break;
         default:
-            u::unreachable();
+            U_UNREACHABLE();
             break;
         }
 
@@ -1138,7 +1138,7 @@ struct png : decoder {
             m_format = kTexFormatRGBA;
             break;
         default:
-            u::unreachable();
+            U_UNREACHABLE();
             break;
         }
 
@@ -3105,7 +3105,7 @@ const char *texture::components() const {
     case kTexFormatBC5U:      return "BC5U/ATI2";
     case kTexFormatBC5S:      return "BC5S";
     }
-    u::unreachable();
+    U_UNREACHABLE();
 };
 
 size_t texture::size() const {

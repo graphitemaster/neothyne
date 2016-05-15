@@ -263,13 +263,13 @@ inline void buffer<T>::insert(T *where, const I *ifirst, const I *ilast) {
     const bool fromBuffer = mfirst <= tfirst && mlast >= tlast;
     const size_t fromCount = ilast - ifirst;
     const size_t fromOffset =
-        u::unlikely(fromBuffer && twhere <= tfirst)
+        U_UNLIKELY(fromBuffer && twhere <= tfirst)
             ? tfirst - mfirst + fromCount * sizeof(T)
             : tfirst - mfirst;
 
     where = insert_common(where, fromCount);
 
-    if (u::unlikely(fromBuffer)) {
+    if (U_UNLIKELY(fromBuffer)) {
         const I *begin = (const I *)(tfirst + fromOffset);
         store_range_traits(where, begin, begin + fromCount);
     } else {
