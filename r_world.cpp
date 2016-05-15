@@ -703,40 +703,39 @@ void world::render(const pipeline &pl) {
     //
     // the idea is the game code will add the entities back which will
     // unmark the collect flag preventing them from being removed
-    u::vector<u::map<r::model*, modelChunk*>::const_iterator> removeModels;
-    u::vector<u::map<r::spotLight*, spotLightChunk*>::const_iterator> removeSpotLights;
-    u::vector<u::map<r::pointLight*, pointLightChunk*>::const_iterator> removePointLights;
-    u::vector<u::map<r::billboard*, u::pair<bool, r::billboard*>>::const_iterator> removeBillboards;
+    u::vector<spotLightChunk*> removeSpotLights;
+    u::vector<pointLightChunk*> removePointLights;
+    u::vector<r::model*> removeModels;
+    u::vector<r::billboard*> removeBillboards;
     for (auto it = m_models.begin(); it != m_models.end(); ++it)
         if (it->second->collect)
-            removeModels.push_back(it);
+            removeModels.push_back(it->first);
     for (auto it = m_culledSpotLights.begin(); it != m_culledSpotLights.end(); ++it)
         if (it->second->collect)
-            removeSpotLights.push_back(it);
+            removeSpotLights.push_back(it->second);
     for (auto it = m_culledPointLights.begin(); it != m_culledPointLights.end(); ++it)
         if (it->second->collect)
-            removePointLights.push_back(it);
+            removePointLights.push_back(it->second);
     for (auto it = m_billboards.begin(); it != m_billboards.end(); ++it)
         if (it->second.first)
-            removeBillboards.push_back(it);
-    // we now have the iterators for which entities to remove, walk the
-    // lists and remove the internal state of them
+            removeBillboards.push_back(it->first);
+    for (auto *it : removeSpotLights) {
+        m_culledSpotLights.erase(m_culledSpotLights.find((r::spotLight*)it->light));
+        delete it;
+    }
+    for (auto *it : removePointLights) {
+        m_culledPointLights.erase(m_culledPointLights.find((r::pointLight*)it->light));
+        delete it;
+    }
+    // remove them
     for (const auto &it : removeModels) {
-        delete it->second;
-        m_models.erase(it);
-    }
-    for (const auto &it : removeSpotLights) {
-        delete it->second;
-        m_culledSpotLights.erase(it);
-    }
-    for (const auto &it : removePointLights) {
-        delete it->second;
-        m_culledPointLights.erase(it);
+        m_models.erase(m_models.find(it));
+        delete it;
     }
     for (const auto &it : removeBillboards) {
         // note: not deleted like others since this references the game's
         // billboard state directly
-        m_billboards.erase(it);
+        m_billboards.erase(m_billboards.find(it));
     }
 
     // TODO: commands (u::function needs to be implemented)
