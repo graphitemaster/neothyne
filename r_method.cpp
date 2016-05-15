@@ -4,7 +4,7 @@
 
 #include "u_file.h"
 #include "u_misc.h"
-#include "u_sha512.h"
+#include "u_hash.h"
 #include "u_zip.h"
 
 namespace r {
@@ -310,8 +310,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
         for (const auto &it : m_shaders)
             concatenate += it.second.shaderText;
         // Hash the result of the concatenation
-        auto hash = u::sha512((const unsigned char *)&concatenate[0],
-                              concatenate.size());
+        auto hash = u::djbx33a((const unsigned char *)&concatenate[0], concatenate.size());
         // Load the cached program in memory
         auto load = gMethodCache.read(hash.hex());
         if (!load)
@@ -335,7 +334,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             // Verify that this program is valid (linked)
             gl::GetProgramiv(m_program, GL_LINK_STATUS, &status);
             if (status) {
-                u::print("[cache] => loaded (method) %.50s...\n", hash.hex());
+                u::print("[cache] => loaded (method) %s\n", hash.hex());
                 notUsingCache = false;
             }
             break;
@@ -422,9 +421,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
                 concatenate += it.second.shaderText;
 
             // Hash the result of the concatenation
-            auto hash = u::sha512((const unsigned char *const)&concatenate[0],
-                                  concatenate.size());
-
+            auto hash = u::djbx33a((const unsigned char *const)&concatenate[0], concatenate.size());
             // Get the program binary from the driver
             GLint length = 0;
             GLenum binaryFormat = 0;
@@ -445,7 +442,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             memcpy(&serialize[sizeof header], &programBinary[0], programBinary.size());
 
             if (gMethodCache.write(hash.hex(), serialize))
-                u::print("[cache] => wrote (method) %.50s...\n", hash.hex());
+                u::print("[cache] => wrote (method) %s\n", hash.hex());
             else
                 return false;
         }

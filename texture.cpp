@@ -6,7 +6,6 @@
 #include "u_file.h"
 #include "u_algorithm.h"
 #include "u_misc.h"
-#include "u_sha512.h"
 #include "u_traits.h"
 
 #include "m_const.h"
@@ -2413,7 +2412,7 @@ void texture::drawString(size_t &line, const char *string) {
     }
     line++;
     // Recalculate hash string
-    u::sha512 hash(&m_data[0], m_data.size());
+    u::djbx33a hash(&m_data[0], m_data.size());
     m_hashString = hash.hex();
 }
 
@@ -2542,7 +2541,7 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
         }
 
         // Hash the contents as well to generate a hash string
-        u::sha512 hash(&m_data[0], m_data.size());
+        u::djbx33a hash(&m_data[0], m_data.size());
         m_hashString = hash.hex();
     }
     return true;
@@ -2583,7 +2582,7 @@ void texture::colorize(uint32_t color) {
     }
 
     // Hash the contents as well to generate a hash string
-    u::sha512 hash(&m_data[0], m_data.size());
+    u::djbx33a hash(&m_data[0], m_data.size());
     m_hashString = hash.hex();
 }
 

@@ -569,6 +569,18 @@ inline const K &hash_iterator<const hash_elem<K, void>>::operator*() const {
     return node->first.first;
 }
 
+// 128-bit version djbx33a
+struct djbx33a {
+    djbx33a(const unsigned char *data, size_t size);
+    const char *hex() const;
+private:
+    char m_result[33];
+};
+
+inline const char *djbx33a::hex() const {
+    return m_result;
+}
+
 }
 
 #endif

@@ -47,7 +47,7 @@ UTIL_SOURCES = \
 	u_file.cpp \
 	u_misc.cpp \
 	u_new.cpp \
-	u_sha512.cpp \
+	u_hash.cpp \
 	u_string.cpp \
 	u_zip.cpp \
 	u_zlib.cpp

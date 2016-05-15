@@ -229,7 +229,7 @@ static void menuDeveloper() {
                 for (const auto &it : u::dir(cachePath)) {
                     const u::string cacheFile = cachePath + u::kPathSep + it;
                     if (u::remove(cacheFile))
-                        u::print("[cache] => removed cache%c%.50s...\n", u::kPathSep, it);
+                        u::print("[cache] => removed cache%c%s\n", u::kPathSep, it);
                 }
                 u::print("[cache] => cleared\n");
             }
