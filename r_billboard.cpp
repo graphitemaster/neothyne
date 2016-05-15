@@ -43,8 +43,8 @@ billboard::billboard()
 }
 
 billboard::~billboard() {
-    m_stats->adjustTextureCount(-1);
-    m_stats->adjustTextureMemory(-m_texture.memory());
+    m_stats->decTextureCount();
+    m_stats->decTextureMemory(m_texture.memory());
 }
 
 bool billboard::load(const u::string &billboardTexture) {
@@ -76,8 +76,8 @@ bool billboard::upload() {
     m_method.enable();
     m_method.setColorTextureUnit(0);
 
-    m_stats->adjustTextureCount(1);
-    m_stats->adjustTextureMemory(m_texture.memory());
+    m_stats->incTextureCount();
+    m_stats->incTextureMemory(m_texture.memory());
 
     return true;
 }
@@ -88,8 +88,8 @@ void billboard::render(const pipeline &pl, float size) {
     m::vec3 side;
     rotation.getOrient(nullptr, &up, &side);
 
-    m_stats->adjustVBOMemory(-(sizeof m_vertices[0] * m_vertices.size()));
-    m_stats->adjustIBOMemory(-(sizeof m_indices[0] * m_indices.size()));
+    m_stats->decVBOMemory(sizeof m_vertices[0] * m_vertices.size());
+    m_stats->decIBOMemory(sizeof m_indices[0] * m_indices.size());
 
     m_vertices.destroy();
     m_vertices.reserve(m_entries.size() * 4);
@@ -138,8 +138,8 @@ void billboard::render(const pipeline &pl, float size) {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof m_indices[0], &m_indices[0], GL_DYNAMIC_DRAW);
 
-    m_stats->adjustVBOMemory(sizeof(vertex) * m_vertices.size());
-    m_stats->adjustIBOMemory(sizeof(GLuint) * m_indices.size());
+    m_stats->incVBOMemory(sizeof(vertex) * m_vertices.size());
+    m_stats->incIBOMemory(sizeof(GLuint) * m_indices.size());
 
     m_method.enable();
     m_method.setVP(pl.projection() * pl.view());

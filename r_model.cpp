@@ -509,40 +509,40 @@ model::~model() {
     if (m_model.animated()) {
         if (useHalf) {
             const auto &vertices = m_model.animHalfVertices();
-            m_stats->adjustVBOMemory(-(sizeof(mesh::animHalfVertex) * vertices.size()));
+            m_stats->decVBOMemory(sizeof(mesh::animHalfVertex) * vertices.size());
         } else {
             const auto &vertices = m_model.animVertices();
-            m_stats->adjustVBOMemory(-(sizeof(mesh::animVertex) * vertices.size()));
+            m_stats->decVBOMemory(sizeof(mesh::animVertex) * vertices.size());
         }
     } else {
         if (useHalf) {
             const auto &vertices = m_model.basicHalfVertices();
-            m_stats->adjustVBOMemory(-(sizeof(mesh::basicHalfVertex) * vertices.size()));
+            m_stats->decVBOMemory(sizeof(mesh::basicHalfVertex) * vertices.size());
         } else {
             const auto &vertices = m_model.basicVertices();
-            m_stats->adjustVBOMemory(-(sizeof(mesh::basicVertex) * vertices.size()));
+            m_stats->decVBOMemory(sizeof(mesh::basicVertex) * vertices.size());
         }
     }
 
     const auto &indices = m_model.indices();
-    m_stats->adjustIBOMemory(-(m_indices * sizeof indices[0]));
+    m_stats->decIBOMemory(m_indices * sizeof indices[0]);
 
     for (auto &mat : m_materials) {
         if (mat.diffuse) {
-            m_stats->adjustTextureCount(-1);
-            m_stats->adjustTextureMemory(mat.diffuse->memory());
+            m_stats->decTextureCount();
+            m_stats->decTextureMemory(mat.diffuse->memory());
         }
         if (mat.normal) {
-            m_stats->adjustTextureCount(-1);
-            m_stats->adjustTextureMemory(mat.normal->memory());
+            m_stats->decTextureCount();
+            m_stats->decTextureMemory(mat.normal->memory());
         }
         if (mat.spec) {
-            m_stats->adjustTextureCount(-1);
-            m_stats->adjustTextureMemory(mat.spec->memory());
+            m_stats->decTextureCount();
+            m_stats->decTextureMemory(mat.spec->memory());
         }
         if (mat.displacement) {
-            m_stats->adjustTextureCount(-1);
-            m_stats->adjustTextureMemory(mat.displacement->memory());
+            m_stats->decTextureCount();
+            m_stats->decTextureMemory(mat.displacement->memory());
         }
     }
 
@@ -668,7 +668,7 @@ bool model::upload() {
             gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animHalfVertex), u::offset_of(&mesh::animHalfVertex::blendWeight)); // blend weight
             gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animHalfVertex), u::offset_of(&mesh::animHalfVertex::blendIndex)); // blend index
             precision = "half";
-            m_stats->adjustVBOMemory(sizeof(mesh::animHalfVertex) * vertices.size());
+            m_stats->incVBOMemory(sizeof(mesh::animHalfVertex) * vertices.size());
         } else {
             const auto &vertices = m_model.animVertices();
             gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::animVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
@@ -679,7 +679,7 @@ bool model::upload() {
             gl::VertexAttribPointer(4, 4, GL_UNSIGNED_BYTE, GL_TRUE,  sizeof(mesh::animVertex), u::offset_of(&mesh::animVertex::blendWeight)); // blend weight
             gl::VertexAttribPointer(5, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(mesh::animVertex), u::offset_of(&mesh::animVertex::blendIndex)); // blend index
             precision = "single";
-            m_stats->adjustVBOMemory(sizeof(mesh::animVertex) * vertices.size());
+            m_stats->incVBOMemory(sizeof(mesh::animVertex) * vertices.size());
         }
         gl::EnableVertexAttribArray(0);
         gl::EnableVertexAttribArray(1);
@@ -697,7 +697,7 @@ bool model::upload() {
             gl::VertexAttribPointer(2, 2, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), u::offset_of(&mesh::basicHalfVertex::coordinate));
             gl::VertexAttribPointer(3, 4, GL_HALF_FLOAT, GL_FALSE, sizeof(mesh::basicHalfVertex), u::offset_of(&mesh::basicHalfVertex::tangent));
             precision = "half";
-            m_stats->adjustVBOMemory(sizeof(mesh::basicHalfVertex) * vertices.size());
+            m_stats->incVBOMemory(sizeof(mesh::basicHalfVertex) * vertices.size());
         } else {
             const auto &vertices = m_model.basicVertices();
             gl::BufferData(GL_ARRAY_BUFFER, sizeof(mesh::basicVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
@@ -705,7 +705,7 @@ bool model::upload() {
             gl::VertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), u::offset_of(&mesh::basicVertex::normal));
             gl::VertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), u::offset_of(&mesh::basicVertex::coordinate));
             gl::VertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(mesh::basicVertex), u::offset_of(&mesh::basicVertex::tangent));
-            m_stats->adjustVBOMemory(sizeof(mesh::basicVertex) * vertices.size());
+            m_stats->incVBOMemory(sizeof(mesh::basicVertex) * vertices.size());
             precision = "single";
         }
         gl::EnableVertexAttribArray(0);
@@ -717,27 +717,27 @@ bool model::upload() {
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices * sizeof indices[0], &indices[0], GL_STATIC_DRAW);
 
-    m_stats->adjustIBOMemory(m_indices * sizeof indices[0]);
+    m_stats->incIBOMemory(m_indices * sizeof indices[0]);
 
     // Upload materials
     for (auto &mat : m_materials) {
         if (!mat.upload())
             return false;
         if (mat.diffuse) {
-            m_stats->adjustTextureCount(1);
-            m_stats->adjustTextureMemory(mat.diffuse->memory());
+            m_stats->incTextureCount();
+            m_stats->incTextureMemory(mat.diffuse->memory());
         }
         if (mat.normal) {
-            m_stats->adjustTextureCount(1);
-            m_stats->adjustTextureMemory(mat.normal->memory());
+            m_stats->incTextureCount();
+            m_stats->incTextureMemory(mat.normal->memory());
         }
         if (mat.spec) {
-            m_stats->adjustTextureCount(1);
-            m_stats->adjustTextureMemory(mat.spec->memory());
+            m_stats->incTextureCount();
+            m_stats->incTextureMemory(mat.spec->memory());
         }
         if (mat.displacement) {
-            m_stats->adjustTextureCount(1);
-            m_stats->adjustTextureMemory(mat.displacement->memory());
+            m_stats->incTextureCount();
+            m_stats->incTextureMemory(mat.displacement->memory());
         }
     }
 

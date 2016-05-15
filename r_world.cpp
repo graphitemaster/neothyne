@@ -28,7 +28,6 @@ VAR(float, r_smbias, "shadow map bias", -10.0f, 10.0f, -0.1f);
 VAR(float, r_smpolyfactor, "shadow map polygon offset factor", -1000.0f, 1000.0f, 1.0f);
 VAR(float, r_smpolyoffset, "shadow map polygon offset units", -1000.0f, 1000.0f, 0.0f);
 NVAR(int, r_debug, "debug visualizations", 0, 4, 0);
-NVAR(int, r_stats, "rendering statistics", 0, 1, 0);
 NVAR(int, r_reload, "reload shaders", 0, 1, 0);
 
 namespace r {
@@ -185,7 +184,7 @@ world::lightChunk::~lightChunk() {
     // adjust statistics accordingly
     if (stats) {
         stats->decInstances();
-        stats->adjustIBOMemory(-memory);
+        stats->decIBOMemory(memory);
     }
 }
 
@@ -212,7 +211,7 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
     if (hash == 0 && !init("slshadow", "Spot Light Shadows"))
         return false;
     if (memory)
-        stats->adjustIBOMemory(-memory);
+        stats->decIBOMemory(memory);
     u::vector<size_t> triangleIndices;
     u::vector<GLuint> indices;
     map->inSphere(triangleIndices, light->position, light->radius);
@@ -232,7 +231,7 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
         &indices[0], GL_STATIC_DRAW);
     memory = indices.size() * sizeof indices[0];
     count = indices.size();
-    stats->adjustIBOMemory(memory);
+    stats->incIBOMemory(memory);
     return true;
 }
 
@@ -254,7 +253,7 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
         return false;
     // rebuilding mesh: throw away old memory statistics
     if (memory)
-        stats->adjustIBOMemory(-memory);
+        stats->decIBOMemory(memory);
     u::vector<size_t> triangleIndices;
     u::vector<GLuint> indices[6];
     map->inSphere(triangleIndices, light->position, light->radius);
@@ -292,7 +291,7 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
         }
         offset += sideCounts[side];
     }
-    stats->adjustIBOMemory(memory);
+    stats->incIBOMemory(memory);
     return true;
 }
 
@@ -514,8 +513,8 @@ bool world::upload(const m::perspective &p) {
 
     // count textures and memory utilization for map
     for (const auto &it : m_textures2D) {
-        m_stats->adjustTextureCount(1);
-        m_stats->adjustTextureMemory(it.second->memory());
+        m_stats->incTextureCount();
+        m_stats->incTextureMemory(it.second->memory());
     }
 
     geom::upload();
@@ -533,13 +532,13 @@ bool world::upload(const m::perspective &p) {
     gl::EnableVertexAttribArray(2);
     gl::EnableVertexAttribArray(3);
 
-    m_stats->adjustVBOMemory(vertices.size() * sizeof(kdBinVertex));
+    m_stats->incVBOMemory(vertices.size() * sizeof(kdBinVertex));
 
     // upload data
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     gl::BufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof m_indices[0], &m_indices[0], GL_STATIC_DRAW);
 
-    m_stats->adjustIBOMemory(m_indices.size() * sizeof m_indices[0]);
+    m_stats->incIBOMemory(m_indices.size() * sizeof m_indices[0]);
 
     // composite shader
     if (!m_compositeMethod.init())
@@ -668,8 +667,8 @@ bool world::upload(const m::perspective &p) {
 
 void world::unload(bool destroy) {
     for (auto &it : m_textures2D) {
-        m_stats->adjustTextureCount(-1);
-        m_stats->adjustTextureMemory(it.second->memory());
+        m_stats->decTextureCount();
+        m_stats->decTextureMemory(it.second->memory());
         delete it.second;
     }
 
@@ -683,8 +682,8 @@ void world::unload(bool destroy) {
         m_textures2D.clear();
     }
 
-    m_stats->adjustIBOMemory(-(m_indices.size() * sizeof m_indices[0]));
-    m_stats->adjustVBOMemory(-(m_kdWorld->vertices.size() * sizeof(kdBinVertex)));
+    m_stats->decIBOMemory(m_indices.size() * sizeof m_indices[0]);
+    m_stats->decVBOMemory(m_kdWorld->vertices.size() * sizeof(kdBinVertex));
 
     m_uploaded = false;
     u::print("[world] => unloaded\n");
@@ -727,7 +726,6 @@ void world::render(const pipeline &pl) {
         m_culledPointLights.erase(m_culledPointLights.find((r::pointLight*)it->light));
         delete it;
     }
-    // remove them
     for (const auto &it : removeModels) {
         m_models.erase(m_models.find(it));
         delete it;
@@ -1111,9 +1109,7 @@ void world::forwardPass(const pipeline &pl) {
         break;
     }
 
-    // Render some statistics
-    if (r_stats)
-        r::stat::render(20);
+    r::stat::render(20);
 }
 
 void world::compositePass(const pipeline &pl) {

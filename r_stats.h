@@ -8,11 +8,16 @@ struct stat {
     stat();
     stat(const char *name, const char *description);
 
+    void incInstances();
     void decInstances();
-    void adjustVBOMemory(int amount);
-    void adjustIBOMemory(int amount);
-    void adjustTextureCount(int amount);
-    void adjustTextureMemory(int amount);
+    void incVBOMemory(int amount);
+    void decVBOMemory(int amount);
+    void incIBOMemory(int amount);
+    void decIBOMemory(int amount);
+    void incTextureCount();
+    void decTextureCount();
+    void incTextureMemory(int amount);
+    void decTextureMemory(int amount);
 
     const char *description() const;
     const char *name() const;
@@ -57,25 +62,46 @@ inline stat::stat(const char *name, const char *description)
     m_instances = 1;
 }
 
+inline void stat::incInstances() {
+    m_instances++;
+}
+
 inline void stat::decInstances() {
     if (m_instances)
         m_instances--;
 }
 
-inline void stat::adjustVBOMemory(int amount) {
+inline void stat::incVBOMemory(int amount) {
     m_vboMemory += amount;
 }
 
-inline void stat::adjustIBOMemory(int amount) {
+inline void stat::decVBOMemory(int amount) {
+    m_vboMemory -= amount;
+}
+
+inline void stat::incIBOMemory(int amount) {
     m_iboMemory += amount;
 }
 
-inline void stat::adjustTextureCount(int amount) {
-    m_textureCount += amount;
+inline void stat::decIBOMemory(int amount) {
+    m_iboMemory -= amount;
 }
 
-inline void stat::adjustTextureMemory(int amount) {
+inline void stat::incTextureCount() {
+    m_textureCount++;
+}
+
+inline void stat::decTextureCount() {
+    if (m_textureCount)
+        m_textureCount--;
+}
+
+inline void stat::incTextureMemory(int amount) {
     m_textureMemory += amount;
+}
+
+inline void stat::decTextureMemory(int amount) {
+    m_textureMemory -= amount;
 }
 
 inline const char *stat::description() const {

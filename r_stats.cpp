@@ -1,5 +1,8 @@
 #include "gui.h"
+#include "cvar.h"
 #include "r_stats.h"
+
+NVAR(int, r_stats, "rendering statistics", 0, 1, 1);
 
 namespace r {
 
@@ -8,14 +11,16 @@ u::map<const char *, stat> stat::m_stats;
 static constexpr size_t kSpace = 20u;
 
 void stat::render(size_t x) {
-    // calculate total vertical space needed
-    size_t space = kSpace;
-    for (const auto &it : m_stats)
-        space += it.second.space();
-    // shift up by vertical space
-    size_t next = space;
-    for (const auto &it : m_stats)
-        next = it.second.draw(x, next);
+    if (r_stats) {
+        // calculate total vertical space needed
+        size_t space = kSpace;
+        for (const auto &it : m_stats)
+            space += it.second.space();
+        // shift up by vertical space
+        size_t next = space;
+        for (const auto &it : m_stats)
+            next = it.second.draw(x, next);
+    }
 }
 
 stat *stat::get(const char *name) {
