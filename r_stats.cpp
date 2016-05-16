@@ -5,10 +5,11 @@
 #include "gui.h"
 #include "cvar.h"
 
-
+#include "r_common.h"
 #include "r_stats.h"
 
 NVAR(int, r_stats, "rendering statistics", 0, 1, 1);
+NVAR(int, r_stats_gpu_meminfo, "show GPU memory info if supported", 0, 1, 1);
 NVAR(int, r_stats_histogram, "rendering statistics histogram", 0, 1, 1);
 NVAR(int, r_stats_histogram_duration, "duration in seconds to collect histogram samples", 1, 10, 2);
 NVAR(float, r_stats_histogram_size, "size of histogram in screen width percentage", 0.25f, 1.0f, 0.5f);
@@ -69,6 +70,73 @@ void stat::drawHistogram(size_t x, size_t next) {
     gui::drawTexture(x + kSpace, next-kSpace+5, renderWidth, renderHeight, m_texture);
 }
 
+size_t stat::drawMemoryInfo(size_t x, size_t next) {
+    const auto color = gui::RGBA(255,255,255);
+    if (gl::has(gl::NVX_gpu_memory_info)) {
+        gui::drawText(x, next, gui::kAlignLeft, "Memory Info", gui::RGBA(255, 255, 0));
+        next -= kSpace;
+
+        GLint read[5];
+        size_t memory[4];
+        gl::GetIntegerv(GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX, &read[0]);
+        gl::GetIntegerv(GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX, &read[1]);
+        gl::GetIntegerv(GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &read[2]);
+        gl::GetIntegerv(GL_GPU_MEMORY_INFO_EVICTION_COUNT_NVX, &read[3]);
+        gl::GetIntegerv(GL_GPU_MEMORY_INFO_EVICTED_MEMORY_NVX, &read[4]);
+        memory[0] = size_t(read[0]) * 1024u;
+        memory[1] = size_t(read[1]) * 1024u;
+        memory[2] = size_t(read[2]) * 1024u;
+        memory[3] = size_t(read[4]) * 1024u;
+        gui::drawText(x + kSpace, next, gui::kAlignLeft,
+            u::format("Dedicated Memory: %s", u::sizeMetric(memory[0])).c_str(), color);
+        next -= kSpace;
+        gui::drawText(x + kSpace, next, gui::kAlignLeft,
+            u::format("Total Memory: %s", u::sizeMetric(memory[1])).c_str(), color);
+        next -= kSpace;
+        gui::drawText(x + kSpace, next, gui::kAlignLeft,
+            u::format("Available Memory: %s", u::sizeMetric(memory[2])).c_str(), color);
+        next -= kSpace;
+        gui::drawText(x + kSpace, next, gui::kAlignLeft,
+            u::format("Eviction Count: %zu", size_t(read[3])).c_str(), color);
+        next -= kSpace;
+        gui::drawText(x + kSpace, next, gui::kAlignLeft,
+            u::format("Eviction Memory: %s", u::sizeMetric(memory[3])).c_str(), color);
+        next -= kSpace;
+    } else if (gl::has(gl::ATI_meminfo)) {
+        gui::drawText(x, next, gui::kAlignLeft, "Memory Info", gui::RGBA(255, 255, 0));
+        next -= kSpace;
+
+        GLint vbo[4]; size_t vbomem[4];
+        GLint tex[4]; size_t texmem[4];
+        GLint rbf[4]; size_t rbfmem[4];
+        gl::GetIntegerv(GL_VBO_FREE_MEMORY_ATI, vbo);
+        gl::GetIntegerv(GL_TEXTURE_FREE_MEMORY_ATI, tex);
+        gl::GetIntegerv(GL_RENDERBUFFER_FREE_MEMORY_ATI, rbf);
+        for (size_t i = 0; i < 4; i++) {
+            vbomem[i] = size_t(vbo[i]) * 1024u;
+            texmem[i] = size_t(tex[i]) * 1024u;
+            rbfmem[i] = size_t(rbf[i]) * 1024u;
+        }
+
+        gui::drawText(x + kSpace, next, gui::kAlignLeft,
+            u::format("Vertex: Total (%s) - Largest (%s) | Auxiliary: Total (%s) - Largest (%s)",
+                u::sizeMetric(vbomem[0]), u::sizeMetric(vbomem[1]),
+                u::sizeMetric(vbomem[2]), u::sizeMetric(vbomem[2])).c_str(), color);
+        next -= kSpace;
+        gui::drawText(x + kSpace, next, gui::kAlignLeft,
+            u::format("Texture: Total (%s) - Largest (%s) | Auxiliary: Total (%s) - Largest (%s)",
+                u::sizeMetric(texmem[0]), u::sizeMetric(texmem[1]),
+                u::sizeMetric(texmem[2]), u::sizeMetric(texmem[3])).c_str(), color);
+        next -= kSpace;
+        gui::drawText(x + kSpace, next, gui::kAlignLeft,
+            u::format("Buffer: Total (%s) - Largest (%s) | Auxiliary: Total (%s) - Largest (%s)",
+                u::sizeMetric(rbfmem[0]), u::sizeMetric(rbfmem[1]),
+                u::sizeMetric(rbfmem[2]), u::sizeMetric(rbfmem[3])).c_str(), color);
+        next -= kSpace;
+    }
+    return next;
+}
+
 void stat::render(size_t x) {
     if (r_stats) {
         // calculate total vertical space needed
@@ -77,8 +145,18 @@ void stat::render(size_t x) {
             space += it.second.space();
 
         if (r_stats_histogram) {
-            space += kSpace;   // 1 for "Histogram" test
+            space += kSpace;   // 1 for "Histogram" text
             space += kSpace*2; // 2 for "Histogram" bars
+        }
+
+        if (r_stats_gpu_meminfo) {
+            if (gl::has(gl::NVX_gpu_memory_info)) {
+                space += kSpace;   // 1 for "Memory Info" text
+                space += kSpace*5; // for the information
+            } else if (gl::has(gl::ATI_meminfo)) {
+                space += kSpace;   // 1 for "Memory Info" text
+                space += kSpace*3; // for the information
+            }
         }
 
         // shift up by vertical space
@@ -86,6 +164,14 @@ void stat::render(size_t x) {
         for (const auto &it : m_stats)
             next = it.second.draw(x, next);
 
+        // memory information before histogram
+        if (r_stats_gpu_meminfo)
+            next = drawMemoryInfo(x, next);
+        if (r_stats_histogram)
+            drawHistogram(x, next);
+    } else if (r_stats_gpu_meminfo) {
+        // memory information before histogram
+        const size_t next = drawMemoryInfo(x, kSpace*4);
         if (r_stats_histogram)
             drawHistogram(x, next);
     } else if (r_stats_histogram) {
@@ -131,28 +217,34 @@ size_t stat::draw(size_t x, size_t y) const {
     y -= kSpace;
     if (m_instances > 1) {
         // Sometimes there are multiple instances
-        gui::drawText(x + kSpace, y, gui::kAlignLeft, u::format("Instances: %zu", m_instances).c_str(), color);
+        gui::drawText(x + kSpace, y, gui::kAlignLeft,
+            u::format("Instances: %zu", m_instances).c_str(), color);
         y -= kSpace;
     }
     if (m_vboMemory) {
-        gui::drawText(x + kSpace, y, gui::kAlignLeft, u::format("Vertex Memory: %s", u::sizeMetric(m_vboMemory)).c_str(), color);
+        gui::drawText(x + kSpace, y, gui::kAlignLeft,
+            u::format("Vertex Memory: %s", u::sizeMetric(m_vboMemory)).c_str(), color);
         y -= kSpace;
     }
     if (m_iboMemory) {
-        gui::drawText(x + kSpace, y, gui::kAlignLeft, u::format("Index Memory: %s", u::sizeMetric(m_iboMemory)).c_str(), color);
+        gui::drawText(x + kSpace, y, gui::kAlignLeft,
+            u::format("Index Memory: %s", u::sizeMetric(m_iboMemory)).c_str(), color);
         y -= kSpace;
     }
     if (m_textureCount > 1) {
         // Multiple textures: indicate count and total memory usage
         gui::drawText(x + kSpace, y, gui::kAlignLeft, "Textures:", color);
         y -= kSpace;
-        gui::drawText(x + 40, y, gui::kAlignLeft, u::format("Count: %zu", m_textureCount).c_str(), color);
+        gui::drawText(x + 40, y, gui::kAlignLeft,
+            u::format("Count: %zu", m_textureCount).c_str(), color);
         y -= kSpace;
-        gui::drawText(x + 40, y, gui::kAlignLeft, u::format("Memory: %s", u::sizeMetric(m_textureMemory)).c_str(), color);
+        gui::drawText(x + 40, y, gui::kAlignLeft,
+            u::format("Memory: %s", u::sizeMetric(m_textureMemory)).c_str(), color);
         y -= kSpace;
     } else if (m_textureCount) {
         // Single texture: has no count just indicate texture memory (memory of the single texture)
-        gui::drawText(x + kSpace, y, gui::kAlignLeft, u::format("Texture Memory: %s", u::sizeMetric(m_textureMemory)).c_str(), color);
+        gui::drawText(x + kSpace, y, gui::kAlignLeft,
+            u::format("Texture Memory: %s", u::sizeMetric(m_textureMemory)).c_str(), color);
         y -= kSpace;
     }
     return y;

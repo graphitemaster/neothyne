@@ -83,6 +83,34 @@ def genHeader(functionList, extensionList, headerFile):
         #define GL_COMPRESSED_RGBA8_ETC2_EAC 0x9278
         #endif
 
+        // GL_NVX_gpu_memory_info
+        #ifndef GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX
+        #define GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX 0x9047
+        #endif
+        #ifndef GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX
+        #define GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX 0x9048
+        #endif
+        #ifndef GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX
+        #define GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX 0x9049
+        #endif
+        #ifndef GL_GPU_MEMORY_INFO_EVICTION_COUNT_NVX
+        #define GL_GPU_MEMORY_INFO_EVICTION_COUNT_NVX 0x904A
+        #endif
+        #ifndef GL_GPU_MEMORY_INFO_EVICTED_MEMORY_NVX
+        #define GL_GPU_MEMORY_INFO_EVICTED_MEMORY_NVX 0x904B
+        #endif
+
+        // ATI_meminfo
+        #ifndef GL_VBO_FREE_MEMORY_ATI
+        #define GL_VBO_FREE_MEMORY_ATI 0x87FB
+        #endif
+        #ifndef GL_TEXTURE_FREE_MEMORY_ATI
+        #define GL_TEXTURE_FREE_MEMORY_ATI 0x87FC
+        #endif
+        #ifndef GL_RENDERBUFFER_FREE_MEMORY_ATI
+        #define GL_RENDERBUFFER_FREE_MEMORY_ATI 0x87FD
+        #endif
+
         namespace u {
         template <typename T>
         struct set;
@@ -359,7 +387,7 @@ def genSource(functionList, extensionList, sourceFile):
             case 150: return "3.2";
             case 330: return "3.3";
             }
-            u::unreachable();
+            U_UNREACHABLE();
         }
 
         const char *extensionString(size_t what) {

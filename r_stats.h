@@ -29,6 +29,7 @@ struct stat {
 
 private:
     static void drawHistogram(size_t x, size_t next);
+    static size_t drawMemoryInfo(size_t x, size_t next);
     size_t draw(size_t x, size_t y) const;
     size_t space() const;
 
