@@ -4,7 +4,7 @@ Neothyne is an attempt at getting back to the roots of good old twitch shooting
 akin to that of Quake World.
 
 Here's what it looks like currently
-![](http://i.imgur.com/aK8ZAm0.png)
+![](http://i.imgur.com/TokBM3y.png)
 
 ## Philosphy
 
