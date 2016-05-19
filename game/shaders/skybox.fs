@@ -18,8 +18,8 @@ void main() {
     // Vertical gradient below certain height so that world fog "reaches" into
     // the sky.
     float vertFogGrad = 1.0f - clamp(dot(-eyeDir, vec3(0.0f, 1.0f, 0.0f)) - 0.1f, 0.0f, 0.25f) / 0.25f;
-    vec3 verticalMixture = mix(color, gFog.color, vertFogGrad);
-    fragColor = mix(verticalMixture, gSkyColor, gFog.density);
+    vec3 verticalMixture = mix(color, FOG_COLOR, vertFogGrad);
+    fragColor = mix(verticalMixture, gSkyColor, FOG_DENSITY);
 #else
     fragColor = texture(gColorMap, texCoord0).rgb;
 #endif

@@ -41,7 +41,7 @@ void main() {
     } else {
         vec2 randomJitter = normalize(neoTexture2D(gRandomMap, texCoord).xy * 2.0f - 2.0f);
         vec3 srcNormal = neoTexture2D(gNormalMap, texCoord).rgb * 2.0f - 1.0f;
-        float srcDepth = evalLinearDepth(texCoord, depth);
+        float srcDepth = evalLinearDepth(depth);
         vec3 srcPosition = calcPosition(texCoord);
 
         float kernelRadius = gSamplingRadius * (1.0f - srcDepth);

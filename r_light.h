@@ -112,19 +112,11 @@ struct directionalLightMethod : lightMethod {
     void setFog(const fog &f);
 
 private:
-    struct {
-        uniform *color;
-        uniform *ambient;
-        uniform *diffuse;
-        uniform *direction;
-    } m_directionalLight;
-
-    struct {
-        uniform *color;
-        uniform *density;
-        uniform *range;
-        uniform *equation;
-    } m_fog;
+    uniform *m_light0; // { r, g, b, diffuse }
+    uniform *m_light1; // { dir.x, dir.y, dir.z, ambient }
+    uniform *m_fog0; // { r, g, b }
+    uniform *m_fog1; // { range.x, range.y, density }
+    uniform *m_fogEquation;
 };
 
 struct pointLightMethod : lightMethod {
@@ -134,14 +126,8 @@ struct pointLightMethod : lightMethod {
     void setLightWVP(const m::mat4 &wvp);
 
 private:
-    struct {
-        uniform *color;
-        uniform *ambient;
-        uniform *diffuse;
-        uniform *position;
-        uniform *radius;
-    } m_pointLight;
-
+    uniform *m_light0; // { r, g, b, diffuse }
+    uniform *m_light1; // { pos.x, pos.y, pos.z, radius }
     uniform *m_lightWVP;
 };
 
@@ -152,16 +138,9 @@ struct spotLightMethod : lightMethod {
     void setLightWVP(const m::mat4 &wvp);
 
 private:
-    struct {
-        uniform *color;
-        uniform *ambient;
-        uniform *diffuse;
-        uniform *position;
-        uniform *radius;
-        uniform *direction;
-        uniform *cutOff;
-    } m_spotLight;
-
+    uniform *m_light0; // { r, g, b, diffuse }
+    uniform *m_light1; // { pos.x, pos.y, pos.z, radius }
+    uniform *m_light2; // { dir.x, dir.y, dir.z, cutoff }
     uniform *m_lightWVP;
 };
 

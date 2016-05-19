@@ -59,10 +59,9 @@ private:
     uniform *m_world;
     uniform *m_skyColor;
     uniform *m_colorMap;
-    struct {
-        uniform *color;
-        uniform *density;
-    } m_fog;
+    uniform *m_fog0; // { r, g, b }
+    uniform *m_fog1; // { range.x, range.y, density }
+    uniform *m_fogEquation;
 };
 
 struct skybox {

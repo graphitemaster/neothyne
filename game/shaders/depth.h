@@ -24,7 +24,7 @@ vec3 calcPosition(vec2 texCoord) {
     return pos.xyz / pos.w;
 }
 
-float evalLinearDepth(vec2 texCoord, float depth) {
+float evalLinearDepth(float depth) {
     return (2.0f * gScreenFrustum.x)
         / (gScreenFrustum.y + gScreenFrustum.x -
             depth * (gScreenFrustum.y - gScreenFrustum.x));
@@ -35,7 +35,7 @@ float calcDepth(vec2 texCoord) {
 }
 
 float calcLinearDepth(vec2 texCoord) {
-    return evalLinearDepth(texCoord, calcDepth(texCoord));
+    return evalLinearDepth(calcDepth(texCoord));
 }
 
 #endif

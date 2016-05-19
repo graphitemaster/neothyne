@@ -30,8 +30,11 @@ bool skyboxMethod::init(const u::vector<const char *> &defines) {
     m_world = getUniform("gWorld", uniform::kMat4);
     m_colorMap = getUniform("gColorMap", uniform::kSampler);
     m_skyColor = getUniform("gSkyColor", uniform::kVec3);
-    m_fog.color = getUniform("gFog.color", uniform::kVec3);
-    m_fog.density = getUniform("gFog.density", uniform::kFloat);
+
+    // { { r, g, b }, { range.x, range.y, density } }
+    m_fog0 = getUniform("gFog[0]", uniform::kVec3);
+    m_fog1 = getUniform("gFog[1]", uniform::kVec3);
+    m_fogEquation = getUniform("gFogEquation", uniform::kInt);
 
     post();
     return true;
@@ -50,8 +53,9 @@ void skyboxMethod::setWorld(const m::mat4 &worldInverse) {
 }
 
 void skyboxMethod::setFog(const fog &f) {
-    m_fog.color->set(f.color);
-    m_fog.density->set(f.density);
+    m_fog0->set(f.color);
+    m_fog1->set(m::vec3(f.start, f.end, f.density));
+    m_fogEquation->set(int(f.equation));
 }
 
 void skyboxMethod::setSkyColor(const m::vec3 &skyColor) {

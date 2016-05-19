@@ -117,32 +117,28 @@ bool directionalLightMethod::init(const u::vector<const char *> &defines) {
                            defines))
         return false;
 
-    m_directionalLight.color = getUniform("gDirectionalLight.base.color", uniform::kVec3);
-    m_directionalLight.ambient = getUniform("gDirectionalLight.base.ambient", uniform::kFloat);
-    m_directionalLight.diffuse = getUniform("gDirectionalLight.base.diffuse", uniform::kFloat);
-    m_directionalLight.direction = getUniform("gDirectionalLight.direction", uniform::kVec3);
+    // { { r, g, b, ambient }, { dir.x, dir.y, dir.z, diffuse } }
+    m_light0 = getUniform("gDirectionalLight[0]", uniform::kVec4);
+    m_light1 = getUniform("gDirectionalLight[1]", uniform::kVec4);
 
-    m_fog.color = getUniform("gFog.color", uniform::kVec3);
-    m_fog.density = getUniform("gFog.density", uniform::kFloat);
-    m_fog.range = getUniform("gFog.range", uniform::kVec2);
-    m_fog.equation = getUniform("gFog.equation", uniform::kInt);
+    // { { r, g, b }, { range.x, range.y, density } }
+    m_fog0 = getUniform("gFog[0]", uniform::kVec3);
+    m_fog1 = getUniform("gFog[1]", uniform::kVec3);
+    m_fogEquation = getUniform("gFogEquation", uniform::kInt);
 
     post();
     return true;
 }
 
 void directionalLightMethod::setLight(const directionalLight &light) {
-    m_directionalLight.color->set(light.color);
-    m_directionalLight.ambient->set(light.ambient);
-    m_directionalLight.direction->set(light.direction.normalized());
-    m_directionalLight.diffuse->set(light.diffuse);
+    m_light0->set(m::vec4(light.color, light.ambient));
+    m_light1->set(m::vec4(light.direction.normalized(), light.diffuse));
 }
 
 void directionalLightMethod::setFog(const fog &f) {
-    m_fog.color->set(f.color);
-    m_fog.density->set(f.density);
-    m_fog.range->set(m::vec2(f.start, f.end));
-    m_fog.equation->set(int(f.equation));
+    m_fog0->set(f.color);
+    m_fog1->set(m::vec3(f.start, f.end, f.density));
+    m_fogEquation->set(int(f.equation));
 }
 
 ///! Point Light Rendering Method
@@ -153,11 +149,9 @@ bool pointLightMethod::init(const u::vector<const char *> &defines) {
                            defines))
         return false;
 
-    m_pointLight.color = getUniform("gPointLight.base.color", uniform::kVec3);
-    m_pointLight.ambient = getUniform("gPointLight.base.ambient", uniform::kFloat);
-    m_pointLight.diffuse = getUniform("gPointLight.base.diffuse", uniform::kFloat);
-    m_pointLight.position = getUniform("gPointLight.position", uniform::kVec3);
-    m_pointLight.radius = getUniform("gPointLight.radius", uniform::kFloat);
+    // { { r, g, b, diffuse }, { pos.x, pos.y, pos.z, radius } }
+    m_light0 = getUniform("gPointLight[0]", uniform::kVec4);
+    m_light1 = getUniform("gPointLight[1]", uniform::kVec4);
 
     m_lightWVP = getUniform("gLightWVP", uniform::kMat4);
 
@@ -166,11 +160,8 @@ bool pointLightMethod::init(const u::vector<const char *> &defines) {
 }
 
 void pointLightMethod::setLight(const pointLight &light) {
-    m_pointLight.color->set(light.color);
-    m_pointLight.ambient->set(light.ambient);
-    m_pointLight.diffuse->set(light.diffuse);
-    m_pointLight.position->set(light.position);
-    m_pointLight.radius->set(light.radius);
+    m_light0->set(m::vec4(light.color, light.diffuse));
+    m_light1->set(m::vec4(light.position, light.radius));
 }
 
 void pointLightMethod::setLightWVP(const m::mat4 &wvp) {
@@ -185,14 +176,10 @@ bool spotLightMethod::init(const u::vector<const char *> &defines) {
                            defines))
         return false;
 
-    m_spotLight.color = getUniform("gSpotLight.base.base.color", uniform::kVec3);
-    m_spotLight.ambient = getUniform("gSpotLight.base.base.ambient", uniform::kFloat);
-    m_spotLight.diffuse = getUniform("gSpotLight.base.base.diffuse", uniform::kFloat);
-    m_spotLight.position = getUniform("gSpotLight.base.position", uniform::kVec3);
-    m_spotLight.radius = getUniform("gSpotLight.base.radius", uniform::kFloat);
-    m_spotLight.direction = getUniform("gSpotLight.direction", uniform::kVec3);
-    m_spotLight.cutOff = getUniform("gSpotLight.cutOff", uniform::kFloat);
-
+    // { { r, g, b, diffuse }, { pos.x, pos.y, pos.z, radius }, { dir.x, dir.y, dir.z, cutoff } }
+    m_light0 = getUniform("gSpotLight[0]", uniform::kVec4);
+    m_light1 = getUniform("gSpotLight[1]", uniform::kVec4);
+    m_light2 = getUniform("gSpotLight[2]", uniform::kVec4);
     m_lightWVP = getUniform("gLightWVP", uniform::kMat4);
 
     post();
@@ -200,13 +187,9 @@ bool spotLightMethod::init(const u::vector<const char *> &defines) {
 }
 
 void spotLightMethod::setLight(const spotLight &light) {
-    m_spotLight.color->set(light.color);
-    m_spotLight.ambient->set(light.ambient);
-    m_spotLight.diffuse->set(light.diffuse);
-    m_spotLight.position->set(light.position);
-    m_spotLight.radius->set(light.radius);
-    m_spotLight.direction->set(light.direction.normalized());
-    m_spotLight.cutOff->set(m::cos(m::toRadian(light.cutOff)));
+    m_light0->set(m::vec4(light.color, light.diffuse));
+    m_light1->set(m::vec4(light.position, light.radius));
+    m_light2->set(m::vec4(light.direction.normalized(), m::cos(m::toRadian(light.cutOff))));
 }
 
 void spotLightMethod::setLightWVP(const m::mat4 &wvp) {
