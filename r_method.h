@@ -96,7 +96,7 @@ protected:
                   const u::initializer_list<const char *> &fragData = {},
                   bool initial = true);
 
-    u::optional<u::string> preprocess(const u::string &file, bool initial = true);
+    u::optional<u::string> preprocess(const u::string &file, u::set<u::string> &uniforms, bool initial = true);
 
     void post();
 

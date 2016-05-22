@@ -6,6 +6,7 @@
 #include "u_misc.h"
 #include "u_hash.h"
 #include "u_zip.h"
+#include "u_set.h"
 
 namespace r {
 
@@ -180,7 +181,7 @@ void method::define(const char *macro, float value) {
     m_prelude += u::format("#define %s %f\n", macro, value);
 }
 
-u::optional<u::string> method::preprocess(const u::string &file, bool initial) {
+u::optional<u::string> method::preprocess(const u::string &file, u::set<u::string> &uniforms, bool initial) {
     auto fp = u::fopen(neoGamePath() + file, "r");
     if (!fp)
         return u::none;
@@ -198,7 +199,7 @@ u::optional<u::string> method::preprocess(const u::string &file, bool initial) {
                 const auto back = thing.pop_back(); // '"' or '>'
                 if ((front == '<' && back != '>') && (front != back))
                     return u::format("#error invalid use of include directive on line %zu\n", lineno);
-                const u::optional<u::string> include = preprocess(thing, false);
+                const u::optional<u::string> include = preprocess(thing, uniforms, false);
                 if (!include)
                     return u::format("#error failed to include %s\n", thing);
                 result += u::format("#line %zu\n%s\n", lineno++, *include);
@@ -206,25 +207,16 @@ u::optional<u::string> method::preprocess(const u::string &file, bool initial) {
             }
         }
         if (!strncmp(&line[0], "uniform", 7)) {
-            // We put #ifdef uniform_name ... #define uniform_name #endif
-            // around all uniforms to prevent declaring them twice. This is because
-            // it's quite easy to cause multiple declarations when using headers
-            auto split = u::split(line);
-            split[2].pop_back(); // Remove the semicolon
-            auto name = split[2];
-            // Erase anything after '[', which would mark an array
-            const auto find = name.find('[');
-            if (find != u::string::npos)
-                name.erase(find, name.size());
-            result += u::format("#ifndef uniform_%s\n"
-                                "uniform %s %s;\n"
-                                "#define uniform_%s\n"
-                                "#endif\n"
-                                "#line %zu\n",
-                                name,
-                                split[1], split[2],
-                                name,
-                                lineno);
+            // don't emit the uniform line if it's already declared
+            u::string name = &line[0] + 7;
+            while (u::isspace(name[0])) name.pop_front();
+            size_t semicolon = name.find(';');
+            if (semicolon != u::string::npos)
+                name.erase(semicolon, name.size() - (name.size() - semicolon));
+            if (uniforms.find(name) == uniforms.end()) {
+                uniforms.insert(name);
+                result += line + "\n";
+            }
         } else {
             result += line + "\n";
         }
@@ -234,10 +226,10 @@ u::optional<u::string> method::preprocess(const u::string &file, bool initial) {
 }
 
 bool method::addShader(GLenum type, const char *shaderFile) {
-    const auto pp = preprocess(shaderFile);
+    u::set<u::string> uniforms;
+    const auto pp = preprocess(shaderFile, uniforms);
     if (!pp)
         neoFatal("failed preprocessing `%s'", shaderFile);
-
     auto &what = m_shaders[type];
     what.shaderFile = shaderFile;
     what.shaderText = u::move(*pp);

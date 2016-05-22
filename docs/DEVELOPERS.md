@@ -48,9 +48,7 @@ utilize as well as things like `HAS_TEXTURE_RECTANGLE` if the GPU supports that
 feature. You can find a list of the macros it emits by searching for
 `method::define` in the code-base.
 
-Neothyne supports the `#include` directive in GLSL; similarly, Neothyne will emit
-uniform guards to prevent declaring uniforms more than once. This is useful as
-headers typically declare uniforms throughout.
+Neothyne supports the `#include` directive in GLSL.
 
 If supported, Neothyne will fetch compiled program binaries and cache them disk
 for subsequent launches to reduce startup costs associated with processing,
