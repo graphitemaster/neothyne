@@ -190,17 +190,15 @@ u::vector<half> convertToHalf(const float *const input, size_t length) {
 #if defined(__SSE2__)
     const int blocks = int(length) / 4;
     const int remainder = int(length) % 4;
-    int where = 0;
     for (int i = 0; i < blocks; i++) {
-        const __m128 value = _mm_load_ps(&in[where]);
-        const __m128i convert = convertToHalfSSE2(value);
-        result[where++] = extractScalar<0>(convert);
-        result[where++] = extractScalar<1>(convert);
-        result[where++] = extractScalar<2>(convert);
-        result[where++] = extractScalar<3>(convert);
+        const __m128i convert = convertToHalfSSE2(((__m128 *)in)[i]);
+        result[i * 4 + 0] = extractScalar<0>(convert);
+        result[i * 4 + 1] = extractScalar<1>(convert);
+        result[i * 4 + 2] = extractScalar<2>(convert);
+        result[i * 4 + 3] = extractScalar<3>(convert);
     }
     for (int i = 0; i < remainder; i++)
-        result[where+i] = convertToHalf(in[where+i]);
+        result[blocks * 4 + i] = convertToHalf(in[blocks * 4 + i]);
 #else
     for (size_t i = 0; i < length; i++)
         result[i] = convertToHalf(in[i]);
