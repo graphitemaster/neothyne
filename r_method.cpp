@@ -212,7 +212,7 @@ u::optional<u::string> method::preprocess(const u::string &file, u::set<u::strin
             while (u::isspace(name[0])) name.pop_front();
             size_t semicolon = name.find(';');
             if (semicolon != u::string::npos)
-                name.erase(semicolon, name.size() - (name.size() - semicolon));
+                name.erase(semicolon, semicolon);
             if (uniforms.find(name) == uniforms.end()) {
                 uniforms.insert(name);
                 result += line + "\n";
