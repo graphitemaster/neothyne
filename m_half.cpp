@@ -122,10 +122,7 @@ static inline uint32_t extractScalar(__m128i v) {
 #if defined(__SSE4_1__)
     return _mm_extract_epi32(v, I);
 #else
-    // Not pretty
-    vectorShape shape;
-    shape.asVector = v;
-    return shape.asInt[I];
+    return _mm_cvtsi128_si32(_mm_shuffle_epi32(v, _MM_SHUFFLE(I,I,I,I)));
 #endif
 }
 
