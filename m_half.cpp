@@ -112,11 +112,6 @@ float convertToFloat(half in) {
 }
 
 #if defined(__SSE2__)
-union vectorShape {
-    __m128i asVector;
-    alignas(16) uint32_t asInt[4];
-};
-
 template <unsigned int I>
 static inline uint32_t extractScalar(__m128i v) {
 #if defined(__SSE4_1__)
