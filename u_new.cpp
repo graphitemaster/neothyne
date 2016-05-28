@@ -18,7 +18,7 @@ static voidptr neoCoreMalloc(size_t size) {
 
 static voidptr neoCoreRealloc(voidptr ptr, size_t size) {
     if (size) {
-            void *resize = realloc(ptr, size);
+        void *resize = realloc(ptr, size);
         if (resize)
             return resize;
     }
