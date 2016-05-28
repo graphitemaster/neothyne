@@ -18,7 +18,7 @@ static voidptr neoCoreMalloc(size_t size) {
 
 static voidptr neoCoreRealloc(voidptr ptr, size_t size) {
     if (size) {
-        void *resize = realloc(ptr, size);
+            void *resize = realloc(ptr, size);
         if (resize)
             return resize;
     }
@@ -97,7 +97,13 @@ struct max_alignment {
     enum { value = alignof(data) };
 };
 
+// sizeof(long double) in Visual Studio is not 16 bytes for Win64 even though it should be.
+// this works around the non-conformancy of Visual Studio.
+#if defined(_WIN64)
+using allocator = alignedAllocator<false>;
+#else
 using allocator = alignedAllocator<max_alignment::value < kMemoryAlignment>;
+#endif
 
 voidptr neoMalloc(size_t size) {
     return allocator::neoMalloc(size);

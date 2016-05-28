@@ -1,15 +1,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-// These exist on Windows too
-#include <sys/stat.h>   // S_ISREG, stat
-
 #if defined(_WIN32)
 #   define _WIN32_LEAN_AND_MEAN
 #   define NOMINMAX
 #   include <windows.h>
-#   include <direct.h>  // rmdir, mkdir
 #else
+#    include <sys/stat.h>   // S_ISREG, stat
 #   include <dirent.h>  // opendir, readir, DIR
 #   include <unistd.h>  // rmdir, mkdir
 #endif
@@ -62,61 +59,58 @@ void file::close() {
 
 u::string fixPath(const u::string &path) {
     u::string fix = path;
-    for (auto &it : fix)
-        if (strchr("/\\", it))
-            it = u::kPathSep;
+    for (char *it = &fix[0]; (it = strpbrk(it, "/\\")); *it++ = u::kPathSep)
+        ;
     return fix;
 }
 
 // file system stuff
-bool exists(const u::string &path, pathType type) {
+bool exists(const u::string &inputPath, pathType type) {
+    u::string &&path = u::move(u::fixPath(inputPath));
     if (type == kFile)
         return dir::isFile(path);
 
     // type == kDirectory
-#if !defined(_WIN32)
+#if defined(_WIN32)
+    const DWORD attribs = GetFileAttributesA(inputPath.c_str());
+    if (attribs == INVALID_FILE_ATTRIBUTES)
+        return false;
+    if (!(attribs & FILE_ATTRIBUTE_DIRECTORY))
+        return false;
+#else
     struct stat info;
     if (stat(path.c_str(), &info) != 0)
         return false; // Couldn't stat directory
     if (!(info.st_mode & S_IFDIR))
         return false; // Not a directory
-#else
-    // _stat does not like trailing path separators
-    u::string strip = path;
-    if (strip.end()[-1] == u::kPathSep)
-        strip.pop_back();
-    struct _stat info;
-    if (_stat(strip.c_str(), &info) != 0)
-        return false;
-#if !defined(S_IFDIR)
-#  define S_IFDIR _S_IFDIR
-#endif
-    if (!(info.st_mode & _S_IFDIR))
-        return false;
 #endif
     return true;
 }
 
 bool remove(const u::string &path, pathType type) {
-    u::string fix = fixPath(path);
-    if (type == kFile)
-        return ::remove(fix.c_str()) == 0;
+    u::string &&fix = u::move(fixPath(path));
+    if (type == kFile) {
+#if defined(_WIN32)
+        return DeleteFileA(&fix[0]) != 0;
+#else
+        return ::remove(&fix[0]) == 0;
+#endif
+    }
 
     // type == kDirectory
 #if defined(_WIN32)
-    return ::_rmdir(fix.c_str()) == 0;
+    return RemoveDirectoryA(&fix[0]) != 0;
 #else
-    return ::rmdir(fix.c_str()) == 0;
+    return ::rmdir(&fix[0]) == 0;
 #endif
 }
 
 bool mkdir(const u::string &dir) {
-    u::string fix = fixPath(dir);
-    const char *path = fix.c_str();
+    u::string &&fix = u::move(u::fixPath(dir));
 #if defined(_WIN32)
-    return ::_mkdir(path) == 0;
+    return CreateDirectoryA(&fix[0], nullptr) != 0;
 #else
-    return ::mkdir(path, 0775);
+    return ::mkdir(&fix[0], 0775);
 #endif
 }
 
@@ -229,15 +223,6 @@ bool dir::isFile(const char *fileName) {
 #else
 #define IS_IGNORE(X) (!strcmp((X).cFileName, ".") || !strcmp((X).cFileName, ".."))
 
-#if !defined(S_ISREG) && defined(S_IFMT) && defined(S_IFREG)
-#define S_ISREG(M) (((M) & S_IFMT) == S_IFREG)
-#elif defined(_S_ISREG)
-#define S_ISREG(M) _S_ISREG(M)
-#else
-#define S_ISREG(M) \
-    ([]() { static_assert(0, "no suitable implementation of S_ISREG"); return false; })()
-#endif
-
 struct findContext {
     findContext(const char *where);
     ~findContext();
@@ -297,14 +282,12 @@ dir::~dir() {
 }
 
 bool dir::isFile(const char *fileName) {
-    struct _stat buff;
-    if (_stat(fileName, &buff) != 0)
+    const DWORD attribs = GetFileAttributesA(fileName);
+    if (attribs == INVALID_FILE_ATTRIBUTES)
         return false;
-#if defined(S_ISREG)
-    return S_ISREG(buff.st_mode);
-#else
-    return _S_ISREG(buff.st_mode);
-#endif
+    if (attribs & FILE_ATTRIBUTE_DIRECTORY)
+        return false;
+    return true;
 }
 #endif
 

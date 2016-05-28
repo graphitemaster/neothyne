@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Engine">
@@ -192,6 +192,27 @@
     <ClInclude Include="world.h">
       <Filter>Engine\Header</Filter>
     </ClInclude>
+    <ClInclude Include="a_fader.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="a_filter.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="a_lane.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="a_system.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="a_wav.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="r_stats.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="u_zip.h">
+      <Filter>Engine\Header</Filter>
+    </ClInclude>
     <ClInclude Include="game\client.h">
       <Filter>Game\Header</Filter>
     </ClInclude>
@@ -202,6 +223,9 @@
       <Filter>Game\Header</Filter>
     </ClInclude>
     <ClInclude Include="game\res.h">
+      <Filter>Game\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="game\world.h">
       <Filter>Game\Header</Filter>
     </ClInclude>
   </ItemGroup>
@@ -323,16 +347,10 @@
     <ClCompile Include="u_new.cpp">
       <Filter>Engine\Source</Filter>
     </ClCompile>
-    <ClCompile Include="u_sha512.cpp">
-      <Filter>Engine\Source</Filter>
-    </ClCompile>
     <ClCompile Include="u_string.cpp">
       <Filter>Engine\Source</Filter>
     </ClCompile>
     <ClCompile Include="u_zlib.cpp">
-      <Filter>Engine\Source</Filter>
-    </ClCompile>
-    <ClCompile Include="world.cpp">
       <Filter>Engine\Source</Filter>
     </ClCompile>
     <ClCompile Include="game\client.cpp">
@@ -345,6 +363,33 @@
       <Filter>Game\Source</Filter>
     </ClCompile>
     <ClCompile Include="game\menu.cpp">
+      <Filter>Game\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="a_fader.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="a_filter.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="a_lane.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="a_system.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="a_wav.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="r_stats.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="u_hash.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="u_zip.cpp">
+      <Filter>Engine\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="game\world.cpp">
       <Filter>Game\Source</Filter>
     </ClCompile>
   </ItemGroup>

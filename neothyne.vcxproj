@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -108,7 +108,7 @@
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
@@ -146,7 +146,7 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
@@ -184,7 +184,7 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ControlFlowGuard>false</ControlFlowGuard>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
@@ -196,6 +196,7 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ObjectFileName>$(IntDir)%(RelativeDir)\%(Filename)</ObjectFileName>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -225,7 +226,7 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ControlFlowGuard>false</ControlFlowGuard>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
@@ -237,6 +238,7 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ObjectFileName>$(IntDir)%(RelativeDir)\%(Filename)</ObjectFileName>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -254,6 +256,11 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="a_fader.h" />
+    <ClInclude Include="a_filter.h" />
+    <ClInclude Include="a_lane.h" />
+    <ClInclude Include="a_system.h" />
+    <ClInclude Include="a_wav.h" />
     <ClInclude Include="cvar.h" />
     <ClInclude Include="c_complete.h" />
     <ClInclude Include="engine.h" />
@@ -261,6 +268,7 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
     <ClInclude Include="game\edit.h" />
     <ClInclude Include="game\menu.h" />
     <ClInclude Include="game\res.h" />
+    <ClInclude Include="game\world.h" />
     <ClInclude Include="grader.h" />
     <ClInclude Include="gui.h" />
     <ClInclude Include="kdmap.h" />
@@ -291,6 +299,7 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
     <ClInclude Include="r_shadow.h" />
     <ClInclude Include="r_skybox.h" />
     <ClInclude Include="r_ssao.h" />
+    <ClInclude Include="r_stats.h" />
     <ClInclude Include="r_texture.h" />
     <ClInclude Include="r_vignette.h" />
     <ClInclude Include="r_world.h" />
@@ -313,10 +322,16 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
     <ClInclude Include="u_string.h" />
     <ClInclude Include="u_traits.h" />
     <ClInclude Include="u_vector.h" />
+    <ClInclude Include="u_zip.h" />
     <ClInclude Include="u_zlib.h" />
     <ClInclude Include="world.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="a_fader.cpp" />
+    <ClCompile Include="a_filter.cpp" />
+    <ClCompile Include="a_lane.cpp" />
+    <ClCompile Include="a_system.cpp" />
+    <ClCompile Include="a_wav.cpp" />
     <ClCompile Include="cvar.cpp" />
     <ClCompile Include="c_complete.cpp" />
     <ClCompile Include="engine.cpp" />
@@ -324,6 +339,7 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
     <ClCompile Include="game\edit.cpp" />
     <ClCompile Include="game\main.cpp" />
     <ClCompile Include="game\menu.cpp" />
+    <ClCompile Include="game\world.cpp" />
     <ClCompile Include="grader.cpp" />
     <ClCompile Include="gui.cpp" />
     <ClCompile Include="kdmap.cpp" />
@@ -352,18 +368,19 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
     <ClCompile Include="r_shadow.cpp" />
     <ClCompile Include="r_skybox.cpp" />
     <ClCompile Include="r_ssao.cpp" />
+    <ClCompile Include="r_stats.cpp" />
     <ClCompile Include="r_texture.cpp" />
     <ClCompile Include="r_vignette.cpp" />
     <ClCompile Include="r_world.cpp" />
     <ClCompile Include="texture.cpp" />
     <ClCompile Include="u_assert.cpp" />
     <ClCompile Include="u_file.cpp" />
+    <ClCompile Include="u_hash.cpp" />
     <ClCompile Include="u_misc.cpp" />
     <ClCompile Include="u_new.cpp" />
-    <ClCompile Include="u_sha512.cpp" />
     <ClCompile Include="u_string.cpp" />
+    <ClCompile Include="u_zip.cpp" />
     <ClCompile Include="u_zlib.cpp" />
-    <ClCompile Include="world.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="neothyne.rc" />

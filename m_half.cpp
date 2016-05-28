@@ -224,7 +224,7 @@ u::vector<float> convertToFloat(const half *const input, size_t length) {
         result[where+i] = convertToFloat(in[where+i]);
 #else
     for (size_t i = 0; i < length; i++)
-        result[i] = convertToFloat(in[i]);
+        result[i] = convertToFloat(input[i]);
 #endif
     return result;
 }
