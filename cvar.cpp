@@ -107,29 +107,41 @@ bool writeConfig(const u::string &userPath) {
     u::file file = u::fopen(userPath + "init.cfg", "w");
     if (!file)
         return false;
-    auto writeLine = [](FILE *fp, const u::string &name, const varReference &ref) {
+
+    typedef u::pair<u::string, u::string> line;
+    u::vector<line> lines;
+    auto addLine = [&lines](const u::string &name, const varReference &ref) {
         if (ref.type == kVarInt) {
             auto handle = (var<int>*)ref.self;
             const auto &v = handle->get();
             if (handle->flags() & kVarPersist)
-                u::fprint(fp, "%s %d\n", name, v);
+                lines.push_back({ name, u::format("%d", v) });
         } else if (ref.type == kVarFloat) {
             auto handle = (var<float>*)ref.self;
             const auto &v = handle->get();
             if (handle->flags() & kVarPersist)
-                u::fprint(fp, "%s %.2f\n", name, v);
+                lines.push_back({ name, u::format("%.2f", v) });
         } else if (ref.type == kVarString) {
             auto handle = (var<u::string>*)ref.self;
             const auto &v = handle->get();
             if (handle->flags() & kVarPersist) {
                 if (v.empty())
                     return;
-                u::fprint(fp, "%s \"%s\"\n", name, v.c_str());
+                lines.push_back({ name, u::format("\"%s\"", v) });
             }
         }
     };
+
     for (const auto &it : *gVariables())
-        writeLine(file, it.first, it.second);
+        addLine(it.first, it.second);
+
+    // sort all lines lexicographically before writing
+    u::sort(lines.begin(), lines.end(),
+        [](const line &a, const line &b) { return a.first < b.first; });
+
+    for (const auto &it : lines)
+        u::fprint(file, "%s %s\n", it.first, it.second);
+
     return true;
 }
 

@@ -19,7 +19,7 @@ static inline void insertion_sort(T *start, T *end, F fun) {
             T temp = u::move(*i);
             *i = u::move(i[-1]);
             T *j = i-1;
-            for (; j < start && fun(temp, j[-1]); --j)
+            for (; j > start && fun(temp, j[-1]); --j)
                 *j = u::move(j[-1]);
             *j = u::move(temp);
         }
