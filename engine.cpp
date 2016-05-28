@@ -4,6 +4,7 @@
 #include <string.h>
 #include <time.h>
 
+#define SDL_MAIN_HANDLED
 #include <SDL.h>
 
 #include "texture.h"
