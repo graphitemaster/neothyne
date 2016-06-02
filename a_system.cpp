@@ -510,11 +510,10 @@ void audio::setFilterParam(int voiceHandle, int filterHandle, int attrib, float 
             m_filterInstances[filterHandle]->setFilterParam(attrib, value);
         return;
     }
-    const int voice = getVoiceFromHandle(voiceHandle);
-    if (voice == -1)
-        return;
-
     locked(m_mutex) {
+        const int voice = getVoiceFromHandle(voiceHandle);
+        if (voice == -1)
+            return;
         if (m_voices[voice] && m_voices[voice]->m_filters[filterHandle])
             m_voices[voice]->m_filters[filterHandle]->setFilterParam(attrib, value);
     }
@@ -535,11 +534,10 @@ void audio::fadeFilterParam(int voiceHandle,
             m_filterInstances[filterHandle]->fadeFilterParam(attrib, from, to, time, m_streamTime);
         return;
     }
-    const int voice = getVoiceFromHandle(voiceHandle);
-    if (voice == -1)
-        return;
-
     locked(m_mutex) {
+        const int voice = getVoiceFromHandle(voiceHandle);
+        if (voice == -1)
+            return;
         if (m_voices[voice] && m_voices[voice]->m_filters[filterHandle])
             m_voices[voice]->m_filters[filterHandle]->fadeFilterParam(attrib, from, to, time, m_streamTime);
     }
@@ -560,11 +558,10 @@ void audio::oscFilterParam(int voiceHandle,
             m_filterInstances[filterHandle]->oscFilterParam(attrib, from, to, time, m_streamTime);
         return;
     }
-    const int voice = getVoiceFromHandle(voiceHandle);
-    if (voice == -1)
-        return;
-
     locked(m_mutex) {
+        const int voice = getVoiceFromHandle(voiceHandle);
+        if (voice == -1)
+            return;
         if (m_voices[voice] && m_voices[voice]->m_filters[filterHandle])
             m_voices[voice]->m_filters[filterHandle]->oscFilterParam(attrib, from, to, time, m_streamTime);
     }
