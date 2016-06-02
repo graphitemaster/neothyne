@@ -333,35 +333,29 @@ static deferred_data<stringMemory, false> gStringMemory;
 
 ///! string
 string::string()
-    : m_first(nullptr)
-    , m_last(nullptr)
-    , m_capacity(nullptr)
+    : m_first(m_buffer)
+    , m_last(m_buffer)
+    , m_capacity(m_buffer + kSmallStringSize)
 {
 }
 
 string::string(const string &other)
-    : m_first(nullptr)
-    , m_last(nullptr)
-    , m_capacity(nullptr)
+    : m_first(m_buffer)
+    , m_last(m_buffer)
+    , m_capacity(m_buffer + kSmallStringSize)
 {
     reserve(other.size());
     append(other.m_first, other.m_last);
 }
 
-string::string(string &&other)
-    : m_first(other.m_first)
-    , m_last(other.m_last)
-    , m_capacity(other.m_capacity)
-{
-    other.m_first = nullptr;
-    other.m_last = nullptr;
-    other.m_capacity = nullptr;
+string::string(string &&other) {
+    move_small_string(*this, u::forward<u::string>(other));
 }
 
 string::string(const char* sz)
-    : m_first(nullptr)
-    , m_last(nullptr)
-    , m_capacity(nullptr)
+    : m_first(m_buffer)
+    , m_last(m_buffer)
+    , m_capacity(m_buffer + kSmallStringSize)
 {
     const size_t len = strlen(sz);
     reserve(len);
@@ -369,16 +363,17 @@ string::string(const char* sz)
 }
 
 string::string(const char *sz, size_t len)
-    : m_first(nullptr)
-    , m_last(nullptr)
-    , m_capacity(nullptr)
+    : m_first(m_buffer)
+    , m_last(m_buffer)
+    , m_capacity(m_buffer + kSmallStringSize)
 {
     reserve(len);
     append(sz, sz + len);
 }
 
 string::~string() {
-    STR_FREE(m_first);
+    if (m_first != m_buffer)
+        STR_FREE(m_first);
 }
 
 string &string::operator=(const string &other) {
@@ -388,12 +383,7 @@ string &string::operator=(const string &other) {
 
 string &string::operator=(string &&other) {
     U_ASSERT(this != &other);
-    m_first = other.m_first;
-    m_last = other.m_last;
-    m_capacity = other.m_capacity;
-    other.m_first = nullptr;
-    other.m_last = nullptr;
-    other.m_capacity = nullptr;
+    move_small_string(*this, u::forward<u::string>(other));
     return *this;
 }
 
@@ -415,7 +405,14 @@ void string::reserve(size_t capacity) {
 
     const size_t size = m_last - m_first;
 
-    char *newfirst = STR_REALLOC(m_first, capacity + 1);
+    char *newfirst = nullptr;
+    if (m_first == m_buffer) {
+        newfirst = STR_MALLOC(capacity + 1);
+        memcpy(newfirst, m_first, size + 1);
+    } else {
+        newfirst = STR_REALLOC(m_first, capacity + 1);
+    }
+
     m_first = newfirst;
     m_last = newfirst + size;
     m_capacity = m_first + capacity;
@@ -425,7 +422,7 @@ void string::resize(size_t size) {
     reserve(size);
     for (char *it = m_last, *end = m_first + size + 1; it < end; ++it)
         *it = '\0';
-    m_last += size;
+    m_last = m_last + size;
 }
 
 void string::clear() {
@@ -529,15 +526,72 @@ void string::erase(size_t beg, size_t end) {
 }
 
 void string::swap(string &other) {
-    u::swap(m_first, other.m_first);
-    u::swap(m_last, other.m_last);
-    u::swap(m_capacity, other.m_capacity);
+    swap_small_string(*this, other);
 }
 
 void string::reset() {
     m_last = m_first;
     *m_first = '\0';
     m_capacity = m_first;
+}
+
+void string::swap_small_string(string &dst, string &src) {
+    u::swap(dst.m_first, src.m_first);
+    u::swap(dst.m_last, src.m_last);
+    u::swap(dst.m_capacity, src.m_capacity);
+
+    char buffer[kSmallStringSize];
+    if (dst.m_first == src.m_buffer)
+        for (char *it = src.m_buffer, *end = dst.m_last, *out = buffer; it != end; ++it, ++out)
+            *out = *it;
+
+    if (src.m_first == dst.m_buffer) {
+        src.m_last = src.m_last - src.m_first + src.m_buffer;
+        src.m_first = src.m_buffer;
+        src.m_capacity = src.m_buffer + kSmallStringSize;
+
+        for (char *it = src.m_first, *end = src.m_last, *in = dst.m_buffer; it != end; ++it, ++in)
+            *it = *in;
+
+        *src.m_last = '\0';
+    }
+
+    if (dst.m_first == src.m_buffer) {
+        dst.m_last = dst.m_last - dst.m_first + dst.m_buffer;
+        dst.m_first = dst.m_buffer;
+        dst.m_capacity = dst.m_buffer + kSmallStringSize;
+
+        for (char *it = dst.m_first, *end = dst.m_last, *in = buffer; it != end; ++it, ++in)
+            *it = *in;
+
+        *dst.m_last = '\0';
+    }
+}
+
+void string::move_small_string(string &dst, string &&src) {
+    dst.m_first = src.m_first;
+    dst.m_last = src.m_last;
+    dst.m_capacity = src.m_capacity;
+
+    char buffer[kSmallStringSize];
+    if (dst.m_first == src.m_buffer)
+        for (char *it = src.m_buffer, *end = dst.m_last, *out = buffer; it != end; ++it, ++out)
+            *out = *it;
+
+    if (dst.m_first == src.m_buffer) {
+        dst.m_last = dst.m_last - dst.m_first + dst.m_buffer;
+        dst.m_first = dst.m_buffer;
+        dst.m_capacity = dst.m_buffer + kSmallStringSize;
+
+        for (char *it = dst.m_first, *end = dst.m_last, *in = buffer; it != end; ++it, ++in)
+            *it = *in;
+
+        *dst.m_last = '\0';
+    }
+
+    src.m_last = nullptr;
+    src.m_first = nullptr;
+    src.m_capacity = nullptr;
 }
 
 size_t hash(const string &str) {

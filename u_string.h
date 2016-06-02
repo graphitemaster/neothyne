@@ -6,10 +6,12 @@
 
 namespace u {
 
+
 struct string {
     typedef char *iterator;
     typedef const char *const_iterator;
 
+    static constexpr size_t kSmallStringSize = 12_z;
     static constexpr size_t npos = -1_z;
 
     // constructors
@@ -60,16 +62,20 @@ struct string {
     void reset();
 
 private:
+    static void swap_small_string(string &dst, string &src);
+    static void move_small_string(string &dst, string &&src);
+
     char *m_first;
     char *m_last;
     char *m_capacity;
+    char m_buffer[kSmallStringSize];
 };
 
 template <typename I>
 inline string::string(I first, I last)
-    : m_first(nullptr)
-    , m_last(nullptr)
-    , m_capacity(nullptr)
+    : m_first(m_buffer)
+    , m_last(m_buffer)
+    , m_capacity(m_buffer + kSmallStringSize)
 {
     const size_t len = last - first;
     reserve(len);
