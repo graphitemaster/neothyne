@@ -574,11 +574,10 @@ void string::move_small_string(string &dst, string &&src) {
     dst.m_capacity = src.m_capacity;
 
     char buffer[kSmallStringSize];
-    if (dst.m_first == src.m_buffer)
+    if (dst.m_first == src.m_buffer) {
         for (char *it = src.m_buffer, *end = dst.m_last, *out = buffer; it != end; ++it, ++out)
             *out = *it;
 
-    if (dst.m_first == src.m_buffer) {
         dst.m_last = dst.m_last - dst.m_first + dst.m_buffer;
         dst.m_first = dst.m_buffer;
         dst.m_capacity = dst.m_buffer + kSmallStringSize;
