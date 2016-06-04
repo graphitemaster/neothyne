@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -129,8 +129,9 @@
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"
+
 copy "$(ProjectDir)packages\sdl2.redist.2.0.3\build\native\bin\$(Platform)\dynamic\SDL2.dll" "$(ProjectDir)\SDL2.dll"
-rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s /q</Command>
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -167,8 +168,9 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"
+
 copy "$(ProjectDir)packages\sdl2.redist.2.0.3\build\native\bin\$(Platform)\dynamic\SDL2.dll" "$(ProjectDir)\SDL2.dll"
-rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s /q</Command>
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -209,8 +211,9 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"
+
 copy "$(ProjectDir)packages\sdl2.redist.2.0.3\build\native\bin\$(Platform)\dynamic\SDL2.dll" "$(ProjectDir)\SDL2.dll"
-rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s /q</Command>
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -251,8 +254,9 @@ rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s 
     </Link>
     <PostBuildEvent>
       <Command>copy "$(TargetPath)" "$(ProjectDir)$(TargetFileName)"
+
 copy "$(ProjectDir)packages\sdl2.redist.2.0.3\build\native\bin\$(Platform)\dynamic\SDL2.dll" "$(ProjectDir)\SDL2.dll"
-rmdir "$(ProjectDir).build\$(Platform)\$(Configuration)\$(ProjectName).tlog" /s /q</Command>
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

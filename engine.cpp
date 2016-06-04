@@ -429,6 +429,15 @@ bool engine::initContext() {
     if (vid_fullscreen)
         flags |= SDL_WINDOW_FULLSCREEN;
 
+#if defined(_MSC_VER)
+    if (IsDebuggerPresent())
+    {
+        flags &= ~SDL_WINDOW_FULLSCREEN;
+        m_screenWidth = 800;
+        m_screenHeight = 600;
+    }
+#endif
+
     char name[1024];
     snprintf(name, sizeof name, "Neothyne [%s]", gOperatingSystem);
     ctx->m_window = SDL_CreateWindow(
@@ -745,6 +754,11 @@ size_t engine::height() const {
 }
 
 void engine::relativeMouse(bool state) {
+#if defined(_MSC_VER)
+    if (IsDebuggerPresent())
+        SDL_SetRelativeMouseMode(SDL_FALSE);
+    else
+#endif
     SDL_SetRelativeMouseMode(state ? SDL_TRUE : SDL_FALSE);
 }
 
