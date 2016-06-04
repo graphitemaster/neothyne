@@ -25,6 +25,8 @@ u::vector<unsigned char> stat::m_texture;
 static constexpr size_t kSpace = 20u;
 
 void stat::drawHistogram(size_t x, size_t next) {
+    return;
+
     // draw histogram
     if (!m_histogram.size())
         return;

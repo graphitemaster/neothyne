@@ -90,7 +90,7 @@ failedArchitecture:
             inWine = true;
             RegCloseKey(key);
         }
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(_WIN64)
         if (!strcmp(architecture, "AMD64")) {
             snprintf(gOperatingSystem, sizeof gOperatingSystem,
                 "%s %s %s (32-bit binary on 64-bit CPU)", name, version,
@@ -108,7 +108,7 @@ failedArchitecture:
 #endif
         return;
 failedCSDVersion:
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(_WIN64)
         if (!strcmp(architecture, "AMD64")) {
             snprintf(gOperatingSystem, sizeof gOperatingSystem,
                 "%s %s (32-bit binary on 64-bit CPU)", name,
@@ -126,7 +126,7 @@ failedCSDVersion:
 #endif
         return;
 failedProductName:
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(_WIN64)
         if (!strcmp(architecture, "AMD64")) {
             snprintf(gOperatingSystem, sizeof gOperatingSystem,
                 "Windows %s (32-bit binary on 64-bit CPU)",
@@ -1038,11 +1038,11 @@ static int entryPoint(int argc, char **argv) {
     u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
 
     a::audio audio;
-    a::init(&audio);
+    //a::init(&audio);
     // Launch the game
     const int status = neoMain(gEngine.m_frameTimer, audio, argc, argv, (bool &)gShutdown);
     writeConfig(gEngine.userPath());
-    a::stop(&audio);
+    //a::stop(&audio);
 
     // Instance must be released before OpenGL context is lost
     r::geomMethods::instance().release();
