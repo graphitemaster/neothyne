@@ -25,33 +25,30 @@ u::vector<unsigned char> stat::m_texture;
 static constexpr size_t kSpace = 20u;
 
 void stat::drawHistogram(size_t x, size_t next) {
-    return;
-
     // draw histogram
     if (!m_histogram.size())
         return;
 
     gui::drawText(x, next, gui::kAlignLeft, "Histogram", gui::RGBA(255, 255, 0));
     next -= kSpace*2;
-    auto clamp = [](int value) { return abs(((value + (4 - 1)) / 4) * 4); };
     const m::vec3 bad(1.0f, 0.0f, 0.0f);
     const m::vec3 good(0.0f, 1.0f, 0.0f);
-    const float renderWidth = (neoWidth()-kSpace*4) * r_stats_histogram_size;
-    const float renderHeight = kSpace*2;
-    const float sampleWidth = renderWidth / m_histogram.size();
+    const size_t renderWidth = m::floor((neoWidth()-kSpace*4) * r_stats_histogram_size);
+    const size_t renderHeight = kSpace*2;
+    size_t sampleCount = m_histogram.size();
+    while ((renderWidth % sampleCount) != 0)
+        sampleCount--;
+    const size_t sampleWidth = renderWidth / sampleCount;
     m_texture.destroy();
-    m_texture.resize(clamp(renderWidth) * clamp(renderHeight) * 4);
-    for (size_t i = 0; i < m_histogram.size(); i++) {
+    m_texture.resize(renderWidth * renderHeight * 4);
+    for (size_t i = 0; i < sampleCount; i++) {
         const auto &it = m_histogram[i];
         const float scaledSample = it >= r_stats_histogram_max ? 1.0f : it / r_stats_histogram_max;
         const m::vec3 color = bad*scaledSample+good*(1.0f-scaledSample);
-        const float height = kSpace*2.0f*scaledSample;
-        for (int h = 1; h < height; ++h) {
-            unsigned char *dst = &m_texture[0] + clamp(renderWidth*(renderHeight-h)*4 + sampleWidth*i*4);
-            // Just incase something strange happens
-            if (dst >= m_texture.end())
-                break;
-            for (int w = 0; w < sampleWidth; ++w) {
+        const size_t height = m::floor(kSpace*2.0f*scaledSample);
+        for (size_t h = 1; h < height; ++h) {
+            unsigned char *dst = &m_texture[0] + renderWidth*(renderHeight-h)*4 + sampleWidth*i*4;
+            for (size_t w = 0; w < sampleWidth; ++w) {
                 *dst++ = color.x*255.0f;
                 *dst++ = color.y*255.0f;
                 *dst++ = color.z*255.0f;
@@ -59,15 +56,6 @@ void stat::drawHistogram(size_t x, size_t next) {
             }
         }
     }
-
-    // due to rounding errors the first row of pixels can be incorrect
-    // just replace them with their neighbors
-    for (int h = 0; h < clamp(renderHeight); h++) {
-        unsigned char *dst = &m_texture[0] + clamp(renderWidth*(renderHeight-h)*4);
-        for (int c = 0; c < 4; c++)
-            dst[c] = dst[1*4+c];
-    }
-
     // render the texture's contents into the UI directly
     gui::drawTexture(x + kSpace, next-kSpace+5, renderWidth, renderHeight, m_texture);
 }
