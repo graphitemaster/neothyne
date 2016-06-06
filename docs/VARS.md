@@ -97,7 +97,7 @@ have slow on-driver texture compression like Intel.
 * 0 = disable
 * 1 = enable
 
-##### r_texquality
+##### r_tex_quality
 Adjust texture quality
 
 * any value in the range [0.0, 1.0]
@@ -139,16 +139,6 @@ Fog
 * 0 = disable
 * 1 = enable
 
-##### r_smsize
-Shadow map resolution
-
-* any value in range [16, 4096]
-
-##### r_smborder
-Shadow map border
-
-* any value in range [0, 8]
-
 ##### r_vignette
 Vignette
 
@@ -170,17 +160,27 @@ Opacity for vignette
 
 * any value in range [0.0, 1.0]
 
-##### r_smbias
+##### r_sm_size
+Shadow map resolution
+
+* any value in range [16, 4096]
+
+##### r_sm_border
+Shadow map border
+
+* any value in range [0, 8]
+
+##### r_sm_bias
 Shadow map bias
 
 * any value in range [-10.0,  10.0]
 
-##### r_smpolyfactor
+##### r_sm_poly_factor
 Shadow map polygon offset factor (for slope dependent bias)
 
 * any value in range [-1000.0, 1000.0]
 
-##### r_smpolyoffset
+##### r_sm_poly_offset
 Shadow map polygon offset units (for slope dependent bias)
 
 * any value in range [-1000.0, 1000.0]

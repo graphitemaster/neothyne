@@ -24,7 +24,7 @@ VAR(int, r_dxt_compressor, "DXT compressor", 0, 1, 1);
 VAR(int, r_dxt_compressor, "DXT compressor", 0, 0, 0);
 #endif
 
-VAR(float, r_texquality, "texture quality", 0.0f, 1.0f, 1.0f);
+VAR(float, r_tex_quality, "texture quality", 0.0f, 1.0f, 1.0f);
 
 namespace r {
 
@@ -890,7 +890,7 @@ bool texture2D::cache(GLuint internal) {
 }
 
 bool texture2D::load(const u::string &file, bool preserveQuality, bool mipmaps, bool debug) {
-    const bool status = m_texture.load(file, preserveQuality ? 1.0f : r_texquality);
+    const bool status = m_texture.load(file, preserveQuality ? 1.0f : r_tex_quality);
     if (status) {
         if (mipmaps)
             m_mipmaps = u::log2(u::max(m_texture.width(), m_texture.height())) + 1;

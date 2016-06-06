@@ -18,15 +18,15 @@ VAR(int, r_parallax, "parallax mapping", 0, 1, 1);
 VAR(int, r_ssao, "screen space ambient occlusion", 0, 1, 1);
 VAR(int, r_spec, "specularity mapping", 0, 1, 1);
 VAR(int, r_fog, "fog", 0, 1, 1);
-VAR(int, r_smsize, "shadow map size", 16, 4096, 256);
-VAR(int, r_smborder, "shadow map border", 0, 8, 3);
+VAR(int, r_sm_size, "shadow map size", 16, 4096, 256);
+VAR(int, r_sm_border, "shadow map border", 0, 8, 3);
 VAR(int, r_vignette, "vignette", 0, 1, 1);
 VAR(float, r_vignette_radius, "vignette radius", 0.25f, 1.0f, 0.90f);
 VAR(float, r_vignette_softness, "vignette softness", 0.0f, 1.0f, 0.45f);
 VAR(float, r_vignette_opacity, "vignette opacity", 0.0f, 1.0f, 0.5f);
-VAR(float, r_smbias, "shadow map bias", -10.0f, 10.0f, -0.1f);
-VAR(float, r_smpolyfactor, "shadow map polygon offset factor", -1000.0f, 1000.0f, 1.0f);
-VAR(float, r_smpolyoffset, "shadow map polygon offset units", -1000.0f, 1000.0f, 0.0f);
+VAR(float, r_sm_bias, "shadow map bias", -10.0f, 10.0f, -0.1f);
+VAR(float, r_sm_poly_factor, "shadow map polygon offset factor", -1000.0f, 1000.0f, 1.0f);
+VAR(float, r_sm_poly_offset, "shadow map polygon offset units", -1000.0f, 1000.0f, 0.0f);
 NVAR(int, r_debug, "debug visualizations", 0, 4, 0);
 NVAR(int, r_reload, "reload shaders", 0, 1, 0);
 
@@ -266,7 +266,7 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
         const m::vec3 p3 = map->vertices[triangle.v[2]].vertex - light->position;
         if (p1 * (p2 - p1).cross(p3 - p1) > 0)
             continue;
-        const uint8_t mask = calcTriangleSideMask(p1, p2, p3, r_smborder / float(r_smsize - r_smborder));
+        const uint8_t mask = calcTriangleSideMask(p1, p2, p3, r_sm_border / float(r_sm_size - r_sm_border));
         for (size_t side = 0; side < 6; ++side) {
             if (mask & (1 << side)) {
                 for (const auto &it : triangle.v)
@@ -654,7 +654,7 @@ bool world::upload(const m::perspective &p) {
     if (!m_vignette.init(p))
         neoFatal("failed to initialize vignette render buffer");
 
-    if (!m_shadowMap.init(r_smsize*3, r_smsize*2))
+    if (!m_shadowMap.init(r_sm_size*3, r_sm_size*2))
         neoFatal("failed to initialize shadow map");
     if (!m_shadowMapMethod.init())
         neoFatal("failed to initialize shadow map method");
@@ -761,10 +761,10 @@ void world::render(const pipeline &pl) {
 }
 
 void world::cullPass(const pipeline &pl) {
-    const float widthOffset = 0.5f * m_shadowMap.widthScale(r_smsize);
-    const float heightOffset = 0.5f * m_shadowMap.heightScale(r_smsize);
-    const float widthScale = 0.5f * m_shadowMap.widthScale(r_smsize - r_smborder);
-    const float heightScale = 0.5f * m_shadowMap.heightScale(r_smsize - r_smborder);
+    const float widthOffset = 0.5f * m_shadowMap.widthScale(r_sm_size);
+    const float heightOffset = 0.5f * m_shadowMap.heightScale(r_sm_size);
+    const float widthScale = 0.5f * m_shadowMap.widthScale(r_sm_size - r_sm_border);
+    const float heightScale = 0.5f * m_shadowMap.heightScale(r_sm_size - r_sm_border);
 
     // cull spot lights (and calculate theit transform)
     for (auto &pair : m_culledSpotLights) {
@@ -779,7 +779,7 @@ void world::cullPass(const pipeline &pl) {
             if (light->castShadows) {
                 it.transform = m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
                                m::mat4::scale({widthScale, heightScale, 0.5f}) *
-                               m::mat4::project(light->cutOff, 1.0f / light->radius, m::sqrt(3.0f), r_smbias / light->radius) *
+                               m::mat4::project(light->cutOff, 1.0f / light->radius, m::sqrt(3.0f), r_sm_bias / light->radius) *
                                m::mat4::lookat(light->direction, m::vec3::yAxis) *
                                m::mat4::scale(1.0f / light->radius) *
                                m::mat4::translate(-light->position);
@@ -800,7 +800,7 @@ void world::cullPass(const pipeline &pl) {
             if (light->castShadows) {
                 it.transform = m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
                                m::mat4::scale({widthScale, heightScale, 0.5f}) *
-                               m::mat4::project(90.0f, 1.0f / light->radius, m::sqrt(3.0f), r_smbias / light->radius) *
+                               m::mat4::project(90.0f, 1.0f / light->radius, m::sqrt(3.0f), r_sm_bias / light->radius) *
                                m::mat4::scale(1.0f / light->radius);
             }
         }
@@ -1270,12 +1270,12 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
     gl::DepthMask(GL_TRUE);
     gl::DepthFunc(GL_LEQUAL);
 
-    m_shadowMap.update(r_smsize*3, r_smsize*2);
+    m_shadowMap.update(r_sm_size*3, r_sm_size*2);
     m_shadowMap.bindWriting();
     gl::Clear(GL_DEPTH_BUFFER_BIT);
 
-    if (r_smpolyfactor || r_smpolyoffset) {
-        gl::PolygonOffset(r_smpolyfactor, r_smpolyoffset);
+    if (r_sm_poly_factor || r_sm_poly_offset) {
+        gl::PolygonOffset(r_sm_poly_factor, r_sm_poly_offset);
         gl::Enable(GL_POLYGON_OFFSET_FILL);
     }
 
@@ -1309,7 +1309,7 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, plc->ebo);
-    const float borderScale = float(r_smsize - r_smborder) / r_smsize;
+    const float borderScale = float(r_sm_size - r_sm_border) / r_sm_size;
     size_t offset = 0;
     for (size_t side = 0; side < 6; ++side) {
         if (plc->sideCounts[side] <= 0)
@@ -1322,10 +1322,10 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
                                  m::mat4::scale(1.0f /  pl->radius) *
                                  m::mat4::translate(-pl->position));
 
-        const size_t x = r_smsize * (side / 2);
-        const size_t y = r_smsize * (side % 2);
-        gl::Viewport(x, y, r_smsize, r_smsize);
-        gl::Scissor(x, y, r_smsize, r_smsize);
+        const size_t x = r_sm_size * (side / 2);
+        const size_t y = r_sm_size * (side % 2);
+        gl::Viewport(x, y, r_sm_size, r_sm_size);
+        gl::Scissor(x, y, r_sm_size, r_sm_size);
         gl::CullFace(view.cullFace);
         gl::DrawElements(GL_TRIANGLES, plc->sideCounts[side], GL_UNSIGNED_INT,
             (const GLvoid *)(sizeof(GLuint)*offset));
@@ -1338,7 +1338,7 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
 
     gl::Disable(GL_SCISSOR_TEST);
 
-    if (r_smpolyfactor || r_smpolyoffset)
+    if (r_sm_poly_factor || r_sm_poly_offset)
         gl::Disable(GL_POLYGON_OFFSET_FILL);
 
     m_final.bindWriting();
@@ -1408,19 +1408,19 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
     gl::DepthFunc(GL_LEQUAL);
     gl::CullFace(GL_BACK);
 
-    if (r_smpolyfactor || r_smpolyoffset) {
-        gl::PolygonOffset(r_smpolyfactor, r_smpolyoffset);
+    if (r_sm_poly_factor || r_sm_poly_offset) {
+        gl::PolygonOffset(r_sm_poly_factor, r_sm_poly_offset);
         gl::Enable(GL_POLYGON_OFFSET_FILL);
     }
 
     gl::Enable(GL_SCISSOR_TEST);
-    gl::Scissor(0, 0, r_smsize, r_smsize);
+    gl::Scissor(0, 0, r_sm_size, r_sm_size);
 
-    m_shadowMap.update(r_smsize*3, r_smsize*2);
+    m_shadowMap.update(r_sm_size*3, r_sm_size*2);
     m_shadowMap.bindWriting();
     gl::Clear(GL_DEPTH_BUFFER_BIT);
 
-    const float borderScale = float(r_smsize - r_smborder) / r_smsize;
+    const float borderScale = float(r_sm_size - r_sm_border) / r_sm_size;
     m_shadowMapMethod.enable();
     m_shadowMapMethod.setWVP(m::mat4::scale({borderScale, borderScale, 1.0f}) *
                              m::mat4::project(sl->cutOff, 1.0f / sl->radius, m::sqrt(3.0f)) *
@@ -1429,7 +1429,7 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
                              m::mat4::translate(-sl->position));
 
     // Draw the scene from the lights perspective into the shadow map
-    gl::Viewport(0, 0, r_smsize, r_smsize);
+    gl::Viewport(0, 0, r_sm_size, r_sm_size);
     gl::BindVertexArray(vao);
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, slc->ebo);
     gl::DrawElements(GL_TRIANGLES, slc->count, GL_UNSIGNED_INT, 0);
@@ -1438,7 +1438,7 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
 
     gl::Disable(GL_SCISSOR_TEST);
 
-    if (r_smpolyfactor || r_smpolyoffset)
+    if (r_sm_poly_factor || r_sm_poly_offset)
         gl::Disable(GL_POLYGON_OFFSET_FILL);
 
     m_final.bindWriting();

@@ -35,12 +35,16 @@ void stat::drawHistogram(size_t x, size_t next) {
     const m::vec3 good(0.0f, 1.0f, 0.0f);
     const size_t renderWidth = m::floor((neoWidth()-kSpace*4) * r_stats_histogram_size);
     const size_t renderHeight = kSpace*2;
+
+    // ignore subpixel samples
     size_t sampleCount = m_histogram.size();
     while ((renderWidth % sampleCount) != 0)
         sampleCount--;
     const size_t sampleWidth = renderWidth / sampleCount;
+
     m_texture.destroy();
     m_texture.resize(renderWidth * renderHeight * 4);
+
     for (size_t i = 0; i < sampleCount; i++) {
         const auto &it = m_histogram[i];
         const float scaledSample = it >= r_stats_histogram_max ? 1.0f : it / r_stats_histogram_max;
