@@ -2905,6 +2905,7 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
                 const int type = map[k];
                 int estimate = 0;
                 const unsigned char *const z = &m_data[0] + m_pitch*j;
+
                 for (size_t i = 0; i < m_bpp; i++) {
                     switch (type) {
                     case 0: lineBuffer[i] = z[i]; break;

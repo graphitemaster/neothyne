@@ -14,9 +14,10 @@ struct plane {
         kFront
     };
 
-    plane();
+    constexpr plane();
     plane(const m::vec3 &p1, const m::vec3 &p2, const m::vec3 &p3);
     plane(const m::vec3 &pp, const m::vec3 &nn);
+    plane(const m::vec3 &pp, float distance);
 
     bool intersect(float &f, const m::vec3 &p, const m::vec3 &v) const;
 
@@ -27,7 +28,7 @@ struct plane {
     float d;
 };
 
-inline plane::plane()
+inline constexpr plane::plane()
     : d(0.0f)
 {
 }
@@ -42,6 +43,15 @@ inline plane::plane(const m::vec3 &point, const m::vec3 &normal)
     : n(normal.normalized())
     , d(-n * point)
 {
+}
+
+inline plane::plane(const m::vec3 &point, float distance)
+    : n(point)
+    , d(distance)
+{
+    const float magnitude = 1.0f / n.abs();
+    n *= magnitude;
+    d *= magnitude;
 }
 
 inline bool plane::intersect(float &f, const m::vec3 &p, const m::vec3 &v) const {
