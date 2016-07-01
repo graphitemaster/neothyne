@@ -326,7 +326,7 @@ static void menuOptions() {
             auto &fxaa = varGet<int>("r_fxaa");
             auto &parallax = varGet<int>("r_parallax");
             auto &texcomp = varGet<int>("r_tex_compress");
-            auto &texquality = varGet<float>("r_texquality");
+            auto &texquality = varGet<float>("r_tex_quality");
             gui::indent();
                 gui::slider<int>("Anisotropic", aniso.get(), aniso.min(), aniso.max(), 1);
                 if (gui::check("Ambient occlusion", ssao.get()))
