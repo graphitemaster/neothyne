@@ -1059,10 +1059,11 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw) {
     (void)szCmdLine;
     (void)sw;
 
-#if defined(_MSC_VER)
     freopen(u::fixPath(gEngine.userPath() + "/stdout.txt").c_str(), "w", stdout);
     freopen(u::fixPath(gEngine.userPath() + "/stderr.txt").c_str(), "w", stderr);
-#endif
+
+    setbuf(stdout, nullptr);
+    setbuf(stderr, nullptr);
 
     auto parseCommandLine = [](const char *src, u::vector<char *> &args) {
         char *const buf = new char[strlen(src) + 1];
