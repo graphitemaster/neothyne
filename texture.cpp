@@ -2905,31 +2905,34 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
                 const int type = map[k];
                 int estimate = 0;
                 const unsigned char *const z = &m_data[0] + m_pitch*j;
-
-                for (size_t i = 0; i < m_bpp; i++) {
-                    switch (type) {
-                    case 0: lineBuffer[i] = z[i]; break;
-                    case 1: lineBuffer[i] = z[i]; break;
-                    case 2: lineBuffer[i] = z[i] - z[i-m_pitch]; break;
-                    case 3: lineBuffer[i] = z[i] - (z[i-m_pitch]>>1); break;
-                    case 4: lineBuffer[i] = (signed char)(z[i] - png::paethPredictor(0, z[i-m_pitch], 0)); break;
-                    case 5: lineBuffer[i] = z[i]; break;
-                    case 6: lineBuffer[i] = z[i]; break;
-                    }
+                const size_t s = m_bpp*m_width;
+                const size_t b = m_bpp;
+                size_t i = 0;
+                switch (type) {
+                case 0:
+                    while (i < s) lineBuffer[i] = z[i], i++;
+                    break;
+                case 1:
+                    while (i < b) lineBuffer[i] = z[i], i++;
+                    while (i < s) lineBuffer[i] = z[i] - z[i-m_bpp], i++;
+                    break;
+                case 2:
+                    while (i < s) lineBuffer[i] = z[i] - z[i-m_pitch], i++;
+                    break;
+                case 3:
+                    while (i < b) lineBuffer[i] = z[i] - (z[i-m_pitch]>>1), i++;
+                    while (i < s) lineBuffer[i] = z[i] - ((z[i-m_bpp] + z[i-m_pitch])>>1), i++;
+                    break;
+                case 4:
+                    while (i < b) lineBuffer[i] = (signed char)(z[i] - png::paethPredictor(0, z[i-m_pitch], 0)), i++;
+                    while (i < s) lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], z[i-m_pitch], z[i-m_pitch-m_bpp]), i++;
+                case 5:
+                    while (i < b) lineBuffer[i] = z[i], i++;
+                    while (i < s) lineBuffer[i] = z[i] - (z[i-m_bpp]>>1), i++;
+                case 6:
+                    while (i < b) lineBuffer[i] = z[i], i++;
+                    while (i < s) lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], 0, 0), i++;
                 }
-
-                for (size_t i = m_bpp; i < m_width*m_bpp; ++i) {
-                    switch (type) {
-                    case 0: lineBuffer[i] = z[i]; break;
-                    case 1: lineBuffer[i] = z[i] - z[i-m_bpp]; break;
-                    case 2: lineBuffer[i] = z[i] - z[i-m_pitch]; break;
-                    case 3: lineBuffer[i] = z[i] - ((z[i-m_bpp] + z[i-m_pitch])>>1); break;
-                    case 4: lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], z[i-m_pitch], z[i-m_pitch-m_bpp]); break;
-                    case 5: lineBuffer[i] = z[i] - (z[i-m_bpp]>>1); break;
-                    case 6: lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], 0, 0); break;
-                    }
-                }
-
                 if (p)
                     break;
                 for (size_t i = 0; i < m_width*m_bpp; ++i)
