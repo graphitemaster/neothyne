@@ -285,7 +285,7 @@ private:
     //
     // where: c[0]    = 128
     //        c[1..7] = 128*sqrt(2)
-    void rowIDCT(int* blk) {
+    void rowIDCT(int *U_RESTRICT blk) {
         int x0, x1, x2, x3, x4, x5, x6, x7, x8;
         // if all the AC components are zero, the IDCT is trivial.
         if (!((x1 = sls(blk[4], 11))
@@ -348,7 +348,7 @@ private:
     // where: c[0]    = 1/1024
     //        c[1..7] = (1/1024)*sqrt(2)
     template <bool ClippingTable>
-    void columnIDCT(const int* blk, unsigned char *out, int stride) {
+    void columnIDCT(const int *U_RESTRICT blk, unsigned char *U_RESTRICT out, int stride) {
         int x0, x1, x2, x3, x4, x5, x6, x7, x8;
         // if all AC components are zero, then IDCT is trival.
         if (!((x1 = sls(blk[8*4], 8))
