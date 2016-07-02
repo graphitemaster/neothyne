@@ -2926,12 +2926,15 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
                 case 4:
                     while (i < b) lineBuffer[i] = (signed char)(z[i] - png::paethPredictor(0, z[i-m_pitch], 0)), i++;
                     while (i < s) lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], z[i-m_pitch], z[i-m_pitch-m_bpp]), i++;
+                    break;
                 case 5:
                     while (i < b) lineBuffer[i] = z[i], i++;
                     while (i < s) lineBuffer[i] = z[i] - (z[i-m_bpp]>>1), i++;
+                    break;
                 case 6:
                     while (i < b) lineBuffer[i] = z[i], i++;
                     while (i < s) lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], 0, 0), i++;
+                    break;
                 }
                 if (p)
                     break;
