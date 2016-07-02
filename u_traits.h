@@ -67,6 +67,18 @@
         (void)0
 #endif
 
+// Compiler hint: indicate the function is "malloc-like"; the pointer it returns
+// won't alias anything
+#if defined(__GNUC__)
+#   define U_MALLOC_LIKE \
+        __attribute__((malloc))
+#elif defined(_MSC_VER)
+#   define U_MALLOC_LIKE \
+        __declspec(noalias)
+#else
+#   define U_MALLOC_LIKE
+#endif
+
 namespace u {
 
 /// nullptr_t

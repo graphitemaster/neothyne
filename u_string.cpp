@@ -93,7 +93,7 @@ inline stringMemory::~stringMemory() {
     neoFree(m_head);
 }
 
-char *stringMemory::allocate(size_t size) {
+U_MALLOC_LIKE char *stringMemory::allocate(size_t size) {
     U_ASSERT(m_head);
     if (size == 0)
         return allocate(1);

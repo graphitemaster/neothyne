@@ -9,14 +9,14 @@
 
 static constexpr size_t kMemoryAlignment = 16u;
 
-static voidptr neoCoreMalloc(size_t size) {
+static inline voidptr neoCoreMalloc(size_t size) {
     void *ptr = malloc(size);
     if (ptr)
         return ptr;
     abort();
 }
 
-static voidptr neoCoreRealloc(voidptr ptr, size_t size) {
+static inline voidptr neoCoreRealloc(voidptr ptr, size_t size) {
     if (size) {
         void *resize = realloc(ptr, size);
         if (resize)
@@ -25,7 +25,7 @@ static voidptr neoCoreRealloc(voidptr ptr, size_t size) {
     abort();
 }
 
-static void neoCoreFree(voidptr what) {
+static inline void neoCoreFree(voidptr what) {
     free(what);
 }
 
@@ -53,7 +53,7 @@ struct alignedAllocator {
 // store the size rounded to a multiple of kMemoryAlignment, which gives us some
 // bits to also store the difference between the aligned pointer and base pointer.
 template <>
-voidptr alignedAllocator<true>::neoMalloc(size_t size) {
+inline voidptr alignedAllocator<true>::neoMalloc(size_t size) {
     size = (size+(kMemoryAlignment-1)) & ~(kMemoryAlignment-1);
     unsigned char *base = neoCoreMalloc(size + sizeof(size_t) + kMemoryAlignment);
     unsigned char *aligned = (unsigned char *)((uintptr_t)(base + sizeof(size_t) + (kMemoryAlignment - 1)) & ~(kMemoryAlignment - 1));
@@ -62,13 +62,13 @@ voidptr alignedAllocator<true>::neoMalloc(size_t size) {
 }
 
 template <>
-void alignedAllocator<true>::neoFree(voidptr what) {
+inline void alignedAllocator<true>::neoFree(voidptr what) {
     if (what)
         neoCoreFree((unsigned char *)what - sizeof(size_t) - (((size_t*)what)[-1] & (kMemoryAlignment-1)));
 }
 
 template <>
-voidptr alignedAllocator<true>::neoRealloc(voidptr what, size_t size) {
+inline voidptr alignedAllocator<true>::neoRealloc(voidptr what, size_t size) {
     if (what) {
         if (size == 0) {
             neoFree(what);
@@ -117,11 +117,11 @@ void neoFree(voidptr ptr) {
     allocator::neoFree(ptr);
 }
 
-void *operator new(size_t size) noexcept {
+U_MALLOC_LIKE void *operator new(size_t size) noexcept {
     return neoMalloc(size);
 }
 
-void *operator new[](size_t size) noexcept {
+U_MALLOC_LIKE void *operator new[](size_t size) noexcept {
     return neoMalloc(size);
 }
 
