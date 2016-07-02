@@ -268,7 +268,7 @@ const char *CPUDesc() {
     CPUID(0x80000000, a, b, c, d);
     if (a >= 0x80000004) {
         for (int k = 0; k < 3; k++) {
-            CPUID(0x80000002 + k, a, b, c, d);
+            CPUID(0x80000002u + k, a, b, c, d);
             for (int j = 0; j < 4; j++) { desc[i++] = (char)(a & 0xFF); a >>= 8; }
             for (int j = 0; j < 4; j++) { desc[i++] = (char)(b & 0xFF); b >>= 8; }
             for (int j = 0; j < 4; j++) { desc[i++] = (char)(c & 0xFF); c >>= 8; }

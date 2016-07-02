@@ -119,7 +119,7 @@ failedCSDVersion:
         }
 #elif defined(_WIN64)
         snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s (64-bit)",
-            name, (inWine ? "(in Wine)" : "");
+            name, (inWine ? "(in Wine)" : ""));
 #else
         snprintf(gOperatingSystem, sizeof gOperatingSystem, "%s %s",
             name, (inWine ? "(in Wine)" : ""));

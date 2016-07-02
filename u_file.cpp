@@ -178,7 +178,7 @@ bool write(const u::vector<unsigned char> &data, const u::string &file, const ch
 #include <unistd.h>
 #include <dirent.h>
 
-#define IS_IGNORE(X) (!strcmp((X)->d_name, ".") || !strcmp((X)->d_name, ".."))
+#define IS_IGNORE(X) ((X)->d_name[0] == '.' && !(X)->d_name[1+((X)->d_name[1]=='.')])
 
 ///! dir::const_iterator
 dir::const_iterator::const_iterator(void *handle)
@@ -221,7 +221,7 @@ bool dir::isFile(const char *fileName) {
 }
 
 #else
-#define IS_IGNORE(X) (!strcmp((X).cFileName, ".") || !strcmp((X).cFileName, ".."))
+#define IS_IGNORE(X) ((X).cFileName[0] == '.' && !(X).cFileName[1+((X).cFileName[1]=='.')])
 
 struct findContext {
     findContext(const char *where);
