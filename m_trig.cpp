@@ -449,6 +449,27 @@ float log2(float x) {
     return (lo+hi)*kIvLn2Lo + lo*kIvLn2Hi + hi*kIvLn2Hi + k;
 }
 
+float pow(float a, float b) {
+    // Approximation with fraction of exponent
+    int32_t e = int32_t(b);
+
+    union {
+        double asDouble;
+        int32_t asInts[2];
+    } shape = { b };
+    shape.asInts[0] = int32_t((b - e)  * (shape.asInts[1] - 1072632447) + 1072632447);
+    shape.asInts[1] = 0;
+
+    // exponentation by squaring for more accuracy
+    float r = 1.0f;
+    while (e) {
+        if (e & 1) r *= a;
+        a *= a;
+        e >>= 1;
+    }
+    return r * shape.asDouble;
+}
+
 #ifdef __SSE2__
 float sqrt(float x) {
     // The use of inverse square root is actually faster than a full

@@ -38,7 +38,6 @@ ENGINE_CXXFLAGS = \
 	`sdl2-config --cflags`
 
 ENGINE_LDFLAGS = \
-	-lm \
 	`sdl2-config --libs`
 
 all: $(GAME_BIN)

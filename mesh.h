@@ -87,7 +87,8 @@ struct vertexCacheOptimizer {
 
     result optimize(u::vector<size_t> &indices);
 
-    size_t getCacheMissCount() const;
+    size_t getCacheMissBefore() const;
+    size_t getCacheMissAfter() const;
 
 private:
     u::vector<vertexCacheData> m_vertices;
@@ -97,6 +98,8 @@ private:
     u::vector<size_t> m_drawList;
     vertexCache m_vertexCache;
     size_t m_bestTriangle;
+    size_t m_cacheMissesBefore;
+    size_t m_cacheMissesAfter;
 
     float calcVertexScore(size_t vertex);
     size_t fullScoreRecalculation();
@@ -108,6 +111,15 @@ private:
     size_t partialScoreRecalculation();
     bool process();
 };
+
+inline size_t vertexCacheOptimizer::getCacheMissBefore() const {
+    return m_cacheMissesBefore;
+}
+
+inline size_t vertexCacheOptimizer::getCacheMissAfter() const {
+    return m_cacheMissesAfter;
+}
+
 
 struct face {
     face();

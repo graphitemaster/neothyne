@@ -14,6 +14,7 @@ float log2(float x);
 float fmod(float x, float y);
 void sincos(float x, float &s, float &c);
 float sqrt(float x);
+float pow(float x, float y);
 
 }
 

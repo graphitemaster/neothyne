@@ -1,10 +1,11 @@
-#include <math.h> // powf
-
 #include "mesh.h"
 #include "engine.h"
 
 #include "u_file.h"
 #include "u_map.h"
+
+#include "m_vec.h"
+#include "m_trig.h"
 
 ///! vertexCacheData
 size_t vertexCacheData::findTriangle(size_t triangle) {
@@ -103,10 +104,16 @@ static constexpr float kValenceBoostPower = 0.5f;
 
 vertexCacheOptimizer::vertexCacheOptimizer()
     : m_bestTriangle(0)
+    , m_cacheMissesBefore(0)
+    , m_cacheMissesAfter(0)
 {
 }
 
 vertexCacheOptimizer::result vertexCacheOptimizer::optimize(u::vector<size_t> &indices) {
+    // Calculate the initial vertex cache misses
+    vertexCache countMisses;
+    m_cacheMissesBefore = countMisses.getCacheMissCount(indices);
+
     size_t find = -1_z;
     for (size_t i = 0; i < indices.size(); i++)
         if (find == -1_z || (find != -1_z && indices[i] > find))
@@ -121,6 +128,8 @@ vertexCacheOptimizer::result vertexCacheOptimizer::optimize(u::vector<size_t> &i
     // Process
     while (process())
         ;
+
+    m_cacheMissesAfter = m_vertexCache.getCacheMissCount();
 
     // Rewrite the indices
     for (size_t i = 0; i < m_drawList.size(); i++)
@@ -147,12 +156,12 @@ float vertexCacheOptimizer::calcVertexScore(size_t vertex) {
             // Points for being heigh in the cache
             const float scale = 1.0f / (32 - 3);
             value = 1.0f - (v->cachePosition - 3) * scale;
-            value = powf(value, kCacheDecayPower);
+            value = m::pow(value, kCacheDecayPower);
         }
     }
 
     // Bonus points for having a low number of triangles.
-    const float valenceBoost = powf(float(v->remainingValence), -kValenceBoostPower);
+    const float valenceBoost = m::pow(float(v->remainingValence), -kValenceBoostPower);
     value += kValenceBoostScale * valenceBoost;
     return value;
 }
@@ -365,8 +374,4 @@ inline bool vertexCacheOptimizer::process() {
     m_bestTriangle = cleanFlags() ? partialScoreRecalculation() : fullScoreRecalculation();
 
     return true;
-}
-
-size_t vertexCacheOptimizer::getCacheMissCount() const {
-    return m_vertexCache.getCacheMissCount();
 }
