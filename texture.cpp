@@ -3021,8 +3021,6 @@ void texture::writeJPG(u::vector<unsigned char> &outData) {
     static const uint8_t kDCC[] = "\x0\x0\x3\x1\x1\x1\x1\x1\x1\x1\x1\x1\x0\x0\x0\x0\x00";                     // dc chroma codes
     static const uint8_t kALC[] = "\x0\x0\x2\x1\x3\x3\x2\x4\x3\x5\x5\x4\x4\x0\x0\x1\x7d";                     // ac luma codes
     static const uint8_t kACC[] = "\x0\x0\x2\x1\x2\x4\x4\x3\x4\x7\x5\x4\x4\x0\x1\x2\x77";                     // ac chroma codes
-    static const uint8_t kDLV[] = "\x0\x1\x2\x3\x4\x5\x6\x7\x8\x9\xa\xb";                                     // dc luma values
-    static const uint8_t kDCV[] = "\x0\x1\x2\x3\x4\x5\x6\x7\x8\x9\xa\xb";                                     // dc chroma values
 
     static const uint8_t kZig[] = "\x00\x01\x05\x06\x0e\x0f\x1b\x1c\x02\x04\x07\x0d\x10\x1a\x1d\x2a"          // zig zag pattern
                                   "\x03\x08\x0c\x11\x19\x1e\x29\x2b\x09\x0b\x12\x18\x1f\x28\x2c\x35"
@@ -3060,16 +3058,16 @@ void texture::writeJPG(u::vector<unsigned char> &outData) {
                                   "\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa";
 
     // fixed huffman tables
-    static const uint16_t kYDCHT[256][2] = {
-        { 0x0000, 0x0002 }, { 0x0002, 0x0003 }, { 0x0003, 0x0003 }, { 0x0004, 0x0003 },
-        { 0x0005, 0x0003 }, { 0x0006, 0x0003 }, { 0x000e, 0x0004 }, { 0x001e, 0x0005 },
-        { 0x003e, 0x0006 }, { 0x007e, 0x0007 }, { 0x00fe, 0x0008 }, { 0x01fe, 0x0009 }
-    };
-
-    static const uint16_t kUDCHT[256][2] = {
-        { 0x0000, 0x0002 }, { 0x0001, 0x0002 }, { 0x0002, 0x0002 }, { 0x0006, 0x0003 },
-        { 0x000e, 0x0004 }, { 0x001e, 0x0005 }, { 0x003e, 0x0006 }, { 0x007e, 0x0007 },
-        { 0x00fe, 0x0008 }, { 0x01fe, 0x0009 }, { 0x03fe, 0x000a }, { 0x07fe, 0x000b }
+    static const uint16_t kYUDCHT[2][12][2] = {
+        {
+            { 0x0000, 0x0002 }, { 0x0002, 0x0003 }, { 0x0003, 0x0003 }, { 0x0004, 0x0003 },
+            { 0x0005, 0x0003 }, { 0x0006, 0x0003 }, { 0x000e, 0x0004 }, { 0x001e, 0x0005 },
+            { 0x003e, 0x0006 }, { 0x007e, 0x0007 }, { 0x00fe, 0x0008 }, { 0x01fe, 0x0009 }
+        }, {
+            { 0x0000, 0x0002 }, { 0x0001, 0x0002 }, { 0x0002, 0x0002 }, { 0x0006, 0x0003 },
+            { 0x000e, 0x0004 }, { 0x001e, 0x0005 }, { 0x003e, 0x0006 }, { 0x007e, 0x0007 },
+            { 0x00fe, 0x0008 }, { 0x01fe, 0x0009 }, { 0x03fe, 0x000a }, { 0x07fe, 0x000b }
+        }
     };
 
     static const uint16_t kYACHT[256][2] = {
@@ -3249,7 +3247,7 @@ void texture::writeJPG(u::vector<unsigned char> &outData) {
         }
     };
 
-    auto process = [&](float *c, float *table, int dc, const uint16_t (&htdc)[256][2], const uint16_t (&htac)[256][2]) {
+    auto process = [&](float *c, float *table, int dc, const uint16_t (&htdc)[12][2], const uint16_t (&htac)[256][2]) {
         const uint16_t eob[2] = { htac[0x00][0], htac[0x00][1] };
         const uint16_t m16[2] = { htac[0xF0][0], htac[0xF0][1] };
 
@@ -3320,7 +3318,9 @@ void texture::writeJPG(u::vector<unsigned char> &outData) {
         if (difference) {
             uint16_t bits[2];
             calcBits(difference, bits);
-            writeBits(htdc[bits[1]]);
+            const uint16_t index = bits[1];
+            static const uint16_t kZeroBits[2] = { 0, 0 };
+            writeBits(index < 12 ? htdc[index] : kZeroBits);
             writeBits(bits);
         } else {
             writeBits(htdc[0]);
@@ -3389,13 +3389,13 @@ void texture::writeJPG(u::vector<unsigned char> &outData) {
     writeBytes({0x01, 0xA2});       // DHT (length) 41473 bytes
     outData.push_back(0x00);        // DC luma info
     outData.insert(outData.end(), kDLC + 1, kDLC + sizeof kDLC - 1);
-    outData.insert(outData.end(), kDLV, kDLV + sizeof kDLV - 1);
+    for (uint8_t i = 0; i < 12; i++) outData.push_back(i); // dc luma values
     outData.push_back(0x10);        // AC luma info
     outData.insert(outData.end(), kALC + 1, kALC + sizeof kALC - 1);
     outData.insert(outData.end(), kALV, kALV + sizeof kALV - 1);
     outData.push_back(0x01);        // DC chroma info
     outData.insert(outData.end(), kDCC + 1, kDCC + sizeof kDCC - 1);
-    outData.insert(outData.end(), kDCV, kDCV + sizeof kDCV - 1);
+    for (uint8_t i = 0; i < 12; i++) outData.push_back(i); // dc chroma values
     outData.push_back(0x11);        // AC chroma info
     outData.insert(outData.end(), kACC + 1, kACC + sizeof kACC - 1);
     outData.insert(outData.end(), kACV, kACV + sizeof kACV - 1);
@@ -3428,9 +3428,9 @@ void texture::writeJPG(u::vector<unsigned char> &outData) {
                     du[2][p] =  0.50000f * R - 0.41869f * G - 0.08131f * B;
                 }
             }
-            dc[0] = process(du[0], fyTable, dc[0], kYDCHT, kYACHT);
-            dc[1] = process(du[1], fuTable, dc[1], kUDCHT, kUACHT);
-            dc[2] = process(du[2], fuTable, dc[2], kUDCHT, kUACHT);
+            dc[0] = process(du[0], fyTable, dc[0], kYUDCHT[0], kYACHT);
+            dc[1] = process(du[1], fuTable, dc[1], kYUDCHT[1], kUACHT);
+            dc[2] = process(du[2], fuTable, dc[2], kYUDCHT[1], kUACHT);
         }
     }
 
