@@ -51,6 +51,7 @@ screenshot output format
 * 0 = BMP
 * 1 = TGA
 * 2 = PNG (default)
+* 3 = JPG
 
 ##### scr_quality
 adjust screenshot resolution
@@ -292,6 +293,12 @@ smaller files.
 
 * any value in range [5, 128]
 
+##### tex_jpg_compress_quality
+Quality of JPEG file size. This adjusts the sampling algorithm for producing 8x8
+macro blocks. Higher values produces better looking JPGs with larger files, while
+smaller values produce worse looking JPGs with smaller file sizes.
+
+* any value in the range [1, 100]
 
 ## UI
 ##### ui_scroll_speed

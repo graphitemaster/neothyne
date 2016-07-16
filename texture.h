@@ -34,11 +34,12 @@ enum textureFormat {
 enum saveFormat {
     kSaveBMP,
     kSaveTGA,
-    kSavePNG
+    kSavePNG,
+    kSaveJPG
 };
 
 static constexpr const char *kSaveFormatExtensions[] = {
-    "bmp", "tga", "png"
+    "bmp", "tga", "png", "jpg"
 };
 
 enum flipFlags {
@@ -126,6 +127,7 @@ private:
     void writeTGA(u::vector<unsigned char> &outData);
     void writeBMP(u::vector<unsigned char> &outData);
     void writePNG(u::vector<unsigned char> &outData);
+    void writeJPG(u::vector<unsigned char> &outData);
 
     u::optional<u::string> find(const u::string &file);
     template <typename T>

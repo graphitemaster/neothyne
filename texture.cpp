@@ -9,6 +9,7 @@
 #include "u_traits.h"
 
 #include "m_const.h"
+#include "m_trig.h"
 #include "m_vec.h"
 
 // To render text into textures we use an 8x8 bitmap font
@@ -51,6 +52,7 @@ VAR(int, tex_jpg_chroma, "chroma filtering method", 0, 1, 0);
 VAR(int, tex_jpg_cliplut, "clipping lookup table", 0, 1, 1);
 VAR(int, tex_tga_compress, "compress TGA", 0, 1, 1);
 VAR(int, tex_png_compress_quality, "compression quality for PNG", 5, 128, 16);
+VAR(int, tex_jpg_compress_quality, "compression quality for JPG", 1, 100, 90);
 
 #define returnResult(E) \
     do { \
@@ -3002,6 +3004,439 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
     crc(store, 0);
 }
 
+// writes JPEG baseline (no progressive)
+// supports 1, 3 or 4 component (always writes YCbCr JPEG)
+// uses fixed huffman tables
+void texture::writeJPG(u::vector<unsigned char> &outData) {
+    int quality = tex_jpg_compress_quality;
+    quality = quality < 1 ? 1 : quality > 100 ? 100 : quality;
+    quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
+
+    static const unsigned char kDLC[] = "\x0\x0\x1\x5\x1\x1\x1\x1\x1\x1\x0\x0\x0\x0\x0\x0\x00";                     // dc luma codes
+    static const unsigned char kDCC[] = "\x0\x0\x3\x1\x1\x1\x1\x1\x1\x1\x1\x1\x0\x0\x0\x0\x00";                     // dc chroma codes
+    static const unsigned char kALC[] = "\x0\x0\x2\x1\x3\x3\x2\x4\x3\x5\x5\x4\x4\x0\x0\x1\x7d";                     // ac luma codes
+    static const unsigned char kACC[] = "\x0\x0\x2\x1\x2\x4\x4\x3\x4\x7\x5\x4\x4\x0\x1\x2\x77";                     // ac chroma codes
+    static const unsigned char kDLV[] = "\x0\x1\x2\x3\x4\x5\x6\x7\x8\x9\xa\xb";                                     // dc luma values
+    static const unsigned char kDCV[] = "\x0\x1\x2\x3\x4\x5\x6\x7\x8\x9\xa\xb";                                     // dc chroma values
+
+    static const unsigned char kZig[] = "\x00\x01\x05\x06\x0e\x0f\x1b\x1c\x02\x04\x07\x0d\x10\x1a\x1d\x2a"          // zig zag pattern
+                                        "\x03\x08\x0c\x11\x19\x1e\x29\x2b\x09\x0b\x12\x18\x1f\x28\x2c\x35"
+                                        "\x0a\x13\x17\x20\x27\x2d\x34\x36\x14\x16\x21\x26\x2e\x33\x37\x3c"
+                                        "\x15\x22\x25\x2f\x32\x38\x3b\x3d\x23\x24\x30\x31\x39\x3a\x3e\x3f";
+
+    static const unsigned char kYQT[] = "\x10\x0b\x0a\x10\x18\x28\x33\x3d\x0c\x0c\x0e\x13\x1a\x3a\x3c\x37"          // y generator
+                                        "\x0e\x0d\x10\x18\x28\x39\x45\x38\x0e\x11\x16\x1d\x33\x57\x50\x3e"
+                                        "\x12\x16\x25\x38\x44\x6d\x67\x4d\x18\x23\x37\x40\x51\x68\x71\x5c"
+                                        "\x31\x40\x4e\x57\x67\x79\x78\x65\x48\x5c\x5f\x62\x70\x64\x67\x63";
+
+    static const unsigned char kUQT[] = "\x11\x12\x18\x2f\x63\x63\x63\x63\x12\x15\x1a\x42\x63\x63\x63\x63"          // u&v generator
+                                        "\x18\x1a\x38\x63\x63\x63\x63\x63\x2f\x42\x63\x63\x63\x63\x63\x63"
+                                        "\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63"
+                                        "\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63\x63";
+
+    static const unsigned char kALV[] = "\x01\x02\x03\x00\x04\x11\x05\x12\x21\x31\x41\x06\x13\x51\x61\x07\x22\x71"  // ac luma values
+                                        "\x14\x32\x81\x91\xa1\x08\x23\x42\xb1\xc1\x15\x52\xd1\xf0\x24\x33\x62\x72"
+                                        "\x82\x09\x0a\x16\x17\x18\x19\x1a\x25\x26\x27\x28\x29\x2a\x34\x35\x36\x37"
+                                        "\x38\x39\x3a\x43\x44\x45\x46\x47\x48\x49\x4a\x53\x54\x55\x56\x57\x58\x59"
+                                        "\x5a\x63\x64\x65\x66\x67\x68\x69\x6a\x73\x74\x75\x76\x77\x78\x79\x7a\x83"
+                                        "\x84\x85\x86\x87\x88\x89\x8a\x92\x93\x94\x95\x96\x97\x98\x99\x9a\xa2\xa3"
+                                        "\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xc2\xc3"
+                                        "\xc4\xc5\xc6\xc7\xc8\xc9\xca\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xe1\xe2"
+                                        "\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa";
+
+    static const unsigned char kACV[] = "\x00\x01\x02\x03\x11\x04\x05\x21\x31\x06\x12\x41\x51\x07\x61\x71\x13\x22"  // ac chroma values
+                                        "\x32\x81\x08\x14\x42\x91\xa1\xb1\xc1\x09\x23\x33\x52\xf0\x15\x62\x72\xd1"
+                                        "\x0a\x16\x24\x34\xe1\x25\xf1\x17\x18\x19\x1a\x26\x27\x28\x29\x2a\x35\x36"
+                                        "\x37\x38\x39\x3a\x43\x44\x45\x46\x47\x48\x49\x4a\x53\x54\x55\x56\x57\x58"
+                                        "\x59\x5a\x63\x64\x65\x66\x67\x68\x69\x6a\x73\x74\x75\x76\x77\x78\x79\x7a"
+                                        "\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x92\x93\x94\x95\x96\x97\x98\x99\x9a"
+                                        "\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba"
+                                        "\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda"
+                                        "\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa";
+
+    unsigned char yTable[64];
+    unsigned char uTable[64];
+    for (size_t i = 0; i < 64; i++) {
+        const int yIndex = (kYQT[i] * quality + 50) / 100;
+        const int uIndex = (kUQT[i] * quality + 50) / 100;
+        yTable[kZig[i]] = m::clamp(yIndex, 1, 255);
+        uTable[kZig[i]] = m::clamp(uIndex, 1, 255);
+    }
+
+    static const float kSample[] = {
+        1.000000000f * 2.828427125f, 1.387039845f * 2.828427125f,
+        1.306562965f * 2.828427125f, 1.175875602f * 2.828427125f,
+        1.000000000f * 2.828427125f, 0.785694958f * 2.828427125f,
+        0.541196100f * 2.828427125f, 0.275899379f * 2.828427125f
+    };
+
+    float fyTable[64];
+    float fuTable[64];
+    for (size_t r = 0, k = 0; r < 8; r++) {
+        for (size_t c = 0; c < 8; c++, k++) {
+            fyTable[k] = 1.0f / (yTable[kZig[k]] * kSample[r] * kSample[c]);
+            fuTable[k] = 1.0f / (uTable[kZig[k]] * kSample[r] * kSample[c]);
+        }
+    }
+
+    auto writeBytes = [&outData](const u::initializer_list<unsigned char> &values) {
+        for (const auto& value : values)
+            outData.push_back(value);
+    };
+
+    const unsigned char hHi = m_height >> 8;
+    const unsigned char hLo = m_height & 0xFF;
+    const unsigned char wHi = m_width >> 8;
+    const unsigned char wLo = m_width & 0xFF;
+
+    writeBytes({0xFF, 0xD8});       // SOI
+    writeBytes({0xFF, 0xE0});       // APP0
+    writeBytes({0x00, 0x10});       // APP0 (length) 16 bytes
+    writeBytes({'J','F','I','F'});  // APP0 (identifier)
+    writeBytes({0x00});             // APP0 (density units) 0 = no units;
+    writeBytes({0x01, 0x01});       // APP0 (Xdensity) 257
+    writeBytes({0x00, 0x00});       // APP0 (Ydensity) 0
+    writeBytes({0x01});             // APP0 (Xthumbnail) 1
+    writeBytes({0x00});             // APP0 (Ythumbnail) 0
+    writeBytes({0x01, 0x00, 0x00}); // APP0 (thumbnail data)
+
+    writeBytes({0xFF, 0xDB});       // DQT
+    writeBytes({0x00, 0x84});       // DQT length
+    outData.push_back(0x00);        // DQT information (y table)
+    outData.insert(outData.end(), yTable, yTable + sizeof yTable);
+    outData.push_back(0x01);        // DQT information (u table)
+    outData.insert(outData.end(), uTable, uTable + sizeof uTable);
+
+    writeBytes({0xFF, 0xC0});       // SOF0
+    writeBytes({0x00, 0x11});       // SOF0 (length) 17 bytes
+    writeBytes({0x08});             // SOF0 (data precision) 8 bits
+    writeBytes({hHi, hLo});         // SOF0 (image height)
+    writeBytes({wHi, wLo});         // SOF0 (image width)
+    writeBytes({0x03});             // SOF0 (number of components 3=YCbCr)
+    writeBytes({0x01, 0x11, 0x00}); // SOF0 (component read order for Y)
+    writeBytes({0x02, 0x11, 0x01}); // SOF0 (component read order for Cb)
+    writeBytes({0x03, 0x11, 0x01}); // SOF0 (component read order for Cr)
+
+    writeBytes({0xFF, 0xC4});       // DHT
+    writeBytes({0x01, 0xA2});       // DHT (length) 41473 bytes
+
+    // DC luma info
+    outData.push_back(0x00);
+    outData.insert(outData.end(), kDLC + 1, kDLC + sizeof kDLC - 1);
+    outData.insert(outData.end(), kDLV, kDLV + sizeof kDLV - 1);
+    // AC luma info
+    outData.push_back(0x10);
+    outData.insert(outData.end(), kALC + 1, kALC + sizeof kALC - 1);
+    outData.insert(outData.end(), kALV, kALV + sizeof kALV - 1);
+    // DC chroma info
+    outData.push_back(0x01);
+    outData.insert(outData.end(), kDCC + 1, kDCC + sizeof kDCC - 1);
+    outData.insert(outData.end(), kDCV, kDCV + sizeof kDCV - 1);
+    // AC chroma info
+    outData.push_back(0x11);
+    outData.insert(outData.end(), kACC + 1, kACC + sizeof kACC - 1);
+    outData.insert(outData.end(), kACV, kACV + sizeof kACV - 1);
+
+    writeBytes({0xFF, 0xDA});       // SOS
+    writeBytes({0x00, 0x0C});       // SOS (length) 3072 bytes
+    writeBytes({0x03});             // SOS (components in scan)
+    writeBytes({0x01, 0x00});       // SOS (component table order Y)
+    writeBytes({0x02, 0x11});       // SOS (component table order Cb)
+    writeBytes({0x03, 0x11});       // SOS (component table order Cr)
+    writeBytes({0x00, 0x3F, 0x00}); // SOS (ignored bytes)
+
+    // write out bits
+    int bitBuffer = 0;
+    int bitCount = 0;
+    auto writeBits = [&](const uint16_t *bits) {
+        bitCount += bits[1];
+        bitBuffer |= bits[0] << (24 - bitCount);
+        while (bitCount >= 8) {
+            unsigned char byte = (bitBuffer >> 16) & 255;
+            outData.push_back(byte);
+            if (byte == 255)
+                outData.push_back(0);
+            bitBuffer <<= 8;
+            bitCount -= 8;
+        }
+    };
+
+    // fixed huffman tables
+    static const uint16_t kYDCHT[256][2] = {
+        { 0x0000, 0x0002 }, { 0x0002, 0x0003 }, { 0x0003, 0x0003 }, { 0x0004, 0x0003 },
+        { 0x0005, 0x0003 }, { 0x0006, 0x0003 }, { 0x000e, 0x0004 }, { 0x001e, 0x0005 },
+        { 0x003e, 0x0006 }, { 0x007e, 0x0007 }, { 0x00fe, 0x0008 }, { 0x01fe, 0x0009 }
+    };
+
+    static const uint16_t kUDCHT[256][2] = {
+        { 0x0000, 0x0002 }, { 0x0001, 0x0002 }, { 0x0002, 0x0002 }, { 0x0006, 0x0003 },
+        { 0x000e, 0x0004 }, { 0x001e, 0x0005 }, { 0x003e, 0x0006 }, { 0x007e, 0x0007 },
+        { 0x00fe, 0x0008 }, { 0x01fe, 0x0009 }, { 0x03fe, 0x000a }, { 0x07fe, 0x000b }
+    };
+
+    static const uint16_t kYACHT[256][2] = {
+        { 0x000a, 0x0004 }, { 0x0000, 0x0002 }, { 0x0001, 0x0002 }, { 0x0004, 0x0003 },
+        { 0x000b, 0x0004 }, { 0x001a, 0x0005 }, { 0x0078, 0x0007 }, { 0x00f8, 0x0008 },
+        { 0x03f6, 0x000a }, { 0xff82, 0x0010 }, { 0xff83, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x000c, 0x0004 }, { 0x001b, 0x0005 }, { 0x0079, 0x0007 },
+        { 0x01f6, 0x0009 }, { 0x07f6, 0x000b }, { 0xff84, 0x0010 }, { 0xff85, 0x0010 },
+        { 0xff86, 0x0010 }, { 0xff87, 0x0010 }, { 0xff88, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x001c, 0x0005 }, { 0x00f9, 0x0008 }, { 0x03f7, 0x000a },
+        { 0x0ff4, 0x000c }, { 0xff89, 0x0010 }, { 0xff8a, 0x0010 }, { 0xff8b, 0x0010 },
+        { 0xff8c, 0x0010 }, { 0xff8d, 0x0010 }, { 0xff8e, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x003a, 0x0006 }, { 0x01f7, 0x0009 }, { 0x0ff5, 0x000c },
+        { 0xff8f, 0x0010 }, { 0xff90, 0x0010 }, { 0xff91, 0x0010 }, { 0xff92, 0x0010 },
+        { 0xff93, 0x0010 }, { 0xff94, 0x0010 }, { 0xff95, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x003b, 0x0006 }, { 0x03f8, 0x000a }, { 0xff96, 0x0010 },
+        { 0xff97, 0x0010 }, { 0xff98, 0x0010 }, { 0xff99, 0x0010 }, { 0xff9a, 0x0010 },
+        { 0xff9b, 0x0010 }, { 0xff9c, 0x0010 }, { 0xff9d, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x007a, 0x0007 }, { 0x07f7, 0x000b }, { 0xff9e, 0x0010 },
+        { 0xff9f, 0x0010 }, { 0xffa0, 0x0010 }, { 0xffa1, 0x0010 }, { 0xffa2, 0x0010 },
+        { 0xffa3, 0x0010 }, { 0xffa4, 0x0010 }, { 0xffa5, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x007b, 0x0007 }, { 0x0ff6, 0x000c }, { 0xffa6, 0x0010 },
+        { 0xffa7, 0x0010 }, { 0xffa8, 0x0010 }, { 0xffa9, 0x0010 }, { 0xffaa, 0x0010 },
+        { 0xffab, 0x0010 }, { 0xffac, 0x0010 }, { 0xffad, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x00fa, 0x0008 }, { 0x0ff7, 0x000c }, { 0xffae, 0x0010 },
+        { 0xffaf, 0x0010 }, { 0xffb0, 0x0010 }, { 0xffb1, 0x0010 }, { 0xffb2, 0x0010 },
+        { 0xffb3, 0x0010 }, { 0xffb4, 0x0010 }, { 0xffb5, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x01f8, 0x0009 }, { 0x7fc0, 0x000f }, { 0xffb6, 0x0010 },
+        { 0xffb7, 0x0010 }, { 0xffb8, 0x0010 }, { 0xffb9, 0x0010 }, { 0xffba, 0x0010 },
+        { 0xffbb, 0x0010 }, { 0xffbc, 0x0010 }, { 0xffbd, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x01f9, 0x0009 }, { 0xffbe, 0x0010 }, { 0xffbf, 0x0010 },
+        { 0xffc0, 0x0010 }, { 0xffc1, 0x0010 }, { 0xffc2, 0x0010 }, { 0xffc3, 0x0010 },
+        { 0xffc4, 0x0010 }, { 0xffc5, 0x0010 }, { 0xffc6, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x01fa, 0x0009 }, { 0xffc7, 0x0010 }, { 0xffc8, 0x0010 },
+        { 0xffc9, 0x0010 }, { 0xffca, 0x0010 }, { 0xffcb, 0x0010 }, { 0xffcc, 0x0010 },
+        { 0xffcd, 0x0010 }, { 0xffce, 0x0010 }, { 0xffcf, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x03f9, 0x000a }, { 0xffd0, 0x0010 }, { 0xffd1, 0x0010 },
+        { 0xffd2, 0x0010 }, { 0xffd3, 0x0010 }, { 0xffd4, 0x0010 }, { 0xffd5, 0x0010 },
+        { 0xffd6, 0x0010 }, { 0xffd7, 0x0010 }, { 0xffd8, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x03fa, 0x000a }, { 0xffd9, 0x0010 }, { 0xffda, 0x0010 },
+        { 0xffdb, 0x0010 }, { 0xffdc, 0x0010 }, { 0xffdd, 0x0010 }, { 0xffde, 0x0010 },
+        { 0xffdf, 0x0010 }, { 0xffe0, 0x0010 }, { 0xffe1, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x07f8, 0x000b }, { 0xffe2, 0x0010 }, { 0xffe3, 0x0010 },
+        { 0xffe4, 0x0010 }, { 0xffe5, 0x0010 }, { 0xffe6, 0x0010 }, { 0xffe7, 0x0010 },
+        { 0xffe8, 0x0010 }, { 0xffe9, 0x0010 }, { 0xffea, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0xffeb, 0x0010 }, { 0xffec, 0x0010 }, { 0xffed, 0x0010 },
+        { 0xffee, 0x0010 }, { 0xffef, 0x0010 }, { 0xfff0, 0x0010 }, { 0xfff1, 0x0010 },
+        { 0xfff2, 0x0010 }, { 0xfff3, 0x0010 }, { 0xfff4, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x07f9, 0x000b }, { 0xfff5, 0x0010 }, { 0xfff6, 0x0010 }, { 0xfff7, 0x0010 },
+        { 0xfff8, 0x0010 }, { 0xfff9, 0x0010 }, { 0xfffa, 0x0010 }, { 0xfffb, 0x0010 },
+        { 0xfffc, 0x0010 }, { 0xfffd, 0x0010 }, { 0xfffe, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }
+    };
+
+    static const uint16_t kUACHT[256][2] = {
+        { 0x0000, 0x0002 }, { 0x0001, 0x0002 }, { 0x0004, 0x0003 }, { 0x000a, 0x0004 },
+        { 0x0018, 0x0005 }, { 0x0019, 0x0005 }, { 0x0038, 0x0006 }, { 0x0078, 0x0007 },
+        { 0x01f4, 0x0009 }, { 0x03f6, 0x000a }, { 0x0ff4, 0x000c }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x000b, 0x0004 }, { 0x0039, 0x0006 }, { 0x00f6, 0x0008 },
+        { 0x01f5, 0x0009 }, { 0x07f6, 0x000b }, { 0x0ff5, 0x000c }, { 0xff88, 0x0010 },
+        { 0xff89, 0x0010 }, { 0xff8a, 0x0010 }, { 0xff8b, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x001a, 0x0005 }, { 0x00f7, 0x0008 }, { 0x03f7, 0x000a },
+        { 0x0ff6, 0x000c }, { 0x7fc2, 0x000f }, { 0xff8c, 0x0010 }, { 0xff8d, 0x0010 },
+        { 0xff8e, 0x0010 }, { 0xff8f, 0x0010 }, { 0xff90, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x001b, 0x0005 }, { 0x00f8, 0x0008 }, { 0x03f8, 0x000a },
+        { 0x0ff7, 0x000c }, { 0xff91, 0x0010 }, { 0xff92, 0x0010 }, { 0xff93, 0x0010 },
+        { 0xff94, 0x0010 }, { 0xff95, 0x0010 }, { 0xff96, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x003a, 0x0006 }, { 0x01f6, 0x0009 }, { 0xff97, 0x0010 },
+        { 0xff98, 0x0010 }, { 0xff99, 0x0010 }, { 0xff9a, 0x0010 }, { 0xff9b, 0x0010 },
+        { 0xff9c, 0x0010 }, { 0xff9d, 0x0010 }, { 0xff9e, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x003b, 0x0006 }, { 0x03f9, 0x000a }, { 0xff9f, 0x0010 },
+        { 0xffa0, 0x0010 }, { 0xffa1, 0x0010 }, { 0xffa2, 0x0010 }, { 0xffa3, 0x0010 },
+        { 0xffa4, 0x0010 }, { 0xffa5, 0x0010 }, { 0xffa6, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0079, 0x0007 }, { 0x07f7, 0x000b }, { 0xffa7, 0x0010 },
+        { 0xffa8, 0x0010 }, { 0xffa9, 0x0010 }, { 0xffaa, 0x0010 }, { 0xffab, 0x0010 },
+        { 0xffac, 0x0010 }, { 0xffad, 0x0010 }, { 0xffae, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x007a, 0x0007 }, { 0x07f8, 0x000b }, { 0xffaf, 0x0010 },
+        { 0xffb0, 0x0010 }, { 0xffb1, 0x0010 }, { 0xffb2, 0x0010 }, { 0xffb3, 0x0010 },
+        { 0xffb4, 0x0010 }, { 0xffb5, 0x0010 }, { 0xffb6, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x00f9, 0x0008 }, { 0xffb7, 0x0010 }, { 0xffb8, 0x0010 },
+        { 0xffb9, 0x0010 }, { 0xffba, 0x0010 }, { 0xffbb, 0x0010 }, { 0xffbc, 0x0010 },
+        { 0xffbd, 0x0010 }, { 0xffbe, 0x0010 }, { 0xffbf, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x01f7, 0x0009 }, { 0xffc0, 0x0010 }, { 0xffc1, 0x0010 },
+        { 0xffc2, 0x0010 }, { 0xffc3, 0x0010 }, { 0xffc4, 0x0010 }, { 0xffc5, 0x0010 },
+        { 0xffc6, 0x0010 }, { 0xffc7, 0x0010 }, { 0xffc8, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x01f8, 0x0009 }, { 0xffc9, 0x0010 }, { 0xffca, 0x0010 },
+        { 0xffcb, 0x0010 }, { 0xffcc, 0x0010 }, { 0xffcd, 0x0010 }, { 0xffce, 0x0010 },
+        { 0xffcf, 0x0010 }, { 0xffd0, 0x0010 }, { 0xffd1, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x01f9, 0x0009 }, { 0xffd2, 0x0010 }, { 0xffd3, 0x0010 },
+        { 0xffd4, 0x0010 }, { 0xffd5, 0x0010 }, { 0xffd6, 0x0010 }, { 0xffd7, 0x0010 },
+        { 0xffd8, 0x0010 }, { 0xffd9, 0x0010 }, { 0xffda, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x01fa, 0x0009 }, { 0xffdb, 0x0010 }, { 0xffdc, 0x0010 },
+        { 0xffdd, 0x0010 }, { 0xffde, 0x0010 }, { 0xffdf, 0x0010 }, { 0xffe0, 0x0010 },
+        { 0xffe1, 0x0010 }, { 0xffe2, 0x0010 }, { 0xffe3, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x07f9, 0x000b }, { 0xffe4, 0x0010 }, { 0xffe5, 0x0010 },
+        { 0xffe6, 0x0010 }, { 0xffe7, 0x0010 }, { 0xffe8, 0x0010 }, { 0xffe9, 0x0010 },
+        { 0xffea, 0x0010 }, { 0xffeb, 0x0010 }, { 0xffec, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x3fe0, 0x000e }, { 0xffed, 0x0010 }, { 0xffee, 0x0010 },
+        { 0xffef, 0x0010 }, { 0xfff0, 0x0010 }, { 0xfff1, 0x0010 }, { 0xfff2, 0x0010 },
+        { 0xfff3, 0x0010 }, { 0xfff4, 0x0010 }, { 0xfff5, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 },
+        { 0x03fa, 0x000a }, { 0x7fc3, 0x000f }, { 0xfff6, 0x0010 }, { 0xfff7, 0x0010 },
+        { 0xfff8, 0x0010 }, { 0xfff9, 0x0010 }, { 0xfffa, 0x0010 }, { 0xfffb, 0x0010 },
+        { 0xfffc, 0x0010 }, { 0xfffd, 0x0010 }, { 0xfffe, 0x0010 }, { 0x0000, 0x0000 },
+        { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }, { 0x0000, 0x0000 }
+    };
+
+    auto process = [&](float *c, float *table, int dc, const uint16_t (&htdc)[256][2], const uint16_t (&htac)[256][2]) {
+        const unsigned short eob[2] = { htac[0x00][0], htac[0x00][1] };
+        const unsigned short m16[2] = { htac[0xF0][0], htac[0xF0][1] };
+
+        auto calcBits = [](int value, uint16_t (&bits)[2]) {
+            int t = abs(value);
+            int m = value < 0 ? value - 1 : value;
+            bits[1] = 1;
+            while (t >>= 1) bits[1]++;
+            bits[0] = m & ((1 << bits[1]) - 1);
+        };
+
+        auto dct = [](float &d0, float &d1, float &d2, float &d3, float &d4, float &d5, float &d6, float &d7) {
+            const float t0 = d0 + d7, t7 = d0 - d7;
+            const float t1 = d1 + d6, t6 = d1 - d6;
+            const float t2 = d2 + d5, t5 = d2 - d5;
+            const float t3 = d3 + d4, t4 = d3 - d4;
+            // event part
+            float t10 = t0 + t3, t13 = t0 - t3;          // phase 2
+            float t11 = t1 + t2, t12 = t1 - t2;
+            d0 = t10 + t11;                              // phase 3
+            d4 = t10 - t11;
+            const float z1 = (t12 + t13) * 0.707106781f; // c4
+            d2 = t13 + z1;                               // phase 5
+            d6 = t13 - z1;
+            // odd part
+            t10 = t4 + t5;                               // phase 2
+            t11 = t5 + t6;
+            t12 = t6 + t7;
+            const float z5 = (t10 - t12) * 0.382683433f; // c6
+            const float z2 = t10 * 0.541196100f + z5;    // c2-c6
+            const float z4 = t12 * 1.306562965f + z5;    // c2+c6
+            const float z3 = t11 * 0.707106781f;         // c4
+            const float z11 = t7 + z3;                   // phase 5
+            const float z13 = t7 - z3;
+            d5 = z13 + z2;                               // phase 6
+            d3 = z13 - z2;
+            d1 = z11 + z4;
+            d7 = z11 - z4;
+        };
+
+        for (size_t i = 0; i < 64; i += 8)
+            dct(c[i], c[i+1], c[i+2], c[i+3], c[i+4], c[i+5], c[i+6], c[i+7]);
+        for (size_t i = 0; i < 8; i++)
+            dct(c[i], c[i+8], c[i+16], c[i+24], c[i+32], c[i+40], c[i+48], c[i+56]);
+
+        // quantize the coefficients
+        int du[64];
+        for (size_t i = 0; i < 64; i++) {
+            const float v = c[i] * table[i];
+            du[kZig[i]] = (int)(v < 0 ? m::ceil(v - 0.5f) : m::floor(v + 0.5f));
+        }
+
+        // encode DC
+        int difference = du[0] - dc;
+        if (difference) {
+            uint16_t bits[2];
+            calcBits(difference, bits);
+            writeBits(htdc[bits[1]]);
+            writeBits(bits);
+        } else {
+            writeBits(htdc[0]);
+        }
+
+        // encode ACs
+        int end = 63;
+        for (; end > 0 && !du[end]; --end)
+            ;
+        if (!end) {
+            writeBits(eob);
+            return du[0];
+        }
+        for (int i = 1; i <= end; i++) {
+            int beg = i;
+            for (; !du[i] && i <= end; i++)
+                ;
+            int zeroes = i - beg;
+            if (zeroes >= 16) {
+                int length = zeroes >> 4;
+                for (int m = 1; m <= length; m++)
+                    writeBits(m16);
+                zeroes &= 15;
+            }
+            uint16_t bits[2];
+            calcBits(du[i], bits);
+            writeBits(htac[(zeroes << 4) + bits[1]]);
+            writeBits(bits);
+        }
+        if (end != 63)
+            writeBits(eob);
+        return du[0];
+    };
+
+    // encode 8x8 macro blocks
+    int dc[] = { 0, 0, 0 };
+    const size_t rOffset = m_format == kTexFormatBGRA || m_format == kTexFormatBGR ? 2 : 0;
+    const size_t gOffset = m_bpp > 1 ? 1 : 0;
+    const size_t bOffset = m_bpp == 1 || rOffset == 2 ? 0 : 2;
+    for (size_t y = 0; y < m_height; y += 8) {
+        for (size_t x = 0; x < m_width; x += 8) {
+            float du[3][64];
+            for (size_t r = y, p = 0; r < y+8; r++) {
+                for (size_t c = x; c < x+8; c++, p++) {
+                    size_t m = r*m_width*m_bpp + c*m_bpp;
+                    if (r >= m_height)
+                        m -= m_width*m_bpp*(r+1 - m_height);
+                    if (c >= m_width)
+                        m -= m_bpp*(c+1 - m_width);
+                    const float R = m_data[m + rOffset];
+                    const float G = m_data[m + gOffset];
+                    const float B = m_data[m + bOffset];
+                    du[0][p] =  0.29900f * R + 0.58700f * G + 0.11400f * B - 128.0f;
+                    du[1][p] = -0.16874f * R - 0.33126f * G + 0.50000f * B;
+                    du[2][p] =  0.50000f * R - 0.41869f * G - 0.08131f * B;
+                }
+            }
+            dc[0] = process(du[0], fyTable, dc[0], kYDCHT, kYACHT);
+            dc[1] = process(du[1], fuTable, dc[1], kUDCHT, kUACHT);
+            dc[2] = process(du[2], fuTable, dc[2], kUDCHT, kUACHT);
+        }
+    }
+
+    // bit alignment for EOI marker
+    static const uint16_t kFillBits[] = { 0x7F, 0x07 };
+    writeBits(kFillBits);
+
+    writeBytes({0xFF, 0xD9}); // EOI
+}
+
 bool texture::save(const u::string &file, saveFormat format, float quality) {
     if (m_data.empty())
         return false;
@@ -3021,7 +3456,8 @@ bool texture::save(const u::string &file, saveFormat format, float quality) {
     } kExtensions[] = {
         { &texture::writeTGA, kSaveTGA },
         { &texture::writeBMP, kSaveBMP },
-        { &texture::writePNG, kSavePNG }
+        { &texture::writePNG, kSavePNG },
+        { &texture::writeJPG, kSaveJPG }
     };
 
     u::vector<unsigned char> data;
