@@ -376,6 +376,6 @@ const u::vector<mapModel*> &world::getMapModels() const {
     return m_mapModels;
 }
 
-colorGrader &world::getColorGrader() {
+ColorGrader &world::getColorGrader() {
     return m_renderer.getColorGrader();
 }

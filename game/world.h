@@ -101,7 +101,7 @@ struct world {
     playerStart &getPlayerStart(size_t index);
     teleport &getTeleport(size_t index);
     jumppad &getJumppad(size_t index);
-    colorGrader &getColorGrader();
+    ColorGrader &getColorGrader();
 
     const u::vector<mapModel*> &getMapModels() const;
 

@@ -422,7 +422,7 @@ directionalLight &world::getDirectionalLight() {
     return m_directionalLight;
 }
 
-colorGrader &world::getColorGrader() {
+ColorGrader &world::getColorGrader() {
     return m_grader;
 }
 

@@ -6,7 +6,7 @@
 
 #include "m_const.h"
 
-colorGrader::colorGrader() {
+ColorGrader::ColorGrader() {
     reset();
 
     generateTexture();
@@ -33,25 +33,25 @@ colorGrader::colorGrader() {
     }
 }
 
-void colorGrader::setBrightness(double brightness) {
+void ColorGrader::setBrightness(double brightness) {
     m_brightness = brightness;
     m_updated = true;
 }
 
-void colorGrader::setContrast(double contrast) {
+void ColorGrader::setContrast(double contrast) {
     m_contrast = contrast;
     m_updated = true;
 }
 
-double colorGrader::brightness() const {
+double ColorGrader::brightness() const {
     return m_brightness;
 }
 
-double colorGrader::contrast() const {
+double ColorGrader::contrast() const {
     return m_contrast;
 }
 
-void colorGrader::generateTexture() {
+void ColorGrader::generateTexture() {
     // Generate the 3D volume texture
     unsigned char *next = m_data;
     for (size_t y = 0; y < kHeight; y++) {
@@ -63,7 +63,7 @@ void colorGrader::generateTexture() {
     }
 }
 
-void colorGrader::generateColorBalanceTables() {
+void ColorGrader::generateColorBalanceTables() {
     const double *transfer[3][kBalanceMax];
     for (size_t i = kBalanceShadows; i < kBalanceMax; i++)
         for (size_t j = 0; j < 3; j++)
@@ -80,7 +80,7 @@ void colorGrader::generateColorBalanceTables() {
     }
 }
 
-void colorGrader::generateHueSaturationTables() {
+void ColorGrader::generateHueSaturationTables() {
     int value;
     for (int hue = 0; hue < 6; hue++) {
         for (int i = 0; i < 256; i++) {
@@ -111,7 +111,7 @@ void colorGrader::generateHueSaturationTables() {
 //  H [0, 360]
 //  S [0, 255]
 //  L [0, 255]
-void colorGrader::RGB2HSL(int &red, int &green, int &blue) {
+void ColorGrader::RGB2HSL(int &red, int &green, int &blue) {
     const int r = red;
     const int g = green;
     const int b = blue;
@@ -156,7 +156,7 @@ void colorGrader::RGB2HSL(int &red, int &green, int &blue) {
     blue = u::round(l);
 }
 
-int colorGrader::HSLINT(double n1, double n2, double hue) {
+int ColorGrader::HSLINT(double n1, double n2, double hue) {
     if (hue > 255.0)
         hue -= 255.0;
     else if (hue < 0.0)
@@ -175,7 +175,7 @@ int colorGrader::HSLINT(double n1, double n2, double hue) {
     return u::round(value * 255.0);
 }
 
-void colorGrader::HSL2RGB(int &hue, int &saturation, int &lightness) {
+void ColorGrader::HSL2RGB(int &hue, int &saturation, int &lightness) {
     const int h = hue;
     const int s = saturation;
     const int l = lightness;
@@ -198,7 +198,7 @@ void colorGrader::HSL2RGB(int &hue, int &saturation, int &lightness) {
 
 // Calculates lightness value for RGB triplet with formula
 // L = (max(R, G, B) + min(R, G, B)) / 2
-int colorGrader::RGB2L(int red, int green, int blue) {
+int ColorGrader::RGB2L(int red, int green, int blue) {
     int min = 0;
     int max = 0;
     if (red > green) {
@@ -211,7 +211,7 @@ int colorGrader::RGB2L(int red, int green, int blue) {
     return u::round((max + min) / 2.0);
 }
 
-void colorGrader::applyColorBalance() {
+void ColorGrader::applyColorBalance() {
     generateColorBalanceTables();
     unsigned char *src = m_data;
     unsigned char *dst = m_data;
@@ -240,7 +240,7 @@ void colorGrader::applyColorBalance() {
     }
 }
 
-void colorGrader::applyHueSaturation() {
+void ColorGrader::applyHueSaturation() {
     generateHueSaturationTables();
 
     // +42ish each step, capped to a byte, rounded down to nearest integer
@@ -327,7 +327,7 @@ void colorGrader::applyHueSaturation() {
     }
 }
 
-void colorGrader::applyBrightnessContrast() {
+void ColorGrader::applyBrightnessContrast() {
     const float brightness = 255.0f * 0.392f * float(m_brightness);
     const float contrast = float(m_contrast);
     float gain = 1.0f;
@@ -365,18 +365,18 @@ void colorGrader::applyBrightnessContrast() {
     }
 }
 
-void colorGrader::grade() {
+void ColorGrader::grade() {
     applyColorBalance();
     applyHueSaturation();
     applyBrightnessContrast();
 }
 
-void colorGrader::update() {
+void ColorGrader::update() {
     generateTexture();
     m_updated = false;
 }
 
-void colorGrader::reset() {
+void ColorGrader::reset() {
     memset(m_balance, 0, sizeof m_balance);
 
     for (size_t i = kHuesAll; i < kHuesMax; i++) {
@@ -392,82 +392,82 @@ void colorGrader::reset() {
     m_updated = true;
 }
 
-bool colorGrader::updated() const {
+bool ColorGrader::updated() const {
     return m_updated;
 }
 
-void colorGrader::setLuma(bool keep) {
+void ColorGrader::setLuma(bool keep) {
     m_preserveLuma = keep;
     m_updated = true;
 }
 
-void colorGrader::setCR(double value, int what) {
+void ColorGrader::setCR(double value, int what) {
     m_balance[0][what] = value;
     m_updated = true;
 }
 
-void colorGrader::setMG(double value, int what) {
+void ColorGrader::setMG(double value, int what) {
     m_balance[1][what] = value;
     m_updated = true;
 }
 
-void colorGrader::setYB(double value, int what) {
+void ColorGrader::setYB(double value, int what) {
     m_balance[2][what] = value;
     m_updated = true;
 }
 
-void colorGrader::setH(double hue, int what) {
+void ColorGrader::setH(double hue, int what) {
     m_hue[what] = hue;
     m_updated = true;
 }
 
-void colorGrader::setS(double saturation, int what) {
+void ColorGrader::setS(double saturation, int what) {
     m_saturation[what] = saturation;
     m_updated = true;
 }
 
-void colorGrader::setL(double lightness, int what) {
+void ColorGrader::setL(double lightness, int what) {
     m_lightness[what] = lightness;
     m_updated = true;
 }
 
-void colorGrader::setHueOverlap(double value) {
+void ColorGrader::setHueOverlap(double value) {
     m_hueOverlap = value;
     m_updated = true;
 }
 
-bool colorGrader::luma() const {
+bool ColorGrader::luma() const {
     return m_preserveLuma;
 }
 
-double colorGrader::CR(int what) const {
+double ColorGrader::CR(int what) const {
     return m_balance[0][what];
 }
 
-double colorGrader::MG(int what) const {
+double ColorGrader::MG(int what) const {
     return m_balance[1][what];
 }
 
-double colorGrader::YB(int what) const {
+double ColorGrader::YB(int what) const {
     return m_balance[2][what];
 }
 
-double colorGrader::H(int what) const {
+double ColorGrader::H(int what) const {
     return m_hue[what];
 }
 
-double colorGrader::S(int what) const {
+double ColorGrader::S(int what) const {
     return m_saturation[what];
 }
 
-double colorGrader::hueOverlap() const {
+double ColorGrader::hueOverlap() const {
     return m_hueOverlap;
 }
 
-double colorGrader::L(int what) const {
+double ColorGrader::L(int what) const {
     return m_lightness[what];
 }
 
-const unsigned char *colorGrader::data() const {
+const unsigned char *ColorGrader::data() const {
     return m_data;
 }

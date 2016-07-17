@@ -2,8 +2,8 @@
 #define GRADER_HDR
 #include <stddef.h>
 
-struct colorGrader {
-    colorGrader();
+struct ColorGrader {
+    ColorGrader();
     void setBrightness(double brightness);
     void setContrast(double contrast);
     double brightness() const;

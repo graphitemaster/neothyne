@@ -146,15 +146,15 @@ static void menuColorGrading() {
             if (gui::collapse("Shadows", "", D(shadows)))
                 D(shadows) = !D(shadows);
             if (D(shadows))
-                cmySliders(colorGrader::kBalanceShadows);
+                cmySliders(ColorGrader::kBalanceShadows);
             if (gui::collapse("Midtones", "", D(midtones)))
                 D(midtones) = !D(midtones);
             if (D(midtones))
-                cmySliders(colorGrader::kBalanceMidtones);
+                cmySliders(ColorGrader::kBalanceMidtones);
             if (gui::collapse("Highlights", "", D(highlights)))
                 D(highlights) = !D(highlights);
             if (D(highlights))
-                cmySliders(colorGrader::kBalanceHighlights);
+                cmySliders(ColorGrader::kBalanceHighlights);
         gui::dedent();
         gui::label("Hue and Saturation");
         gui::indent();
@@ -165,27 +165,27 @@ static void menuColorGrading() {
             if (gui::collapse("Red", "", D(red)))
                 D(red) = !D(red);
             if (D(red))
-                hslSliders(colorGrader::kHuesRed);
+                hslSliders(ColorGrader::kHuesRed);
             if (gui::collapse("Yellow", "", D(yellow)))
                 D(yellow) = !D(yellow);
             if (D(yellow))
-                hslSliders(colorGrader::kHuesYellow);
+                hslSliders(ColorGrader::kHuesYellow);
             if (gui::collapse("Green", "", D(green)))
                 D(green) = !D(green);
             if (D(green))
-                hslSliders(colorGrader::kHuesGreen);
+                hslSliders(ColorGrader::kHuesGreen);
             if (gui::collapse("Cyan", "", D(cyan)))
                 D(cyan) = !D(cyan);
             if (D(cyan))
-                hslSliders(colorGrader::kHuesCyan);
+                hslSliders(ColorGrader::kHuesCyan);
             if (gui::collapse("Blue", "", D(blue)))
                 D(blue) = !D(blue);
             if (D(blue))
-                hslSliders(colorGrader::kHuesBlue);
+                hslSliders(ColorGrader::kHuesBlue);
             if (gui::collapse("Magenta", "", D(magenta)))
                 D(magenta) = !D(magenta);
             if (D(magenta))
-                hslSliders(colorGrader::kHuesMagenta);
+                hslSliders(ColorGrader::kHuesMagenta);
         gui::dedent();
         gui::label("Brightness and contrast");
         gui::indent();

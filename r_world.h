@@ -66,7 +66,7 @@ struct world : geom {
     // global entities
     fog &getFog();
     directionalLight &getDirectionalLight();
-    colorGrader &getColorGrader();
+    ColorGrader &getColorGrader();
 
 private:
     void cullPass(const pipeline &pl);
@@ -156,7 +156,7 @@ private:
     // global entities
     directionalLight m_directionalLight;
     fog m_fog;
-    colorGrader m_grader;
+    ColorGrader m_grader;
 
     u::vector<r::particleSystem*> m_particleSystems;
     // HACK: Testing only
