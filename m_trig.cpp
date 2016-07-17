@@ -61,17 +61,17 @@ static inline float cosdf(double x) {
 }
 
 // |sin(x)/x - s(x)| < 2**-37.5 (~[-4.89e-12, 4.824e-12])
-static const double kS1 = -1.66666666416265236e-01;
-static const double kS2 = 8.33332938588946318e-03;
-static const double kS3 = -1.98393348360966317e-04;
-static const double kS4 = 2.71831149398982191e-06;
+static const double kS0 = -1.66666666416265236e-01;
+static const double kS1 = 8.33332938588946318e-03;
+static const double kS2 = -1.98393348360966317e-04;
+static const double kS3 = 2.71831149398982191e-06;
 
 static inline float sindf(double x) {
     const f64 z = x*x;
     const f64 w = z*z;
-    const f64 r = kS3+z*kS4;
+    const f64 r = kS2+z*kS3;
     const f64 s = z*x;
-    return (x + s*(kS1 + z*kS2)) + s*w*r;
+    return (x + s*(kS0 + z*kS1)) + s*w*r;
 }
 
 // |cos(x) - c(x)| < 2**-34.1 (~[-5.37e-11, 5.295e-11])]
@@ -81,10 +81,10 @@ static inline void sincosdf(double x, float &sin, float &cos) {
     const f64 z = x*x;
     // polynomial reduction into independent terms for parallel evaluation
     const f64 rc = kC2+z*kC3;
-    const f64 rs = kS3+z*kS4;
+    const f64 rs = kS2+z*kS3;
     const f64 w = z*z;
     const f64 s = z*x;
-    const f64 ss = (x + s*(kS1 + z*kS2)) + s*w*rc;
+    const f64 ss = (x + s*(kS0 + z*kS1)) + s*w*rc;
     const f64 cc = ((1.0+z*kC0) + w*kC1) + (w*z)*rs;
     // Compiler synthesizes away branches
     sin = E & 1 ? -ss : ss;
