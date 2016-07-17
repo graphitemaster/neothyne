@@ -202,7 +202,7 @@ struct state {
     const queue &commands() const;
 
     // To update input state
-    void update(mouseState &mouse);
+    void update(MouseState &mouse);
 
     void clearInput(); // Clear any input state
     void clearActive(); // Clear any active state (reference to active thing)
@@ -219,7 +219,7 @@ struct state {
     ref m_nextHot; // Reference to hotToBe
     ref m_area; // Reference to root area
 
-    mouseState m_mouse;
+    MouseState m_mouse;
     int m_drag[2]; // X, Y
     float m_dragOrigin;
 
@@ -321,7 +321,7 @@ inline bool state::buttonLogic(ref thing, bool over) {
     return result;
 }
 
-inline void state::update(mouseState &mouse) {
+inline void state::update(MouseState &mouse) {
     // Update the input state
     const bool left = mouse.button & kMouseButtonLeft;
     m_mouse.x = mouse.x;
@@ -814,7 +814,7 @@ const queue &commands() {
     return Q;
 }
 
-void begin(mouseState &mouse) {
+void begin(MouseState &mouse) {
     G.update(mouse);
 
     // This hot becomes the nextHot

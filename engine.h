@@ -11,11 +11,11 @@
 #include "a_wav.h"
 
 /// Frame timer
-struct frameTimer {
+struct FrameTimer {
     static constexpr size_t kMaxFPS = 0; ///< For capping framerate (0 = disabled)
     static constexpr float kDampenEpsilon = 0.00001f; ///< Dampening to stabilize framerate readings
 
-    frameTimer();
+    FrameTimer();
 
     void cap(float maxFps); ///< Cap framerate to `maxFps' 0 to disable
     float mspf() const; ///< Milliseconds per frame
@@ -55,8 +55,8 @@ enum {
 };
 
 /// Represents the given mouse state
-struct mouseState {
-    mouseState();
+struct MouseState {
+    MouseState();
     enum {
         kMouseButtonLeft = 1 << 0, ///< left mouse button
         kMouseButtonRight = 1 << 1 ///< right mouse button
@@ -67,7 +67,7 @@ struct mouseState {
     int button; ///< flags
 };
 
-inline mouseState::mouseState()
+inline MouseState::MouseState()
     : x(0)
     , y(0)
     , wheel(0)
@@ -75,16 +75,16 @@ inline mouseState::mouseState()
 {
 }
 
-enum class textState {
+enum class TextState {
     kInactive,
     kInputting,
     kFinished
 };
 
 /// Engine object
-struct engine {
-    engine();
-    ~engine();
+struct Engine {
+    Engine();
+    ~Engine();
 
     bool init(int &argc, char **argv);
 
@@ -92,7 +92,7 @@ struct engine {
 
     u::map<u::string, int> &keyState(const u::string &key = "", bool keyDown = false, bool keyUp = false);
     void mouseDelta(int *deltaX, int *deltaY);
-    mouseState mouse() const;
+    MouseState mouse() const;
     void bindSet(const u::string &what, bindFunction handler);
     void swap();
     size_t width() const;
@@ -108,9 +108,9 @@ struct engine {
 
     const u::string &userPath() const;
     const u::string &gamePath() const;
-    textState textInput(u::string &what);
+    TextState textInput(u::string &what);
 
-    frameTimer m_frameTimer; // TODO: private
+    FrameTimer m_frameTimer; // TODO: private
 
 protected:
     bool initContext();
@@ -128,7 +128,7 @@ private:
     size_t m_autoCompleteCursor;
     u::string m_userPath;
     u::string m_gamePath;
-    mouseState m_mouseState;
+    MouseState m_mouseState;
     size_t m_screenWidth;
     size_t m_screenHeight;
     size_t m_refreshRate;
@@ -145,9 +145,9 @@ template <typename... Ts>
 
 // Wrapper
 u::map<u::string, int> &neoKeyState(const u::string &key = "", bool keyDown = false, bool keyUp = false);
-const frameTimer &neoFrameTimer();
-mouseState neoMouseState();
-textState neoTextState(u::string &what);
+const FrameTimer &neoFrameTimer();
+MouseState neoMouseState();
+TextState neoTextState(u::string &what);
 void neoMouseDelta(int *deltaX, int *deltaY);
 void neoSwap();
 size_t neoWidth();

@@ -6,7 +6,7 @@
 
 #include "r_pipeline.h"
 
-struct mouseState;
+struct MouseState;
 
 namespace gui {
 
@@ -182,7 +182,7 @@ void drawTexture(int x, int y, int w, int h, const u::vector<unsigned char> &rgb
 
 const queue &commands();
 
-void begin(mouseState &mouse);
+void begin(MouseState &mouse);
 void finish();
 
 }

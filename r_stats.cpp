@@ -174,7 +174,7 @@ void stat::render(size_t x) {
     // always collect samples even if r_stats_histogram is not enabled;
     // this way if someone toggles it on, the previous samples are immediately
     // available to be rendered to the texture
-    const frameTimer &timer = neoFrameTimer();
+    const FrameTimer &timer = neoFrameTimer();
     m_histogram.push_back(timer.mspf());
     if (m_histogram.size() > size_t(timer.fps()*r_stats_histogram_duration))
         m_histogram.erase(m_histogram.begin(), m_histogram.begin()+1);

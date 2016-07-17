@@ -171,10 +171,10 @@ VAR(int, scr_format, "screenshot file format", 0, 3, 3);
 VAR(float, scr_quality, "screenshot quality", 0.0f, 1.0f, 1.0f);
 
 /// pimpl context
-struct context {
-    struct controller {
-        controller();
-        controller(int id);
+struct Context {
+    struct Controller {
+        Controller();
+        Controller(int id);
 
         const char *name() const;
         int instance() const;
@@ -185,8 +185,8 @@ struct context {
         void close();
 
     private:
-        friend struct engine;
-        friend struct context;
+        friend struct Engine;
+        friend struct Context;
 
         SDL_GameController *m_gamePad;
         SDL_Joystick *m_joyStick;
@@ -195,62 +195,62 @@ struct context {
         m::vec3 m_position[2]; // L, R
         m::vec3 m_velocity[4]; // L, R, Rest L, Rest R
     };
-    ~context();
-    context();
+    ~Context();
+    Context();
 
     void addController(int id);
     void delController(int id);
-    controller *getController(int id);
+    Controller *getController(int id);
     void updateController(int id, unsigned char axis, int16_t value);
 
     void begTextInput();
     void endTextInput();
 
 private:
-    friend struct engine;
-    u::map<int, controller> m_controllers;
+    friend struct Engine;
+    u::map<int, Controller> m_controllers;
     SDL_Window *m_window;
     u::string m_textString;
-    textState m_textState;
+    TextState m_textState;
 };
 
-#define CTX(X) ((context*)(X))
+#define CTX(X) ((Context*)(X))
 
-///! context
-inline context::context()
+///! Context
+inline Context::Context()
     : m_window(nullptr)
-    , m_textState(textState::kInactive)
+    , m_textState(TextState::kInactive)
 {
 }
 
-inline context::~context() {
+inline Context::~Context() {
     if (m_window)
         SDL_DestroyWindow(m_window);
     SDL_Quit();
 }
 
-inline void context::addController(int id) {
+inline void Context::addController(int id) {
     // Add the new game controller
-    controller cntrl(id);
+    Controller cntrl(id);
     m_controllers.insert({ cntrl.instance(), cntrl });
 
     u::print("[input] => gamepad %d (%s) connected\n", cntrl.m_instance, cntrl.name());
 }
 
-inline void context::delController(int instance) {
+inline void Context::delController(int instance) {
     auto cntrl = getController(instance);
     if (!cntrl) return;
     u::print("[input] => gamepad %d (%s) disconnected\n", instance, cntrl->name());
     cntrl->close();
 }
 
-inline context::controller *context::getController(int id) {
+inline Context::Controller *Context::getController(int id) {
     if (m_controllers.find(id) == m_controllers.end())
         return nullptr;
     return &m_controllers[id];
 }
 
-inline void context::updateController(int instance, unsigned char axis, int16_t value) {
+inline void Context::updateController(int instance, unsigned char axis, int16_t value) {
     auto cntrl = getController(instance);
     if (!cntrl) return;
     switch (axis) {
@@ -269,20 +269,20 @@ inline void context::updateController(int instance, unsigned char axis, int16_t 
     }
 }
 
-inline void context::begTextInput() {
-    m_textState = textState::kInputting;
+inline void Context::begTextInput() {
+    m_textState = TextState::kInputting;
     m_textString = "";
 }
 
-inline void context::endTextInput() {
-    if (m_textState != textState::kInputting)
+inline void Context::endTextInput() {
+    if (m_textState != TextState::kInputting)
         return;
-    m_textState = textState::kFinished;
+    m_textState = TextState::kFinished;
 }
 
 
-///! context::controller
-inline context::controller::controller()
+///! Context::Controller
+inline Context::Controller::Controller()
     : m_gamePad(nullptr)
     , m_joyStick(nullptr)
     , m_name(nullptr)
@@ -290,7 +290,7 @@ inline context::controller::controller()
 {
 }
 
-inline context::controller::controller(int id)
+inline Context::Controller::Controller(int id)
     : m_gamePad(SDL_GameControllerOpen(id))
     , m_joyStick(SDL_GameControllerGetJoystick(m_gamePad))
     , m_name(SDL_GameControllerNameForIndex(id))
@@ -306,15 +306,15 @@ inline context::controller::controller(int id)
     m_velocity[3] = m::vec3(rx / 32767.0f, ry / 32767.0f, 0.0f);
 }
 
-inline const char *context::controller::name() const {
+inline const char *Context::Controller::name() const {
     return m_name;
 }
 
-inline int context::controller::instance() const {
+inline int Context::Controller::instance() const {
     return m_instance;
 }
 
-inline void context::controller::update(float delta, const m::vec3 &limits) {
+inline void Context::Controller::update(float delta, const m::vec3 &limits) {
     // If the velocity is close to the idle position kill it
     if (m::abs(m_velocity[2].x - m_velocity[0].x) < 0.1f) m_velocity[0].x = 0.0f;
     if (m::abs(m_velocity[2].y - m_velocity[0].y) < 0.1f) m_velocity[0].y = 0.0f;
@@ -325,14 +325,14 @@ inline void context::controller::update(float delta, const m::vec3 &limits) {
     m_position[1] = m::clamp(m_position[1] + m_velocity[1] * delta, m::vec3::origin, limits);
 }
 
-inline void context::controller::close() {
+inline void Context::Controller::close() {
     SDL_GameControllerClose(m_gamePad);
 }
 
 /// engine
-static engine gEngine;
+static Engine gEngine;
 
-inline engine::engine()
+inline Engine::Engine()
     : m_textInputHistoryCursor(0)
     , m_autoCompleteCursor(0)
     , m_screenWidth(0)
@@ -342,11 +342,11 @@ inline engine::engine()
 {
 }
 
-inline engine::~engine() {
+inline Engine::~Engine() {
     delete CTX(m_context);
 }
 
-bool engine::init(int &argc, char **argv) {
+bool Engine::init(int &argc, char **argv) {
     // Establish local timers for the engine
     if (!initTimers())
         return false;
@@ -363,7 +363,7 @@ bool engine::init(int &argc, char **argv) {
     return true;
 }
 
-bool engine::initContext() {
+bool Engine::initContext() {
     const u::string &videoDriver = vid_driver.get();
     if (videoDriver.size()) {
         if (SDL_GL_LoadLibrary(videoDriver.c_str()) != 0) {
@@ -423,7 +423,7 @@ bool engine::initContext() {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    u::unique_ptr<context> ctx(new context);
+    u::unique_ptr<Context> ctx(new Context);
 
     uint32_t flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     if (vid_fullscreen)
@@ -503,13 +503,13 @@ bool engine::initContext() {
     return true;
 }
 
-bool engine::initTimers() {
+bool Engine::initTimers() {
     m_frameTimer.reset();
-    m_frameTimer.cap(frameTimer::kMaxFPS);
+    m_frameTimer.cap(FrameTimer::kMaxFPS);
     return true;
 }
 
-void engine::deleteConfigRecursive(const u::string &pathName) {
+void Engine::deleteConfigRecursive(const u::string &pathName) {
     if (u::dir::isFile(pathName)) {
         u::remove(pathName, u::kFile);
         return;
@@ -520,11 +520,11 @@ void engine::deleteConfigRecursive(const u::string &pathName) {
     u::remove(pathName, u::kDirectory);
 }
 
-void engine::deleteConfig() {
+void Engine::deleteConfig() {
     deleteConfigRecursive(m_userPath);
 }
 
-bool engine::initData(int &argc, char **argv) {
+bool Engine::initData(int &argc, char **argv) {
     // Get a path for the game, can come from command line as well
     const char *directory = nullptr;
     for (int i = 1; i < argc - 1; i++) {
@@ -586,7 +586,7 @@ bool engine::initData(int &argc, char **argv) {
     return true;
 }
 
-u::map<u::string, int> &engine::keyState(const u::string &key, bool keyDown, bool keyUp) {
+u::map<u::string, int> &Engine::keyState(const u::string &key, bool keyDown, bool keyUp) {
     if (keyDown)
         m_keyMap[key]++;
     if (keyUp)
@@ -594,20 +594,20 @@ u::map<u::string, int> &engine::keyState(const u::string &key, bool keyDown, boo
     return m_keyMap;
 }
 
-void engine::mouseDelta(int *deltaX, int *deltaY) {
+void Engine::mouseDelta(int *deltaX, int *deltaY) {
     if (SDL_GetRelativeMouseMode() == SDL_TRUE)
         SDL_GetRelativeMouseState(deltaX, deltaY);
 }
 
-mouseState engine::mouse() const {
+MouseState Engine::mouse() const {
     return m_mouseState;
 }
 
-void engine::bindSet(const u::string &what, void (*handler)()) {
+void Engine::bindSet(const u::string &what, void (*handler)()) {
     m_binds[what] = handler;
 }
 
-void engine::swap() {
+void Engine::swap() {
     SDL_GL_SwapWindow(CTX(m_context)->m_window);
     m_frameTimer.update();
 
@@ -642,7 +642,7 @@ void engine::swap() {
             }
             break;
         case SDL_KEYDOWN:
-            if (CTX(m_context)->m_textState == textState::kInputting) {
+            if (CTX(m_context)->m_textState == TextState::kInputting) {
                 if (e.key.keysym.sym != SDLK_TAB) {
                     m_autoComplete.destroy();
                     m_autoCompleteCursor = 0;
@@ -712,11 +712,11 @@ void engine::swap() {
             switch (e.button.button) {
             case SDL_BUTTON_LEFT:
                 callBind("MouseDnL");
-                m_mouseState.button |= mouseState::kMouseButtonLeft;
+                m_mouseState.button |= MouseState::kMouseButtonLeft;
                 break;
             case SDL_BUTTON_RIGHT:
                 callBind("MouseDnR");
-                m_mouseState.button |= mouseState::kMouseButtonRight;
+                m_mouseState.button |= MouseState::kMouseButtonRight;
                 break;
             }
             break;
@@ -724,11 +724,11 @@ void engine::swap() {
             switch (e.button.button) {
             case SDL_BUTTON_LEFT:
                 callBind("MouseUpL");
-                m_mouseState.button &= ~mouseState::kMouseButtonLeft;
+                m_mouseState.button &= ~MouseState::kMouseButtonLeft;
                 break;
             case SDL_BUTTON_RIGHT:
                 callBind("MouseUpR");
-                m_mouseState.button &= ~mouseState::kMouseButtonRight;
+                m_mouseState.button &= ~MouseState::kMouseButtonRight;
                 break;
             }
             break;
@@ -745,15 +745,15 @@ void engine::swap() {
         cntrl.second.update(m_frameTimer.delta(), { float(m_screenWidth), float(m_screenHeight), 0.0f });
 }
 
-size_t engine::width() const {
+size_t Engine::width() const {
     return m_screenWidth;
 }
 
-size_t engine::height() const {
+size_t Engine::height() const {
     return m_screenHeight;
 }
 
-void engine::relativeMouse(bool state) {
+void Engine::relativeMouse(bool state) {
 #if defined(_MSC_VER)
     if (IsDebuggerPresent())
         SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -762,21 +762,21 @@ void engine::relativeMouse(bool state) {
     SDL_SetRelativeMouseMode(state ? SDL_TRUE : SDL_FALSE);
 }
 
-bool engine::relativeMouse() {
+bool Engine::relativeMouse() {
     return SDL_GetRelativeMouseMode() == SDL_TRUE;
 }
 
-void engine::centerMouse() {
+void Engine::centerMouse() {
     SDL_WarpMouseInWindow(CTX(m_context)->m_window, m_screenWidth / 2, m_screenHeight / 2);
 }
 
-void engine::setWindowTitle(const char *title) {
+void Engine::setWindowTitle(const char *title) {
     char name[1024];
     snprintf(name, sizeof name, "%s [%s]", title, gOperatingSystem);
     SDL_SetWindowTitle(CTX(m_context)->m_window, name);
 }
 
-void engine::resize(size_t width, size_t height) {
+void Engine::resize(size_t width, size_t height) {
     SDL_SetWindowSize(CTX(m_context)->m_window, width, height);
     m_screenWidth = width;
     m_screenHeight = height;
@@ -785,7 +785,7 @@ void engine::resize(size_t width, size_t height) {
     vid_height.set(height);
 }
 
-void engine::setVSyncOption(int option) {
+void Engine::setVSyncOption(int option) {
     switch (option) {
     case kSyncTear:
         if (SDL_GL_SetSwapInterval(-1) == -1)
@@ -807,7 +807,7 @@ void engine::setVSyncOption(int option) {
     m_frameTimer.reset();
 }
 
-void engine::screenShot() {
+void Engine::screenShot() {
     // Generate a unique filename from the time
     const time_t t = time(nullptr);
     const struct tm tm = *localtime(&t);
@@ -860,27 +860,27 @@ void engine::screenShot() {
         u::print("[screenshot] => %s.%s\n", fixedPath, kSaveFormatExtensions[scr_format]);
 }
 
-const u::string &engine::userPath() const {
+const u::string &Engine::userPath() const {
     return m_userPath;
 }
 
-const u::string &engine::gamePath() const {
+const u::string &Engine::gamePath() const {
     return m_gamePath;
 }
 
-textState engine::textInput(u::string &what) {
-    if (CTX(m_context)->m_textState == textState::kInactive)
-        return textState::kInactive;
+TextState Engine::textInput(u::string &what) {
+    if (CTX(m_context)->m_textState == TextState::kInactive)
+        return TextState::kInactive;
     what = CTX(m_context)->m_textString;
-    if (CTX(m_context)->m_textState == textState::kFinished) {
-        CTX(m_context)->m_textState = textState::kInactive;
-        return textState::kFinished;
+    if (CTX(m_context)->m_textState == TextState::kFinished) {
+        CTX(m_context)->m_textState = TextState::kInactive;
+        return TextState::kFinished;
     }
-    return textState::kInputting;
+    return TextState::kInputting;
 }
 
 // An accurate frame rate timer and capper
-frameTimer::frameTimer()
+FrameTimer::FrameTimer()
     : m_maxFrameTicks(0.0f)
     , m_lastSecondTicks(0)
     , m_frameCount(0)
@@ -899,22 +899,22 @@ frameTimer::frameTimer()
 {
 }
 
-void frameTimer::lock() {
+void FrameTimer::lock() {
     m_lock = true;
 }
 
-void frameTimer::unlock() {
+void FrameTimer::unlock() {
     m_lock = false;
 }
 
-void frameTimer::cap(float maxFps) {
+void FrameTimer::cap(float maxFps) {
     if (m_lock)
         return;
     m_maxFrameTicks = maxFps <= 0.0f
         ? -1 : (1000.0f / maxFps) - kDampenEpsilon;
 }
 
-void frameTimer::reset() {
+void FrameTimer::reset() {
     m_frameCount = 0;
     m_minTicks = 1000;
     m_maxTicks = 0;
@@ -922,7 +922,7 @@ void frameTimer::reset() {
     m_lastSecondTicks = SDL_GetTicks();
 }
 
-bool frameTimer::update() {
+bool FrameTimer::update() {
     m_frameCount++;
     m_targetTicks = m_maxFrameTicks != -1 ?
         m_lastSecondTicks + uint32_t(m_frameCount * m_maxFrameTicks) : 0;
@@ -951,19 +951,19 @@ bool frameTimer::update() {
     return false;
 }
 
-float frameTimer::mspf() const {
+float FrameTimer::mspf() const {
     return m_frameAverage;
 }
 
-int frameTimer::fps() const {
+int FrameTimer::fps() const {
     return m_framesPerSecond;
 }
 
-float frameTimer::delta() const {
+float FrameTimer::delta() const {
     return m_deltaTime;
 }
 
-uint32_t frameTimer::ticks() const {
+uint32_t FrameTimer::ticks() const {
     return m_currentTicks;
 }
 
@@ -986,7 +986,7 @@ void *neoGetProcAddress(const char *proc) {
 ///     main -> entryPoint -> neoMain
 ///
 static int entryPoint(int argc, char **argv) {
-    extern int neoMain(frameTimer&, a::Audio &, int argc, char **argv, bool &shutdown);
+    extern int neoMain(FrameTimer&, a::Audio &, int argc, char **argv, bool &shutdown);
 
     signal(SIGINT, neoSignalHandler);
     signal(SIGTERM, neoSignalHandler);
@@ -1106,11 +1106,11 @@ u::map<u::string, int> &neoKeyState(const u::string &key, bool keyDown, bool key
     return gEngine.keyState(key, keyDown, keyUp);
 }
 
-const frameTimer &neoFrameTimer() {
+const FrameTimer &neoFrameTimer() {
     return gEngine.m_frameTimer;
 }
 
-mouseState neoMouseState() {
+MouseState neoMouseState() {
     return gEngine.mouse();
 }
 
@@ -1158,7 +1158,7 @@ const u::string &neoGamePath() {
     return gEngine.gamePath();
 }
 
-textState neoTextState(u::string &what) {
+TextState neoTextState(u::string &what) {
     return gEngine.textInput(what);
 }
 

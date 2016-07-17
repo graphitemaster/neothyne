@@ -103,7 +103,7 @@ NVAR(float, u_x, "", -180.0f, 360.0f, 0.0f);
 NVAR(float, u_y, "", -180.0f, 360.0f, 0.0f);
 NVAR(float, u_z, "", -180.0f, 360.0f, 0.0f);
 
-int neoMain(frameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
+int neoMain(FrameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
     // Setup rendering pipeline
     gPerspective.fov = cl_fov;
     gPerspective.nearp = cl_nearp;
@@ -236,7 +236,7 @@ int neoMain(frameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
         auto mouse = neoMouseState();
 
         // Update dragging/moving entity
-        if (mouse.button & mouseState::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit))
+        if (mouse.button & MouseState::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit))
             edit::move();
 
         if (gPlaying && gWorld.isLoaded()) {
@@ -345,12 +345,12 @@ int neoMain(frameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
         }
 
         u::string inputText;
-        textState text = neoTextState(inputText);
-        if (text != textState::kInactive) {
+        const TextState text = neoTextState(inputText);
+        if (text != TextState::kInactive) {
             gui::drawTriangle(5, 10, 10, 10, 1, gui::RGBA(155, 155, 155, 255));
             gui::drawText(20, 10, gui::kAlignLeft,
                 inputText.c_str(), gui::RGBA(255, 255, 255, 255));
-            if (text == textState::kFinished) {
+            if (text == TextState::kFinished) {
                 auto values = u::split(inputText);
                 if (values.size() == 2) {
                     switch (varChange(values[0], values[1])) {
