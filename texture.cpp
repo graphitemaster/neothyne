@@ -60,8 +60,8 @@ VAR(int, tex_jpg_compress_quality, "compression quality for JPG", 1, 100, 90);
         return; \
     } while (0)
 
-struct decoder {
-    decoder()
+struct Decoder {
+    Decoder()
         : m_error(kSuccess)
         , m_format(kTexFormatLuminance)
         , m_width(0)
@@ -72,7 +72,7 @@ struct decoder {
     {
     }
 
-    enum result {
+    enum Result {
         kSuccess,
         kInvalid,
         kUnsupported,
@@ -121,12 +121,12 @@ struct decoder {
         return m_format;
     }
 
-    result status() const {
+    Result status() const {
         return m_error;
     }
 
 protected:
-    result m_error;
+    Result m_error;
     TextureFormat m_format;
     size_t m_width;
     size_t m_height;
@@ -147,19 +147,19 @@ protected:
 ///  Decoder itself decodes to either 8-bit greyscale compatible with GL_LUMINANCE8
 ///  or 24-bit RGB compatible with GL_RGB8.
 ///
-struct jpeg : decoder {
+struct JPGDecoder : Decoder {
     static constexpr const char *kMagic = "\xFF\xD8\xFF";
 
     static bool test(const u::vector<unsigned char> &data) {
         return memcmp(&data[0], kMagic, 3) == 0;
     }
 
-    enum chromaFilter {
+    enum ChromaFilter {
         kBicubic,
         kPixelRepetition
     };
 
-    jpeg(const u::vector<unsigned char> &data)
+    JPGDecoder(const u::vector<unsigned char> &data)
         : m_rstinterval(0)
         , m_size(0)
         , m_length(0)
@@ -177,7 +177,7 @@ struct jpeg : decoder {
         memset(m_qtab, 0, sizeof m_qtab);
         memset(m_block, 0, sizeof m_block);
 
-        const chromaFilter filter = chromaFilter(tex_jpg_chroma.get());
+        const ChromaFilter filter = ChromaFilter(tex_jpg_chroma.get());
         if (tex_jpg_cliplut.get())
             decode<true>(data, filter);
         else
@@ -208,12 +208,12 @@ struct jpeg : decoder {
     }
 
 private:
-    struct vlcCode {
+    struct VLCCode {
         unsigned char bits;
         unsigned char code;
     };
 
-    struct component {
+    struct Component {
         int cid;
         int ssx;
         int ssy;
@@ -502,7 +502,7 @@ private:
     void decodeSOF() {
         int ssxmax = 0;
         int ssymax = 0;
-        component *c;
+        Component *c;
 
         decodeLength();
 
@@ -581,7 +581,7 @@ private:
             for (size_t codelen = 1; codelen <= 16; ++codelen)
                 counts[codelen - 1] = m_position[codelen];
             skip(17);
-            vlcCode *vlc = &m_vlctab[i][0];
+            VLCCode *vlc = &m_vlctab[i][0];
             int remain = 65536;
             int spread = 65536;
             for (size_t codelen = 1; codelen <= 16; ++codelen) {
@@ -637,7 +637,7 @@ private:
         skip(m_length);
     }
 
-    int getCoding(const vlcCode *const vlc, unsigned char *const code) {
+    int getCoding(const VLCCode *const vlc, unsigned char *const code) {
         int value = viewBits(16);
         int bits = vlc[value].bits;
         if (!bits) {
@@ -656,7 +656,7 @@ private:
     }
 
     template <bool ClippingTable>
-    void decodeBlock(component *const c, unsigned char *const out) {
+    void decodeBlock(Component *const c, unsigned char *const out) {
         unsigned char code = 0;
         int coef = 0;
         memset(m_block, 0, sizeof m_block);
@@ -684,7 +684,7 @@ private:
         size_t i;
         size_t rstcount = m_rstinterval;
         size_t nextrst = 0;
-        component *c;
+        Component *c;
         decodeLength();
         if (m_length < int(4 + 2 * m_bpp))
             returnResult(kMalformatted);
@@ -805,7 +805,7 @@ private:
     }
 
     // bicubic chroma upsampler
-    void upSampleCenteredH(component *const c) {
+    void upSampleCenteredH(Component *const c) {
         const size_t xmax = c->width - 3;
         u::vector<unsigned char> out((c->width * c->height) << 1);
         unsigned char *lin = &c->pixels[0];
@@ -829,7 +829,7 @@ private:
         c->pixels = u::move(out);
     }
 
-    void upSampleCenteredV(component *const c) {
+    void upSampleCenteredV(Component *const c) {
         const size_t w = c->width;
         const size_t s1 = c->stride;
         const size_t s2 = s1 + s1;
@@ -866,7 +866,7 @@ private:
         c->pixels = u::move(out);
     }
 
-    void upSampleCositedH(component *const c) {
+    void upSampleCositedH(Component *const c) {
         const size_t xmax = c->width - 1;
         u::vector<unsigned char> out((c->width * c->height) << 1);
 
@@ -892,7 +892,7 @@ private:
         c->pixels = u::move(out);
     }
 
-    void upSampleCositedV(component *const c) {
+    void upSampleCositedV(Component *const c) {
         const size_t w = c->width;
         const size_t s1 = c->stride;
         const size_t s2 = s1 + s1;
@@ -926,7 +926,7 @@ private:
     }
 
     // fast pixel repetition upsampler
-    void upSampleFast(component *const c) {
+    void upSampleFast(Component *const c) {
         size_t xshift = 0;
         size_t yshift = 0;
 
@@ -947,9 +947,9 @@ private:
         c->pixels = u::move(out);
     }
 
-    void convert(chromaFilter filter) {
+    void convert(ChromaFilter filter) {
         size_t i;
-        component *c;
+        Component *c;
         switch (filter) {
         case kBicubic:
             for (i = 0, c = m_comp; i < m_bpp; ++i, ++c) {
@@ -1020,7 +1020,7 @@ private:
     }
 
     template <bool ClippingTable>
-    result decode(const u::vector<unsigned char> &data, chromaFilter filter) {
+    Result decode(const u::vector<unsigned char> &data, ChromaFilter filter) {
         m_position = (const unsigned char*)&data[0];
         m_size = data.size() & 0x7FFFFFFF;
 
@@ -1074,8 +1074,8 @@ private:
         return m_error;
     }
 
-    component m_comp[3];
-    vlcCode m_vlctab[4][65536];
+    Component m_comp[3];
+    VLCCode m_vlctab[4][65536];
     const unsigned char *m_position;
     unsigned char m_qtab[4][64];
     u::vector<unsigned char> m_rgb;
@@ -1094,14 +1094,14 @@ private:
     static const unsigned char m_zz[64];
 };
 
-const unsigned char jpeg::m_zz[64] = {
+const unsigned char JPGDecoder::m_zz[64] = {
     0,   1,  8, 16,  9,  2,  3, 10, 17, 24, 32, 25, 18, 11,  4, 5,
     12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13,  6,  7, 14, 21, 28,
     35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51,
     58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63
 };
 
-jpeg::IDCTClippingTable jpeg::gIDCTClippingTable;
+JPGDecoder::IDCTClippingTable JPGDecoder::gIDCTClippingTable;
 
 ///
 /// PNG decoder
@@ -1119,14 +1119,14 @@ jpeg::IDCTClippingTable jpeg::gIDCTClippingTable;
 /// |       16 |         4 | greyscale (with alpha)  |
 /// |       16 |         6 | RGBA64                  |
 ///
-struct png : decoder {
+struct PNGDecoder : Decoder {
     static constexpr const char *kMagic = "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A";
 
     static bool test(const u::vector<unsigned char> &data) {
         return memcmp(&data[0], kMagic, 8) == 0;
     }
 
-    png(const u::vector<unsigned char> &data) {
+    PNGDecoder(const u::vector<unsigned char> &data) {
         decode(m_decoded, data);
 
         switch (m_bpp) {
@@ -1471,7 +1471,7 @@ private:
         return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
     }
 
-    result validateColor(size_t colorType, size_t bd) {
+    Result validateColor(size_t colorType, size_t bd) {
         if (colorType == 2 || colorType == 4 || colorType == 6)
             return (bd != 8 && bd != 16)
                 ? kMalformatted : kSuccess;
@@ -1517,7 +1517,7 @@ protected:
 };
 
 // values for the adam7 passes
-const size_t png::m_adam7Pattern[28]  = {
+const size_t PNGDecoder::m_adam7Pattern[28]  = {
     0, 4, 0, 2, 0, 1, 0, 0, 0, 4, 0, 2, 0, 1,
     8, 8, 4, 4, 2, 2, 1, 8, 8, 8, 4, 4, 2, 2
 };
@@ -1525,13 +1525,13 @@ const size_t png::m_adam7Pattern[28]  = {
 ///
 /// TGA decoder
 ///
-struct tga : decoder {
+struct TGADecoder : Decoder {
     static constexpr const char *kMagic = "TRUEVISION-XFILE";
 
     static bool test(const u::vector<unsigned char> &data) {
         // Not pretty but required to prevent more involved test from reading
         // past the end of the buffer.
-        if (data.size() <= sizeof(header) || data.size() <= 26)
+        if (data.size() <= sizeof(Header) || data.size() <= 26)
             return false;
         // The TGA file format has no magic number. It has an `optional' trailer
         // section which could contain kMagic. It's always the last 26 bytes of
@@ -1544,7 +1544,7 @@ struct tga : decoder {
             return true;
 
         // We've made it here, time for a more involved process
-        header h;
+        Header h;
         memcpy(&h, &data[0], sizeof h);
         // Color type (0, or 1)
         if (h.colorMapType > 1)
@@ -1560,7 +1560,7 @@ struct tga : decoder {
         return true;
     }
 
-    tga(const u::vector<unsigned char> &data) {
+    TGADecoder(const u::vector<unsigned char> &data) {
         decode(data);
 
         switch (m_bpp) {
@@ -1601,7 +1601,7 @@ private:
         m_position += where;
     }
 
-    result decode(const u::vector<unsigned char> &data) {
+    Result decode(const u::vector<unsigned char> &data) {
         m_position = &data[0];
         read((unsigned char *)&m_header, sizeof m_header);
         seek(m_header.identSize);
@@ -1772,7 +1772,7 @@ private:
             u::swap(data[0], data[2]);
     }
 
-    struct header {
+    struct Header {
         unsigned char identSize;
         unsigned char colorMapType;
         unsigned char imageType;
@@ -1791,12 +1791,12 @@ private:
     u::vector<unsigned char> m_data;
 };
 
-struct dds : decoder {
+struct DDSDecoder : Decoder {
     static bool test(const u::vector<unsigned char> &data) {
         return !memcmp(&data[0], (const void *)"DDS ", 4);
     }
 
-    dds(const u::vector<unsigned char> &data) {
+    DDSDecoder(const u::vector<unsigned char> &data) {
         decode(data);
     }
 
@@ -1829,7 +1829,7 @@ private:
         if (memcmp((const void*)magic, (const void*)"DDS ", 4))
             returnResult(kInvalid);
 
-        surfaceDescriptor surface;
+        SurfaceDescriptor surface;
         read((unsigned char*)&surface, sizeof surface);
 
         m_data.resize(data.end() - m_position);
@@ -1855,7 +1855,7 @@ private:
         m_bpp = surface.pitch / surface.width;
     }
 
-    struct pixelFormat {
+    struct PixelFormat {
         uint32_t size;
         uint32_t flags;
         uint32_t fourcc;
@@ -1863,7 +1863,7 @@ private:
         uint32_t colorMask[4];
     };
 
-    struct surfaceDescriptor {
+    struct SurfaceDescriptor {
         uint32_t size;
         uint32_t flags;
         uint32_t height;
@@ -1878,7 +1878,7 @@ private:
         uint32_t dstBlit[2];
         uint32_t srcOverlay[2];
         uint32_t srcBlit[2];
-        pixelFormat format;
+        PixelFormat format;
         uint32_t caps[4];
         uint32_t textureStage;
     };
@@ -1892,12 +1892,12 @@ private:
 ///
 /// Supports all of PBM except P7 (PAM)
 ///
-struct pnm : decoder {
+struct PNMDecoder : Decoder {
     static bool test(const u::vector<unsigned char> &data) {
         return data[0] == 'P' && data[1] >= '1' && data[1] <= '6' && u::isspace(data[2]);
     }
 
-    pnm(const u::vector<unsigned char> &data) {
+    PNMDecoder(const u::vector<unsigned char> &data) {
         decode(data);
     }
 
@@ -2094,8 +2094,8 @@ private:
 
 /// Trivial PCX image loader (only supports 8-bit indexed or 24-bit RLE RGB)
 /// (The only sane formats of PCX for this day and age.)
-struct pcx : decoder {
-    pcx(const u::vector<unsigned char> &data)
+struct PCXDecoder : Decoder {
+    PCXDecoder(const u::vector<unsigned char> &data)
         : m_uncompressed(true)
         , m_planes(0)
         , m_bpl(0)
@@ -2500,7 +2500,7 @@ static inline float textureQualityScale(float quality) {
 template <typename T>
 bool Texture::decode(const u::vector<unsigned char> &data, const char *name, float quality) {
     auto decode = u::unique_ptr<T>(new T(data));
-    if (decode->status() != decoder::kSuccess) {
+    if (decode->status() != Decoder::kSuccess) {
         u::print("failed to decode `%s' %s\n", name, decode->error());
         return false;
     }
@@ -2513,7 +2513,7 @@ bool Texture::decode(const u::vector<unsigned char> &data, const char *name, flo
     m_mips = decode->mips();
     m_data = u::move(decode->data());
     m_flags |= kTexFlagDisk;
-    if (u::is_same<T, dds>::value) {
+    if (u::is_same<T, DDSDecoder>::value) {
         // Don't allow any post-load processes take place on DDS textures
         m_flags |= kTexFlagCompressed;
     } else {
@@ -2640,18 +2640,18 @@ bool Texture::load(const u::string &file, float quality) {
     if (!load)
         return false;
     u::vector<unsigned char> &data = *load;
-    if (jpeg::test(data))
-        return decode<jpeg>(data, fileName, quality);
-    else if (png::test(data))
-        return decode<png>(data, fileName, quality);
-    else if (tga::test(data))
-        return decode<tga>(data, fileName, quality);
-    else if (dds::test(data))
-        return decode<dds>(data, fileName, quality);
-    else if (pnm::test(data))
-        return decode<pnm>(data, fileName, quality);
-    else if (pcx::test(data))
-        return decode<pcx>(data, fileName, quality);
+    if (JPGDecoder::test(data))
+        return decode<JPGDecoder>(data, fileName, quality);
+    else if (PNGDecoder::test(data))
+        return decode<PNGDecoder>(data, fileName, quality);
+    else if (TGADecoder::test(data))
+        return decode<TGADecoder>(data, fileName, quality);
+    else if (DDSDecoder::test(data))
+        return decode<DDSDecoder>(data, fileName, quality);
+    else if (PNMDecoder::test(data))
+        return decode<PNMDecoder>(data, fileName, quality);
+    else if (PCXDecoder::test(data))
+        return decode<PCXDecoder>(data, fileName, quality);
     u::print("no decoder found for `%s'\n", fileName);
     return false;
 }
@@ -2734,7 +2734,7 @@ Texture &Texture::operator=(Texture &&other) {
 }
 
 void Texture::writeTGA(u::vector<unsigned char> &outData) {
-    tga::header hdr;
+    TGADecoder::Header hdr;
     memset(&hdr, 0, sizeof hdr);
     outData.resize(sizeof hdr);
     hdr.pixelSize = m_bpp*8;
@@ -2926,8 +2926,8 @@ void Texture::writePNG(u::vector<unsigned char> &outData) {
                     while (i < s) lineBuffer[i] = z[i] - ((z[i-m_bpp] + z[i-m_pitch])>>1), i++;
                     break;
                 case 4:
-                    while (i < b) lineBuffer[i] = (signed char)(z[i] - png::paethPredictor(0, z[i-m_pitch], 0)), i++;
-                    while (i < s) lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], z[i-m_pitch], z[i-m_pitch-m_bpp]), i++;
+                    while (i < b) lineBuffer[i] = (signed char)(z[i] - PNGDecoder::paethPredictor(0, z[i-m_pitch], 0)), i++;
+                    while (i < s) lineBuffer[i] = z[i] - PNGDecoder::paethPredictor(z[i-m_bpp], z[i-m_pitch], z[i-m_pitch-m_bpp]), i++;
                     break;
                 case 5:
                     while (i < b) lineBuffer[i] = z[i], i++;
@@ -2935,7 +2935,7 @@ void Texture::writePNG(u::vector<unsigned char> &outData) {
                     break;
                 case 6:
                     while (i < b) lineBuffer[i] = z[i], i++;
-                    while (i < s) lineBuffer[i] = z[i] - png::paethPredictor(z[i-m_bpp], 0, 0), i++;
+                    while (i < s) lineBuffer[i] = z[i] - PNGDecoder::paethPredictor(z[i-m_bpp], 0, 0), i++;
                     break;
                 }
                 if (p)
@@ -2977,7 +2977,7 @@ void Texture::writePNG(u::vector<unsigned char> &outData) {
     };
 
     // magic + header length
-    memcpy(store, png::kMagic, 8);
+    memcpy(store, PNGDecoder::kMagic, 8);
     store += 8;
     write(13);
 
