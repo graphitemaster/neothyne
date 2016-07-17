@@ -35,7 +35,7 @@ void varRegister(const char *name, const char *desc, void *self, varType type) {
     if (gVariables()->find(name) != gVariables()->end())
         return;
     (*gVariables())[name] = varReference(desc, self, type);
-    c::complete::insert(name);
+    c::Complete::insert(name);
 }
 
 template <typename T>

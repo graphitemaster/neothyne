@@ -665,7 +665,7 @@ void engine::swap() {
                         input.pop_back();
                 } else if (e.key.keysym.sym == SDLK_TAB) {
                     if (m_autoComplete.empty())
-                        m_autoComplete = c::complete::find(CTX(m_context)->m_textString);
+                        m_autoComplete = c::Complete::find(CTX(m_context)->m_textString);
                     if (m_autoComplete.size()) {
                         if (m_autoComplete.size() <= m_autoCompleteCursor)
                             m_autoCompleteCursor = 0;
