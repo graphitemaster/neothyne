@@ -32,79 +32,79 @@ enum {
     kCommandTexture
 };
 
-struct box {
+struct Box {
     int x;
     int y;
     int w;
     int h;
 };
 
-struct rectangle : box {
+struct Rectangle : Box {
     int r; // Roundness
 };
 
-struct triangle : box { };
-struct scissor : box { };
+struct Triangle : Box { };
+struct Scissor : Box { };
 
-struct image : box {
+struct Image : Box {
     const char *path;
 };
 
-struct texture : box {
+struct Texture : Box {
     // note: all texture data for the GUI must be RGBA8, this code will
     // automatically delete the memory referencing the data
     unsigned char *data;
 };
 
-struct model : box {
+struct Model : Box {
     const char *path;
     r::pipeline pipeline;
     int su;
     int sv;
 };
 
-struct text {
+struct Text {
     int x;
     int y;
     int align;
     const char *contents;
 };
 
-struct line {
+struct Line {
     int x[2];
     int y[2];
     int r;
 };
 
-struct command {
-    command();
+struct Command {
+    Command();
 
     int type;
     int flags;
     uint32_t color;
 
     union {
-        line asLine;
-        rectangle asRectangle;
-        scissor asScissor;
-        triangle asTriangle;
-        text asText;
-        image asImage;
-        model asModel;
-        texture asTexture;
+        Line asLine;
+        Rectangle asRectangle;
+        Scissor asScissor;
+        Triangle asTriangle;
+        Text asText;
+        Image asImage;
+        Model asModel;
+        Texture asTexture;
     };
 };
 
-inline command::command()
+inline Command::Command()
     : type(-1)
     , flags(0)
     , color(0)
 {
 }
 
-struct queue {
+struct Queue {
     static constexpr size_t kCommandQueueSize = 5000;
-    const u::stack<command, kCommandQueueSize> &operator()() const;
+    const u::stack<Command, kCommandQueueSize> &operator()() const;
     void reset();
     void addScissor(int x, int y, int w, int h);
     void addRectangle(int x, int y, int w, int h, uint32_t color);
@@ -116,14 +116,14 @@ struct queue {
     void addImage(int x, int y, int w, int h, const char *path);
     void addModel(int x, int y, int w, int h, const char *path, const r::pipeline &p, int su = 0, int sv = 0);
 private:
-    u::stack<command, kCommandQueueSize> m_commands;
+    u::stack<Command, kCommandQueueSize> m_commands;
 };
 
-inline void queue::reset() {
+inline void Queue::reset() {
     m_commands.reset();
 }
 
-inline const u::stack<command, queue::kCommandQueueSize> &queue::operator()() const {
+inline const u::stack<Command, Queue::kCommandQueueSize> &Queue::operator()() const {
     return m_commands;
 }
 
@@ -180,7 +180,7 @@ void drawImage(int x, int y, int w, int h, const char *path);
 void drawModel(int x, int y, int w, int h, const char *path, const r::pipeline &p, int su = 0, int sv = 0);
 void drawTexture(int x, int y, int w, int h, const u::vector<unsigned char> &rgba);
 
-const queue &commands();
+const Queue &commands();
 
 void begin(MouseState &mouse);
 void finish();

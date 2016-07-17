@@ -21,7 +21,7 @@ inline const char *stringPool::operator()(const char *what) {
     return f ? f->c_str() : insert(what).c_str();
 }
 
-void queue::addScissor(int x, int y, int w, int h) {
+void Queue::addScissor(int x, int y, int w, int h) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandScissor;
@@ -33,7 +33,7 @@ void queue::addScissor(int x, int y, int w, int h) {
     cmd.asScissor.h = h;
 }
 
-void queue::addRectangle(int x, int y, int w, int h, uint32_t color) {
+void Queue::addRectangle(int x, int y, int w, int h, uint32_t color) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandRectangle;
@@ -46,7 +46,7 @@ void queue::addRectangle(int x, int y, int w, int h, uint32_t color) {
     cmd.asRectangle.r = 0;
 }
 
-void queue::addLine(int x0, int y0, int x1, int y1, int r, uint32_t color) {
+void Queue::addLine(int x0, int y0, int x1, int y1, int r, uint32_t color) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandLine;
@@ -59,7 +59,7 @@ void queue::addLine(int x0, int y0, int x1, int y1, int r, uint32_t color) {
     cmd.asLine.r = r;
 }
 
-void queue::addRectangle(int x, int y, int w, int h, int r, uint32_t color) {
+void Queue::addRectangle(int x, int y, int w, int h, int r, uint32_t color) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandRectangle;
@@ -72,7 +72,7 @@ void queue::addRectangle(int x, int y, int w, int h, int r, uint32_t color) {
     cmd.asRectangle.r = r;
 }
 
-void queue::addTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
+void Queue::addTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandTriangle;
@@ -84,7 +84,7 @@ void queue::addTriangle(int x, int y, int w, int h, int flags, uint32_t color) {
     cmd.asTriangle.h = h;
 }
 
-void queue::addText(int x, int y, int align, const char *contents, uint32_t color) {
+void Queue::addText(int x, int y, int align, const char *contents, uint32_t color) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandText;
@@ -96,7 +96,7 @@ void queue::addText(int x, int y, int align, const char *contents, uint32_t colo
     cmd.asText.contents = gStringPool(contents);
 }
 
-void queue::addImage(int x, int y, int w, int h, const char *path) {
+void Queue::addImage(int x, int y, int w, int h, const char *path) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandImage;
@@ -108,7 +108,7 @@ void queue::addImage(int x, int y, int w, int h, const char *path) {
     cmd.asImage.path = gStringPool(path);
 }
 
-void queue::addModel(int x, int y, int w, int h, const char *path, const r::pipeline &p, int su, int sv) {
+void Queue::addModel(int x, int y, int w, int h, const char *path, const r::pipeline &p, int su, int sv) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandModel;
@@ -123,7 +123,7 @@ void queue::addModel(int x, int y, int w, int h, const char *path, const r::pipe
     cmd.asModel.sv = sv;
 }
 
-void queue::addTexture(int x, int y, int w, int h, const unsigned char *data) {
+void Queue::addTexture(int x, int y, int w, int h, const unsigned char *data) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandTexture;
@@ -135,26 +135,26 @@ void queue::addTexture(int x, int y, int w, int h, const unsigned char *data) {
 }
 
 // A reference to something in the gui
-typedef size_t ref;
+typedef size_t Ref;
 
 // A widget is just a bounding box with no height.
-struct widget {
+struct Widget {
     static const size_t kInitialIndentation = 100;
-    widget();
+    Widget();
     void reset();
 
     int x;
     int y;
     int w;
-    ref id;
+    Ref id;
 };
 
-inline widget::widget() {
+inline Widget::Widget() {
     reset();
     w = kInitialIndentation;
 }
 
-inline void widget::reset() {
+inline void Widget::reset() {
     x = 0;
     y = 0;
     w = 0;
@@ -162,8 +162,8 @@ inline void widget::reset() {
 }
 
 // Scrollable area
-struct scroll {
-    scroll();
+struct ScrollArea {
+    ScrollArea();
 
     int top;
     int bottom;
@@ -172,11 +172,11 @@ struct scroll {
     int *value;
     int focusTop;
     int focusBottom;
-    ref id;
+    Ref id;
     bool inside;
 };
 
-inline scroll::scroll()
+inline ScrollArea::ScrollArea()
     : top(0)
     , bottom(0)
     , right(0)
@@ -189,17 +189,17 @@ inline scroll::scroll()
 {
 }
 
-struct state {
-    state();
+struct State {
+    State();
 
     bool anyActive();
-    bool isActive(ref thing);
-    bool isHot(ref thing);
+    bool isActive(Ref thing);
+    bool isHot(Ref thing);
 
     bool inRectangle(int x, int y, int w, int h, bool checkScroll = true);
 
     // To get the commands
-    const queue &commands() const;
+    const Queue &commands() const;
 
     // To update input state
     void update(MouseState &mouse);
@@ -208,16 +208,16 @@ struct state {
     void clearActive(); // Clear any active state (reference to active thing)
 
     // Set active/hot things
-    void setActive(ref thing);
-    void setHot(ref thing);
+    void setActive(Ref thing);
+    void setHot(Ref thing);
 
     // Implements the logic for button hover/click
-    bool buttonLogic(ref thing, bool over);
+    bool buttonLogic(Ref thing, bool over);
 
-    ref m_active; // Reference to active thing
-    ref m_hot; // Reference to hot thing
-    ref m_nextHot; // Reference to hotToBe
-    ref m_area; // Reference to root area
+    Ref m_active; // Reference to active thing
+    Ref m_hot; // Reference to hot thing
+    Ref m_nextHot; // Reference to hotToBe
+    Ref m_area; // Reference to root area
 
     MouseState m_mouse;
     int m_drag[2]; // X, Y
@@ -232,12 +232,12 @@ struct state {
     bool m_leftPressed; // left pressed
     bool m_leftReleased; // left released
 
-    widget m_widget;
-    queue m_queue;
-    scroll m_scroll;
+    Widget m_widget;
+    Queue m_queue;
+    ScrollArea m_scroll;
 };
 
-inline state::state()
+inline State::State()
     : m_active(0)
     , m_hot(0)
     , m_nextHot(0)
@@ -258,45 +258,45 @@ inline state::state()
     m_drag[1] = 0;
 }
 
-inline bool state::anyActive() {
+inline bool State::anyActive() {
     return m_active != 0;
 }
 
-inline bool state::isActive(ref thing) {
+inline bool State::isActive(Ref thing) {
     return m_active == thing;
 }
 
-inline bool state::isHot(ref thing) {
+inline bool State::isHot(Ref thing) {
     return m_hot == thing;
 }
 
-inline bool state::inRectangle(int x, int y, int w, int h, bool checkScroll) {
+inline bool State::inRectangle(int x, int y, int w, int h, bool checkScroll) {
     return (!checkScroll || m_insideCurrentScroll)
         && m_mouse.x >= x && m_mouse.x <= x + w
         && m_mouse.y >= y && m_mouse.y <= y + h;
 }
 
-inline void state::clearInput() {
+inline void State::clearInput() {
     m_leftPressed = false;
     m_leftReleased = false;
     m_mouse.wheel = 0;
 }
 
-inline void state::clearActive() {
+inline void State::clearActive() {
     m_active = 0;
     clearInput();
 }
 
-inline void state::setActive(ref thing) {
+inline void State::setActive(Ref thing) {
     m_active = thing;
     m_wentActive = true;
 }
 
-inline void state::setHot(ref thing) {
+inline void State::setHot(Ref thing) {
     m_nextHot = thing;
 }
 
-inline bool state::buttonLogic(ref thing, bool over) {
+inline bool State::buttonLogic(Ref thing, bool over) {
     bool result = false;
     // Nothing is active
     if (!anyActive()) {
@@ -321,7 +321,7 @@ inline bool state::buttonLogic(ref thing, bool over) {
     return result;
 }
 
-inline void state::update(MouseState &mouse) {
+inline void State::update(MouseState &mouse) {
     // Update the input state
     const bool left = mouse.button & kMouseButtonLeft;
     m_mouse.x = mouse.x;
@@ -334,7 +334,7 @@ inline void state::update(MouseState &mouse) {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// The Singleton
-static state gState;
+static State gState;
 
 #define G (gState)
 #define Q (G.m_queue)  // [Q]ueue
@@ -810,7 +810,7 @@ void drawTexture(int x, int y, int w, int h, const u::vector<unsigned char> &dat
     Q.addTexture(x, y, w, h, copy);
 }
 
-const queue &commands() {
+const Queue &commands() {
     return Q;
 }
 
