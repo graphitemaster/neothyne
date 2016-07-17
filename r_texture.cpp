@@ -452,7 +452,7 @@ static bool mountCache() {
     return true;
 }
 
-static bool readCache(texture &tex, GLuint &internal) {
+static bool readCache(Texture &tex, GLuint &internal) {
     if (!r_tex_compress)
         return false;
 
@@ -510,13 +510,13 @@ static bool readCache(texture &tex, GLuint &internal) {
 
     // Now swap!
     tex.unload();
-    tex.from(data, length, head.width, head.height, false, textureFormat(head.format), head.mips);
+    tex.from(data, length, head.width, head.height, false, TextureFormat(head.format), head.mips);
     u::print("[cache] => loaded (texture) %s %s (%s)\n", cacheName,
         cacheFormat(head.internal), u::sizeMetric(length));
     return true;
 }
 
-static bool writeCacheData(textureFormat format,
+static bool writeCacheData(TextureFormat format,
                            size_t texSize,
                            const u::string &hash,
                            unsigned char *compressedData,
@@ -594,7 +594,7 @@ static bool writeCacheData(textureFormat format,
     return gTextureCache.write(hash, data);
 }
 
-static bool writeCache(const texture &tex, GLuint internal, GLuint handle, size_t mips) {
+static bool writeCache(const Texture &tex, GLuint internal, GLuint handle, size_t mips) {
     auto &r_debug_tex = varGet<int>("r_debug_tex");
     if (r_debug_tex)
         return false;
@@ -685,7 +685,7 @@ struct queryFormat {
     GLenum internal;
 };
 
-static size_t textureAlignment(const texture &tex) {
+static size_t textureAlignment(const Texture &tex) {
     const unsigned char *data = tex.data();
     const size_t width = tex.width();
     const size_t bpp = tex.bpp();
@@ -699,7 +699,7 @@ static size_t textureAlignment(const texture &tex) {
 // Given a source texture the following function finds the best way to present
 // that texture to the hardware. This function will also favor texture compression
 // if the hardware supports it by converting the texture if it needs to.
-static u::optional<queryFormat> getBestFormat(texture &tex) {
+static u::optional<queryFormat> getBestFormat(Texture &tex) {
     auto checkSupport = [](size_t what) {
         if (!gl::has(what))
             neoFatal("No support for `%s'", gl::extensionString(what));
@@ -805,7 +805,7 @@ texture2D::texture2D(bool mipmaps, int filter)
     //
 }
 
-texture2D::texture2D(texture &tex, bool mipmaps, int filter)
+texture2D::texture2D(Texture &tex, bool mipmaps, int filter)
     : texture2D::texture2D(mipmaps, filter)
 {
     m_texture = u::move(tex);
@@ -995,7 +995,7 @@ bool texture2D::upload(GLint wrap) {
             {
                 needsCache = false;
                 u::vector<unsigned char> compressed;
-                texture resize = m_texture;
+                Texture resize = m_texture;
                 size_t mipWidth = m_texture.width();
                 size_t mipHeight = m_texture.height();
                 for (size_t i = 0; i < m_mipmaps; i++) {
@@ -1034,7 +1034,7 @@ bool texture2D::upload(GLint wrap) {
             {
                 m_memory = 0;
                 if (r_mipmaps && m_mipmaps > 1) {
-                    texture resizing = m_texture;
+                    Texture resizing = m_texture;
                     gl::TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_mipmaps - 1);
                     for (unsigned char i = 0; i < m_mipmaps; i++) {
                         gl::PixelStorei(GL_UNPACK_ALIGNMENT, textureAlignment(resizing));
@@ -1106,7 +1106,7 @@ size_t texture2D::memory() const {
     return m_memory;
 }
 
-textureFormat texture2D::format() const {
+TextureFormat texture2D::format() const {
   return m_texture.format();
 }
 

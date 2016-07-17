@@ -15,7 +15,7 @@ enum {
     kTexFlagCompressed = 1 << 5
 };
 
-enum textureFormat {
+enum TextureFormat {
     kTexFormatRGB,
     kTexFormatRGBA,
     kTexFormatBGR,
@@ -31,7 +31,7 @@ enum textureFormat {
     kTexFormatBC5S
 };
 
-enum saveFormat {
+enum SaveFormat {
     kSaveBMP,
     kSaveTGA,
     kSavePNG,
@@ -42,13 +42,13 @@ static constexpr const char *kSaveFormatExtensions[] = {
     "bmp", "tga", "png", "jpg"
 };
 
-enum flipFlags {
+enum FlipFlags {
     kFlipHorizontal = 1 << 0,
     kFlipVertical = 1 << 1
 };
 
-struct texture {
-    texture()
+struct Texture {
+    Texture()
         : m_width(0)
         , m_height(0)
         , m_bpp(0)
@@ -59,19 +59,19 @@ struct texture {
     {
     }
 
-    texture(const unsigned char *const data, size_t length, size_t width,
-        size_t height, bool normal, textureFormat format, size_t mips = 1);
+    Texture(const unsigned char *const data, size_t length, size_t width,
+        size_t height, bool normal, TextureFormat format, size_t mips = 1);
 
-    texture(const texture &other);
-    texture(texture &&other);
+    Texture(const Texture &other);
+    Texture(Texture &&other);
 
-    texture &operator=(texture &&other);
+    Texture &operator=(Texture &&other);
 
     bool load(const u::string &file, float quality = 1.0f);
     bool from(const unsigned char *const data, size_t length, size_t width,
-        size_t height, bool normal, textureFormat format, size_t mips = 1);
+        size_t height, bool normal, TextureFormat format, size_t mips = 1);
 
-    bool save(const u::string &file, saveFormat save = kSaveBMP, float quality = 1.0f);
+    bool save(const u::string &file, SaveFormat save = kSaveBMP, float quality = 1.0f);
 
     void colorize(uint32_t color);
 
@@ -100,12 +100,12 @@ struct texture {
     // Draw a string into the texture
     void drawString(size_t &line, const char *string);
 
-    template <textureFormat F>
+    template <TextureFormat F>
     void convert();
 
     size_t width() const;
     size_t height() const;
-    textureFormat format() const;
+    TextureFormat format() const;
     const char *components() const;
 
     const unsigned char *data() const;
@@ -142,7 +142,7 @@ private:
     size_t m_pitch;
     size_t m_mips;
     int m_flags;
-    textureFormat m_format;
+    TextureFormat m_format;
 };
 
 #endif

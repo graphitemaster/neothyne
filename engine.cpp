@@ -462,7 +462,7 @@ bool Engine::initContext() {
     SDL_ShowCursor(0);
 
     // Application icon
-    texture icon;
+    Texture icon;
     if (icon.load("icon")) {
         SDL_Surface *iconSurface = nullptr;
         if (icon.bpp() == 4) {
@@ -830,7 +830,7 @@ void Engine::screenShot() {
     gl::PixelStorei(GL_PACK_ALIGNMENT, 8);
 
     // Construct a texture object from the pixel data
-    texture screenShot(&pixels[0], screenSize*3, screenWidth, screenHeight, false, kTexFormatRGB);
+    Texture screenShot(&pixels[0], screenSize*3, screenWidth, screenHeight, false, kTexFormatRGB);
     screenShot.flip();
     if (scr_info) {
         size_t line = 0;
@@ -854,7 +854,7 @@ void Engine::screenShot() {
     }
 
     auto fixedPath = u::fixPath(file);
-    saveFormat format = saveFormat(scr_format.get());
+    auto format = SaveFormat(scr_format.get());
 
     if (screenShot.save(file, format, scr_quality))
         u::print("[screenshot] => %s.%s\n", fixedPath, kSaveFormatExtensions[scr_format]);

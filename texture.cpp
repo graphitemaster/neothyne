@@ -12,10 +12,6 @@
 #include "m_trig.h"
 #include "m_vec.h"
 
-#ifdef __SSE2__
-#include <emmintrin.h>
-#endif
-
 // To render text into textures we use an 8x8 bitmap font
 static const uint64_t kFont[128] = {
     0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,0x7E7E7E7E7E7E0000,
@@ -121,7 +117,7 @@ struct decoder {
         return m_mips;
     }
 
-    textureFormat format() const {
+    TextureFormat format() const {
         return m_format;
     }
 
@@ -131,7 +127,7 @@ struct decoder {
 
 protected:
     result m_error;
-    textureFormat m_format;
+    TextureFormat m_format;
     size_t m_width;
     size_t m_height;
     size_t m_pitch;
@@ -1156,7 +1152,7 @@ struct png : decoder {
     }
 
 private:
-    friend struct texture;
+    friend struct Texture;
 
     void decode(u::vector<unsigned char> &out, const u::vector<unsigned char> &invec) {
         const unsigned char *const in = &invec[0];
@@ -1590,7 +1586,7 @@ struct tga : decoder {
     }
 
 private:
-    friend struct texture;
+    friend struct Texture;
 
     void read(unsigned char *dest, size_t size) {
         memcpy(dest, m_position, size);
@@ -2221,7 +2217,7 @@ private:
 ///
 
 template <size_t S>
-void texture::halve(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t stride, unsigned char *U_RESTRICT dst) {
+void Texture::halve(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t stride, unsigned char *U_RESTRICT dst) {
     for (unsigned char *yend = src + sh * stride; src < yend;) {
         for (unsigned char *xend = src + sw * S, *xsrc = src; xsrc < xend; xsrc += 2 * S, dst += S) {
             for (size_t i = 0; i < S; i++)
@@ -2232,7 +2228,7 @@ void texture::halve(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t 
 }
 
 template <size_t S>
-void texture::shift(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t stride, unsigned char *U_RESTRICT dst, size_t dw, size_t dh) {
+void Texture::shift(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t stride, unsigned char *U_RESTRICT dst, size_t dw, size_t dh) {
     size_t wfrac = sw/dw,
            hfrac = sh/dh,
            wshift = 0,
@@ -2258,7 +2254,7 @@ void texture::shift(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t 
 }
 
 template <size_t S>
-void texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t stride, unsigned char *U_RESTRICT dst, size_t dw, size_t dh) {
+void Texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t stride, unsigned char *U_RESTRICT dst, size_t dw, size_t dh) {
     size_t wfrac = (sw << 12) / dw;
     size_t hfrac = (sh << 12) / dh;
     size_t darea = dw * dh;
@@ -2317,7 +2313,7 @@ void texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t 
     }
 }
 
-void texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *U_RESTRICT dst, size_t dw, size_t dh) {
+void Texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t bpp, size_t pitch, unsigned char *U_RESTRICT dst, size_t dw, size_t dh) {
     if (sw == dw * 2 && sh == dh * 2) {
         switch (bpp) {
         case 1: return halve<1>(src, sw, sh, pitch, dst);
@@ -2342,7 +2338,7 @@ void texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t 
     }
 }
 
-void texture::reorient(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t bpp, size_t stride, unsigned char *U_RESTRICT dst, bool flipx, bool flipy, bool swapxy) {
+void Texture::reorient(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t bpp, size_t stride, unsigned char *U_RESTRICT dst, bool flipx, bool flipy, bool swapxy) {
     int stridex = swapxy ? bpp * sh : bpp;
     int stridey = swapxy ? bpp : bpp * sw;
     if (flipx)
@@ -2361,7 +2357,7 @@ void texture::reorient(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size
     }
 }
 
-void texture::flip(int flags) {
+void Texture::flip(int flags) {
     u::vector<unsigned char> temp(m_data.size());
     reorient(&m_data[0],
              m_width,
@@ -2375,7 +2371,7 @@ void texture::flip(int flags) {
     m_data = u::move(temp);
 }
 
-void texture::drawString(size_t &line, const char *string) {
+void Texture::drawString(size_t &line, const char *string) {
     // Can't render into compressed textures or normal maps
     if (m_flags & kTexFlagCompressed || m_flags & kTexFlagNormal)
         return;
@@ -2422,8 +2418,8 @@ void texture::drawString(size_t &line, const char *string) {
     m_hashString = hash.hex();
 }
 
-template <textureFormat F>
-void texture::convert() {
+template <TextureFormat F>
+void Texture::convert() {
     if (F == m_format)
         return;
 
@@ -2485,10 +2481,10 @@ void texture::convert() {
     m_format = F;
 }
 
-template void texture::convert<kTexFormatRG>();
-template void texture::convert<kTexFormatRGB>();
-template void texture::convert<kTexFormatRGBA>();
-template void texture::convert<kTexFormatLuminance>();
+template void Texture::convert<kTexFormatRG>();
+template void Texture::convert<kTexFormatRGB>();
+template void Texture::convert<kTexFormatRGBA>();
+template void Texture::convert<kTexFormatLuminance>();
 
 static inline float textureQualityScale(float quality) {
     // Add 0.5 to the mantissa then zero it. If the mantissa overflows, let
@@ -2502,7 +2498,7 @@ static inline float textureQualityScale(float quality) {
 }
 
 template <typename T>
-bool texture::decode(const u::vector<unsigned char> &data, const char *name, float quality) {
+bool Texture::decode(const u::vector<unsigned char> &data, const char *name, float quality) {
     auto decode = u::unique_ptr<T>(new T(data));
     if (decode->status() != decoder::kSuccess) {
         u::print("failed to decode `%s' %s\n", name, decode->error());
@@ -2553,7 +2549,7 @@ bool texture::decode(const u::vector<unsigned char> &data, const char *name, flo
     return true;
 }
 
-void texture::colorize(uint32_t color) {
+void Texture::colorize(uint32_t color) {
     const uint8_t alpha = color & 0xFF;
     auto blend = [&alpha](uint32_t a, uint32_t b) {
         const uint32_t rb1 = ((0x100 - alpha) * (a & 0xFF00FF)) >> 8;
@@ -2592,7 +2588,7 @@ void texture::colorize(uint32_t color) {
     m_hashString = hash.hex();
 }
 
-u::optional<u::string> texture::find(const u::string &infile) {
+u::optional<u::string> Texture::find(const u::string &infile) {
     static struct tag {
         const char *name;
         int flag;
@@ -2633,7 +2629,7 @@ u::optional<u::string> texture::find(const u::string &infile) {
     return u::format("%s.%s", file, kExtensions[index]);
 }
 
-bool texture::load(const u::string &file, float quality) {
+bool Texture::load(const u::string &file, float quality) {
     // Construct a texture from a file
     auto name = find(neoGamePath() + file);
     if (!name)
@@ -2660,8 +2656,8 @@ bool texture::load(const u::string &file, float quality) {
     return false;
 }
 
-texture::texture(const unsigned char *const data, size_t length, size_t width,
-    size_t height, bool normal, textureFormat format, size_t mips)
+Texture::Texture(const unsigned char *const data, size_t length, size_t width,
+    size_t height, bool normal, TextureFormat format, size_t mips)
     : m_width(width)
     , m_height(height)
     , m_mips(mips)
@@ -2698,7 +2694,7 @@ texture::texture(const unsigned char *const data, size_t length, size_t width,
     m_pitch = m_width * m_bpp;
 }
 
-texture::texture(texture &&other)
+Texture::Texture(Texture &&other)
     : m_hashString(u::move(other.m_hashString))
     , m_data(u::move(other.m_data))
     , m_width(other.m_width)
@@ -2711,7 +2707,7 @@ texture::texture(texture &&other)
 {
 }
 
-texture::texture(const texture &other)
+Texture::Texture(const Texture &other)
     : m_hashString(other.m_hashString)
     , m_data(other.m_data)
     , m_width(other.m_width)
@@ -2724,7 +2720,7 @@ texture::texture(const texture &other)
 {
 }
 
-texture &texture::operator=(texture &&other) {
+Texture &Texture::operator=(Texture &&other) {
     m_hashString = u::move(other.m_hashString);
     m_data = u::move(other.m_data);
     m_width = other.m_width;
@@ -2737,7 +2733,7 @@ texture &texture::operator=(texture &&other) {
     return *this;
 }
 
-void texture::writeTGA(u::vector<unsigned char> &outData) {
+void Texture::writeTGA(u::vector<unsigned char> &outData) {
     tga::header hdr;
     memset(&hdr, 0, sizeof hdr);
     outData.resize(sizeof hdr);
@@ -2804,7 +2800,7 @@ static inline void memput(unsigned char *&store, const T &data) {
     store += sizeof data;
 }
 
-void texture::writeBMP(u::vector<unsigned char> &outData) {
+void Texture::writeBMP(u::vector<unsigned char> &outData) {
     struct {
         char bfType[2];
         int32_t bfSize;
@@ -2896,7 +2892,7 @@ void texture::writeBMP(u::vector<unsigned char> &outData) {
     }
 }
 
-void texture::writePNG(u::vector<unsigned char> &outData) {
+void Texture::writePNG(u::vector<unsigned char> &outData) {
     static constexpr int kMapping[] = { 0, 1, 2, 3, 4 };
     static constexpr int kFirstMapping[] = { 0, 1, 0, 5, 6 };
 
@@ -3012,7 +3008,7 @@ void texture::writePNG(u::vector<unsigned char> &outData) {
 // supports luminance, rg, bgr,rgb, bgra,rgba by always outputting YCbCr
 // fixed huffman tables generated by averaging the common suffix/prefixes for
 // each Y,Cb,Cr "smear" for a bunch of art assets
-void texture::writeJPG(u::vector<unsigned char> &outData) {
+void Texture::writeJPG(u::vector<unsigned char> &outData) {
     int quality = tex_jpg_compress_quality;
     quality = quality < 1 ? 1 : quality > 100 ? 100 : quality;
     quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
@@ -3437,7 +3433,7 @@ void texture::writeJPG(u::vector<unsigned char> &outData) {
     writeBytes({0xFF, 0xD9}); // EOI
 }
 
-bool texture::save(const u::string &file, saveFormat format, float quality) {
+bool Texture::save(const u::string &file, SaveFormat format, float quality) {
     if (m_data.empty())
         return false;
 
@@ -3451,13 +3447,13 @@ bool texture::save(const u::string &file, saveFormat format, float quality) {
     }
 
     static const struct {
-        void (texture::*function)(u::vector<unsigned char> &out);
+        void (Texture::*function)(u::vector<unsigned char> &out);
         int format;
     } kExtensions[] = {
-        { &texture::writeTGA, kSaveTGA },
-        { &texture::writeBMP, kSaveBMP },
-        { &texture::writePNG, kSavePNG },
-        { &texture::writeJPG, kSaveJPG }
+        { &Texture::writeTGA, kSaveTGA },
+        { &Texture::writeBMP, kSaveBMP },
+        { &Texture::writePNG, kSavePNG },
+        { &Texture::writeJPG, kSaveJPG }
     };
 
     u::vector<unsigned char> data;
@@ -3471,14 +3467,14 @@ bool texture::save(const u::string &file, saveFormat format, float quality) {
     return false;
 }
 
-bool texture::from(const unsigned char *const data, size_t length, size_t width,
-    size_t height, bool normal, textureFormat format, size_t mips)
+bool Texture::from(const unsigned char *const data, size_t length, size_t width,
+    size_t height, bool normal, TextureFormat format, size_t mips)
 {
-    *this = u::move(texture(data, length, width, height, normal, format, mips));
+    *this = u::move(Texture(data, length, width, height, normal, format, mips));
     return true;
 }
 
-void texture::resize(size_t width, size_t height) {
+void Texture::resize(size_t width, size_t height) {
     u::vector<unsigned char> data(m_bpp * width * height);
     scale(&m_data[0], m_width, m_height, m_bpp, m_pitch, &data[0], width, height);
     m_data = u::move(data);
@@ -3488,7 +3484,7 @@ void texture::resize(size_t width, size_t height) {
     normalize();
 }
 
-void texture::normalize() {
+void Texture::normalize() {
     if (!(flags() & kTexFlagNormal))
         return;
     u::vector<unsigned char> data(m_bpp * m_width * m_height);
@@ -3508,31 +3504,31 @@ void texture::normalize() {
     m_data = u::move(data);
 }
 
-void texture::unload() {
+void Texture::unload() {
     m_data.destroy();
 }
 
-const u::string &texture::hashString() const {
+const u::string &Texture::hashString() const {
     return m_hashString;
 }
 
-int texture::flags() const {
+int Texture::flags() const {
     return m_flags;
 }
 
-size_t texture::width() const {
+size_t Texture::width() const {
     return m_width;
 }
 
-size_t texture::height() const {
+size_t Texture::height() const {
     return m_height;
 }
 
-textureFormat texture::format() const {
+TextureFormat Texture::format() const {
     return m_format;
 }
 
-const char *texture::components() const {
+const char *Texture::components() const {
     switch (m_format) {
     case kTexFormatRGB:       return "RGB";
     case kTexFormatRGBA:      return "RGBA";
@@ -3551,22 +3547,22 @@ const char *texture::components() const {
     U_UNREACHABLE();
 };
 
-size_t texture::size() const {
+size_t Texture::size() const {
     return m_data.size();
 }
 
-size_t texture::bpp() const {
+size_t Texture::bpp() const {
     return m_bpp;
 }
 
-size_t texture::mips() const {
+size_t Texture::mips() const {
     return m_mips;
 }
 
-size_t texture::pitch() const {
+size_t Texture::pitch() const {
     return m_pitch;
 }
 
-const unsigned char *texture::data() const {
+const unsigned char *Texture::data() const {
     return &m_data[0];
 }

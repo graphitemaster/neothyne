@@ -335,7 +335,7 @@ gui::~gui() {
     gl::DeleteTextures(1, &m_miscTexture);
 
 #if defined(DEBUG_GUI)
-    ::texture saveAtlas;
+    ::Texture saveAtlas;
     saveAtlas.from(m_atlasData, kAtlasSize*kAtlasSize*4, kAtlasSize, kAtlasSize,
         false, kTexFormatRGBA);
     if (saveAtlas.save("ui_atlas", kSaveTGA))
@@ -350,7 +350,7 @@ gui::atlas::node *gui::atlasPack(const u::string &file) {
     if (existing != m_textures.end())
         return existing->second;
 
-    ::texture tex;
+    ::Texture tex;
     if (!tex.load(file))
         return nullptr;
 

@@ -16,7 +16,7 @@ struct texture2D {
     texture2D(bool mipmaps = true, int filter = kFilterDefault);
     ~texture2D();
 
-    texture2D(texture &tex, bool mipmaps = true, int filter = kFilterDefault);
+    texture2D(Texture &tex, bool mipmaps = true, int filter = kFilterDefault);
 
     void colorize(uint32_t color); // must be called before upload
     bool load(const u::string &file, bool preserveQuality = true, bool mipmaps = true, bool debug = false);
@@ -24,24 +24,24 @@ struct texture2D {
     bool cache(GLuint internal);
     void bind(GLenum unit);
     void resize(size_t width, size_t height);
-    textureFormat format() const;
+    TextureFormat format() const;
     size_t width() const;
     size_t height() const;
     size_t memory() const;
-    const texture &get() const;
+    const Texture &get() const;
 
 private:
     bool useCache();
     void applyFilter();
     bool m_uploaded;
     GLuint m_textureHandle;
-    texture m_texture;
+    Texture m_texture;
     size_t m_mipmaps;
     size_t m_memory;
     int m_filter;
 };
 
-inline const texture &texture2D::get() const {
+inline const Texture &texture2D::get() const {
     return m_texture;
 }
 
