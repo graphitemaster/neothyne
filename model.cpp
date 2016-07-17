@@ -95,10 +95,10 @@ static void createTangents(const u::vector<m::vec3> &vertices,
 
 ///! OBJ Loader
 struct obj {
-    bool load(const u::string &file, model *store);
+    bool load(const u::string &file, Model *store);
 };
 
-bool obj::load(const u::string &file, model *store) {
+bool obj::load(const u::string &file, Model *store) {
     u::file fp = fopen(neoGamePath() + file + ".obj", "r");
     if (!fp)
         return false;
@@ -242,7 +242,7 @@ bool obj::load(const u::string &file, model *store) {
 
     // Generate batches
     for (const auto &g : groups) {
-        model::batch b;
+        Model::Batch b;
         b.offset = (void *)(store->m_indices.size() * sizeof(uint32_t));
         b.count = g.second.size();
         // Rewire size_t -> GLuint
@@ -264,7 +264,8 @@ struct iqm {
     static constexpr int kHalf = 6;
     static constexpr int kFloat = 7;
 
-    bool load(const u::string &file, model *store, const u::vector<u::string> &anims);
+    bool load(const u::string &file, Model *store, const u::vector<u::string> &anims);
+
 protected:
     struct iqmHeader {
         static constexpr const char *kMagic = "INTERQUAKEMODEL";
@@ -336,8 +337,8 @@ protected:
         uint32_t offset;
     };
 
-    bool loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store);
-    bool loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store);
+    bool loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store);
+    bool loadAnims(const iqmHeader *hdr, unsigned char *buf, Model *store);
 
 private:
     u::vector<m::mat3x4> m_baseFrame;
@@ -393,7 +394,7 @@ struct inData {
     };
 };
 
-bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
+bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store) {
     u::endianSwap((uint32_t*)&buf[hdr->ofsVertexArrays],
         hdr->numVertexArrays*sizeof(iqmVertexArray)/sizeof(uint32_t));
     u::endianSwap((uint32_t*)&buf[hdr->ofsTriangles],
@@ -579,7 +580,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
     return true;
 }
 
-bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store) {
+bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, Model *store) {
     u::endianSwap((uint32_t *)&buf[hdr->ofsPoses], hdr->numPoses*sizeof(iqmPose)/sizeof(uint32_t));
     u::endianSwap((uint32_t *)&buf[hdr->ofsAnims], hdr->numAnims*sizeof(iqmAnim)/sizeof(uint32_t));
     u::endianSwap((uint16_t *)&buf[hdr->ofsFrames], hdr->numFrames*hdr->numFrameChannels);
@@ -611,7 +612,7 @@ bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, model *store) {
     return true;
 }
 
-bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &anims) {
+bool iqm::load(const u::string &file, Model *store, const u::vector<u::string> &anims) {
     auto read = u::read(neoGamePath() + file + ".iqm", "rb");
     if (!read)
         return false;
@@ -630,7 +631,7 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
         return false;
 
     // batches
-    model::batch b;
+    Model::Batch b;
     const char *const str = hdr->ofsText ? (char *)&data[hdr->ofsText] : nullptr;
     const iqmMesh *const meshes = (iqmMesh*)&data[hdr->ofsMeshes];
     for (uint32_t i = 0; i < hdr->numMeshes; i++) {
@@ -665,9 +666,9 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
     return true;
 }
 
-model::~model() = default;
+Model::~Model() = default;
 
-void model::makeHalf() {
+void Model::makeHalf() {
     static constexpr size_t kFloats = sizeof(Mesh::GeneralVertex)/sizeof(float);
     if (animated()) {
         const auto &vertices = m_animVertices;
@@ -694,7 +695,7 @@ void model::makeHalf() {
     }
 }
 
-void model::makeSingle() {
+void Model::makeSingle() {
     static constexpr size_t kHalfs = sizeof(Mesh::GeneralHalfVertex)/sizeof(m::half);
     if (animated()) {
         const auto &vertices = m_animHalfVertices;
@@ -720,7 +721,7 @@ void model::makeSingle() {
     }
 }
 
-bool model::load(const u::string &file, const u::vector<u::string> &anims) {
+bool Model::load(const u::string &file, const u::vector<u::string> &anims) {
     const auto iqm_ = u::format("%s/%s.iqm", neoGamePath(), file);
     const auto obj_ = u::format("%s/%s.obj", neoGamePath(), file);
     if (u::exists(iqm_) && !iqm().load(file, this, anims))
@@ -739,7 +740,7 @@ bool model::load(const u::string &file, const u::vector<u::string> &anims) {
     return true;
 }
 
-void model::animate(float curFrame) {
+void Model::animate(float curFrame) {
     if (m_numFrames == 0)
         return;
 

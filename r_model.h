@@ -161,9 +161,9 @@ struct model : geom {
 private:
     geomMethods *m_geomMethods;
     u::vector<material> m_materials;
-    u::vector<::model::batch> m_batches;
+    u::vector<::Model::Batch> m_batches;
     size_t m_indices;
-    ::model m_model;
+    ::Model m_model;
     bool m_half;
     r::stat *m_stats;
 };

@@ -6,11 +6,11 @@
 
 #include "u_string.h"
 
-struct model {
-    model();
-    ~model();
+struct Model {
+    Model();
+    ~Model();
 
-    struct batch {
+    struct Batch {
         void *offset;
         size_t count;
         size_t material; // Material index for rendering (calculated in r_model.cpp)
@@ -28,7 +28,7 @@ struct model {
     const u::vector<Mesh::AnimHalfVertex> &animHalfVertices() const;
 
     const u::vector<unsigned int> &indices() const;
-    const u::vector<batch> &batches() const;
+    const u::vector<Batch> &batches() const;
     const u::vector<u::string> &meshNames() const;
 
     const m::bbox &bounds() const;
@@ -49,7 +49,7 @@ private:
     bool m_isHalf;
 
     m::bbox m_bounds;
-    u::vector<batch> m_batches;
+    u::vector<Batch> m_batches;
     u::vector<unsigned int> m_indices;
 
     // When loading OBJs this is populated with the names of the groups in
@@ -75,62 +75,62 @@ private:
     u::vector<Mesh::GeneralHalfVertex> m_generalHalfVertices; // generated data for unanimated models
 };
 
-inline model::model()
+inline Model::Model()
     : m_isHalf(false)
     , m_numFrames(0)
     , m_numJoints(0)
 {
 }
 
-inline bool model::isHalf() const {
+inline bool Model::isHalf() const {
     return m_isHalf;
 }
 
-inline const u::vector<Mesh::GeneralVertex> &model::generalVertices() const {
+inline const u::vector<Mesh::GeneralVertex> &Model::generalVertices() const {
     return m_generalVertices;
 }
 
-inline const u::vector<Mesh::AnimVertex> &model::animVertices() const {
+inline const u::vector<Mesh::AnimVertex> &Model::animVertices() const {
     return m_animVertices;
 }
 
-inline const u::vector<Mesh::GeneralHalfVertex> &model::generalHalfVertices() const {
+inline const u::vector<Mesh::GeneralHalfVertex> &Model::generalHalfVertices() const {
     return m_generalHalfVertices;
 }
 
-inline const u::vector<Mesh::AnimHalfVertex> &model::animHalfVertices() const {
+inline const u::vector<Mesh::AnimHalfVertex> &Model::animHalfVertices() const {
     return m_animHalfVertices;
 }
 
-inline const u::vector<unsigned int> &model::indices() const {
+inline const u::vector<unsigned int> &Model::indices() const {
     return m_indices;
 }
 
-inline const u::vector<model::batch> &model::batches() const {
+inline const u::vector<Model::Batch> &Model::batches() const {
     return m_batches;
 }
 
-inline const u::vector<u::string> &model::meshNames() const {
+inline const u::vector<u::string> &Model::meshNames() const {
     return m_meshNames;
 }
 
-inline const m::bbox &model::bounds() const {
+inline const m::bbox &Model::bounds() const {
     return m_bounds;
 }
 
-inline bool model::animated() const {
+inline bool Model::animated() const {
     return m_numFrames;
 }
 
-inline const float *model::bones() const {
+inline const float *Model::bones() const {
     return m_outFrame[0].a.f;
 }
 
-inline size_t model::joints() const {
+inline size_t Model::joints() const {
     return m_numJoints;
 }
 
-inline const u::string &model::name() const {
+inline const u::string &Model::name() const {
     return m_name;
 }
 

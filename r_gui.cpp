@@ -12,18 +12,18 @@
 namespace r {
 
 #if defined(DEBUG_GUI)
-static void printLine(const ::gui::line &it) {
+static void printLine(const ::gui::Line &it) {
     u::print("    [0] = { x: %d, y: %d }\n", it.x[0], it.y[0]);
     u::print("    [1] = { x: %d, y: %d }\n", it.x[1], it.y[0]);
     u::print("    r = %d\n", it.r);
 }
 
-static void printRectangle(const ::gui::rectangle &it) {
+static void printRectangle(const ::gui::Rectangle &it) {
     u::print("    { x: %d, y: %d, w: %d, h: %d, r: %d }\n", it.x, it.y, it.w,
         it.h, it.r);
 }
 
-static void printText(const ::gui::text &it) {
+static void printText(const ::gui::Text &it) {
     auto align = [](int a) {
         switch (a) {
         case ::gui::kAlignCenter: return "center";
@@ -36,20 +36,20 @@ static void printText(const ::gui::text &it) {
         align(it.align), it.contents);
 }
 
-static void printScissor(const ::gui::scissor &it) {
+static void printScissor(const ::gui::Scissor &it) {
     u::print("    { x: %d, y: %d, w: %d, h: %d }\n", it.x, it.y, it.w, it.h);
 }
 
-static void printTriangle(const ::gui::triangle &it) {
+static void printTriangle(const ::gui::Triangle &it) {
     u::print("    { x: %d, y: %d, w: %d, h: %d }\n", it.x, it.y, it.w, it.h);
 }
 
-static void printImage(const ::gui::image &it) {
+static void printImage(const ::gui::Image &it) {
     u::print("    { x: %d, y: %d, w: %d, h: %d, path: %s }\n",
         it.x, it.y, it.w, it.h, it.path);
 }
 
-static void printModel(const ::gui::model &it) {
+static void printModel(const ::gui::Model &it) {
     u::print("    { x: %d, y: %d, w: %d, h: %d, path: %s\n",
         it.x, it.y, it.w, it.h, it.path);
     u::print("      wvp: {\n");
@@ -61,7 +61,7 @@ static void printModel(const ::gui::model &it) {
     u::print("    }\n");
 }
 
-static void printCommand(const ::gui::command &it) {
+static void printCommand(const ::gui::Command &it) {
     switch (it.type) {
     case ::gui::kCommandLine:
         u::print("line:      (color: #%X)\n", it.color);
