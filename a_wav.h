@@ -6,27 +6,27 @@
 
 namespace a {
 
-struct wav;
-struct wavInstance final : sourceInstance {
-    wavInstance(wav *parent);
+struct WAVFile;
+struct WAVFileInstance final : SourceInstance {
+    WAVFileInstance(WAVFile *parent);
     virtual void getAudio(float *buffer, size_t samples) final;
     virtual bool rewind() final;
     virtual bool hasEnded() const final;
-    virtual ~wavInstance() final;
+    virtual ~WAVFileInstance() final;
 private:
-    wav *m_parent;
+    WAVFile *m_parent;
     u::file m_file;
     size_t m_offset;
 };
 
-struct wav final : source {
-    wav();
-    virtual ~wav() final;
+struct WAVFile final : Source {
+    WAVFile();
+    virtual ~WAVFile() final;
     bool load(const char *fileName);
-    virtual sourceInstance *create() final;
+    virtual SourceInstance *create() final;
 
 private:
-    friend struct wavInstance;
+    friend struct WAVFileInstance;
 
     bool load(u::file &fp);
     u::string m_fileName;

@@ -103,7 +103,7 @@ NVAR(float, u_x, "", -180.0f, 360.0f, 0.0f);
 NVAR(float, u_y, "", -180.0f, 360.0f, 0.0f);
 NVAR(float, u_z, "", -180.0f, 360.0f, 0.0f);
 
-int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
+int neoMain(frameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
     // Setup rendering pipeline
     gPerspective.fov = cl_fov;
     gPerspective.nearp = cl_nearp;
@@ -132,7 +132,7 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
     neoCenterMouse();
 
 #if 0
-    a::wav theme[2];
+    a::WAVFile theme[2];
     if (!theme[0].load("a.wav") || !theme[1].load("theme.wav"))
         neoFatal("failed to load theme music\n");
     theme[0].setLooping(true);
@@ -140,7 +140,7 @@ int neoMain(frameTimer &timer, a::audio &audio, int, char **, bool &shutdown) {
 
     audio.setGlobalVolume(1.0f);
 
-    a::lane lane;
+    a::Lane lane;
 
     // fire and forget!
     int handle = audio.play(lane);

@@ -3,8 +3,8 @@
 
 namespace a {
 
-struct fader {
-    fader();
+struct Fader {
+    Fader();
 
     void lerp(float from, float to, float time, float startTime);
     void lfo(float from, float to, float time, float startTime);
@@ -13,7 +13,7 @@ struct fader {
 
 private:
     friend struct audio;
-    friend struct filter;
+    friend struct Filter;
 
     float m_current;
     float m_from;

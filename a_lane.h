@@ -4,29 +4,29 @@
 
 namespace a {
 
-struct lane;
-struct laneInstance final : sourceInstance {
-    laneInstance(lane *parent);
+struct Lane;
+struct LaneInstance final : SourceInstance {
+    LaneInstance(Lane *parent);
     virtual void getAudio(float *buffer, size_t samples) final;
     virtual bool hasEnded() const final;
-    virtual ~laneInstance() final;
+    virtual ~LaneInstance() final;
 
 private:
-    friend struct lane;
-    lane* m_parent;
+    friend struct Lane;
+    Lane* m_parent;
     u::vector<float> m_scratch;
 };
 
-struct lane final : source {
-    lane();
-    virtual laneInstance *create() final;
-    virtual void setFilter(int filterHandle, filter *filter_) final;
-    int play(source &sound, float volume = 1.0f, float pan = 0.0f, bool paused = false);
+struct Lane final : Source {
+    Lane();
+    virtual LaneInstance *create() final;
+    virtual void setFilter(int filterHandle, Filter *filter) final;
+    int play(Source &sound, float volume = 1.0f, float pan = 0.0f, bool paused = false);
 
 private:
-    friend struct laneInstance;
+    friend struct LaneInstance;
     int m_channelHandle;
-    laneInstance *m_instance;
+    LaneInstance *m_instance;
 };
 
 }

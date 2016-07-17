@@ -986,7 +986,7 @@ void *neoGetProcAddress(const char *proc) {
 ///     main -> entryPoint -> neoMain
 ///
 static int entryPoint(int argc, char **argv) {
-    extern int neoMain(frameTimer&, a::audio &, int argc, char **argv, bool &shutdown);
+    extern int neoMain(frameTimer&, a::Audio &, int argc, char **argv, bool &shutdown);
 
     signal(SIGINT, neoSignalHandler);
     signal(SIGTERM, neoSignalHandler);
@@ -1037,12 +1037,12 @@ static int entryPoint(int argc, char **argv) {
 
     u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
 
-    a::audio audio;
-    //a::init(&audio);
+    a::Audio audio;
+    a::init(&audio);
     // Launch the game
     const int status = neoMain(gEngine.m_frameTimer, audio, argc, argv, (bool &)gShutdown);
     writeConfig(gEngine.userPath());
-    //a::stop(&audio);
+    a::stop(&audio);
 
     // Instance must be released before OpenGL context is lost
     r::geomMethods::instance().release();

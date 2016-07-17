@@ -5,7 +5,7 @@
 
 namespace a {
 
-wavInstance::wavInstance(wav *parent)
+WAVFileInstance::WAVFileInstance(WAVFile *parent)
     : m_parent(parent)
     , m_file(u::fopen(m_parent->m_fileName, "rb"))
     , m_offset(0)
@@ -16,7 +16,7 @@ wavInstance::wavInstance(wav *parent)
     }
 }
 
-wavInstance::~wavInstance() {
+WAVFileInstance::~WAVFileInstance() {
     // Empty
 }
 
@@ -62,7 +62,7 @@ static void readData(u::file &fp,
     }
 }
 
-void wavInstance::getAudio(float *buffer, size_t samples) {
+void WAVFileInstance::getAudio(float *buffer, size_t samples) {
     if (!m_file) return;
 
     const size_t channels = m_channels;
@@ -77,7 +77,7 @@ void wavInstance::getAudio(float *buffer, size_t samples) {
         return;
     }
 
-    if (m_flags & sourceInstance::kLooping) {
+    if (m_flags & SourceInstance::kLooping) {
         int seek = fseek(m_file, m_parent->m_dataOffset, SEEK_SET);
         U_ASSERT(seek == 0);
         readData(m_file, buffer + copySize, samples - copySize, samples,
@@ -90,7 +90,7 @@ void wavInstance::getAudio(float *buffer, size_t samples) {
     }
 }
 
-bool wavInstance::rewind() {
+bool WAVFileInstance::rewind() {
     if (m_file) {
         if (fseek(m_file, m_parent->m_dataOffset, SEEK_SET) != 0)
             return false;
@@ -100,23 +100,23 @@ bool wavInstance::rewind() {
     return true;
 }
 
-bool wavInstance::hasEnded() const {
-    return !(m_flags & sourceInstance::kLooping) && m_offset >= m_parent->m_sampleCount;
+bool WAVFileInstance::hasEnded() const {
+    return !(m_flags & SourceInstance::kLooping) && m_offset >= m_parent->m_sampleCount;
 }
 
-///! wav
-wav::wav()
+///! WAVFile
+WAVFile::WAVFile()
     : m_dataOffset(0)
     , m_bits(0)
     , m_sampleCount(0)
 {
 }
 
-wav::~wav() {
+WAVFile::~WAVFile() {
     // Empty
 }
 
-bool wav::load(u::file &fp) {
+bool WAVFile::load(u::file &fp) {
     read<int32_t>(fp);
 
     if (read<int32_t>(fp) != u::fourCC<int32_t>("WAVE"))
@@ -176,7 +176,7 @@ bool wav::load(u::file &fp) {
     return true;
 }
 
-bool wav::load(const char *fileName) {
+bool WAVFile::load(const char *fileName) {
     m_sampleCount = 0;
     m_fileName = neoGamePath() + fileName;
     u::file fp = u::fopen(m_fileName, "rb");
@@ -189,8 +189,8 @@ bool wav::load(const char *fileName) {
     return false;
 }
 
-sourceInstance *wav::create() {
-    return new wavInstance(this);
+SourceInstance *WAVFile::create() {
+    return new WAVFileInstance(this);
 }
 
 }

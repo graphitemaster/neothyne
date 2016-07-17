@@ -5,46 +5,46 @@
 
 namespace a {
 
-///! laneInstance
-laneInstance::laneInstance(lane *parent)
+///! LaneInstance
+LaneInstance::LaneInstance(Lane *parent)
     : m_parent(parent)
 {
     m_flags |= kProtected;
 }
 
-void laneInstance::getAudio(float *buffer, size_t samples) {
+void LaneInstance::getAudio(float *buffer, size_t samples) {
     int handle = m_parent->m_channelHandle;
     if (handle == 0)
         return;
 
-    audio *owner = m_parent->m_owner;
+    Audio *owner = m_parent->m_owner;
     if (owner->m_scratchNeeded != m_scratch.size())
         m_scratch.resize(owner->m_scratchNeeded);
 
     owner->mixLane(buffer, samples, &m_scratch[0], handle);
 }
 
-bool laneInstance::hasEnded() const {
+bool LaneInstance::hasEnded() const {
     return false;
 }
 
-laneInstance::~laneInstance() {
-    audio *owner = m_parent->m_owner;
+LaneInstance::~LaneInstance() {
+    Audio *owner = m_parent->m_owner;
     for (size_t i = 0; i < owner->m_voices.size(); i++) {
         if (owner->m_voices[i] && owner->m_voices[i]->m_laneHandle == m_parent->m_channelHandle)
             owner->stopVoice(i);
     }
 }
 
-///! lane
-lane::lane()
+///! Lane
+Lane::Lane()
     : m_channelHandle(0)
     , m_instance(nullptr)
 {
     m_channels = 2;
 }
 
-laneInstance *lane::create() {
+LaneInstance *Lane::create() {
     if (m_channelHandle) {
         int voice = m_owner->getVoiceFromHandle(m_channelHandle);
         U_ASSERT(voice != -1);
@@ -52,10 +52,10 @@ laneInstance *lane::create() {
         m_channelHandle = 0;
         m_instance = nullptr;
     }
-    return m_instance = new laneInstance(this);
+    return m_instance = new LaneInstance(this);
 }
 
-int lane::play(source &sound, float volume, float pan, bool paused) {
+int Lane::play(Source &sound, float volume, float pan, bool paused) {
     if (!m_instance || !m_owner)
         return 0;
 
@@ -71,14 +71,14 @@ int lane::play(source &sound, float volume, float pan, bool paused) {
     return m_owner->play(sound, volume, pan, paused, m_channelHandle);
 }
 
-void lane::setFilter(int filterHandle, filter *filter_) {
+void Lane::setFilter(int filterHandle, Filter *filter) {
     if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
         return;
-    m_filters[filterHandle] = filter_;
+    m_filters[filterHandle] = filter;
     if (m_instance) locked(m_owner->m_mutex) {
         delete m_instance->m_filters[filterHandle];
         m_instance->m_filters[filterHandle] = nullptr;
-        if (filter_)
+        if (filter)
             m_instance->m_filters[filterHandle] = m_filters[filterHandle]->create();
     }
 }

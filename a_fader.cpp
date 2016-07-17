@@ -4,7 +4,7 @@
 
 namespace a {
 
-fader::fader()
+Fader::Fader()
     : m_current(0.0f)
     , m_from(0.0f)
     , m_to(0.0f)
@@ -16,7 +16,7 @@ fader::fader()
 {
 }
 
-void fader::lerp(float from, float to, float time, float startTime) {
+void Fader::lerp(float from, float to, float time, float startTime) {
     m_current = from;
     m_from = from;
     m_to = to;
@@ -27,7 +27,7 @@ void fader::lerp(float from, float to, float time, float startTime) {
     m_active = 1;
 }
 
-void fader::lfo(float from, float to, float time, float startTime) {
+void Fader::lfo(float from, float to, float time, float startTime) {
     m_active = 2;
     m_current = 0.0f;
     m_from = from;
@@ -38,7 +38,7 @@ void fader::lfo(float from, float to, float time, float startTime) {
     m_endTime = m::kPi * 2.0f / m_time;
 }
 
-float fader::operator()(float currentTime) {
+float Fader::operator()(float currentTime) {
     if (m_active == 2) {
         // LFO
         if (m_startTime > currentTime) {

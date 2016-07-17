@@ -7,33 +7,33 @@
 
 namespace a {
 
-///! filter
-filter::~filter() {
+///! Filter
+Filter::~Filter() {
     // Empty
 }
 
-///! filterInstance
-filterInstance::~filterInstance() {
+///! FilterInstance
+FilterInstance::~FilterInstance() {
     // Empty
 }
-void filterInstance::setFilterParam(int, float) {
+void FilterInstance::setFilterParam(int, float) {
     // Empty
 }
-void filterInstance::fadeFilterParam(int, float, float, float, float) {
+void FilterInstance::fadeFilterParam(int, float, float, float, float) {
     // Rmpty
 }
-void filterInstance::oscFilterParam(int, float, float, float, float) {
+void FilterInstance::oscFilterParam(int, float, float, float, float) {
     // Empty
 }
 
-///! echoFilter
-echoFilterInstance::echoFilterInstance(echoFilter *parent)
+///! EchoFilterInstance
+EchoFilterInstance::EchoFilterInstance(EchoFilter *parent)
     : m_parent(parent)
     , m_offset(0)
 {
 }
 
-void echoFilterInstance::filter(float *buffer, size_t samples, size_t channels, float sampleRate, float) {
+void EchoFilterInstance::filter(float *buffer, size_t samples, size_t channels, float sampleRate, float) {
     if (m_buffer.empty()) {
         const size_t length = m::ceil(m_parent->m_delay * sampleRate) * channels;
         m_buffer.resize(length);
@@ -52,23 +52,24 @@ void echoFilterInstance::filter(float *buffer, size_t samples, size_t channels, 
     }
 }
 
-echoFilterInstance::~echoFilterInstance() {
+EchoFilterInstance::~EchoFilterInstance() {
     // Empty
 }
 
-echoFilter::echoFilter()
+///! EchoFilter
+EchoFilter::EchoFilter()
     : m_delay(1.0f)
     , m_decay(0.5f)
 {
 }
 
-void echoFilter::setParams(float delay, float decay) {
+void EchoFilter::setParams(float delay, float decay) {
     m_delay = delay;
     m_decay = decay;
 }
 
-filterInstance *echoFilter::create() {
-    return new echoFilterInstance(this);
+FilterInstance *EchoFilter::create() {
+    return new EchoFilterInstance(this);
 }
 
 ///! BQRFilterInstance
@@ -218,6 +219,7 @@ void BQRFilterInstance::calcParams() {
     }
 }
 
+///! BQRFilter
 BQRFilter::BQRFilter()
     : m_filterType(kNone)
     , m_sampleRate(44100.0f)
@@ -273,6 +275,7 @@ DCRemovalFilterInstance::~DCRemovalFilterInstance() {
     // Empty
 }
 
+///! DCRemovalFilter
 DCRemovalFilter::DCRemovalFilter()
     : m_length(0.1f)
 {
@@ -282,7 +285,7 @@ void DCRemovalFilter::setParams(float length) {
     m_length = length;
 }
 
-filterInstance *DCRemovalFilter::create() {
+FilterInstance *DCRemovalFilter::create() {
     return new DCRemovalFilterInstance(this);
 }
 

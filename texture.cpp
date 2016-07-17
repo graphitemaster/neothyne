@@ -3288,7 +3288,6 @@ void texture::writeJPG(u::vector<unsigned char> &outData) {
             d7 = z11 - z4;
         };
 
-        // unrolled dcts
         dct(c[0],  c[0+1],  c[0+2],  c[0+3],  c[0+4],  c[0+5],  c[0+6],  c[0+7]);
         dct(c[8],  c[8+1],  c[8+2],  c[8+3],  c[8+4],  c[8+5],  c[8+6],  c[8+7]);
         dct(c[16], c[16+1], c[16+2], c[16+3], c[16+4], c[16+5], c[16+6], c[16+7]);

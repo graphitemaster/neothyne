@@ -6,51 +6,50 @@
 
 namespace a {
 
-struct audio;
-struct filter;
-struct filterInstance;
+struct Audio;
+struct Filter;
+struct FilterInstance;
 
-struct lockGuard {
-    lockGuard(void *opaque);
-    ~lockGuard();
+struct LockGuard {
+    LockGuard(void *opaque);
+    ~LockGuard();
     void unlock();
     operator bool() const;
 private:
     void *m_mutex;
 };
 
-inline lockGuard::operator bool() const {
+inline LockGuard::operator bool() const {
     return m_mutex;
 }
 
 // Clever technique to make a scope that locks a mutex
 #define locked(X) \
-    for (lockGuard lock(X); lock; lock.unlock())
+    for (LockGuard lock(X); lock; lock.unlock())
 
 /// maximum filters per stream
 static constexpr int kMaxStreamFilters = 4;
 
-struct sourceInstance {
+struct SourceInstance {
     enum {
         kLooping = 1 << 0,
         kProtected = 1 << 1,
         kPaused = 1 << 2
     };
 
-    sourceInstance();
-    virtual ~sourceInstance();
+    SourceInstance();
+    virtual ~SourceInstance();
     void init(size_t playIndex, float baseSampleRate, size_t channels, int sourceFlags);
 
 protected:
-    friend struct laneInstance;
-    friend struct lane;
+    friend struct LaneInstance;
+    friend struct Lane;
+    friend struct Audio;
 
     virtual void getAudio(float *buffer, size_t samples) = 0;
     virtual bool hasEnded() const = 0;
     virtual void seek(float seconds, float *scratch, size_t samples);
     virtual bool rewind();
-
-    friend struct audio;
 
     unsigned int m_playIndex;
     int m_flags;
@@ -61,14 +60,14 @@ protected:
     float m_sampleRate;
     float m_relativePlaySpeed;
     float m_streamTime;
-    fader m_panFader;
-    fader m_volumeFader;
-    fader m_relativePlaySpeedFader;
-    fader m_pauseScheduler;
-    fader m_stopScheduler;
+    Fader m_panFader;
+    Fader m_volumeFader;
+    Fader m_relativePlaySpeedFader;
+    Fader m_pauseScheduler;
+    Fader m_stopScheduler;
     int m_sourceID;
     int m_laneHandle;
-    filterInstance *m_filters[kMaxStreamFilters];
+    FilterInstance *m_filters[kMaxStreamFilters];
 
     // if there is an active fader
     int m_activeFader;
@@ -76,36 +75,35 @@ protected:
     float m_faderVolume[2 * 2];
 };
 
-struct source {
+struct Source {
     enum {
         kLoop = 1 << 0
     };
 
-    source();
+    Source();
 
     void setLooping(bool looping);
-    virtual void setFilter(int filterHandle, filter *filter_);
+    virtual void setFilter(int filterHandle, Filter *filter);
 
-    virtual ~source();
-    virtual sourceInstance *create() = 0;
+    virtual ~Source();
+    virtual SourceInstance *create() = 0;
 
 protected:
-    friend struct laneInstance;
-    friend struct lane;
-
-    friend struct audio;
+    friend struct LaneInstance;
+    friend struct Lane;
+    friend struct Audio;
 
     int m_flags;
     float m_baseSampleRate;
     size_t m_channels;
     int m_sourceID;
-    filter *m_filters[kMaxStreamFilters];
-    audio *m_owner;
+    Filter *m_filters[kMaxStreamFilters];
+    Audio *m_owner;
 };
 
-struct audio {
-    audio();
-    ~audio();
+struct Audio {
+    Audio();
+    ~Audio();
 
     enum {
         kClipRoundOff = 1 << 0
@@ -114,7 +112,7 @@ struct audio {
     void init(int channels, int sampleRate, int bufferSize, int flags);
     void mix(float *buffer, size_t samples);
 
-    int play(source &sound, float volume = 1.0f, float pan = 0.0f, bool paused = false, int lane = 0);
+    int play(Source &sound, float volume = 1.0f, float pan = 0.0f, bool paused = false, int lane = 0);
 
     void seek(int voiceHandle, float seconds);
     void stop(int voiceHandle);
@@ -140,7 +138,7 @@ struct audio {
     void setPan(int voiceHandle, float panning);
     void setPanAbsolute(int voiceHandle, const m::vec2 &panning);
     void setVolume(int voiceHandle, float volume);
-    void setGlobalFilter(int filterHandle, filter *filter_);
+    void setGlobalFilter(int filterHandle, Filter *filter);
 
     void fadeVolume(int voiceHandle, float to, float time);
     void fadePan(int voiceHandle, float to, float time);
@@ -156,18 +154,18 @@ struct audio {
     void oscGlobalVolume(float from, float to, float time);
 
 private:
-    friend struct laneInstance;
-    friend struct lane;
+    friend struct LaneInstance;
+    friend struct Lane;
 
     void mixLane(float *buffer, size_t samples, float *scratch, int lane);
 
-    friend struct source;
+    friend struct Source;
 
     int findFreeVoice();
     int getHandleFromVoice(int voice) const;
     int getVoiceFromHandle(int voiceHandle) const;
 
-    void stopSound(source &sound);
+    void stopSound(Source &sound);
     void stopVoice(int channel);
 
     void setVoicePan(int channel, float panning);
@@ -184,26 +182,26 @@ private:
 
     u::vector<float> m_scratch;
     size_t m_scratchNeeded;
-    u::vector<sourceInstance *> m_voices;
+    u::vector<SourceInstance *> m_voices;
     int m_sampleRate;
     int m_bufferSize;
     int m_flags;
     float m_globalVolume;
     float m_postClipScaler;
     unsigned int m_playIndex;
-    fader m_globalVolumeFader;
+    Fader m_globalVolumeFader;
     float m_streamTime;
     int m_sourceID;
-    filter *m_filters[kMaxStreamFilters];
-    filterInstance *m_filterInstances[kMaxStreamFilters];
+    Filter *m_filters[kMaxStreamFilters];
+    FilterInstance *m_filterInstances[kMaxStreamFilters];
 
 public:
     void *m_mutex;
     float *m_mixerData;
 };
 
-void init(a::audio *system, int channels = 32, int flags = audio::kClipRoundOff, int sampleRate = 44100, int bufferSize = 2048);
-void stop(a::audio *system);
+void init(a::Audio *system, int channels = 32, int flags = Audio::kClipRoundOff, int sampleRate = 44100, int bufferSize = 2048);
+void stop(a::Audio *system);
 
 }
 
