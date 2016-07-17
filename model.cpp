@@ -111,7 +111,7 @@ bool obj::load(const u::string &file, model *store) {
     u::vector<float> bitangents;
 
     // Unique vertices are stored in a map keyed by face.
-    u::map<face, size_t> uniques;
+    u::map<Face, size_t> uniques;
 
     // Current group and indices for group
     u::string group;
@@ -180,7 +180,7 @@ bool obj::load(const u::string &file, model *store) {
                 const size_t index = indices.size();
                 indices.resize(index + 3);
                 auto triangulate = [&v, &n, &t, &uniques, &count](size_t index, size_t &out) {
-                    face triangle;
+                    Face triangle;
                     triangle.vertex = v[index];
                     if (n.size()) triangle.normal = n[index];
                     if (t.size()) triangle.coordinate = t[index];
@@ -214,7 +214,7 @@ bool obj::load(const u::string &file, model *store) {
     u::vector<size_t> indices_;
     for (auto &g : groups) {
         // Optimize the indices
-        vertexCacheOptimizer vco;
+        VertexCacheOptimizer vco;
         vco.optimize(g.second);
         indices_.reserve(indices_.size() + g.second.size());
         for (const auto &i : g.second)
@@ -227,9 +227,9 @@ bool obj::load(const u::string &file, model *store) {
     createTangents(positions_, coordinates_, normals_, indices_, tangents_, bitangents_);
 
     // Interleave vertex data for GPU
-    store->m_basicVertices.resize(count);
+    store->m_generalVertices.resize(count);
     for (size_t i = 0; i < count; i++) {
-        auto &vert = store->m_basicVertices[i];
+        auto &vert = store->m_generalVertices[i];
         for (size_t j = 0; j < 3; j++) {
             vert.position[j] = positions_[i][j];
             vert.normal[j] = normals_[i][j];
@@ -500,7 +500,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
             unsigned char (*curBlendWeight)[4] = nullptr;
             unsigned char (*curBlendIndex)[4] = nullptr;
             if (isHalf) {
-                mesh::animHalfVertex &v = store->m_animHalfVertices[i];
+                Mesh::AnimHalfVertex &v = store->m_animHalfVertices[i];
                 if (inPosition)    memcpy(v.position, &inPosition.asHalf[i*3], sizeof v.position);
                 if (inCoordinate)  memcpy(v.coordinate, &inCoordinate.asHalf[i*2], sizeof v.coordinate);
                 if (inTangent)     memcpy(v.tangent, &inTangent.asHalf[i*4], sizeof v.tangent);
@@ -512,7 +512,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
                 curBlendIndex = &v.blendIndex;
                 curBlendWeight = &v.blendWeight;
             } else {
-                mesh::animVertex &v = store->m_animVertices[i];
+                Mesh::AnimVertex &v = store->m_animVertices[i];
                 if (inPosition)    memcpy(v.position, &inPosition.asFloat[i*3], sizeof v.position);
                 if (inCoordinate)  memcpy(v.coordinate, &inCoordinate.asFloat[i*2], sizeof v.coordinate);
                 if (inTangent)     memcpy(v.tangent, &inTangent.asFloat[i*4], sizeof v.tangent);
@@ -548,10 +548,10 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
             }
         }
     } else {
-        store->m_basicVertices.resize(hdr->numVertexes);
+        store->m_generalVertices.resize(hdr->numVertexes);
         for (uint32_t i = 0; i < hdr->numVertexes; i++) {
             if (isHalf) {
-                mesh::basicHalfVertex &v = store->m_basicHalfVertices[i];
+                Mesh::GeneralHalfVertex &v = store->m_generalHalfVertices[i];
                 if (inPosition)   memcpy(v.position, &inPosition.asHalf[i*3], sizeof v.position);
                 if (inCoordinate) memcpy(v.coordinate, &inCoordinate.asHalf[i*2], sizeof v.coordinate);
                 if (inTangent)    memcpy(v.tangent, &inTangent.asHalf[i*4], sizeof v.tangent);
@@ -561,7 +561,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, model *store) {
                     memcpy(v.normal, &inNormal.asHalf[i*3], sizeof v.normal);
                 }
             } else {
-                mesh::basicVertex &v = store->m_basicVertices[i];
+                Mesh::GeneralVertex &v = store->m_generalVertices[i];
                 if (inPosition)   memcpy(v.position, &inPosition.asFloat[i*3], sizeof v.position);
                 if (inCoordinate) memcpy(v.coordinate, &inCoordinate.asFloat[i*2], sizeof v.coordinate);
                 if (inTangent)    memcpy(v.tangent, &inTangent.asFloat[i*4], sizeof v.tangent);
@@ -668,14 +668,14 @@ bool iqm::load(const u::string &file, model *store, const u::vector<u::string> &
 model::~model() = default;
 
 void model::makeHalf() {
-    static constexpr size_t kFloats = sizeof(mesh::basicVertex)/sizeof(float);
+    static constexpr size_t kFloats = sizeof(Mesh::GeneralVertex)/sizeof(float);
     if (animated()) {
         const auto &vertices = m_animVertices;
-        u::vector<mesh::basicVertex> basics(vertices.size());
+        u::vector<Mesh::GeneralVertex> basics(vertices.size());
         for (size_t i = 0; i < vertices.size(); i++)
             memcpy(&basics[i], &vertices[i], sizeof basics[0]);
         const auto halfData = m::convertToHalf((const float *const)&basics[0], kFloats*vertices.size());
-        u::vector<mesh::animHalfVertex> converted(vertices.size());
+        u::vector<Mesh::AnimHalfVertex> converted(vertices.size());
         for (size_t i = 0; i < vertices.size(); i++) {
             memcpy(&converted[i], &halfData[kFloats*i], kFloats*sizeof(m::half));
             memcpy(converted[i].blendWeight, vertices[i].blendWeight, sizeof vertices[0].blendWeight);
@@ -684,25 +684,25 @@ void model::makeHalf() {
         m_animHalfVertices = u::move(converted);
         m_animVertices.destroy();
     } else {
-        const auto &vertices = m_basicVertices;
-        u::vector<mesh::basicVertex> basics(vertices.size());
+        const auto &vertices = m_generalVertices;
+        u::vector<Mesh::GeneralVertex> basics(vertices.size());
         memcpy(&basics[0], &vertices[0], sizeof basics[0] * vertices.size());
         const auto convert = m::convertToHalf((const float *const)&basics[0], kFloats*vertices.size());
-        m_basicHalfVertices.resize(vertices.size());
-        memcpy(&m_basicHalfVertices[0], &convert[0], sizeof m_basicHalfVertices[0] * vertices.size());
-        m_basicVertices.destroy();
+        m_generalHalfVertices.resize(vertices.size());
+        memcpy(&m_generalHalfVertices[0], &convert[0], sizeof m_generalHalfVertices[0] * vertices.size());
+        m_generalVertices.destroy();
     }
 }
 
 void model::makeSingle() {
-    static constexpr size_t kHalfs = sizeof(mesh::basicHalfVertex)/sizeof(m::half);
+    static constexpr size_t kHalfs = sizeof(Mesh::GeneralHalfVertex)/sizeof(m::half);
     if (animated()) {
         const auto &vertices = m_animHalfVertices;
-        u::vector<mesh::basicHalfVertex> basics(vertices.size());
+        u::vector<Mesh::GeneralHalfVertex> basics(vertices.size());
         for (size_t i = 0; i < vertices.size(); i++)
             memcpy(&basics[i], &vertices[i], sizeof basics[0]);
         const auto singleData = m::convertToFloat((const m::half *const)&basics[0], kHalfs*vertices.size());
-        u::vector<mesh::animVertex> converted(vertices.size());
+        u::vector<Mesh::AnimVertex> converted(vertices.size());
         for (size_t i = 0; i < vertices.size(); i++) {
             memcpy(&converted[i], &singleData[kHalfs*i], kHalfs*sizeof(float));
             memcpy(converted[i].blendWeight, vertices[i].blendWeight, sizeof vertices[0].blendWeight);
@@ -711,12 +711,12 @@ void model::makeSingle() {
         m_animVertices = u::move(converted);
         m_animHalfVertices.destroy();
     } else {
-        const auto &vertices = m_basicHalfVertices;
-        static constexpr size_t kHalfs = sizeof(mesh::basicHalfVertex)/sizeof(m::half);
+        const auto &vertices = m_generalHalfVertices;
+        static constexpr size_t kHalfs = sizeof(Mesh::GeneralHalfVertex)/sizeof(m::half);
         const auto convert = m::convertToFloat((const m::half *const)&vertices[0], kHalfs*vertices.size());
-        m_basicVertices.resize(vertices.size());
-        memcpy(&m_basicVertices[0], &convert[0], sizeof m_basicVertices[0] * vertices.size());
-        m_basicHalfVertices.destroy();
+        m_generalVertices.resize(vertices.size());
+        memcpy(&m_generalVertices[0], &convert[0], sizeof m_generalVertices[0] * vertices.size());
+        m_generalHalfVertices.destroy();
     }
 }
 
@@ -732,7 +732,7 @@ bool model::load(const u::string &file, const u::vector<u::string> &anims) {
         for (const auto &it : m_animVertices)
             m_bounds.expand(m::vec3(it.position));
     } else {
-        for (const auto &it : m_basicVertices)
+        for (const auto &it : m_generalVertices)
             m_bounds.expand(m::vec3(it.position));
     }
     m_name = file;

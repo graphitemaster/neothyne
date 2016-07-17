@@ -10,36 +10,35 @@ namespace u {
     struct string;
 }
 
-struct model;
-struct obj;
+struct Model;
 
-namespace mesh {
-    struct basicVertex {
+namespace Mesh {
+    struct GeneralVertex {
         float position[3];
         float normal[3];
         float coordinate[2];
         float tangent[4]; // w = sign of bitangent
     };
 
-    struct animVertex : basicVertex {
+    struct AnimVertex : GeneralVertex {
         unsigned char blendIndex[4];
         unsigned char blendWeight[4];
     };
 
-    struct basicHalfVertex {
+    struct GeneralHalfVertex {
         m::half position[3];
         m::half normal[3];
         m::half coordinate[2];
         m::half tangent[4]; // w = sign of bitangent
     };
 
-    struct animHalfVertex : basicHalfVertex {
+    struct AnimHalfVertex : GeneralHalfVertex {
         unsigned char blendIndex[4];
         unsigned char blendWeight[4];
     };
 }
 
-struct vertexCacheData {
+struct VertexCacheData {
     u::vector<size_t> indices;
     size_t cachePosition;
     float currentScore;
@@ -47,28 +46,28 @@ struct vertexCacheData {
     size_t remainingValence;
     bool calculated;
 
-    vertexCacheData();
+    VertexCacheData();
 
     size_t findTriangle(size_t tri);
     void moveTriangle(size_t tri);
 };
 
-struct triangleCacheData {
+struct TriangleCacheData {
     bool rendered;
     float currentScore;
     size_t vertices[3];
     bool calculated;
 
-    triangleCacheData();
+    TriangleCacheData();
 };
 
-struct vertexCache {
+struct VertexCache {
     void addVertex(size_t vertex);
     void clear();
     size_t getCacheMissCount() const;
     size_t getCacheMissCount(const u::vector<size_t> &indices);
     size_t getCachedVertex(size_t index) const;
-    vertexCache();
+    VertexCache();
 private:
     size_t findVertex(size_t vertex);
     void removeVertex(size_t stackIndex);
@@ -76,35 +75,35 @@ private:
     size_t m_misses;
 };
 
-struct vertexCacheOptimizer {
-    vertexCacheOptimizer();
+struct VertexCacheOptimizer {
+    VertexCacheOptimizer();
 
-    enum result {
+    enum Result {
         kSuccess,
         kErrorInvalidIndex,
         kErrorNoVertices
     };
 
-    result optimize(u::vector<size_t> &indices);
+    Result optimize(u::vector<size_t> &indices);
 
     size_t getCacheMissBefore() const;
     size_t getCacheMissAfter() const;
 
 private:
-    u::vector<vertexCacheData> m_vertices;
-    u::vector<triangleCacheData> m_triangles;
+    u::vector<VertexCacheData> m_vertices;
+    u::vector<TriangleCacheData> m_triangles;
 
     u::vector<size_t> m_indices;
     u::vector<size_t> m_drawList;
-    vertexCache m_vertexCache;
+    VertexCache m_vertexCache;
     size_t m_bestTriangle;
     size_t m_cacheMissesBefore;
     size_t m_cacheMissesAfter;
 
     float calcVertexScore(size_t vertex);
     size_t fullScoreRecalculation();
-    result initialPass();
-    result init(u::vector<size_t> &indices, size_t vertexCount);
+    Result initialPass();
+    Result init(u::vector<size_t> &indices, size_t vertexCount);
     void addTriangle(size_t triangle);
     bool cleanFlags();
     void triangleScoreRecalculation(size_t triangle);
@@ -112,30 +111,30 @@ private:
     bool process();
 };
 
-inline size_t vertexCacheOptimizer::getCacheMissBefore() const {
+inline size_t VertexCacheOptimizer::getCacheMissBefore() const {
     return m_cacheMissesBefore;
 }
 
-inline size_t vertexCacheOptimizer::getCacheMissAfter() const {
+inline size_t VertexCacheOptimizer::getCacheMissAfter() const {
     return m_cacheMissesAfter;
 }
 
 
-struct face {
-    face();
+struct Face {
+    Face();
     size_t vertex;
     size_t normal;
     size_t coordinate;
 };
 
-inline face::face()
+inline Face::Face()
     : vertex(-1_z)
     , normal(-1_z)
     , coordinate(-1_z)
 {
 }
 
-inline bool operator==(const face &lhs, const face &rhs) {
+inline bool operator==(const Face &lhs, const Face &rhs) {
     return lhs.vertex == rhs.vertex
         && lhs.normal == rhs.normal
         && lhs.coordinate == rhs.coordinate;
@@ -144,7 +143,7 @@ inline bool operator==(const face &lhs, const face &rhs) {
 // Hash a face
 namespace u {
 
-inline size_t hash(const ::face &f) {
+inline size_t hash(const ::Face &f) {
     static constexpr size_t kPrime1 = 73856093_z;
     static constexpr size_t kPrime2 = 19349663_z;
     static constexpr size_t kPrime3 = 83492791_z;

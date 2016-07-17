@@ -20,12 +20,12 @@ struct model {
 
     bool isHalf() const;
 
-    const u::vector<mesh::basicVertex> &basicVertices() const;
-    const u::vector<mesh::animVertex> &animVertices() const;
+    const u::vector<Mesh::GeneralVertex> &generalVertices() const;
+    const u::vector<Mesh::AnimVertex> &animVertices() const;
 
     // when isHalf() these are valid
-    const u::vector<mesh::basicHalfVertex> &basicHalfVertices() const;
-    const u::vector<mesh::animHalfVertex> &animHalfVertices() const;
+    const u::vector<Mesh::GeneralHalfVertex> &generalHalfVertices() const;
+    const u::vector<Mesh::AnimHalfVertex> &animHalfVertices() const;
 
     const u::vector<unsigned int> &indices() const;
     const u::vector<batch> &batches() const;
@@ -67,12 +67,12 @@ private:
     u::vector<m::mat3x4> m_outFrame; // animated frames
     u::vector<int32_t> m_parents; // parent joint indices
 
-    u::vector<mesh::animVertex> m_animVertices; // generated data for animated models
-    u::vector<mesh::basicVertex> m_basicVertices; // generated data for unanimated models
+    u::vector<Mesh::AnimVertex> m_animVertices; // generated data for animated models
+    u::vector<Mesh::GeneralVertex> m_generalVertices; // generated data for unanimated models
 
     // when m_isHalf these are valid
-    u::vector<mesh::animHalfVertex> m_animHalfVertices; // generated data for animated models
-    u::vector<mesh::basicHalfVertex> m_basicHalfVertices; // generated data for unanimated models
+    u::vector<Mesh::AnimHalfVertex> m_animHalfVertices; // generated data for animated models
+    u::vector<Mesh::GeneralHalfVertex> m_generalHalfVertices; // generated data for unanimated models
 };
 
 inline model::model()
@@ -86,19 +86,19 @@ inline bool model::isHalf() const {
     return m_isHalf;
 }
 
-inline const u::vector<mesh::basicVertex> &model::basicVertices() const {
-    return m_basicVertices;
+inline const u::vector<Mesh::GeneralVertex> &model::generalVertices() const {
+    return m_generalVertices;
 }
 
-inline const u::vector<mesh::animVertex> &model::animVertices() const {
+inline const u::vector<Mesh::AnimVertex> &model::animVertices() const {
     return m_animVertices;
 }
 
-inline const u::vector<mesh::basicHalfVertex> &model::basicHalfVertices() const {
-    return m_basicHalfVertices;
+inline const u::vector<Mesh::GeneralHalfVertex> &model::generalHalfVertices() const {
+    return m_generalHalfVertices;
 }
 
-inline const u::vector<mesh::animHalfVertex> &model::animHalfVertices() const {
+inline const u::vector<Mesh::AnimHalfVertex> &model::animHalfVertices() const {
     return m_animHalfVertices;
 }
 
