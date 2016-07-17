@@ -2589,7 +2589,7 @@ void Texture::colorize(uint32_t color) {
 }
 
 u::optional<u::string> Texture::find(const u::string &infile) {
-    static struct tag {
+    static struct {
         const char *name;
         int flag;
     } tags[] = {

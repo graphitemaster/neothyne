@@ -94,11 +94,11 @@ static void createTangents(const u::vector<m::vec3> &vertices,
 }
 
 ///! OBJ Loader
-struct obj {
+struct OBJ {
     bool load(const u::string &file, Model *store);
 };
 
-bool obj::load(const u::string &file, Model *store) {
+bool OBJ::load(const u::string &file, Model *store) {
     u::file fp = fopen(neoGamePath() + file + ".obj", "r");
     if (!fp)
         return false;
@@ -258,7 +258,7 @@ bool obj::load(const u::string &file, Model *store) {
 }
 
 ///! IQM loader
-struct iqm {
+struct IQM {
     static constexpr int kUByte = 1;
     static constexpr int kUInt = 5;
     static constexpr int kHalf = 6;
@@ -267,7 +267,7 @@ struct iqm {
     bool load(const u::string &file, Model *store, const u::vector<u::string> &anims);
 
 protected:
-    struct iqmHeader {
+    struct Header {
         static constexpr const char *kMagic = "INTERQUAKEMODEL";
         static constexpr uint32_t kVersion = 2;
         char magic[16];
@@ -287,7 +287,7 @@ protected:
         void endianSwap();
     };
 
-    struct iqmMesh {
+    struct Mesh {
         uint32_t name;
         uint32_t material;
         uint32_t firstVertex, numVertexes;
@@ -295,19 +295,19 @@ protected:
     };
 
     enum {
-        kPosition     = 0,
-        kTexCoord     = 1,
-        kNormal       = 2,
-        kTangent      = 3,
+        kPosition = 0,
+        kTexCoord = 1,
+        kNormal = 2,
+        kTangent = 3,
         kBlendIndexes = 4,
         kBlendWeights = 5
     };
 
-    struct iqmTriangle {
+    struct Triangle {
         uint32_t vertex[3];
     };
 
-    struct iqmJoint {
+    struct Joint {
         uint32_t name;
         int32_t parent;
         float translate[3];
@@ -315,21 +315,21 @@ protected:
         float scale[3];
     };
 
-    struct iqmPose {
+    struct Pose {
         int32_t parent;
         uint32_t mask;
         float channelOffset[10];
         float channelScale[10];
     };
 
-    struct iqmAnim {
+    struct Anim {
         uint32_t name;
         uint32_t firstFrame, numFrames;
         float frameRate;
         uint32_t flags;
     };
 
-    struct iqmVertexArray {
+    struct VertexArray {
         uint32_t type;
         uint32_t flags;
         uint32_t format;
@@ -337,22 +337,22 @@ protected:
         uint32_t offset;
     };
 
-    bool loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store);
-    bool loadAnims(const iqmHeader *hdr, unsigned char *buf, Model *store);
+    bool loadMeshes(const Header *hdr, unsigned char *buf, Model *store);
+    bool loadAnims(const Header *hdr, unsigned char *buf, Model *store);
 
 private:
     u::vector<m::mat3x4> m_baseFrame;
     u::vector<m::mat3x4> m_inverseBaseFrame;
 };
 
-inline void iqm::iqmHeader::endianSwap() {
-    u::endianSwap(&version, (sizeof(iqmHeader) - sizeof(magic)) / sizeof(uint32_t));
+inline void IQM::Header::endianSwap() {
+    u::endianSwap(&version, (sizeof *this - sizeof magic) / sizeof(uint32_t));
 }
 
 // Helper structure to deal with aliasing input buffer as half precision,
 // single precision floats or unsigned int as well as other general utilities
-struct inData {
-    inData()
+struct AliasData {
+    AliasData()
         : type(-1)
         , asUByte(nullptr)
     {
@@ -367,18 +367,18 @@ struct inData {
         asUByte = data.second;
     }
 
-    bool isHalf() const { return type == iqm::kHalf; }
-    bool isUInt() const { return type == iqm::kUInt; }
+    bool isHalf() const { return type == IQM::kHalf; }
+    bool isUInt() const { return type == IQM::kUInt; }
 
     void endianSwap(size_t count) {
         switch (type) {
-        case iqm::kHalf:
+        case IQM::kHalf:
             u::endianSwap(asHalf, count);
             break;
-        case iqm::kFloat:
+        case IQM::kFloat:
             u::endianSwap(asFloat, count);
             break;
-        case iqm::kUInt:
+        case IQM::kUInt:
             u::endianSwap(asUInt, count);
             break;
         }
@@ -394,53 +394,53 @@ struct inData {
     };
 };
 
-bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store) {
+bool IQM::loadMeshes(const Header *hdr, unsigned char *buf, Model *store) {
     u::endianSwap((uint32_t*)&buf[hdr->ofsVertexArrays],
-        hdr->numVertexArrays*sizeof(iqmVertexArray)/sizeof(uint32_t));
+        hdr->numVertexArrays*sizeof(VertexArray)/sizeof(uint32_t));
     u::endianSwap((uint32_t*)&buf[hdr->ofsTriangles],
-        hdr->numTriangles*sizeof(iqmTriangle)/sizeof(uint32_t));
+        hdr->numTriangles*sizeof(Triangle)/sizeof(uint32_t));
     u::endianSwap((uint32_t*)&buf[hdr->ofsMeshes],
-        hdr->numMeshes*sizeof(iqmMesh)/sizeof(uint32_t));
+        hdr->numMeshes*sizeof(Mesh)/sizeof(uint32_t));
     u::endianSwap((uint32_t*)&buf[hdr->ofsJoints],
-        hdr->numJoints*sizeof(iqmJoint)/sizeof(uint32_t));
+        hdr->numJoints*sizeof(Joint)/sizeof(uint32_t));
 
-    inData inPosition;
-    inData inNormal;
-    inData inTangent;
-    inData inCoordinate;
-    inData inBlendIndex;
-    inData inBlendWeight;
+    AliasData inPosition;
+    AliasData inNormal;
+    AliasData inTangent;
+    AliasData inCoordinate;
+    AliasData inBlendIndex;
+    AliasData inBlendWeight;
 
-    iqmVertexArray *vertexArrays = (iqmVertexArray*)&buf[hdr->ofsVertexArrays];
+    VertexArray *vertexArrays = (VertexArray*)&buf[hdr->ofsVertexArrays];
     for (uint32_t i = 0; i < hdr->numVertexArrays; i++) {
-        iqmVertexArray &va = vertexArrays[i];
+        VertexArray &va = vertexArrays[i];
         switch (va.type) {
-        case iqm::kPosition:
+        case kPosition:
             if ((va.format != kFloat && va.format != kHalf) || va.size != 3)
                 return false;
             inPosition = { va.format, buf + va.offset };
             break;
-        case iqm::kNormal:
+        case kNormal:
             if ((va.format != kFloat && va.format != kHalf) || va.size != 3)
                 return false;
             inNormal = { va.format, buf + va.offset };
             break;
-        case iqm::kTangent:
+        case kTangent:
             if ((va.format != kFloat && va.format != kHalf) || va.size != 4)
                 return false;
             inTangent = { va.format, buf + va.offset };
             break;
-        case iqm::kTexCoord:
+        case kTexCoord:
             if ((va.format != kFloat && va.format != kHalf) || va.size != 2)
                 return false;
             inCoordinate = { va.format, buf + va.offset };
             break;
-        case iqm::kBlendIndexes:
+        case kBlendIndexes:
             if ((va.format != kUByte && va.format != kUInt) || va.size != 4)
                 return false;
             inBlendIndex = { va.format, buf + va.offset };
             break;
-        case iqm::kBlendWeights:
+        case kBlendWeights:
             if ((va.format != kUByte && va.format != kUInt) || va.size != 4)
                 return false;
             inBlendWeight = { va.format, buf + va.offset };
@@ -448,7 +448,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store) {
         }
     }
 
-    const iqmJoint *const joints = (iqmJoint*)&buf[hdr->ofsJoints];
+    const Joint *const joints = (Joint*)&buf[hdr->ofsJoints];
 
     const bool animated = hdr->numFrames != 0;
     store->m_numFrames = hdr->numFrames;
@@ -461,7 +461,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store) {
         m_baseFrame.resize(hdr->numJoints);
         m_inverseBaseFrame.resize(hdr->numJoints);
         for (uint32_t i = 0; i < hdr->numJoints; i++) {
-            const iqmJoint &j = joints[i];
+            const Joint &j = joints[i];
             m_baseFrame[i] = m::mat3x4(m::quat(j.rotate).normalize(),
                                        m::vec3(j.translate),
                                        m::vec3(j.scale));
@@ -474,10 +474,10 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store) {
     }
 
     // indices
-    const iqmTriangle *const triangles = (iqmTriangle*)&buf[hdr->ofsTriangles];
+    const Triangle *const triangles = (Triangle*)&buf[hdr->ofsTriangles];
     store->m_indices.reserve(hdr->numTriangles);
     for (uint32_t i = 0; i < hdr->numTriangles; i++) {
-        const iqmTriangle &triangle = triangles[i];
+        const Triangle &triangle = triangles[i];
         store->m_indices.push_back(triangle.vertex[0]);
         store->m_indices.push_back(triangle.vertex[2]);
         store->m_indices.push_back(triangle.vertex[1]);
@@ -501,7 +501,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store) {
             unsigned char (*curBlendWeight)[4] = nullptr;
             unsigned char (*curBlendIndex)[4] = nullptr;
             if (isHalf) {
-                Mesh::AnimHalfVertex &v = store->m_animHalfVertices[i];
+                ::Mesh::AnimHalfVertex &v = store->m_animHalfVertices[i];
                 if (inPosition)    memcpy(v.position, &inPosition.asHalf[i*3], sizeof v.position);
                 if (inCoordinate)  memcpy(v.coordinate, &inCoordinate.asHalf[i*2], sizeof v.coordinate);
                 if (inTangent)     memcpy(v.tangent, &inTangent.asHalf[i*4], sizeof v.tangent);
@@ -513,7 +513,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store) {
                 curBlendIndex = &v.blendIndex;
                 curBlendWeight = &v.blendWeight;
             } else {
-                Mesh::AnimVertex &v = store->m_animVertices[i];
+                ::Mesh::AnimVertex &v = store->m_animVertices[i];
                 if (inPosition)    memcpy(v.position, &inPosition.asFloat[i*3], sizeof v.position);
                 if (inCoordinate)  memcpy(v.coordinate, &inCoordinate.asFloat[i*2], sizeof v.coordinate);
                 if (inTangent)     memcpy(v.tangent, &inTangent.asFloat[i*4], sizeof v.tangent);
@@ -552,7 +552,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store) {
         store->m_generalVertices.resize(hdr->numVertexes);
         for (uint32_t i = 0; i < hdr->numVertexes; i++) {
             if (isHalf) {
-                Mesh::GeneralHalfVertex &v = store->m_generalHalfVertices[i];
+                ::Mesh::GeneralHalfVertex &v = store->m_generalHalfVertices[i];
                 if (inPosition)   memcpy(v.position, &inPosition.asHalf[i*3], sizeof v.position);
                 if (inCoordinate) memcpy(v.coordinate, &inCoordinate.asHalf[i*2], sizeof v.coordinate);
                 if (inTangent)    memcpy(v.tangent, &inTangent.asHalf[i*4], sizeof v.tangent);
@@ -562,7 +562,7 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store) {
                     memcpy(v.normal, &inNormal.asHalf[i*3], sizeof v.normal);
                 }
             } else {
-                Mesh::GeneralVertex &v = store->m_generalVertices[i];
+                ::Mesh::GeneralVertex &v = store->m_generalVertices[i];
                 if (inPosition)   memcpy(v.position, &inPosition.asFloat[i*3], sizeof v.position);
                 if (inCoordinate) memcpy(v.coordinate, &inCoordinate.asFloat[i*2], sizeof v.coordinate);
                 if (inTangent)    memcpy(v.tangent, &inTangent.asFloat[i*4], sizeof v.tangent);
@@ -580,19 +580,19 @@ bool iqm::loadMeshes(const iqmHeader *hdr, unsigned char *buf, Model *store) {
     return true;
 }
 
-bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, Model *store) {
-    u::endianSwap((uint32_t *)&buf[hdr->ofsPoses], hdr->numPoses*sizeof(iqmPose)/sizeof(uint32_t));
-    u::endianSwap((uint32_t *)&buf[hdr->ofsAnims], hdr->numAnims*sizeof(iqmAnim)/sizeof(uint32_t));
+bool IQM::loadAnims(const Header *hdr, unsigned char *buf, Model *store) {
+    u::endianSwap((uint32_t *)&buf[hdr->ofsPoses], hdr->numPoses*sizeof(Pose)/sizeof(uint32_t));
+    u::endianSwap((uint32_t *)&buf[hdr->ofsAnims], hdr->numAnims*sizeof(Anim)/sizeof(uint32_t));
     u::endianSwap((uint16_t *)&buf[hdr->ofsFrames], hdr->numFrames*hdr->numFrameChannels);
 
-    const iqmPose *const poses = (iqmPose*)&buf[hdr->ofsPoses];
+    const Pose *const poses = (Pose*)&buf[hdr->ofsPoses];
 
     const size_t size = store->m_frames.size();
     store->m_frames.resize(size + hdr->numFrames * hdr->numPoses);
     const uint16_t *frameData = (uint16_t*)&buf[hdr->ofsFrames];
     for (uint32_t i = 0; i < hdr->numFrames; i++) {
         for (uint32_t j = 0; j < hdr->numPoses; j++) {
-            const iqmPose &p = poses[j];
+            const Pose &p = poses[j];
             float data[10];
             memcpy(data, p.channelOffset, sizeof p.channelOffset);
             for (size_t v = 0; v < 10; v++)
@@ -612,18 +612,18 @@ bool iqm::loadAnims(const iqmHeader *hdr, unsigned char *buf, Model *store) {
     return true;
 }
 
-bool iqm::load(const u::string &file, Model *store, const u::vector<u::string> &anims) {
+bool IQM::load(const u::string &file, Model *store, const u::vector<u::string> &anims) {
     auto read = u::read(neoGamePath() + file + ".iqm", "rb");
     if (!read)
         return false;
     auto &data = *read;
 
-    iqmHeader *const hdr = (iqmHeader*)&data[0];
-    if (memcmp(hdr->magic, (const void *)iqmHeader::kMagic, sizeof hdr->magic))
+    Header *const hdr = (Header*)&data[0];
+    if (memcmp(hdr->magic, (const void *)Header::kMagic, sizeof hdr->magic))
         return false;
 
     hdr->endianSwap();
-    if (hdr->version != iqmHeader::kVersion)
+    if (hdr->version != Header::kVersion)
         return false;
     if (hdr->numMeshes > 0 && !loadMeshes(hdr, &data[0], store))
         return false;
@@ -633,10 +633,10 @@ bool iqm::load(const u::string &file, Model *store, const u::vector<u::string> &
     // batches
     Model::Batch b;
     const char *const str = hdr->ofsText ? (char *)&data[hdr->ofsText] : nullptr;
-    const iqmMesh *const meshes = (iqmMesh*)&data[hdr->ofsMeshes];
+    const Mesh *const meshes = (Mesh*)&data[hdr->ofsMeshes];
     for (uint32_t i = 0; i < hdr->numMeshes; i++) {
-        const iqmMesh &m = meshes[i];
-        iqmTriangle *tri = nullptr;
+        const Mesh &m = meshes[i];
+        Triangle *tri = nullptr;
         b.offset = &tri[m.firstTriangle];
         b.count = 3*m.numTriangles;
         store->m_meshNames.push_back(str ? &str[m.name] : "default");
@@ -652,11 +652,11 @@ bool iqm::load(const u::string &file, Model *store, const u::vector<u::string> &
         if (!readAnim)
             continue;
         auto &animData = *read;
-        iqmHeader *const animHdr = (iqmHeader*)&animData[0];
-        if (memcmp(animHdr->magic, (const void *)iqmHeader::kMagic, sizeof animHdr->magic))
+        Header *const animHdr = (Header*)&animData[0];
+        if (memcmp(animHdr->magic, (const void *)Header::kMagic, sizeof animHdr->magic))
             continue;
         animHdr->endianSwap();
-        if (animHdr->version != iqmHeader::kVersion)
+        if (animHdr->version != Header::kVersion)
             continue;
         if (animHdr->numAnims > 0 && !loadAnims(animHdr, &animData[0], store))
             continue;
@@ -722,11 +722,11 @@ void Model::makeSingle() {
 }
 
 bool Model::load(const u::string &file, const u::vector<u::string> &anims) {
-    const auto iqm_ = u::format("%s/%s.iqm", neoGamePath(), file);
-    const auto obj_ = u::format("%s/%s.obj", neoGamePath(), file);
-    if (u::exists(iqm_) && !iqm().load(file, this, anims))
+    const auto iqm = u::format("%s/%s.iqm", neoGamePath(), file);
+    const auto obj = u::format("%s/%s.obj", neoGamePath(), file);
+    if (u::exists(iqm) && !IQM().load(file, this, anims))
         return false;
-    else if (u::exists(obj_) && !obj().load(file, this))
+    else if (u::exists(obj) && !OBJ().load(file, this))
         return false;
     // calculate bounds
     if (animated()) {

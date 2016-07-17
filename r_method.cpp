@@ -102,8 +102,8 @@ void uniform::post() {
     }
 }
 
-///! methodCacheHeader
-struct methodCacheHeader {
+///! MethodCacheHeader
+struct MethodCacheHeader {
     static constexpr const char *kMagic = "SHADER";
     static constexpr uint16_t kVersion = 1;
     char magic[6];
@@ -112,7 +112,7 @@ struct methodCacheHeader {
     void endianSwap();
 };
 
-inline void methodCacheHeader::endianSwap() {
+inline void MethodCacheHeader::endianSwap() {
     version = u::endianSwap(version);
     format = u::endianSwap(format);
 }
@@ -307,10 +307,10 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
         auto load = gMethodCache.read(hash.hex());
         if (!load)
             break;
-        methodCacheHeader *header = (methodCacheHeader*)&(*load)[0];
+        MethodCacheHeader *header = (MethodCacheHeader*)&(*load)[0];
         header->endianSwap();
-        if (memcmp(header->magic, (const void *)methodCacheHeader::kMagic, sizeof header->magic)
-            || header->version != methodCacheHeader::kVersion)
+        if (memcmp(header->magic, (const void *)MethodCacheHeader::kMagic, sizeof header->magic)
+            || header->version != MethodCacheHeader::kVersion)
         {
             gMethodCache.remove(hash.hex());
             break;
@@ -422,9 +422,9 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             gl::GetProgramBinary(m_program, length, nullptr, &binaryFormat, &programBinary[0]);
 
             // Create the header
-            methodCacheHeader header;
-            memcpy(header.magic, (const void *)methodCacheHeader::kMagic, 6);
-            header.version = methodCacheHeader::kVersion;
+            MethodCacheHeader header;
+            memcpy(header.magic, (const void *)MethodCacheHeader::kMagic, 6);
+            header.version = MethodCacheHeader::kVersion;
             header.format = binaryFormat;
             header.endianSwap();
 

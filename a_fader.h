@@ -12,7 +12,6 @@ struct Fader {
     float operator()(float time);
 
 private:
-    friend struct audio;
     friend struct Filter;
 
     float m_current;

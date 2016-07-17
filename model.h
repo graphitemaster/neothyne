@@ -43,8 +43,8 @@ struct Model {
     void makeSingle();
 
 private:
-    friend struct obj;
-    friend struct iqm;
+    friend struct OBJ;
+    friend struct IQM;
 
     bool m_isHalf;
 
