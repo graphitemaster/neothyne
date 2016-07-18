@@ -13,6 +13,7 @@ static inline voidptr neoCoreMalloc(size_t size) {
     void *ptr = malloc(size);
     if (ptr)
         return ptr;
+    U_ASSERT(0 && "Out of memory");
     abort();
 }
 
@@ -21,8 +22,10 @@ static inline voidptr neoCoreRealloc(voidptr ptr, size_t size) {
         void *resize = realloc(ptr, size);
         if (resize)
             return resize;
+        U_ASSERT(0 && "Out of memory");
+        abort();
     }
-    abort();
+    free(ptr);
 }
 
 static inline void neoCoreFree(voidptr what) {
