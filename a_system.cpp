@@ -66,6 +66,9 @@ void init(a::Audio *system, int channels, int flags, int sampleRate, int bufferS
 }
 
 void stop(a::Audio *system) {
+    // stop all sounds before shutting down the audio system
+    system->stopAll();
+    // stop the thread
     SDL_CloseAudio();
     // free the mixer data after shutting down the mixer thread
     neoFree(system->m_mixerData);
@@ -306,7 +309,7 @@ float Audio::getRelativePlaySpeed(int voiceHandle) const {
 }
 
 void Audio::setVoiceRelativePlaySpeed(int voice, float speed) {
-    if (m_voices[voice]) {
+    if (m_voices[voice] && speed > 0.0f) {
         m_voices[voice]->m_relativePlaySpeed = speed;
         m_voices[voice]->m_sampleRate = m_voices[voice]->m_baseSampleRate * speed;
         const size_t scratchNeeded = size_t(m::ceil((m_voices[voice]->m_sampleRate / m_sampleRate) * m_bufferSize));
