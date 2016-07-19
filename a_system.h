@@ -197,6 +197,7 @@ private:
 
 public:
     void *m_mutex;
+    int m_device;
     float *m_mixerData;
 };
 

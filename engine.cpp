@@ -998,7 +998,7 @@ static int entryPoint(int argc, char **argv) {
     setenv("DRI_PRIME", "1", 1);
 #endif
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0)
         neoFatal("Failed to initialize SDL2");
 
     if (!gEngine.init(argc, argv))

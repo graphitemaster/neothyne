@@ -382,8 +382,8 @@ string &string::operator=(const string &other) {
 }
 
 string &string::operator=(string &&other) {
-    U_ASSERT(this != &other);
-    move_small_string(*this, u::forward<u::string>(other));
+    if (this != &other)
+        move_small_string(*this, u::forward<u::string>(other));
     return *this;
 }
 

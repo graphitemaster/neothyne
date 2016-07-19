@@ -12,6 +12,9 @@
 #include "u_memory.h"
 
 #include "engine.h"
+#include "cvar.h"
+
+VAR(u::string, snd_device, "sound device");
 
 namespace a {
 
@@ -42,34 +45,76 @@ static void audioMixer(void *user, Uint8 *stream, int length) {
 }
 
 void init(a::Audio *system, int channels, int flags, int sampleRate, int bufferSize) {
-    system->m_mutex = (void *)SDL_CreateMutex();
-
-    SDL_AudioSpec spec;
-    spec.freq = sampleRate;
-    spec.format = AUDIO_S16;
-    spec.channels = 2;
-    spec.samples = bufferSize;
-    spec.callback = &audioMixer;
-    spec.userdata = (void *)system;
-
-    SDL_AudioSpec got;
-    if (SDL_OpenAudio(&spec, &got) < 0) {
-        SDL_DestroyMutex((SDL_mutex *)system->m_mutex);
-        neoFatalError("failed to initialize audio");
+    const int deviceCount = SDL_GetNumAudioDevices(0);
+    const u::string &checkDevice = snd_device;
+    if (checkDevice.size())
+        u::print("[audio] => searching for device `%s'\n", checkDevice);
+    if (deviceCount != -1) {
+        u::print("[audio] => discovered %d playback %s\n",
+            deviceCount, deviceCount > 1 ? "devices" : "device");
+    }
+    int deviceSearch = checkDevice.empty() ? 0 : -1;
+    // report the devices
+    for (int i = 0; i < deviceCount; i++) {
+        const char *name = SDL_GetAudioDeviceName(i, 0);
+        if (checkDevice.size()) {
+            // found a match for the "configured" device in init.cfg
+            u::print("[audio] => found %s device `%s'\n",
+                name && name == checkDevice ? "matching" : "a", name);
+            if (name && name == checkDevice)
+                deviceSearch = i;
+        } else {
+            u::print("[audio] => found device `%s'\n", name);
+        }
+    }
+    if (deviceSearch == -1) {
+        const char *fallback = SDL_GetAudioDeviceName(0, 0);
+        u::print("[audio] => failed to find device `%s' (falling back to device `%s')\n",
+            snd_device.get(), fallback ? fallback : "unknown");
+        deviceSearch = 0;
     }
 
-    system->m_mixerData = neoMalloc(sizeof(float) * got.samples*4);
-    system->init(channels, got.freq, got.samples * 2, flags);
+    const char *deviceName = SDL_GetAudioDeviceName(deviceSearch, 0);
 
-    u::print("[audio] => device configured for %d channels @ %dHz (%d samples)\n", got.channels, got.freq, got.samples);
-    SDL_PauseAudio(0);
+    SDL_AudioSpec wantFormat;
+    wantFormat.freq = sampleRate;
+    wantFormat.format = AUDIO_S16;
+    wantFormat.channels = 2;
+    wantFormat.samples = bufferSize;
+    wantFormat.callback = &audioMixer;
+    wantFormat.userdata = (void *)system;
+
+    SDL_AudioSpec haveFormat;
+    SDL_AudioDeviceID device = SDL_OpenAudioDevice(deviceName,
+                                                   0,
+                                                   &wantFormat,
+                                                   &haveFormat,
+                                                   0);
+
+    if (device == 0)
+        neoFatal("failed to initialize audio (%s)", SDL_GetError());
+
+    // allocate mixer data and initialize the audio engine
+    system->m_device = device;
+    system->m_mutex = (void *)SDL_CreateMutex();
+    system->m_mixerData = neoMalloc(sizeof(float) * haveFormat.samples*4);
+    system->init(channels, haveFormat.freq, haveFormat.samples * 2, flags);
+
+    u::print("[audio] => device `%s' configured for %d channels @ %dHz (%d samples)\n",
+        deviceName, haveFormat.channels, haveFormat.freq, haveFormat.samples);
+
+    snd_device.set(deviceName);
+    SDL_PauseAudioDevice(device, 0);
 }
 
 void stop(a::Audio *system) {
     // stop all sounds before shutting down the audio system
     system->stopAll();
+    // pause the audio before shutting it down so SDL can shove off silence
+    // into the audio device (this avoids audible noise at shutdown.)
+    SDL_PauseAudioDevice(system->m_device, 1);
     // stop the thread
-    SDL_CloseAudio();
+    SDL_CloseAudioDevice(system->m_device);
     // free the mixer data after shutting down the mixer thread
     neoFree(system->m_mixerData);
     // destroy the mutex after shutting down the mixer thread

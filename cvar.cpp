@@ -95,10 +95,14 @@ varStatus varChange(const u::string &name, const u::string &value, bool callback
             return kVarTypeError;
         return varSet<float>(name, val, callback);
     } else if (ref.type == kVarString) {
-        u::string copy(value);
-        copy.pop_front();
-        copy.pop_back();
-        return varSet<u::string>(name, u::move(copy), callback);
+        // trim quotted string as well
+        if (value[0] == '"' && value[value.size()-1] == '"') {
+            u::string copy(value);
+            copy.pop_front();
+            copy.pop_back();
+            return varSet<u::string>(name, u::move(copy), callback);
+        }
+        return varSet<u::string>(name, value, callback);
     }
     return kVarTypeError;
 }

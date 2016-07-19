@@ -48,14 +48,20 @@ inline int sscanf(const u::string &thing, const char *fmt, ...) {
 }
 
 inline u::vector<u::string> split(const char *str, char ch = ' ') {
-    u::vector<u::string> result;
-    do {
-        const char *begin = str;
-        while (*str != ch && *str)
-            str++;
-        result.push_back(u::string(begin, str));
-    } while (*str++);
-    return result;
+    u::vector<u::string> splitted;
+    bool quoted = false;
+    splitted.push_back("");
+    for (const char *s = str; *s; s++) {
+        if (*s == '\"') {
+            quoted = !quoted;
+            continue;
+        }
+        if (*s == ch && !quoted)
+            splitted.push_back("");
+        else
+            splitted[splitted.size() - 1] += *s;
+    }
+    return splitted;
 }
 
 inline u::vector<u::string> split(const u::string &str, char ch = ' ') {
