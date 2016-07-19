@@ -201,7 +201,7 @@ public:
     float *m_mixerData;
 };
 
-void init(a::Audio *system, int channels = 32, int flags = Audio::kClipRoundOff, int sampleRate = 44100, int bufferSize = 2048);
+void init(a::Audio *system, int flags = Audio::kClipRoundOff);
 void stop(a::Audio *system);
 
 }

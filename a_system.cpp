@@ -15,6 +15,9 @@
 #include "cvar.h"
 
 VAR(u::string, snd_device, "sound device");
+VAR(int, snd_frequency, "sound frequency", 11025, 48000, 44100);
+VAR(int, snd_samples, "sound samples", 1024, 65536, 2048);
+VAR(int, snd_voices, "maximum voices for mixing", 16, 128, 32);
 
 namespace a {
 
@@ -44,7 +47,7 @@ static void audioMixer(void *user, Uint8 *stream, int length) {
         buffer[i] = (short)m::floor(data[i] * 0x7fff);
 }
 
-void init(a::Audio *system, int channels, int flags, int sampleRate, int bufferSize) {
+void init(a::Audio *system, int flags) {
     const int deviceCount = SDL_GetNumAudioDevices(0);
     const u::string &checkDevice = snd_device;
     if (checkDevice.size())
@@ -77,10 +80,10 @@ void init(a::Audio *system, int channels, int flags, int sampleRate, int bufferS
     const char *deviceName = SDL_GetAudioDeviceName(deviceSearch, 0);
 
     SDL_AudioSpec wantFormat;
-    wantFormat.freq = sampleRate;
+    wantFormat.freq = snd_frequency;
     wantFormat.format = AUDIO_S16;
     wantFormat.channels = 2;
-    wantFormat.samples = bufferSize;
+    wantFormat.samples = snd_samples;
     wantFormat.callback = &audioMixer;
     wantFormat.userdata = (void *)system;
 
@@ -98,10 +101,11 @@ void init(a::Audio *system, int channels, int flags, int sampleRate, int bufferS
     system->m_device = device;
     system->m_mutex = (void *)SDL_CreateMutex();
     system->m_mixerData = neoMalloc(sizeof(float) * haveFormat.samples*4);
-    system->init(channels, haveFormat.freq, haveFormat.samples * 2, flags);
 
     u::print("[audio] => device `%s' configured for %d channels @ %dHz (%d samples)\n",
         deviceName, haveFormat.channels, haveFormat.freq, haveFormat.samples);
+
+    system->init(snd_voices, haveFormat.freq, haveFormat.samples * 2, flags);
 
     snd_device.set(deviceName);
     SDL_PauseAudioDevice(device, 0);
