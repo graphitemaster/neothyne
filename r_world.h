@@ -160,7 +160,7 @@ private:
 
     u::vector<r::particleSystem*> m_particleSystems;
     // HACK: Testing only
-    model m_gun;
+    model *m_gun;
 
     // The world itself
     kdMap *m_kdWorld;

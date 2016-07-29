@@ -61,6 +61,7 @@ struct var {
 
     operator T&();
     T &get();
+    const T &get() const;
     const T min() const;
     const T max() const;
     varStatus set(const T &value);
@@ -90,6 +91,7 @@ struct var<u::string> {
 
     operator u::string&();
     u::string &get();
+    const u::string &get() const;
     varStatus set(const u::string &value);
     void operator()();
     int flags() const;
@@ -158,6 +160,11 @@ inline var<T>::operator T&() {
 
 template <typename T>
 T &var<T>::get() {
+    return m_current;
+}
+
+template <typename T>
+const T &var<T>::get() const {
     return m_current;
 }
 
@@ -253,6 +260,10 @@ inline var<u::string>::operator u::string&() {
 }
 
 inline u::string &var<u::string>::get() {
+    return m_current;
+}
+
+inline const u::string &var<u::string>::get() const {
     return m_current;
 }
 

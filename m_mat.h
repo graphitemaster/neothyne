@@ -44,8 +44,6 @@ struct mat4 {
     static mat4 lookat(const vec3 &target, const vec3 &up);
     static mat4 lookat(const vec3 &position, const quat &q);
 
-    void getOrient(vec3 *direction, vec3 *up, vec3 *side) const;
-
     float *ptr();
     const float *ptr() const;
 

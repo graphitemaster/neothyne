@@ -18,7 +18,7 @@ NVAR(float, r_stats_histogram_transparency, "histogram transparency", 0.25f, 1.0
 
 namespace r {
 
-u::map<const char *, stat> stat::m_stats;
+u::deferred_data<u::map<const char *, stat>, false> stat::m_stats;
 u::vector<float> stat::m_histogram;
 u::vector<unsigned char> stat::m_texture;
 
@@ -135,7 +135,7 @@ void stat::render(size_t x) {
     if (r_stats) {
         // calculate total vertical space needed
         size_t space = kSpace;
-        for (const auto &it : m_stats)
+        for (const auto &it : *m_stats())
             space += it.second.space();
 
         if (r_stats_histogram) {
@@ -155,7 +155,7 @@ void stat::render(size_t x) {
 
         // shift up by vertical space
         size_t next = space;
-        for (const auto &it : m_stats)
+        for (const auto &it : *m_stats())
             next = it.second.draw(x, next);
 
         // memory information before histogram
@@ -181,15 +181,15 @@ void stat::render(size_t x) {
 }
 
 stat *stat::get(const char *name) {
-    auto find = m_stats.find(name);
-    U_ASSERT(find != m_stats.end());
+    auto find = m_stats()->find(name);
+    U_ASSERT(find != m_stats()->end());
     return &find->second;
 }
 
 stat *stat::add(const char *name, const char *description) {
-    auto find = m_stats.find(name);
-    if (find == m_stats.end())
-        find = m_stats.insert( { name, { name, description } } ).first;
+    auto find = m_stats()->find(name);
+    if (find == m_stats()->end())
+        find = m_stats()->insert( { name, { name, description } } ).first;
     else
         find->second.m_instances++;
     return &find->second;

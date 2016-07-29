@@ -11,7 +11,7 @@ struct string {
     typedef char *iterator;
     typedef const char *const_iterator;
 
-    static constexpr size_t kSmallStringSize = 4096_z;
+    static constexpr size_t kSmallStringSize = 512_z;
     static constexpr size_t npos = -1_z;
 
     // constructors

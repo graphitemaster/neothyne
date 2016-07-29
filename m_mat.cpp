@@ -93,7 +93,7 @@ mat4 mat4::project(const m::perspective &p) {
     const float halfFov = m::tan(m::toRadian(p.fov) * 0.5f);
     return { { 1.0f / (halfFov * ar), 0.0f, 0.0f, 0.0f },
              { 0.0f, 1.0f / halfFov, 0.0f, 0.0f },
-             { 0.0f, 0.0f, (-p.nearp - p.farp) / range, 2.0f * p.farp * p.nearp / range },
+             { 0.0f, 0.0f, -(p.nearp + p.farp) / range, 2.0f * p.farp * p.nearp / range },
              { 0.0f, 0.0f, 1.0f, 0.0f } };
 }
 
@@ -104,24 +104,6 @@ mat4 mat4::project(float angle, float nearClip, float farClip, float bias) {
              { 0.0f, halfFOV, 0.0f, 0.0f },
              { 0.0f, 0.0f, -(nearClip + farClip) / zRange, 2.0f * nearClip * farClip / zRange + bias },
              { 0.0f, 0.0f, 1.0f, 0.0f} };
-}
-
-void mat4::getOrient(vec3 *direction, vec3 *up, vec3 *side) const {
-    if (side) {
-        side->x = a[0];
-        side->y = b[0];
-        side->z = c[0];
-    }
-    if (up) {
-        up->x = a[1];
-        up->y = b[1];
-        up->z = c[1];
-    }
-    if (direction) {
-        direction->x = a[2];
-        direction->y = b[2];
-        direction->z = c[2];
-    }
 }
 
 mat4 mat4::operator*(const mat4 &t) const {

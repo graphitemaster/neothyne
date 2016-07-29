@@ -1,3 +1,4 @@
+#include <SDL.h>
 #include <SDL_audio.h>
 #include <SDL_mutex.h>
 
@@ -15,6 +16,7 @@
 #include "cvar.h"
 
 VAR(u::string, snd_device, "sound device");
+VAR(u::string, snd_driver, "sound driver");
 VAR(int, snd_frequency, "sound frequency", 11025, 48000, 44100);
 VAR(int, snd_samples, "sound samples", 1024, 65536, 2048);
 VAR(int, snd_voices, "maximum voices for mixing", 16, 128, 32);
@@ -45,84 +47,6 @@ static void audioMixer(void *user, Uint8 *stream, int length) {
     system->mix(data, samples);
     for (int i = 0; i < samples*2; i++)
         buffer[i] = (short)m::floor(data[i] * 0x7fff);
-}
-
-void init(a::Audio *system, int flags) {
-    const int deviceCount = SDL_GetNumAudioDevices(0);
-    const u::string &checkDevice = snd_device;
-    if (checkDevice.size())
-        u::print("[audio] => searching for device `%s'\n", checkDevice);
-    if (deviceCount != -1) {
-        u::print("[audio] => discovered %d playback %s\n",
-            deviceCount, deviceCount > 1 ? "devices" : "device");
-    }
-    int deviceSearch = checkDevice.empty() ? 0 : -1;
-    // report the devices
-    for (int i = 0; i < deviceCount; i++) {
-        const char *name = SDL_GetAudioDeviceName(i, 0);
-        if (checkDevice.size()) {
-            // found a match for the "configured" device in init.cfg
-            u::print("[audio] => found %s device `%s'\n",
-                name && name == checkDevice ? "matching" : "a", name);
-            if (name && name == checkDevice)
-                deviceSearch = i;
-        } else {
-            u::print("[audio] => found device `%s'\n", name);
-        }
-    }
-    if (deviceSearch == -1) {
-        const char *fallback = SDL_GetAudioDeviceName(0, 0);
-        u::print("[audio] => failed to find device `%s' (falling back to device `%s')\n",
-            snd_device.get(), fallback ? fallback : "unknown");
-        deviceSearch = 0;
-    }
-
-    const char *deviceName = SDL_GetAudioDeviceName(deviceSearch, 0);
-
-    SDL_AudioSpec wantFormat;
-    wantFormat.freq = snd_frequency;
-    wantFormat.format = AUDIO_S16;
-    wantFormat.channels = 2;
-    wantFormat.samples = snd_samples;
-    wantFormat.callback = &audioMixer;
-    wantFormat.userdata = (void *)system;
-
-    SDL_AudioSpec haveFormat;
-    SDL_AudioDeviceID device = SDL_OpenAudioDevice(deviceName,
-                                                   0,
-                                                   &wantFormat,
-                                                   &haveFormat,
-                                                   0);
-
-    if (device == 0)
-        neoFatal("failed to initialize audio (%s)", SDL_GetError());
-
-    // allocate mixer data and initialize the audio engine
-    system->m_device = device;
-    system->m_mutex = (void *)SDL_CreateMutex();
-    system->m_mixerData = neoMalloc(sizeof(float) * haveFormat.samples*4);
-
-    u::print("[audio] => device `%s' configured for %d channels @ %dHz (%d samples)\n",
-        deviceName, haveFormat.channels, haveFormat.freq, haveFormat.samples);
-
-    system->init(snd_voices, haveFormat.freq, haveFormat.samples * 2, flags);
-
-    snd_device.set(deviceName);
-    SDL_PauseAudioDevice(device, 0);
-}
-
-void stop(a::Audio *system) {
-    // stop all sounds before shutting down the audio system
-    system->stopAll();
-    // pause the audio before shutting it down so SDL can shove off silence
-    // into the audio device (this avoids audible noise at shutdown.)
-    SDL_PauseAudioDevice(system->m_device, 1);
-    // stop the thread
-    SDL_CloseAudioDevice(system->m_device);
-    // free the mixer data after shutting down the mixer thread
-    neoFree(system->m_mixerData);
-    // destroy the mutex after shutting down the mixer thread
-    SDL_DestroyMutex((SDL_mutex*)system->m_mutex);
 }
 
 ///! SourceInstance
@@ -213,7 +137,7 @@ void Source::setFilter(int filterHandle, Filter *filter) {
 }
 
 ///! Audio
-Audio::Audio()
+Audio::Audio(int flags)
     : m_scratchNeeded(0)
     , m_sampleRate(0)
     , m_bufferSize(0)
@@ -228,12 +152,121 @@ Audio::Audio()
 {
     memset(m_filters, 0, sizeof m_filters);
     memset(m_filterInstances, 0, sizeof m_filterInstances);
+
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO))
+        neoFatal("failed to initialize audio subsystem `%s'", SDL_GetError());
+
+    // find the appropriate audio driver
+    const int driverCount = SDL_GetNumAudioDrivers();
+    const u::string &checkDriver = snd_driver.get();
+    if (checkDriver.size())
+        u::print("[audio] => searching for driver `%s'\n", checkDriver);
+    if (driverCount)
+        u::print("[audio] => discovered %d %s\n",
+            driverCount + 1, driverCount > 0 ? "drivers" : "driver");
+    int driverSearch = checkDriver.empty() ? 0 : -1;
+    for (int i = 0; i < driverCount; i++) {
+        const char *name = SDL_GetAudioDriver(i);
+        if (checkDriver.size()) {
+            // found a match for the "configured" driver in init.cfg
+            u::print("[audio] => found %s driver `%s'\n",
+                name && name == checkDriver ? "matching" : "a", name);
+            if (name && name == checkDriver)
+                driverSearch = i;
+        } else if (name) {
+            u::print("[audio] => found driver `%s'\n", name);
+        }
+    }
+    if (driverSearch == -1) {
+        const char *fallback = SDL_GetCurrentAudioDriver();
+        u::print("[audio] => failed to find driver `%s' (falling back to driver `%s')\n",
+            fallback ? fallback : "unknown");
+        if (fallback)
+            snd_driver.set(fallback);
+    }
+    const char *driverName = SDL_GetAudioDriver(driverSearch);
+    if (SDL_AudioInit(driverName))
+        neoFatal("failed to initialize audio driver `%s'", driverName);
+    snd_driver.set(driverName);
+
+    // find the appropriate device
+    const int deviceCount = SDL_GetNumAudioDevices(0);
+    const u::string &checkDevice = snd_device;
+    if (checkDevice.size())
+        u::print("[audio] => searching for device `%s'\n", checkDevice);
+    if (deviceCount != -1) {
+        u::print("[audio] => discovered %d playback %s\n",
+            deviceCount, deviceCount > 1 ? "devices" : "device");
+    }
+    int deviceSearch = checkDevice.empty() ? 0 : -1;
+    // report the devices
+    for (int i = 0; i < deviceCount; i++) {
+        const char *name = SDL_GetAudioDeviceName(i, 0);
+        if (checkDevice.size()) {
+            // found a match for the "configured" device in init.cfg
+            u::print("[audio] => found %s device `%s'\n",
+                name && name == checkDevice ? "matching" : "a", name);
+            if (name && name == checkDevice)
+                deviceSearch = i;
+        } else if (name) {
+            u::print("[audio] => found device `%s'\n", name);
+        }
+    }
+    if (deviceSearch == -1) {
+        const char *fallback = SDL_GetAudioDeviceName(0, 0);
+        u::print("[audio] => failed to find device `%s' (falling back to device `%s')\n",
+            snd_device.get(), fallback ? fallback : "unknown");
+        deviceSearch = 0;
+    }
+
+    const char *deviceName = SDL_GetAudioDeviceName(deviceSearch, 0);
+
+    SDL_AudioSpec wantFormat;
+    wantFormat.freq = snd_frequency;
+    wantFormat.format = AUDIO_S16;
+    wantFormat.channels = 2;
+    wantFormat.samples = snd_samples;
+    wantFormat.callback = &audioMixer;
+    wantFormat.userdata = (void *)this;
+
+    SDL_AudioSpec haveFormat;
+    SDL_AudioDeviceID device = SDL_OpenAudioDevice(deviceName,
+                                                   0,
+                                                   &wantFormat,
+                                                   &haveFormat,
+                                                   0);
+
+    if (device == 0)
+        neoFatal("failed to initialize audio (%s)", SDL_GetError());
+
+    // allocate mixer data and initialize the audio engine
+    m_device = device;
+    m_mutex = (void *)SDL_CreateMutex();
+    m_mixerData = neoMalloc(sizeof(float) * haveFormat.samples*4);
+
+    u::print("[audio] => device `%s' configured for %d channels @ %dHz (%d samples)\n",
+        deviceName, haveFormat.channels, haveFormat.freq, haveFormat.samples);
+
+    init(snd_voices, haveFormat.freq, haveFormat.samples * 2, flags);
+
+    snd_device.set(deviceName);
+    SDL_PauseAudioDevice(device, 0);
 }
 
 Audio::~Audio() {
+    // pause the audio before shutting it down so SDL can shove off silence
+    // into the audio device (this avoids audible noise at shutdown.)
+    SDL_PauseAudioDevice(m_device, 1);
+    // stop all sounds before shutting down the audio system
     stopAll();
     for (auto *it : m_filterInstances)
         delete it;
+    // stop the thread
+    SDL_CloseAudioDevice(m_device);
+    // free the mixer data after shutting down the mixer thread
+    neoFree(m_mixerData);
+    // destroy the mutex after shutting down the mixer thread
+    SDL_DestroyMutex((SDL_mutex*)m_mutex);
 }
 
 void Audio::init(int voices, int sampleRate, int bufferSize, int flags) {

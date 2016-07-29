@@ -14,6 +14,7 @@
 
 #include "a_filter.h" // audio filtering
 #include "a_lane.h" // audio lanes
+#include "a_wav.h" // audio wav file
 
 // Game globals
 bool gRunning = true;
@@ -131,9 +132,9 @@ int neoMain(FrameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
     neoSetWindowTitle("Neothyne");
     neoCenterMouse();
 
-#if 0
+#if 1
     a::WAVFile theme[2];
-    if (!theme[0].load("a.wav") || !theme[1].load("theme.wav"))
+    if (!theme[0].load("theme.wav") || !theme[1].load("theme.wav"))
         neoFatal("failed to load theme music\n");
     theme[0].setLooping(true);
     theme[1].setLooping(true);
@@ -147,7 +148,7 @@ int neoMain(FrameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
     lane.play(theme[0], 0.5f);
     lane.play(theme[1], 0.5f);
 
-    audio.setRelativePlaySpeed(handle, 0.5f);
+    audio.setRelativePlaySpeed(handle, 0.75f);
 #endif
 
 #if 1

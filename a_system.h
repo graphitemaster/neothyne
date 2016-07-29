@@ -102,7 +102,7 @@ protected:
 };
 
 struct Audio {
-    Audio();
+    Audio(int flags);
     ~Audio();
 
     enum {
@@ -200,9 +200,6 @@ public:
     int m_device;
     float *m_mixerData;
 };
-
-void init(a::Audio *system, int flags = Audio::kClipRoundOff);
-void stop(a::Audio *system);
 
 }
 

@@ -32,8 +32,7 @@ static u::deferred_data<u::map<u::string, varReference>> gVariables;
 
 // public API
 void varRegister(const char *name, const char *desc, void *self, varType type) {
-    if (gVariables()->find(name) != gVariables()->end())
-        return;
+    U_ASSERT(gVariables()->find(name) == gVariables()->end());
     (*gVariables())[name] = varReference(desc, self, type);
     c::Complete::insert(name);
 }
@@ -47,6 +46,7 @@ var<T> &varGet(const char *name) {
 
 template var<int> &varGet<int>(const char *name);
 template var<float> &varGet<float>(const char *name);
+template var<u::string> &varGet<u::string>(const char *name);
 
 u::optional<u::string> varValue(const u::string &name) {
     if (gVariables()->find(name) == gVariables()->end())
@@ -70,7 +70,7 @@ template <typename T>
 static inline varStatus varSet(const u::string &name, const T &value, bool callback) {
     if (gVariables()->find(name) == gVariables()->end())
         return kVarNotFoundError;
-    const auto &ref = (*gVariables())[name];
+    auto &ref = (*gVariables())[name];
     if (ref.type != varTypeTraits<T>::type)
         return kVarTypeError;
     auto &val = *(var<T>*)(ref.self);
@@ -116,17 +116,17 @@ bool writeConfig(const u::string &userPath) {
     u::vector<line> lines;
     auto addLine = [&lines](const u::string &name, const varReference &ref) {
         if (ref.type == kVarInt) {
-            auto handle = (var<int>*)ref.self;
+            const auto handle = (const var<int>*)ref.self;
             const auto &v = handle->get();
             if (handle->flags() & kVarPersist)
                 lines.push_back({ name, u::format("%d", v) });
         } else if (ref.type == kVarFloat) {
-            auto handle = (var<float>*)ref.self;
+            const auto handle = (const var<float>*)ref.self;
             const auto &v = handle->get();
             if (handle->flags() & kVarPersist)
                 lines.push_back({ name, u::format("%.2f", v) });
         } else if (ref.type == kVarString) {
-            auto handle = (var<u::string>*)ref.self;
+            const auto handle = (const var<u::string>*)ref.self;
             const auto &v = handle->get();
             if (handle->flags() & kVarPersist) {
                 if (v.empty())

@@ -467,7 +467,8 @@ bool world::load(kdMap *map) {
     }
 
     // HACK: Testing only
-    if (!m_gun.load(m_textures2D, "models/lg"))
+    m_gun = new model;
+    if (!m_gun->load(m_textures2D, "models/lg"))
         neoFatal("failed to load gun");
 
     m_stats = r::stat::add("world", "Map");
@@ -499,7 +500,7 @@ bool world::upload(const m::perspective &p) {
         neoFatal("failed to upload cone");
 
     // HACK: Testing only
-    if (!m_gun.upload())
+    if (!m_gun->upload())
         neoFatal("failed to upload gun");
 
     // upload particle systems
@@ -666,6 +667,9 @@ bool world::upload(const m::perspective &p) {
 }
 
 void world::unload(bool destroy) {
+    // Note: must be before deleting the textures below
+    delete m_gun;
+
     for (auto &it : m_textures2D) {
         m_stats->decTextureCount();
         m_stats->decTextureMemory(it.second->memory());
@@ -924,7 +928,7 @@ void world::geometryPass(const pipeline &pl) {
             p.setScale({0.1, 0.1, 0.1});
             p.setPosition({-0.15, 0.2, -0.35});
             p.setWorld({0, 0, 0});
-            m_gun.render(p, pl.world());
+            m_gun->render(p, pl.world());
         }
 #endif
 
