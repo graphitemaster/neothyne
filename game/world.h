@@ -60,6 +60,7 @@ struct world {
 
     bool setRenderer(r::World &renderer) {
         m_renderer = &renderer;
+        return true;
     }
 
     void setFog(const r::fog &f);

@@ -276,11 +276,27 @@ const char *CPUDesc() {
         }
     }
     if (desc[0]) {
+        // trim leading whitespace
+        char *trim = desc;
+        while (u::isspace(*trim)) trim++;
+        if (trim != desc && *trim)
+            u::moveMemory(desc, trim, strlen(trim) + 1);
+        // trim trailing whitespace
         const size_t size = strlen(desc);
         char *end = desc + size - 1;
         while (end >= desc && u::isspace(*end))
             end--;
         *(end + 1) = '\0';
+        // replace instances of two or more spaces with one
+        char *dest = desc;
+        char *chop = desc;
+        while (*chop) {
+            while (*chop == ' ' && *(chop + 1) == ' ')
+                chop++;
+            *dest++ = *chop++;
+        }
+        *dest ='\0';
+
         char format[1024];
         int count = SDL_GetCPUCount();
         int wrote = snprintf(format, sizeof format, "%s (%d %s)",
