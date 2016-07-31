@@ -93,7 +93,7 @@ inline stringMemory::~stringMemory() {
     bool leaks = false;
     for (region *reg = m_head; reg != m_tail; reg = nextRegion(reg))
     {
-        if (reg->free())
+        if (U_LIKELY(reg->free()))
             continue;
         leaks = true;
         break;
