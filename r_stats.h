@@ -42,7 +42,7 @@ private:
     size_t m_textureMemory;
     size_t m_instances;
 
-    static u::deferred_data<u::map<const char *, stat>, false> m_stats;
+    static u::map<const char *, stat> m_stats;
     static u::vector<float> m_histogram;
     static u::vector<unsigned char> m_texture;
 };
