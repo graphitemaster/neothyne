@@ -110,7 +110,7 @@ void Console::shutdown() {
     map().~map_type();
 }
 
-unsigned char Console::m_map[sizeof(map_type)];
+alignas(alignof(Console::map_type)) unsigned char Console::m_map[sizeof(map_type)];
 
 Console::map_type &Console::map() {
     return *u::unsafe_cast<map_type*>(m_map);
