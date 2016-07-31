@@ -89,7 +89,6 @@ private:
     friend struct Console;
     Reference m_reference;
     const char *m_default;
-    u::string *current() const;
     alignas(alignof(u::string)) unsigned char m_current[sizeof(u::string)];
     int m_flags;
 };

@@ -104,7 +104,7 @@ void Console::shutdown() {
         if (ref->m_type != kVarString)
             continue;
         auto &value = *((Variable<u::string> *)ref->m_handle);
-        value.current()->~string();
+        value.get().~string();
     }
     // and the hashtable
     map().~map_type();
@@ -113,12 +113,7 @@ void Console::shutdown() {
 unsigned char Console::m_map[sizeof(map_type)];
 
 Console::map_type &Console::map() {
-    union {
-        map_type *m;
-        void *p;
-    };
-    *(void **)&p = (void *)m_map;
-    return *m;
+    return *u::unsafe_cast<map_type*>(m_map);
 }
 
 }

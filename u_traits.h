@@ -600,6 +600,17 @@ inline constexpr void *offset_of(T1 T2::*member) {
     return (void *)&(((T2*)nullptr)->*member);
 }
 
+/// unsafe_cast
+template <typename T1, typename T2>
+inline T1 unsafe_cast(T2 object) {
+    union {
+        T1 casted;
+        void *p;
+    };
+    *(void **)&p = (void *)object;
+    return casted;
+}
+
 }
 
 #undef HAS_FEATURE

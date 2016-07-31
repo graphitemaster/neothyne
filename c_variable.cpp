@@ -118,31 +118,22 @@ Variable<u::string>::Variable(int flags,
 {
 }
 
-u::string *Variable<u::string>::current() const {
-    union {
-        u::string *s;
-        void *p;
-    };
-    *(void **)&p = (void *)m_current;
-    return s;
-}
-
 Variable<u::string>::operator u::string&() {
-    return *current();
+    return *u::unsafe_cast<u::string *>(m_current);
 }
 
 u::string &Variable<u::string>::get() {
-    return *current();
+    return *u::unsafe_cast<u::string *>(m_current);
 }
 
 const u::string &Variable<u::string>::get() const {
-    return *current();
+    return *u::unsafe_cast<u::string *>(m_current);
 }
 
 int Variable<u::string>::set(const u::string &value) {
     if (m_flags & kReadOnly)
         return Console::kVarReadOnlyError;
-    *current() = value;
+    *u::unsafe_cast<u::string *>(m_current) = value;
     return Console::kVarSuccess;
 }
 
