@@ -44,6 +44,7 @@ protected:
     };
 
     static region *nextRegion(region *reg);
+    static region *prevRegion(region *reg);
     region *findAvailable(size_t size);
     bool mergeFree();
     region *divideRegion(region *reg, size_t size);
@@ -88,7 +89,17 @@ inline stringMemory::stringMemory()
 
 inline stringMemory::~stringMemory() {
 #if !defined(NDEBUG)
-    print();
+    // walk the list to see if we leaked any memory
+    bool leaks = false;
+    for (region *reg = m_head; reg != m_tail; reg = nextRegion(reg))
+    {
+        if (reg->free())
+            continue;
+        leaks = true;
+        break;
+    }
+    if (leaks)
+        print();
 #endif
     neoFree(m_head);
 }
