@@ -105,6 +105,7 @@ void BQRFilterInstance::filter(float *buffer, size_t samples, size_t channels, f
     }
 
     if (m_wetSignalFader.m_active > 0) {
+        m_dirty = true;
         m_wetSignal = m_wetSignalFader(time);
     }
 
