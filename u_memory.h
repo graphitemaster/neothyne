@@ -406,38 +406,6 @@ inline void unique_ptr<T[], D>::kill() {
     }
 }
 
-///! deferred_data
-template <typename T, bool F = true>
-struct deferred_data {
-    deferred_data() = default;
-    ~deferred_data();
-    T *operator()();
-    void free();
-private:
-    alignas(alignof(T)) unsigned char m_data[sizeof(T)];
-};
-
-template <typename T, bool F>
-inline deferred_data<T, F>::~deferred_data() {
-    if (F) free();
-}
-
-template <typename T, bool F>
-inline T *deferred_data<T, F>::operator()() {
-    void *p = m_data;
-    static bool initialized = false;
-    if (initialized)
-        return (T*)p;
-    initialized = true;
-    return new ((T*)p) T();
-}
-
-template <typename T, bool F>
-inline void deferred_data<T, F>::free() {
-    void *p = m_data;
-    ((T*)p)->~T();
-}
-
 }
 
 #endif

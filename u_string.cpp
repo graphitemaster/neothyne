@@ -329,18 +329,16 @@ void stringMemory::print() {
     }
 }
 
-// We utilize deferred data here due to C++ lacking any sort of primitives for
-// specifying initialization order of statics.
-static deferred_data<stringMemory> gStringMemory;
+static stringMemory gStringMemory;
 
 #define STR_MALLOC(SIZE) \
-    gStringMemory()->allocate((SIZE))
+    gStringMemory.allocate((SIZE))
 
 #define STR_REALLOC(PTR, SIZE) \
-    gStringMemory()->reallocate((PTR), (SIZE))
+    gStringMemory.reallocate((PTR), (SIZE))
 
 #define STR_FREE(PTR) \
-    gStringMemory()->deallocate((PTR))
+    gStringMemory.deallocate((PTR))
 
 ///! string
 string::string()
