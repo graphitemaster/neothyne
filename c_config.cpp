@@ -1,3 +1,5 @@
+#include <time.h>
+
 #include "u_algorithm.h"
 #include "u_vector.h"
 #include "u_file.h"
@@ -12,6 +14,12 @@ bool Config::write(const u::string &path) {
     u::file file = u::fopen(path + "init.cfg", "w");
     if (!file)
         return false;
+
+    const time_t t = time(nullptr);
+    const struct tm tm = *localtime(&t);
+    u::fprint(file, "# Wrote by Neothyne on %d-%d-%d-%d%d%d\n\n",
+        tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+        tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     // use the static linked list for traversal it's sorted
     for (Reference *ref = Console::m_references; ref; ref = ref->m_next) {
