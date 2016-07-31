@@ -260,7 +260,7 @@ Audio::Audio(int flags)
                                           0,
                                           &wantFormat,
                                           &haveFormat,
-                                          0)))
+                                          0)) == 0)
         {
             neoFatal("failed to initialize audio (%s)", SDL_GetError());
         }
