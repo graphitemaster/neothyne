@@ -77,12 +77,15 @@ protected:
 
 struct Source {
     enum {
-        kLoop = 1 << 0
+        kLoop = 1 << 0,
+        kSingleInstance = 1 << 1
     };
 
     Source();
 
     void setLooping(bool looping);
+    void setSingleInstance(bool singleInstance);
+
     virtual void setFilter(int filterHandle, Filter *filter);
 
     virtual ~Source();

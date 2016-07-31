@@ -131,6 +131,13 @@ void Source::setLooping(bool looping) {
         m_flags &= ~kLoop;
 }
 
+void Source::setSingleInstance(bool singleInstance) {
+    if (singleInstance)
+        m_flags |= kSingleInstance;
+    else
+        m_flags &= ~kSingleInstance;
+}
+
 void Source::setFilter(int filterHandle, Filter *filter) {
     if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
         return;
@@ -322,6 +329,10 @@ int Audio::findFreeVoice() {
 }
 
 int Audio::play(Source &sound, float volume, float pan, bool paused, int lane) {
+    // only one instance is allowed
+    if (sound.m_flags & Source::kSingleInstance)
+        stopSound(sound);
+
     u::unique_ptr<SourceInstance> instance(sound.create());
     sound.m_owner = this;
 

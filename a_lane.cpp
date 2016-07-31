@@ -14,8 +14,12 @@ LaneInstance::LaneInstance(Lane *parent)
 
 void LaneInstance::getAudio(float *buffer, size_t samples) {
     int handle = m_parent->m_channelHandle;
-    if (handle == 0)
+    if (handle == 0) {
+        // avoid reuse of scratch buffer if this lane hasn't played anything yet
+        for (size_t i = 0; i < samples * m_channels; i++)
+            m_scratch[i] = 0;
         return;
+    }
 
     Audio *owner = m_parent->m_owner;
     if (owner->m_scratchNeeded != m_scratch.size())
