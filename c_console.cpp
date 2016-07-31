@@ -5,6 +5,11 @@
 
 namespace c {
 
+// Console variables are arranged into a linked list of references with the use
+// of static constructors. The initialization function then initializes a
+// hashtable and inserts them while initializing string variables. This avoids
+// having to lazily initialize the string heap and helps with memory management
+// during shutdown
 Reference *Console::m_references = nullptr;
 
 const Reference &Console::reference(const char *name) {
@@ -82,7 +87,41 @@ int Console::change(const u::string &name, const u::string &value) {
     return change(&name[0], &value[0]);
 }
 
+Reference *Console::split(Reference *ref) {
+    if (!ref || !ref->m_next)
+        return nullptr;
+    Reference *splitted = ref->m_next;
+    ref->m_next = splitted->m_next;
+    splitted->m_next = split(splitted->m_next);
+    return splitted;
+}
+
+Reference *Console::merge(Reference *lhs, Reference *rhs) {
+    if (!lhs)
+        return rhs;
+    if (!rhs)
+        return lhs;
+    if (strcmp(lhs->m_name, rhs->m_name) > 0) {
+        rhs->m_next = merge(lhs, rhs->m_next);
+        return rhs;
+    }
+    lhs->m_next = merge(lhs->m_next, rhs);
+    return lhs;
+}
+
+Reference *Console::sort(Reference *begin) {
+    if (!begin)
+        return nullptr;
+    if (!begin->m_next)
+        return begin;
+    Reference *splitted = split(begin);
+    return merge(sort(begin), sort(splitted));
+}
+
 void Console::initialize() {
+    // sort the references by key
+    m_references = sort(m_references);
+
     // initialize the hashtable for references
     new (m_map) map_type;
     auto &table = map();
