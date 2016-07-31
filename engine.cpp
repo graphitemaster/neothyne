@@ -210,6 +210,7 @@ struct Context {
 private:
     friend struct Engine;
     u::map<int, Controller> m_controllers;
+    SDL_GLContext m_gl;
     SDL_Window *m_window;
     u::string m_textString;
     TextState m_textState;
@@ -222,11 +223,14 @@ inline Context::Context()
     : m_window(nullptr)
     , m_textState(TextState::kInactive)
 {
+    memset(&m_gl, 0, sizeof m_gl);
 }
 
 inline Context::~Context() {
-    if (m_window)
+    if (m_window) {
+        SDL_GL_DeleteContext(m_gl);
         SDL_DestroyWindow(m_window);
+    }
     SDL_Quit();
 }
 
@@ -450,7 +454,7 @@ bool Engine::initContext() {
         flags
     );
 
-    if (!ctx->m_window || !SDL_GL_CreateContext(ctx->m_window)) {
+    if (!ctx->m_window || !(ctx->m_gl = SDL_GL_CreateContext(ctx->m_window))) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
             "Neothyne: Initialization error",
             "OpenGL 3.0 or higher is required",
