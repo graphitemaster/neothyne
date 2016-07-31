@@ -3,59 +3,39 @@
 
 namespace c {
 
-static constexpr char kAlphabet[] = "abcdefghijklmnopqrstuvwxyz_";
-
-///! Completer
-struct Completer {
-    Completer();
-    ~Completer();
-    Completer *insert(const char *c, bool term = true);
-    void insert(const char *c);
-    static int at(int ch);
-    static Completer *insert(Completer *h, const char *c);
-    static void dfs(const Completer *const n, u::string &&data, u::vector<u::string> &matches);
-    static void search(const Completer *const n, const char *find, u::vector<u::string> &matches, const u::string &item = "");
-    void search(const char *find, u::vector<u::string> &matches) const;
-private:
-    bool m_term;
-    Completer *m_array[sizeof kAlphabet];
-};
-
-static u::deferred_data<Completer> gAutoComplete;
-
-inline Completer::Completer()
+Complete::Complete()
     : m_term(false)
 {
     for (auto &it : m_array)
         it = nullptr;
 }
 
-inline Completer::~Completer() {
+Complete::~Complete() {
     for (auto &it : m_array)
         delete it;
 }
 
-inline int Completer::at(int ch) {
+int Complete::at(int ch) {
     const char *find = strchr(kAlphabet, ch);
     return find ? find - kAlphabet : -1;
 }
 
-inline Completer *Completer::insert(const char *c, bool term) {
+Complete *Complete::insert(const char *c, bool term) {
     if (!*c)
         return this;
-    Completer *p = this;
+    Complete *p = this;
     for (const char *it = c; *it; ++it) {
         const int i = at(*it);
         U_ASSERT(i != -1);
         if (!p->m_array[i])
-            p->m_array[i] = new Completer;
+            p->m_array[i] = new Complete;
         p = p->m_array[i];
     }
     p->m_term = term;
     return this;
 }
 
-inline void Completer::dfs(const Completer *const n, u::string &&item, u::vector<u::string> &matches) {
+void Complete::dfs(const Complete *const n, u::string &&item, u::vector<u::string> &matches) {
     if (n) {
         if (n->m_term)
             matches.push_back(item);
@@ -64,15 +44,15 @@ inline void Completer::dfs(const Completer *const n, u::string &&item, u::vector
     }
 }
 
-inline void Completer::insert(const char *c) {
-    Completer::insert(this, c);
+void Complete::add(const char *ident) {
+    Complete::insert(this, ident);
 }
 
-inline Completer *Completer::insert(Completer *h, const char *c) {
-    return (h ? h : new Completer)->insert(c, true);
+Complete *Complete::insert(Complete *h, const char *c) {
+    return (h ? h : new Complete)->insert(c, true);
 }
 
-inline void Completer::search(const Completer *const n, const char *s, u::vector<u::string> &matches, const u::string &item) {
+void Complete::search(const Complete *const n, const char *s, u::vector<u::string> &matches, const u::string &item) {
     if (*s) {
         const int f = at(*s);
         if (f != -1 && n->m_array[f])
@@ -83,19 +63,8 @@ inline void Completer::search(const Completer *const n, const char *s, u::vector
     }
 }
 
-inline void Completer::search(const char *s, u::vector<u::string> &matches) const {
-    Completer::search(this, s, matches);
-}
-
-///! Complete
-void Complete::insert(const char *ident) {
-    gAutoComplete()->insert(gAutoComplete(), ident);
-}
-
-u::vector<u::string> Complete::find(const char *prefix) {
-    u::vector<u::string> matches;
-    gAutoComplete()->search(prefix, matches);
-    return u::move(matches);
+void Complete::search(const char *s, u::vector<u::string> &matches) const {
+    Complete::search(this, s, matches);
 }
 
 }

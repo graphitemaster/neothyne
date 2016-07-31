@@ -5,6 +5,12 @@
 
 namespace c {
 
+alignas(alignof(Console::Map))
+unsigned char Console::m_map[sizeof(Map)];
+
+alignas(alignof(Complete))
+unsigned char Console::m_complete[sizeof(Complete)];
+
 // Console variables are arranged into a linked list of references with the use
 // of static constructors. The initialization function then initializes a
 // hashtable and inserts them while initializing string variables. This avoids
@@ -121,10 +127,12 @@ Reference *Console::sort(Reference *begin) {
 void Console::initialize() {
     // sort the references by key
     m_references = sort(m_references);
+    new (m_map) Map;
+    new (m_complete) Complete;
 
-    // initialize the hashtable for references
-    new (m_map) map_type;
     auto &table = map();
+    auto &completer = complete();
+
     for (Reference *ref = m_references; ref; ref = ref->m_next) {
         table[ref->m_name] = *ref;
         // initialize the string values
@@ -132,8 +140,8 @@ void Console::initialize() {
             auto &value = *((Variable<u::string> *)ref->m_handle);
             new (value.m_current) u::string(value.m_default ? value.m_default : "");
         }
-        // add it to the auto completer
-        Complete::insert(ref->m_name);
+        // add it to the auto complete tree
+        completer.insert(ref->m_name);
     }
 }
 
@@ -146,13 +154,23 @@ void Console::shutdown() {
         value.get().~string();
     }
     // and the hashtable
-    map().~map_type();
+    map().~Map();
+    // and the auto complete tree
+    complete().~Complete();
 }
 
-alignas(alignof(Console::map_type)) unsigned char Console::m_map[sizeof(map_type)];
+u::vector<u::string> Console::suggestions(const u::string &prefix) {
+    u::vector<u::string> matches;
+    complete().search(prefix, matches);
+    return u::move(matches);
+}
 
-Console::map_type &Console::map() {
-    return *u::unsafe_cast<map_type*>(m_map);
+Console::Map &Console::map() {
+    return *u::unsafe_cast<Map*>(m_map);
+}
+
+Complete &Console::complete() {
+    return *u::unsafe_cast<Complete*>(m_complete);
 }
 
 }

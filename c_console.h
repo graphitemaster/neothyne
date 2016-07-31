@@ -5,6 +5,7 @@
 #include "u_map.h"
 
 #include "c_variable.h"
+#include "c_complete.h"
 
 namespace c {
 
@@ -41,7 +42,12 @@ struct Console {
     // shut down the console subsystem
     static void shutdown();
 
+    // get console variable suggestions for a prefix
+    static u::vector<u::string> suggestions(const u::string &prefix);
+
 private:
+    typedef u::map<u::string, Reference> Map;
+
     friend struct Config;
     friend struct Reference;
 
@@ -51,9 +57,10 @@ private:
     static Reference *merge(Reference *lhs, Reference *rhs);
     static Reference *sort(Reference *begin);
 
-    using map_type = u::map<u::string, Reference>;
-    static map_type &map();
-    static unsigned char m_map[sizeof(map_type)];
+    static Map &map();
+    static Complete &complete();
+    static unsigned char m_map[sizeof(Map)];
+    static unsigned char m_complete[sizeof(Complete)];
 };
 
 }
