@@ -86,8 +86,8 @@ struct var<u::string> {
     typedef void (*command)(u::string &value);
 
     var(int flags, const char *name, const char *desc);
-    var(int flags, const char *name, const char *desc, const u::string &def);
-    var(int flags, const char *name, const char *desc, const u::string &def, command cb);
+    var(int flags, const char *name, const char *desc, const char *def);
+    var(int flags, const char *name, const char *desc, const char *def, command cb);
 
     operator u::string&();
     u::string &get();
@@ -97,7 +97,7 @@ struct var<u::string> {
     int flags() const;
 
 private:
-    const u::string m_default;
+    const char *m_default;
     u::string m_current;
     command m_callback;
     int m_flags;
@@ -224,7 +224,7 @@ inline void var<T>::toggle() {
 inline var<u::string>::var(int flags,
                            const char *name,
                            const char *desc,
-                           const u::string &def)
+                           const char *def)
     : m_default(def)
     , m_current(def)
     , m_callback(nullptr)
@@ -245,7 +245,7 @@ inline var<u::string>::var(int flags,
 inline var<u::string>::var(int flags,
                            const char *name,
                            const char *desc,
-                           const u::string &def,
+                           const char *def,
                            typename var<u::string>::command cb)
     : m_default(def)
     , m_current(def)
