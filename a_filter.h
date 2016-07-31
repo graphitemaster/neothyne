@@ -39,12 +39,13 @@ private:
 struct EchoFilter final : Filter {
     virtual FilterInstance *create() final;
     EchoFilter();
-    void setParams(float delay, float decay);
+    void setParams(float delay, float decay = 0.7f, float filter = 0.0f);
 
 private:
     friend struct EchoFilterInstance;
     float m_delay;
     float m_decay;
+    float m_filter;
 };
 
 struct BQRFilter;
@@ -142,6 +143,8 @@ private:
     friend struct DCRemovalFilterInstance;
     float m_length;
 };
+
+struct LoFiFilter;
 
 }
 

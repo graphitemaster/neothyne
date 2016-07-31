@@ -39,12 +39,14 @@ void EchoFilterInstance::filter(float *buffer, size_t samples, size_t channels, 
         m_buffer.resize(length);
     }
     const size_t bufferLength = m_buffer.size() / channels;
+    const size_t p = (m_offset + bufferLength - 1) % bufferLength; // low pass sampling offset (wraps around)
     const float decay = m_parent->m_decay;
     for (size_t i = 0; i < samples; i++) {
         for (size_t j = 0; j < channels; j++) {
             const size_t c = j * bufferLength;
             const size_t b = j * samples;
-            float sample = buffer[i + b] + m_buffer[m_offset + c] * decay;
+            m_buffer[m_offset + c] = m_parent->m_filter * m_buffer[p + c] + (1.0f - m_parent->m_filter) * m_buffer[m_offset + c];
+            const float sample = buffer[i + b] + m_buffer[m_offset + c] * decay;
             m_buffer[m_offset + c] = sample;
             buffer[i + b] = sample;
         }
@@ -60,12 +62,14 @@ EchoFilterInstance::~EchoFilterInstance() {
 EchoFilter::EchoFilter()
     : m_delay(1.0f)
     , m_decay(0.5f)
+    , m_filter(0.0f)
 {
 }
 
-void EchoFilter::setParams(float delay, float decay) {
+void EchoFilter::setParams(float delay, float decay, float filter) {
     m_delay = delay;
     m_decay = decay;
+    m_filter = filter;
 }
 
 FilterInstance *EchoFilter::create() {
