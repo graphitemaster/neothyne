@@ -52,6 +52,12 @@ inline u::vector<u::string> split(const char *str, char ch = ' ') {
     bool quoted = false;
     splitted.push_back("");
     for (const char *s = str; *s; s++) {
+        if (*s == '\\' && (s[1] == '\\' || s[1] == '\"')) {
+            if (s[1] == '\\') splitted[splitted.size() - 1] += "\\";
+            if (s[1] == '\"') splitted[splitted.size() - 1] += "\"";
+            s += 2;
+            continue;
+        }
         if (*s == '\"') {
             quoted = !quoted;
             continue;

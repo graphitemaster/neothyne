@@ -166,6 +166,7 @@ VAR(int, vid_width, "resolution width", 0, 15360, 0);
 VAR(int, vid_height, "resolution height", 0, 8640, 0);
 VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
+VAR(u::string, vid_display, "video display");
 
 VAR(int, scr_info, "embed engine info in screenshot", 0, 1, 1);
 VAR(int, scr_format, "screenshot file format", 0, 3, 3);
@@ -379,6 +380,36 @@ bool Engine::initContext() {
         }
     }
 
+    // search for a suitable display
+    const u::string &displayName = vid_display.get();
+    int display = -1;
+    int displays = SDL_GetNumVideoDisplays();
+    u::print("[video] => found %d displays\n", displays);
+    if (displayName.size())
+        u::print("[video] => searching for display `%s'\n", displayName);
+    for (int i = 0; i < displays; i++) {
+        const char *name = SDL_GetDisplayName(i);
+        u::print("[video] => found %s display `%s' ",
+            name == displayName ? "matching" : "a", name);
+        if (name == displayName)
+            display = i;
+        SDL_Rect bounds;
+        if (SDL_GetDisplayBounds(i, &bounds))
+            u::print("\n");
+        else
+            u::print("(%d x %d)\n", bounds.w, bounds.h);
+    }
+    if (display == -1) {
+        // by default SDL uses display 0
+        const char *name = SDL_GetDisplayName(0);
+        if (name)
+            vid_display.set(name);
+        display = 0;
+    }
+    const char *selectedDisplayName = SDL_GetDisplayName(display);
+    if (selectedDisplayName)
+        u::print("[video] => using display `%s'\n", selectedDisplayName);
+
     // Get the display mode resolution
     SDL_DisplayMode mode;
     if (SDL_GetDesktopDisplayMode(0, &mode) != 0) {
@@ -447,8 +478,8 @@ bool Engine::initContext() {
     snprintf(name, sizeof name, "Neothyne [%s]", gOperatingSystem);
     ctx->m_window = SDL_CreateWindow(
         name,
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
+        display == -1 ? SDL_WINDOWPOS_UNDEFINED : SDL_WINDOWPOS_CENTERED_DISPLAY(display),
+        display == -1 ? SDL_WINDOWPOS_UNDEFINED : SDL_WINDOWPOS_CENTERED_DISPLAY(display),
         m_screenWidth,
         m_screenHeight,
         flags
@@ -1036,13 +1067,20 @@ static int entryPoint(int argc, char **argv) {
         dxtCompressor.set(1);
     }
 
-    u::print("OS: %s\nCPU: %s\nRAM: %s\nVendor: %s\nRenderer: %s\nDriver: %s\nShading: %s (using %s)\nExtensions:\n",
-        gOperatingSystem, u::CPUDesc(), u::RAMDesc(), vendor, renderer, version, shader, gl::glslVersionString());
+    u::print("[video] => Vendor: %s\n", vendor);
+    u::print("[video] => Renderer: %s\n", renderer);
+    u::print("[video] => Driver: %s\n", version);
+    u::print("[video] => Shading: %s (using %s)\n", shader, gl::glslVersionString());
+    u::print("[video] => Extensions:\n");
 
     for (const auto &it : gl::extensions())
-        u::print(" %s\n", gl::extensionString(it));
+        u::print("            %s\n", gl::extensionString(it));
 
-    u::print("Game: %s\nUser: %s\n", gEngine.gamePath(), gEngine.userPath());
+    u::print("[system] => OS: %s\n", gOperatingSystem);
+    u::print("[system] => CPU: %s\n", u::CPUDesc());
+    u::print("[system] => RAM: %s\n", u::RAMDesc());
+    u::print("[system] => Game: %s\n", gEngine.gamePath());
+    u::print("[system] => User: %s\n", gEngine.userPath());
 
     a::Audio *audio = new a::Audio(a::Audio::kClipRoundOff);
     // Launch the game

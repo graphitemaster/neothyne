@@ -28,12 +28,27 @@ bool Config::write(const u::string &path) {
             if (handle->flags() & kPersist)
                 lines.push_back({ name, u::format("%.2f", value) });
         } else if (ref.m_type == kVarString) {
+            auto escape = [](const u::string &before) {
+                u::string after;
+                after.reserve(before.size() + 4);
+                for (size_t i = 0; i < before.size(); i++) {
+                    switch (before[i]) {
+                    case '"':
+                    case '\\':
+                        after += '\\';
+                    default:
+                        after += before[i];
+                    }
+                }
+                return after;
+            };
+
             const auto handle = (const Variable<u::string>*)ref.m_handle;
             const auto &value = handle->get();
             if (handle->flags() & kPersist) {
                 if (value.empty())
                     return;
-                lines.push_back({ name, u::format("\"%s\"", value) });
+                lines.push_back({ name, u::format("\"%s\"", escape(value)) });
             }
         }
     };
@@ -58,6 +73,7 @@ bool Config::read(const u::string &path) {
     u::file file = u::fopen(path + "init.cfg", "r");
     if (!file)
         return false;
+
     for (u::string line; u::getline(file, line); ) {
         const u::vector<u::string> kv = u::split(line);
         if (kv.size() != 2)

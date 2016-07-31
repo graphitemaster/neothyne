@@ -189,6 +189,7 @@ Audio::Audio(int flags)
     if (SDL_AudioInit(driverName))
         neoFatal("failed to initialize audio driver `%s'", driverName);
     snd_driver.set(driverName);
+    u::print("[audio] => using driver `%s'\n", driverName);
 
     // find the appropriate device
     const int deviceCount = SDL_GetNumAudioDevices(0);
