@@ -20,7 +20,7 @@ bool Config::write(const u::string &path) {
             const auto handle = (const Variable<int>*)ref->m_handle;
             const auto &value = handle->get();
             if (handle->flags() & kPersist) {
-                u::fprint(file, "# %s (integer value in range [%d, %d], defaults %d)\n",
+                u::fprint(file, "# %s (in [%d, %d], defaults %d)\n",
                     ref->m_description, handle->min(), handle->max(), handle->m_default);
                 u::fprint(file, "%s %d\n", name, value);
             }
@@ -28,7 +28,7 @@ bool Config::write(const u::string &path) {
             const auto handle = (const Variable<float>*)ref->m_handle;
             const auto &value = handle->get();
             if (handle->flags() & kPersist) {
-                u::fprint(file, "# %s (floating value in range [%.2f, %.2f] defaults %.2f)\n",
+                u::fprint(file, "# %s (in [%.2f, %.2f], defaults %.2f)\n",
                     ref->m_description, handle->min(), handle->max(), handle->m_default);
                 u::fprint(file, "%s %.2f\n", name, value);
             }
