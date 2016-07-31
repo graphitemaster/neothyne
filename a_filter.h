@@ -75,10 +75,12 @@ private:
     float m_sampleRate;
     float m_frequency;
     float m_resonance;
+    float m_wetSignal;
 
     Fader m_resonanceFader;
     Fader m_frequencyFader;
     Fader m_sampleRateFader;
+    Fader m_wetSignalFader;
 
     bool m_active;
     bool m_dirty;
@@ -97,7 +99,8 @@ struct BQRFilter final : Filter {
     enum {
         kSampleRate,
         kFrequency,
-        kResonance
+        kResonance,
+        kWet
     };
 
     virtual BQRFilterInstance *create() final;
@@ -111,6 +114,7 @@ private:
     float m_sampleRate;
     float m_frequency;
     float m_resonance;
+    float m_wetSignal;
 };
 
 // check docs/AUDIO.md for explanation of how this does what it does

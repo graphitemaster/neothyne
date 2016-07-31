@@ -79,6 +79,7 @@ BQRFilterInstance::BQRFilterInstance(BQRFilter *parent)
     , m_sampleRate(m_parent->m_sampleRate)
     , m_frequency(m_parent->m_frequency)
     , m_resonance(m_parent->m_resonance)
+    , m_wetSignal(1.0f)
     , m_active(false)
     , m_dirty(false)
 {
@@ -103,6 +104,10 @@ void BQRFilterInstance::filter(float *buffer, size_t samples, size_t channels, f
         m_sampleRate = m_sampleRateFader(time);
     }
 
+    if (m_wetSignalFader.m_active > 0) {
+        m_wetSignal = m_wetSignalFader(time);
+    }
+
     if (m_dirty)
         calcParams();
 
@@ -112,12 +117,13 @@ void BQRFilterInstance::filter(float *buffer, size_t samples, size_t channels, f
             float x = buffer[c];
             m_y2[s] = (m_a.x * x) + (m_a.y * m_x1[s]) + (m_a.z * m_x2[s])
                                   - (m_b.x * m_y1[s]) - (m_b.y * m_y2[s]);
-            buffer[c++] = m_y2[s];
+            buffer[c] += (m_y2[s] - buffer[c]) * m_wetSignal;
+            c++;
             // permute filter ops to reduce movement
             m_x2[s] = buffer[c];
             m_y1[s] = (m_a.y * x) + (m_a.x * m_x2[s]) + (m_a.z * m_x1[s])
                                   - (m_b.x * m_y2[s]) - (m_b.y * m_y1[s]);
-            buffer[c] = m_y1[s];
+            buffer[c] += (m_y1[s] - buffer[c]) * m_wetSignal;
             // move it a little
             m_x1[s] = m_x2[s];
             m_x2[s] = x;
@@ -145,6 +151,11 @@ void BQRFilterInstance::setFilterParam(int attrib, float value) {
         m_resonanceFader.m_active = 0;
         m_resonance = value;
         break;
+    case BQRFilter::kWet:
+        m_dirty = true;
+        m_wetSignalFader.m_active = 0;
+        m_wetSignal = value;
+        break;
     }
 }
 
@@ -161,6 +172,9 @@ void BQRFilterInstance::fadeFilterParam(int attrib, float from, float to, float 
     case BQRFilter::kResonance:
         m_sampleRateFader.lerp(from, to, time, startTime);
         break;
+    case BQRFilter::kWet:
+        m_wetSignalFader.lerp(from, to, time, startTime);
+        break;
     }
 }
 
@@ -176,6 +190,9 @@ void BQRFilterInstance::oscFilterParam(int attrib, float from, float to, float t
         break;
     case BQRFilter::kResonance:
         m_resonanceFader.lfo(from, to, time, startTime);
+        break;
+    case BQRFilter::kWet:
+        m_wetSignalFader.lfo(from, to, time, startTime);
         break;
     }
 }
