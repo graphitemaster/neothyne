@@ -1,4 +1,4 @@
-#include "cvar.h"
+#include "c_console.h"
 
 #include "r_skybox.h"
 #include "r_pipeline.h"
@@ -77,7 +77,7 @@ skybox::~skybox() {
 }
 
 bool skybox::load(const u::string &skyboxName) {
-    auto &r_debug_tex = varGet<int>("r_debug_tex");
+    auto &r_debug_tex = c::Console::value<int>("r_debug_tex");
     static const char *kSuffices[] = { "_bk", "_ft", "_lf", "_rt", "_up", "_dn" };
     for (size_t i = 0; i < 6; i++)
         if (!m_textures[i].load(skyboxName + kSuffices[i], false, false, r_debug_tex.get()))
@@ -205,7 +205,7 @@ void skybox::render(const pipeline &pl, const fog &f) {
     p.setPerspective(pl.perspective());
 
     skyboxMethod *renderMethod = nullptr;
-    if (varGet<int>("r_fog")) {
+    if (c::Console::value<int>("r_fog")) {
         renderMethod = &m_methods[1];
         renderMethod->enable();
         renderMethod->setFog(f);

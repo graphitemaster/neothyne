@@ -1,6 +1,6 @@
 #include "engine.h"
 #include "gui.h"
-#include "cvar.h"
+#include "c_variable.h"
 
 #include "u_misc.h"
 #include "u_lru.h"

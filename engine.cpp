@@ -9,9 +9,10 @@
 
 #include "texture.h"
 #include "engine.h"
-#include "cvar.h"
 
+#include "c_console.h"
 #include "c_complete.h"
+#include "c_config.h"
 
 #include "r_common.h"
 #include "r_model.h"
@@ -149,7 +150,7 @@ failedProductName:
 static volatile bool gShutdown = false;
 
 static void neoSignalHandler(int) {
-    writeConfig(neoUserPath());
+    c::Config::write(neoUserPath());
     gShutdown = true;
 }
 
@@ -582,7 +583,7 @@ bool Engine::initData(int &argc, char **argv) {
     }
 
     // Established game and user data paths, now load the config
-    readConfig(m_userPath);
+    c::Config::read(m_userPath);
     return true;
 }
 
@@ -969,7 +970,7 @@ uint32_t FrameTimer::ticks() const {
 
 // Global functions
 [[noreturn]] void neoFatalError(const char *error) {
-    writeConfig(gEngine.userPath());
+    c::Config::write(gEngine.userPath());
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Neothyne: Fatal error", error, nullptr);
     fflush(nullptr);
     abort();
@@ -998,6 +999,8 @@ static int entryPoint(int argc, char **argv) {
     setenv("DRI_PRIME", "1", 1);
 #endif
 
+    c::Console::initialize();
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0)
         neoFatal("Failed to initialize SDL2");
 
@@ -1025,7 +1028,7 @@ static int entryPoint(int argc, char **argv) {
     // Intel online texture compression is slow (even with the compression hint.)
     if (strstr(vendor, "Intel")) {
         // Silently fails if not compiled with -DDXT_COMPRESSOR
-        auto &dxtCompressor = varGet<int>("r_dxt_compressor");
+        auto &dxtCompressor = c::Console::value<int>("r_dxt_compressor");
         dxtCompressor.set(1);
     }
 
@@ -1040,12 +1043,15 @@ static int entryPoint(int argc, char **argv) {
     a::Audio *audio = new a::Audio(a::Audio::kClipRoundOff);
     // Launch the game
     const int status = neoMain(gEngine.m_frameTimer, *audio, argc, argv, (bool &)gShutdown);
-    writeConfig(gEngine.userPath());
+    c::Config::write(gEngine.userPath());
 
     // Instance must be released before OpenGL context is lost
     r::geomMethods::instance().release();
 
     delete audio;
+
+    // shut down the console (frees the console variables)
+    c::Console::shutdown();
     return status;
 }
 

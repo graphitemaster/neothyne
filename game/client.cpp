@@ -4,7 +4,7 @@
 #include "client.h"
 #include "kdmap.h"
 #include "world.h"
-#include "cvar.h"
+#include "c_variable.h"
 
 static constexpr float kClientMaxVelocity = 120.0f;
 static constexpr float kClientMaxEditVelocity = kClientMaxVelocity * 10.0f;

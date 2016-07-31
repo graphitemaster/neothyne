@@ -3,8 +3,10 @@
 #include "world.h"
 #include "client.h"
 #include "menu.h"
-#include "cvar.h"
 #include "edit.h"
+
+#include "c_variable.h"
+#include "c_console.h"
 
 #include "r_pipeline.h"
 #include "r_gui.h"
@@ -31,7 +33,7 @@ VAR(float, cl_farp, "far plane", 128.0f, 4096.0f, 2048.0f);
 
 static void setBinds() {
     neoBindSet("MouseDnL", []() {
-        if (varGet<int>("cl_edit").get() && (gMenuState == 0 || gMenuState == kMenuConsole))
+        if (c::Console::value<int>("cl_edit").get() && (gMenuState == 0 || gMenuState == kMenuConsole))
             edit::select();
     });
 
@@ -71,7 +73,7 @@ static void setBinds() {
     });
 
     neoBindSet("F10Dn", []() {
-        if (varGet<int>("cl_edit").get())
+        if (c::Console::value<int>("cl_edit").get())
             gMenuState ^= kMenuColorGrading;
         neoRelativeMouse(!((gMenuState & kMenuEdit) || (gMenuState & kMenuColorGrading)));
     });
@@ -81,14 +83,14 @@ static void setBinds() {
     });
 
     neoBindSet("F12Dn", []() {
-        if (varGet<int>("cl_edit").get())
+        if (c::Console::value<int>("cl_edit").get())
             gMenuState ^= kMenuEdit;
         neoRelativeMouse(!(gMenuState & kMenuEdit));
     });
 
     neoBindSet("EDn", []() {
         if (gPlaying) {
-            varGet<int>("cl_edit").toggle();
+            c::Console::value<int>("cl_edit").toggle();
             gMenuState &= ~kMenuEdit;
             neoRelativeMouse(!(gMenuState & kMenuEdit));
         }
@@ -338,7 +340,7 @@ int neoMain(FrameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
             u::format("%d fps : %.2f mspf\n", timer.fps(), timer.mspf()).c_str(),
             gui::RGBA(255, 255, 255, 255));
 
-        if (varGet<int>("cl_edit").get() && !(gMenuState & kMenuEdit)) {
+        if (c::Console::value<int>("cl_edit").get() && !(gMenuState & kMenuEdit)) {
             gui::drawText(neoWidth() / 2, neoHeight() - 20, gui::kAlignCenter, "F12 to toggle edit menu",
                 gui::RGBA(0, 0, 0, 255));
             gui::drawText(neoWidth() / 2, neoHeight() - 40, gui::kAlignCenter, "F10 to toggle color grading menu",
@@ -354,20 +356,20 @@ int neoMain(FrameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
             if (text == TextState::kFinished) {
                 auto values = u::split(inputText);
                 if (values.size() == 2) {
-                    switch (varChange(values[0], values[1])) {
-                    case kVarSuccess:
+                    switch (c::Console::change(values[0], values[1])) {
+                    case c::Console::kVarSuccess:
                         u::print("changed `%s' to `%s'\n", values[0], values[1]);
                         break;
-                    case kVarRangeError:
+                    case c::Console::kVarRangeError:
                         u::print("invalid range for `%s'\n", values[0]);
                         break;
-                    case kVarTypeError:
+                    case c::Console::kVarTypeError:
                         u::print("invalid type for `%s'\n", values[0]);
                         break;
-                    case kVarNotFoundError:
+                    case c::Console::kVarNotFoundError:
                         u::print("variable `%s' not found\n", values[0]);
                         break;
-                    case kVarReadOnlyError:
+                    case c::Console::kVarReadOnlyError:
                         u::print("variable `%s' is read-only\n", values[0]);
                         break;
                     }

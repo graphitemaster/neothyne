@@ -7,7 +7,7 @@
 #include "u_misc.h"
 #include "u_file.h"
 
-#include "cvar.h"
+#include "c_console.h"
 
 VAR(int, r_debug_tex, "debug textures by rendering information into them", 0, 1, 0);
 
@@ -428,8 +428,8 @@ bool material::upload() {
 }
 
 void material::calculatePermutation(bool skeletal) {
-    var<int> &spec_ = varGet<int>("r_spec");
-    var<int> &parallax_ = varGet<int>("r_parallax");
+    c::Variable<int> &spec_ = c::Console::value<int>("r_spec");
+    c::Variable<int> &parallax_ = c::Console::value<int>("r_parallax");
 
     int p = 0;
     if (skeletal)

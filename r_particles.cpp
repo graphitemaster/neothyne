@@ -8,7 +8,7 @@
 
 #include "m_plane.h"
 
-#include "cvar.h"
+#include "c_variable.h"
 
 namespace r {
 

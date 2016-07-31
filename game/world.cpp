@@ -1,6 +1,6 @@
 #include "engine.h"
 #include "world.h"
-#include "cvar.h"
+#include "c_variable.h"
 
 #include "u_file.h"
 

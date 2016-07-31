@@ -2,9 +2,11 @@
 #include "world.h"
 #include "client.h"
 #include "menu.h"
-#include "gui.h"
-#include "cvar.h"
 #include "grader.h"
+#include "gui.h"
+
+#include "c_variable.h"
+#include "c_console.h"
 
 #include "u_set.h"
 #include "u_misc.h"
@@ -208,15 +210,15 @@ static void menuDeveloper() {
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() / 2 - h / 2;
 
-    auto &trilinear = varGet<int>("r_trilinear");
-    auto &bilinear = varGet<int>("r_bilinear");
-    auto &fog = varGet<int>("r_fog");
-    auto &spec = varGet<int>("r_spec");
-    auto &texcompcache = varGet<int>("r_tex_compress_cache");
-    auto &mipmaps = varGet<int>("r_mipmaps");
-    auto &fov = varGet<float>("cl_fov");
-    auto &nearp = varGet<float>("cl_nearp");
-    auto &farp = varGet<float>("cl_farp");
+    auto &trilinear = c::Console::value<int>("r_trilinear");
+    auto &bilinear = c::Console::value<int>("r_bilinear");
+    auto &fog = c::Console::value<int>("r_fog");
+    auto &spec = c::Console::value<int>("r_spec");
+    auto &texcompcache = c::Console::value<int>("r_tex_compress_cache");
+    auto &mipmaps = c::Console::value<int>("r_mipmaps");
+    auto &fov = c::Console::value<float>("cl_fov");
+    auto &nearp = c::Console::value<float>("cl_nearp");
+    auto &farp = c::Console::value<float>("cl_farp");
 
     // Calculate texture compression cache contents
     gui::areaBegin("Developer", x, y, w, h, D(scroll));
@@ -273,11 +275,11 @@ static void menuOptions() {
             D(video) = !D(video);
         if (D(video)) {
             gui::indent();
-                auto &fullscreen = varGet<int>("vid_fullscreen");
+                auto &fullscreen = c::Console::value<int>("vid_fullscreen");
                 if (gui::check("Fullscreen", fullscreen))
                     fullscreen.toggle();
                 gui::label("Vsync");
-                auto &vsync = varGet<int>("vid_vsync");
+                auto &vsync = c::Console::value<int>("vid_vsync");
                 if (gui::check("Late swap tearing", vsync.get() == kSyncTear) && vsync.get() != kSyncTear)
                     vsync.set(kSyncTear);
                 if (gui::check("Disabled", vsync.get() == kSyncNone) && vsync.get() != kSyncNone)
@@ -288,8 +290,8 @@ static void menuOptions() {
                     vsync.set(kSyncRefresh);
                 gui::label("Resolution");
 
-                auto &width = varGet<int>("vid_width");
-                auto &height = varGet<int>("vid_height");
+                auto &width = c::Console::value<int>("vid_width");
+                auto &height = c::Console::value<int>("vid_height");
 
                 // Find matching resolution
                 int findRatio = -1;
@@ -321,12 +323,12 @@ static void menuOptions() {
         if (gui::collapse("Graphics", "", D(graphics)))
             D(graphics) = !D(graphics);
         if (D(graphics)) {
-            auto &aniso = varGet<int>("r_aniso");
-            auto &ssao = varGet<int>("r_ssao");
-            auto &fxaa = varGet<int>("r_fxaa");
-            auto &parallax = varGet<int>("r_parallax");
-            auto &texcomp = varGet<int>("r_tex_compress");
-            auto &texquality = varGet<float>("r_tex_quality");
+            auto &aniso = c::Console::value<int>("r_aniso");
+            auto &ssao = c::Console::value<int>("r_ssao");
+            auto &fxaa = c::Console::value<int>("r_fxaa");
+            auto &parallax = c::Console::value<int>("r_parallax");
+            auto &texcomp = c::Console::value<int>("r_tex_compress");
+            auto &texquality = c::Console::value<float>("r_tex_quality");
             gui::indent();
                 gui::slider<int>("Anisotropic", aniso.get(), aniso.min(), aniso.max(), 1);
                 if (gui::check("Ambient occlusion", ssao.get()))
@@ -344,8 +346,8 @@ static void menuOptions() {
             D(input) = !D(input);
         if (D(input)) {
             gui::indent();
-                auto &mouse_sens = varGet<float>("cl_mouse_sens");
-                auto &mouse_invert = varGet<int>("cl_mouse_invert");
+                auto &mouse_sens = c::Console::value<float>("cl_mouse_sens");
+                auto &mouse_invert = c::Console::value<int>("cl_mouse_invert");
                 gui::label("Mouse");
                 if (gui::check("Invert", mouse_invert.get()))
                     mouse_invert.toggle();
@@ -509,12 +511,12 @@ static void menuEdit() {
                 D(dlight) = !D(dlight);
             if (D(dlight)) {
                 gui::indent();
-                    auto &ambient = varGet<float>("map_dlight_ambient");
-                    auto &diffuse = varGet<float>("map_dlight_diffuse");
-                    auto &color = varGet<int>("map_dlight_color");
-                    auto &x = varGet<float>("map_dlight_directionx");
-                    auto &y = varGet<float>("map_dlight_directiony");
-                    auto &z = varGet<float>("map_dlight_directionz");
+                    auto &ambient = c::Console::value<float>("map_dlight_ambient");
+                    auto &diffuse = c::Console::value<float>("map_dlight_diffuse");
+                    auto &color = c::Console::value<int>("map_dlight_color");
+                    auto &x = c::Console::value<float>("map_dlight_directionx");
+                    auto &y = c::Console::value<float>("map_dlight_directiony");
+                    auto &z = c::Console::value<float>("map_dlight_directionz");
                     int R = (color.get() >> 16) & 0xFF;
                     int G = (color.get() >> 8) & 0xFF;
                     int B = color.get() & 0xFF;
@@ -543,9 +545,9 @@ static void menuEdit() {
                 D(fog) = !D(fog);
             if (D(fog)) {
                 gui::indent();
-                    auto &equation = varGet<int>("map_fog_equation");
-                    auto &density = varGet<float>("map_fog_density");
-                    auto &color = varGet<int>("map_fog_color");
+                    auto &equation = c::Console::value<int>("map_fog_equation");
+                    auto &density = c::Console::value<float>("map_fog_density");
+                    auto &color = c::Console::value<int>("map_fog_color");
                     int R = (color.get() >> 16) & 0xFF;
                     int G = (color.get() >> 8) & 0xFF;
                     int B = color.get() & 0xFF;
@@ -554,8 +556,8 @@ static void menuEdit() {
                     D(fogSelect) = gui::selector(nullptr, D(fogSelect), { "Linear", "Exp", "Exp2" });
                     equation.set(kEquations[D(fogSelect)]);
                     if (equation.get() == r::fog::kLinear) {
-                        auto &start = varGet<float>("map_fog_range_start");
-                        auto &end = varGet<float>("map_fog_range_end");
+                        auto &start = c::Console::value<float>("map_fog_range_start");
+                        auto &end = c::Console::value<float>("map_fog_range_end");
                         gui::label("Range");
                         gui::indent();
                         gui::slider("Start", start.get(), start.min(), start.max(), 0.001f);

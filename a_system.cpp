@@ -13,7 +13,8 @@
 #include "u_memory.h"
 
 #include "engine.h"
-#include "cvar.h"
+
+#include "c_variable.h"
 
 VAR(u::string, snd_device, "sound device");
 VAR(u::string, snd_driver, "sound driver");

@@ -53,7 +53,10 @@ UTIL_SOURCES = \
 	u_zlib.cpp
 
 CONSOLE_SOURCES = \
-	c_complete.cpp
+	c_complete.cpp \
+	c_config.cpp \
+	c_console.cpp \
+	c_variable.cpp
 
 ENGINE_SOURCES = \
 	engine.cpp \
@@ -62,7 +65,6 @@ ENGINE_SOURCES = \
 	mesh.cpp \
 	model.cpp \
 	texture.cpp \
-	cvar.cpp \
 	gui.cpp \
 	grader.cpp \
 	$(AUDIO_SOURCES) \

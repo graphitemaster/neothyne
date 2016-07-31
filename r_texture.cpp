@@ -1,5 +1,5 @@
 #include "engine.h"
-#include "cvar.h"
+#include "c_console.h"
 
 #include "r_texture.h"
 
@@ -595,7 +595,7 @@ static bool writeCacheData(TextureFormat format,
 }
 
 static bool writeCache(const Texture &tex, GLuint internal, GLuint handle, size_t mips) {
-    auto &r_debug_tex = varGet<int>("r_debug_tex");
+    auto &r_debug_tex = c::Console::value<int>("r_debug_tex");
     if (r_debug_tex)
         return false;
     if (!r_tex_compress_cache)
@@ -977,7 +977,7 @@ bool texture2D::upload(GLint wrap) {
 
     } else {
         // Don't attempt to cache debug textures
-        auto &r_debug_tex = varGet<int>("r_debug_tex");
+        auto &r_debug_tex = c::Console::value<int>("r_debug_tex");
         queryFormat format;
         bool needsCache = !useCache();
         if (needsCache) {

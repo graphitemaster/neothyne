@@ -1,6 +1,7 @@
 #include "engine.h"
-#include "cvar.h"
 #include "gui.h"
+
+#include "c_console.h"
 
 #include "r_stats.h"
 #include "r_world.h"
@@ -997,7 +998,7 @@ void world::forwardPass(const pipeline &pl) {
     static constexpr m::vec3 kOutline = { 0.0f, 0.0f, 1.0f };
 
     gl::DepthMask(GL_FALSE);
-    if (varGet<int>("cl_edit").get()) {
+    if (c::Console::value<int>("cl_edit").get()) {
         // World billboards:
         //  All billboards have pre-multiplied alpha to prevent strange blending
         //  issues around the edges.

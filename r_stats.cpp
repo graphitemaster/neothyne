@@ -3,7 +3,7 @@
 #include "engine.h"
 #include "texture.h"
 #include "gui.h"
-#include "cvar.h"
+#include "c_variable.h"
 
 #include "r_common.h"
 #include "r_stats.h"

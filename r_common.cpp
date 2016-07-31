@@ -9,7 +9,8 @@
 #include "u_traits.h"
 
 #include "engine.h"
-#include "cvar.h"
+
+#include "c_console.h"
 
 #if !defined(APIENTRY)
 #   if defined(_WIN32)
@@ -615,7 +616,7 @@ void init() {
             if (!strcmp(kExtensions[j], (const char *)glGetStringi_(GL_EXTENSIONS, i)))
                 gExtensions.insert(j);
 
-    auto &aniso = varGet<int>("r_aniso");
+    auto &aniso = c::Console::value<int>("r_aniso");
     if (has(gl::EXT_texture_filter_anisotropic)) {
         float largest;
         glGetFloatv_(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &largest);
