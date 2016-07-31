@@ -19,13 +19,17 @@ bool Config::write(const u::string &path) {
         if (ref->m_type == kVarInt) {
             const auto handle = (const Variable<int>*)ref->m_handle;
             const auto &value = handle->get();
-            if (handle->flags() & kPersist)
+            if (handle->flags() & kPersist) {
+                u::fprint(file, "# %s\n", ref->m_description);
                 u::fprint(file, "%s %d\n", name, value);
+            }
         } else if (ref->m_type == kVarFloat) {
             const auto handle = (const Variable<float>*)ref->m_handle;
             const auto &value = handle->get();
-            if (handle->flags() & kPersist)
+            if (handle->flags() & kPersist) {
+                u::fprint(file, "# %s\n", ref->m_description);
                 u::fprint(file, "%s %.2f\n", name, value);
+            }
         } else if (ref->m_type == kVarString) {
             auto escape = [](const u::string &before) {
                 u::string after;
@@ -47,6 +51,7 @@ bool Config::write(const u::string &path) {
             if (handle->flags() & kPersist) {
                 if (value.empty())
                     continue;
+                u::fprint(file, "# %s\n", ref->m_description);
                 u::fprint(file, "%s \"%s\"\n", name, escape(value));
             }
         }
@@ -61,6 +66,12 @@ bool Config::read(const u::string &path) {
         return false;
 
     for (u::string line; u::getline(file, line); ) {
+        // ignore leading whitespace
+        while (u::isspace(line[0]))
+            line.pop_front();
+        // ignore comments
+        if (line[0] == '#')
+            continue;
         const u::vector<u::string> kv = u::split(line);
         if (kv.size() != 2)
             continue;
