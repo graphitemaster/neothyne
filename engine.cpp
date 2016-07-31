@@ -16,6 +16,7 @@
 
 #include "r_common.h"
 #include "r_model.h"
+#include "r_world.h"
 
 #include "u_file.h"
 #include "u_misc.h"
@@ -1022,7 +1023,7 @@ void *neoGetProcAddress(const char *proc) {
 ///     main -> entryPoint -> neoMain
 ///
 static int entryPoint(int argc, char **argv) {
-    extern int neoMain(FrameTimer&, a::Audio &, int argc, char **argv, bool &shutdown);
+    extern int neoMain(FrameTimer&, a::Audio &, r::World &, int argc, char **argv, bool &shutdown);
 
     signal(SIGINT, neoSignalHandler);
     signal(SIGTERM, neoSignalHandler);
@@ -1083,13 +1084,16 @@ static int entryPoint(int argc, char **argv) {
     u::print("[system] => User: %s\n", gEngine.userPath());
 
     a::Audio *audio = new a::Audio(a::Audio::kClipRoundOff);
+    r::World *world = new r::World();
+
     // Launch the game
-    const int status = neoMain(gEngine.m_frameTimer, *audio, argc, argv, (bool &)gShutdown);
+    const int status = neoMain(gEngine.m_frameTimer, *audio, *world, argc, argv, (bool &)gShutdown);
     c::Config::write(gEngine.userPath());
 
     // Instance must be released before OpenGL context is lost
     r::geomMethods::instance().release();
 
+    delete world;
     delete audio;
 
     // shut down the console (frees the console variables)

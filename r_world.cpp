@@ -168,7 +168,7 @@ static uint8_t calcTriangleSideMask(const m::vec3 &p1,
 }
 
 ///! lightChunk
-world::lightChunk::lightChunk()
+World::LightChunk::LightChunk()
     : hash(0)
     , count(0)
     , memory(0)
@@ -179,7 +179,7 @@ world::lightChunk::lightChunk()
 {
 }
 
-world::lightChunk::~lightChunk() {
+World::LightChunk::~LightChunk() {
     if (ebo)
         gl::DeleteBuffers(1, &ebo);
     // adjust statistics accordingly
@@ -189,7 +189,7 @@ world::lightChunk::~lightChunk() {
     }
 }
 
-bool world::lightChunk::init(const char *name, const char *description) {
+bool World::LightChunk::init(const char *name, const char *description) {
     stats = r::stat::add(name, description);
     gl::GenBuffers(1, &ebo);
     gl::BindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -198,17 +198,17 @@ bool world::lightChunk::init(const char *name, const char *description) {
 }
 
 ///! spotLightChunk
-world::spotLightChunk::spotLightChunk()
+World::SpotLightChunk::SpotLightChunk()
     : light(nullptr)
 {
 }
 
-world::spotLightChunk::spotLightChunk(const spotLight *light)
+World::SpotLightChunk::SpotLightChunk(const spotLight *light)
     : light(light)
 {
 }
 
-bool world::spotLightChunk::buildMesh(kdMap *map) {
+bool World::SpotLightChunk::buildMesh(kdMap *map) {
     if (hash == 0 && !init("slshadow", "Spot Light Shadows"))
         return false;
     if (memory)
@@ -237,19 +237,19 @@ bool world::spotLightChunk::buildMesh(kdMap *map) {
 }
 
 ///! pointLightChunk
-world::pointLightChunk::pointLightChunk()
+World::PointLightChunk::PointLightChunk()
     : light(nullptr)
 {
     memset(sideCounts, 0, sizeof sideCounts);
 }
 
-world::pointLightChunk::pointLightChunk(const pointLight *light)
+World::PointLightChunk::PointLightChunk(const pointLight *light)
     : light(light)
 {
     memset(sideCounts, 0, sizeof sideCounts);
 }
 
-bool world::pointLightChunk::buildMesh(kdMap *map) {
+bool World::PointLightChunk::buildMesh(kdMap *map) {
     if (hash == 0 && !init("plshadow", "Point Light Shadows"))
         return false;
     // rebuilding mesh: throw away old memory statistics
@@ -297,14 +297,14 @@ bool world::pointLightChunk::buildMesh(kdMap *map) {
 }
 
 ///! modelChunk
-world::modelChunk::modelChunk()
+World::ModelChunk::ModelChunk()
     : collect(false)
     , highlight(false)
     , visible(false)
 {
 }
 
-world::modelChunk::modelChunk(const r::model *model,
+World::ModelChunk::ModelChunk(const r::model *model,
                               bool highlight,
                               const m::vec3 &position,
                               const m::vec3 &scale,
@@ -363,27 +363,27 @@ void dustSystem::initParticle(particle &p, const m::vec3 &ownerPosition) {
 static constexpr float kLightRadiusTweak = 1.11f;
 
 // light entities
-void world::addPointLight(r::pointLight *light) {
+void World::addPointLight(r::pointLight *light) {
     // ignore adding it again
     auto find = m_culledPointLights.find(light);
     if (find != m_culledPointLights.end()) {
         find->second->collect = false;
         return;
     }
-    m_culledPointLights.insert( { light, new pointLightChunk(light) } );
+    m_culledPointLights.insert( { light, new PointLightChunk(light) } );
 }
 
-void world::addSpotLight(r::spotLight *light) {
+void World::addSpotLight(r::spotLight *light) {
     // ignore adding it again
     auto find = m_culledSpotLights.find(light);
     if (find != m_culledSpotLights.end()) {
         find->second->collect = false;
         return;
     }
-    m_culledSpotLights.insert( { light, new spotLightChunk(light) } );
+    m_culledSpotLights.insert( { light, new SpotLightChunk(light) } );
 }
 
-void world::addBillboard(r::billboard *billboard) {
+void World::addBillboard(r::billboard *billboard) {
     auto find = m_billboards.find(billboard);
     if (find != m_billboards.end()) {
         find->second.first = false;
@@ -394,7 +394,7 @@ void world::addBillboard(r::billboard *billboard) {
     m_billboards.insert({ billboard, { false, billboard } });
 }
 
-void world::addModel(r::model *model,
+void World::addModel(r::model *model,
                      bool highlight,
                      const m::vec3 &position,
                      const m::vec3 &scale,
@@ -411,35 +411,35 @@ void world::addModel(r::model *model,
     }
     // upload and insert the model
     model->upload();
-    m_models.insert({ model, new modelChunk(model, highlight, position, scale, rotate) });
+    m_models.insert({ model, new ModelChunk(model, highlight, position, scale, rotate) });
 }
 
 // global entities
-fog &world::getFog() {
+fog &World::getFog() {
     return m_fog;
 }
 
-directionalLight &world::getDirectionalLight() {
-    return m_directionalLight;
+directionalLight *World::getDirectionalLight() {
+    return &m_directionalLight;
 }
 
-ColorGrader &world::getColorGrader() {
-    return m_grader;
+ColorGrader *World::getColorGrader() {
+    return &m_grader;
 }
 
 ///! world
-world::world()
+World::World()
     : m_geomMethods(&geomMethods::instance())
     , m_kdWorld(nullptr)
     , m_uploaded(false)
 {
 }
 
-world::~world() {
+World::~World() {
     unload(false);
 }
 
-bool world::load(kdMap *map) {
+bool World::load(kdMap *map) {
     // load skybox
     if (!m_skybox.load("textures/sky01"))
         return false;
@@ -477,7 +477,7 @@ bool world::load(kdMap *map) {
     return true;
 }
 
-bool world::upload(const m::perspective &p) {
+bool World::upload(const m::perspective &p) {
     if (m_uploaded)
         return true;
 
@@ -667,7 +667,7 @@ bool world::upload(const m::perspective &p) {
     return m_uploaded = true;
 }
 
-void world::unload(bool destroy) {
+void World::unload(bool destroy) {
     // Note: must be before deleting the textures below
     delete m_gun;
 
@@ -694,7 +694,7 @@ void world::unload(bool destroy) {
     u::print("[world] => unloaded\n");
 }
 
-void world::render(const pipeline &pl) {
+void World::render(const pipeline &pl) {
     m_frustum.update(pl.projection() * pl.view() * pl.world());
 
     // the job of the game code is to call reset before the start
@@ -707,8 +707,8 @@ void world::render(const pipeline &pl) {
     //
     // the idea is the game code will add the entities back which will
     // unmark the collect flag preventing them from being removed
-    u::vector<spotLightChunk*> removeSpotLights;
-    u::vector<pointLightChunk*> removePointLights;
+    u::vector<SpotLightChunk*> removeSpotLights;
+    u::vector<PointLightChunk*> removePointLights;
     u::vector<r::model*> removeModels;
     u::vector<r::billboard*> removeBillboards;
     for (auto it = m_models.begin(); it != m_models.end(); ++it)
@@ -765,7 +765,7 @@ void world::render(const pipeline &pl) {
     compositePass(pl);
 }
 
-void world::cullPass(const pipeline &pl) {
+void World::cullPass(const pipeline &pl) {
     const float widthOffset = 0.5f * m_shadowMap.widthScale(r_sm_size);
     const float heightOffset = 0.5f * m_shadowMap.heightScale(r_sm_size);
     const float widthScale = 0.5f * m_shadowMap.widthScale(r_sm_size - r_sm_border);
@@ -831,7 +831,7 @@ void world::cullPass(const pipeline &pl) {
     }
 }
 
-void world::geometryPass(const pipeline &pl) {
+void World::geometryPass(const pipeline &pl) {
     // The scene pass will be writing into the gbuffer
     m_gBuffer.update(pl.perspective());
     m_gBuffer.bindWriting();
@@ -938,7 +938,7 @@ void world::geometryPass(const pipeline &pl) {
     }
 }
 
-void world::lightingPass(const pipeline &pl) {
+void World::lightingPass(const pipeline &pl) {
     // Write to the final composite
     m_final.update(pl.perspective());
     m_final.bindWriting();
@@ -986,7 +986,7 @@ void world::lightingPass(const pipeline &pl) {
     gl::Disable(GL_STENCIL_TEST);
 }
 
-void world::forwardPass(const pipeline &pl) {
+void World::forwardPass(const pipeline &pl) {
     gl::Enable(GL_DEPTH_TEST);
 
     // Skybox:
@@ -1117,7 +1117,7 @@ void world::forwardPass(const pipeline &pl) {
     r::stat::render(20);
 }
 
-void world::compositePass(const pipeline &pl) {
+void World::compositePass(const pipeline &pl) {
     auto &colorGrading = m_grader;
     if (colorGrading.updated()) {
         colorGrading.grade();
@@ -1212,7 +1212,7 @@ void world::compositePass(const pipeline &pl) {
     }
 }
 
-void world::pointLightPass(const pipeline &pl) {
+void World::pointLightPass(const pipeline &pl) {
     gl::DepthMask(GL_FALSE);
 
     for (const auto &pair : m_culledPointLights) {
@@ -1270,7 +1270,7 @@ void world::pointLightPass(const pipeline &pl) {
     gl::CullFace(GL_BACK);
 }
 
-void world::pointLightShadowPass(const pointLightChunk *const plc) {
+void World::pointLightShadowPass(const PointLightChunk *const plc) {
     const pointLight *const pl = plc->light;
     gl::DepthMask(GL_TRUE);
     gl::DepthFunc(GL_LEQUAL);
@@ -1349,7 +1349,7 @@ void world::pointLightShadowPass(const pointLightChunk *const plc) {
     m_final.bindWriting();
 }
 
-void world::spotLightPass(const pipeline &pl) {
+void World::spotLightPass(const pipeline &pl) {
     gl::DepthMask(GL_FALSE);
 
     for (const auto &pair : m_culledSpotLights) {
@@ -1407,7 +1407,7 @@ void world::spotLightPass(const pipeline &pl) {
     gl::CullFace(GL_BACK);
 }
 
-void world::spotLightShadowPass(const spotLightChunk *const slc) {
+void World::spotLightShadowPass(const SpotLightChunk *const slc) {
     const spotLight *const sl = slc->light;
     gl::DepthMask(GL_TRUE);
     gl::DepthFunc(GL_LEQUAL);
@@ -1449,7 +1449,7 @@ void world::spotLightShadowPass(const spotLightChunk *const slc) {
     m_final.bindWriting();
 }
 
-void world::directionalLightPass(const pipeline &pl, bool stencil) {
+void World::directionalLightPass(const pipeline &pl, bool stencil) {
     GLenum format = gl::has(gl::ARB_texture_rectangle)
         ? GL_TEXTURE_RECTANGLE : GL_TEXTURE_2D;
 

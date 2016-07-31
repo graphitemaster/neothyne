@@ -29,9 +29,9 @@ struct renderTextureBatch {
     material mat; // Rendering material (world and models share this)
 };
 
-struct world : geom {
-    world();
-    ~world();
+struct World : geom {
+    World();
+    ~World();
 
     bool load(kdMap *map);
     bool upload(const m::perspective &p);
@@ -65,8 +65,8 @@ struct world : geom {
 
     // global entities
     fog &getFog();
-    directionalLight &getDirectionalLight();
-    ColorGrader &getColorGrader();
+    directionalLight *getDirectionalLight();
+    ColorGrader *getColorGrader();
 
 private:
     void cullPass(const pipeline &pl);
@@ -75,9 +75,9 @@ private:
     void forwardPass(const pipeline &pl);
     void compositePass(const pipeline &pl);
 
-    struct lightChunk {
-        lightChunk();
-        ~lightChunk();
+    struct LightChunk {
+        LightChunk();
+        ~LightChunk();
         size_t hash;
         size_t count;
         size_t memory;
@@ -89,24 +89,24 @@ private:
         bool init(const char *name, const char *description);
     };
 
-    struct spotLightChunk : lightChunk {
-        spotLightChunk();
-        spotLightChunk(const r::spotLight *light);
+    struct SpotLightChunk : LightChunk {
+        SpotLightChunk();
+        SpotLightChunk(const r::spotLight *light);
         bool buildMesh(kdMap *map);
         const r::spotLight *light;
     };
 
-    struct pointLightChunk : lightChunk {
-        pointLightChunk();
-        pointLightChunk(const r::pointLight *light);
+    struct PointLightChunk : LightChunk {
+        PointLightChunk();
+        PointLightChunk(const r::pointLight *light);
         bool buildMesh(kdMap *map);
         size_t sideCounts[6];
         const r::pointLight *light;
     };
 
-    struct modelChunk {
-        modelChunk();
-        modelChunk(const r::model *model,
+    struct ModelChunk {
+        ModelChunk();
+        ModelChunk(const r::model *model,
                    bool highlight,
                    const m::vec3 &position,
                    const m::vec3 &scale,
@@ -124,9 +124,9 @@ private:
     };
 
     void pointLightPass(const pipeline &pl);
-    void pointLightShadowPass(const pointLightChunk *const pl);
+    void pointLightShadowPass(const PointLightChunk *const pl);
     void spotLightPass(const pipeline &pl);
-    void spotLightShadowPass(const spotLightChunk *const sl);
+    void spotLightShadowPass(const SpotLightChunk *const sl);
     void directionalLightPass(const pipeline &pl, bool stencil);
 
     // represents all six frustum planes used for frustum culling
@@ -179,9 +179,9 @@ private:
     grader m_colorGrader;
     shadowMap m_shadowMap;
 
-    u::map<r::model*, modelChunk*> m_models;
-    u::map<r::spotLight*, spotLightChunk*> m_culledSpotLights;
-    u::map<r::pointLight*, pointLightChunk*> m_culledPointLights;
+    u::map<r::model*, ModelChunk*> m_models;
+    u::map<r::spotLight*, SpotLightChunk*> m_culledSpotLights;
+    u::map<r::pointLight*, PointLightChunk*> m_culledPointLights;
     u::map<r::billboard*, u::pair<bool, r::billboard*>> m_billboards;
 
     bool m_uploaded;

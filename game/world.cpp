@@ -41,7 +41,7 @@ void world::unload(bool destroy) {
     // release memory backing the containers
     if (destroy) {
         m_map.unload();
-        m_renderer.unload();
+        m_renderer->unload();
 
         // auxiliaries
         m_entities.destroy();
@@ -82,27 +82,30 @@ bool world::isLoaded() const {
 }
 
 bool world::load(const u::string &file) {
+    if (!m_renderer) return false;
     auto read = u::read(neoGamePath() + "maps/" + file, "rb");
-    return read && load(*read) && m_renderer.load(&m_map);
+    return read && load(*read) && m_renderer->load(&m_map);
 }
 
 bool world::upload(const m::perspective &p) {
-    return m_renderer.upload(p);
+    if (!m_renderer) return false;
+    return m_renderer->upload(p);
 }
 
 void world::render(const r::pipeline &pl) {
+    if (!m_renderer) return;
     // a new frame reset world state!
-    m_renderer.reset();
+    m_renderer->reset();
 
     float R = ((map_dlight_color >> 16) & 0xFF) / 255.0f;
     float G = ((map_dlight_color >> 8) & 0xFF) / 255.0f;
     float B = (map_dlight_color & 0xFF) / 255.0f;
 
-    r::directionalLight &directionalLight = m_renderer.getDirectionalLight();
-    directionalLight.ambient = map_dlight_ambient;
-    directionalLight.diffuse = map_dlight_diffuse;
-    directionalLight.color = { R, G, B };
-    directionalLight.direction = {
+    r::directionalLight *directionalLight = m_renderer->getDirectionalLight();
+    directionalLight->ambient = map_dlight_ambient;
+    directionalLight->diffuse = map_dlight_diffuse;
+    directionalLight->color = { R, G, B };
+    directionalLight->direction = {
         map_dlight_directionx,
         map_dlight_directiony,
         map_dlight_directionz
@@ -112,7 +115,7 @@ void world::render(const r::pipeline &pl) {
     G = ((map_fog_color >> 8) & 0xFF) / 255.0f;
     B = (map_fog_color & 0xFF) / 255.0f;
 
-    r::fog &fog = m_renderer.getFog();
+    r::fog &fog = m_renderer->getFog();
     fog.color = { R, G, B };
     fog.density = map_fog_density;
     fog.start = map_fog_range_start;
@@ -127,13 +130,13 @@ void world::render(const r::pipeline &pl) {
 
     // add all lights to the renderer (will ignore adding ones which already exist)
     for (auto *it : m_pointLights)
-        m_renderer.addPointLight(it);
+        m_renderer->addPointLight(it);
     for (auto *it : m_spotLights)
-        m_renderer.addSpotLight(it);
+        m_renderer->addSpotLight(it);
 
     // add all billboards
     for (auto *it : m_billboards)
-        m_renderer.addBillboard(it);
+        m_renderer->addBillboard(it);
 
     // walk the map models and load new ones on demand (renderer will upload them)
     for (const auto &it : m_mapModels) {
@@ -144,13 +147,13 @@ void world::render(const r::pipeline &pl) {
             if (!model->load(m_textures, it->name))
                 neoFatal("Failed to load model %s", it->name);
             m_models.insert({ it->name, model });
-            m_renderer.addModel(model, it->highlight, it->position, it->scale, it->rotate);
+            m_renderer->addModel(model, it->highlight, it->position, it->scale, it->rotate);
         } else {
-            m_renderer.addModel(find->second, it->highlight, it->position, it->scale, it->rotate);
+            m_renderer->addModel(find->second, it->highlight, it->position, it->scale, it->rotate);
         }
     }
 
-    m_renderer.render(pl);
+    m_renderer->render(pl);
 }
 
 bool world::trace(const world::trace::query &q, world::trace::hit *h, float maxDistance, bool entities, descriptor *ignore) {
@@ -344,8 +347,8 @@ void world::erase(size_t where) {
     }
 }
 
-r::directionalLight &world::getDirectionalLight() {
-    return m_renderer.getDirectionalLight();
+r::directionalLight *world::getDirectionalLight() {
+    return m_renderer ? m_renderer->getDirectionalLight() : nullptr;
 }
 
 r::spotLight &world::getSpotLight(size_t index) {
@@ -376,6 +379,6 @@ const u::vector<mapModel*> &world::getMapModels() const {
     return m_mapModels;
 }
 
-ColorGrader &world::getColorGrader() {
-    return m_renderer.getColorGrader();
+ColorGrader *world::getColorGrader() {
+    return m_renderer ? m_renderer->getColorGrader() : nullptr;
 }

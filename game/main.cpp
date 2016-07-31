@@ -106,7 +106,9 @@ NVAR(float, u_x, "", -180.0f, 360.0f, 0.0f);
 NVAR(float, u_y, "", -180.0f, 360.0f, 0.0f);
 NVAR(float, u_z, "", -180.0f, 360.0f, 0.0f);
 
-int neoMain(FrameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
+int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, bool &shutdown) {
+    gWorld.setRenderer(world_);
+
     // Setup rendering pipeline
     gPerspective.fov = cl_fov;
     gPerspective.nearp = cl_nearp;
@@ -194,11 +196,13 @@ int neoMain(FrameTimer &timer, a::Audio &audio, int, char **, bool &shutdown) {
     gWorld.insert(light);
 
     // World only has one directional light
-    r::directionalLight &dlight = gWorld.getDirectionalLight();
-    dlight.color = { 0.2, 0.2, 0.2 };
-    dlight.ambient = 0.10f;
-    dlight.diffuse = 0.50f;
-    dlight.direction = { -1.0f, 0.0f, 0.0f };
+    r::directionalLight *dlight = gWorld.getDirectionalLight();
+    if (dlight) {
+        dlight->color = { 0.2, 0.2, 0.2 };
+        dlight->ambient = 0.10f;
+        dlight->diffuse = 0.50f;
+        dlight->direction = { -1.0f, 0.0f, 0.0f };
+    }
 
     // and some map models
     mapModel m;

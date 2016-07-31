@@ -51,11 +51,16 @@ enum class entity {
 };
 
 struct world {
+    world() : m_renderer(nullptr) { }
     ~world();
 
     bool load(const u::string &map);
     bool upload(const m::perspective &p);
     void render(const r::pipeline &pl);
+
+    bool setRenderer(r::World &renderer) {
+        m_renderer = &renderer;
+    }
 
     void setFog(const r::fog &f);
 
@@ -94,19 +99,19 @@ struct world {
 
     void erase(size_t where); // Erase an entity
 
-    r::directionalLight &getDirectionalLight();
+    r::directionalLight *getDirectionalLight();
     r::spotLight &getSpotLight(size_t index);
     r::pointLight &getPointLight(size_t index);
     mapModel &getMapModel(size_t index);
     playerStart &getPlayerStart(size_t index);
     teleport &getTeleport(size_t index);
     jumppad &getJumppad(size_t index);
-    ColorGrader &getColorGrader();
+    ColorGrader *getColorGrader();
 
     const u::vector<mapModel*> &getMapModels() const;
 
 protected:
-    friend struct r::world;
+    friend struct r::World;
 
     static constexpr float kMaxTraceDistance = 99999.9f;
 
@@ -115,8 +120,7 @@ protected:
 
 private:
     kdMap m_map; // The map for this world
-
-    r::world m_renderer;
+    r::World *m_renderer;
 
     u::vector<descriptor> m_entities;
 

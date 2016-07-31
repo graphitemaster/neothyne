@@ -113,7 +113,9 @@ static void menuColorGrading() {
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() / 2 - h / 2;
 
-    auto &colorGrading = gWorld.getColorGrader();
+    auto *colorGrad = gWorld.getColorGrader();
+    if (!colorGrad) return;
+    auto &colorGrading = *colorGrad;
 
     auto cmySliders = [&](int what) {
         float cr = colorGrading.CR(what);
