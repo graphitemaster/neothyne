@@ -10,18 +10,18 @@
 
 #include "m_const.h"
 
-VAR(int, r_tex_compress, "texture compression", 0, 1, 1);
-VAR(int, r_tex_compress_cache, "cache compressed textures", 0, 1, 1);
+VAR(int, r_tex_compress, "use texture compression", 0, 1, 1);
+VAR(int, r_tex_compress_cache, "cache compressed textures (improve loading times for subsequent loads)", 0, 1, 1);
 VAR(int, r_aniso, "anisotropic filtering", 0, 16, 4);
 VAR(int, r_bilinear, "bilinear filtering", 0, 1, 1);
 VAR(int, r_trilinear, "trilinear filtering", 0, 1, 1);
-VAR(int, r_mipmaps, "mipmaps", 0, 1, 1);
-VAR(int, r_dxt_optimize, "DXT endpoints optimization", 0, 1, 1);
+VAR(int, r_mipmaps, "use mipamps", 0, 1, 1);
+VAR(int, r_dxt_optimize, "optimize endpoints in DXT textures (improves on disk compression ratio and performance for older GPUs)", 0, 1, 1);
 
 #if defined(DXT_COMPRESSOR)
-VAR(int, r_dxt_compressor, "DXT compressor", 0, 1, 1);
+VAR(int, r_dxt_compressor, "use our DXT compressor (typically improves loading times)", 0, 1, 1);
 #else
-VAR(int, r_dxt_compressor, "DXT compressor", 0, 0, 0);
+VAR(int, r_dxt_compressor, "use our DXT compressor (typically improves loading times)", 0, 0, 0);
 #endif
 
 VAR(float, r_tex_quality, "texture quality", 0.0f, 1.0f, 1.0f);

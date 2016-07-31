@@ -20,14 +20,16 @@ bool Config::write(const u::string &path) {
             const auto handle = (const Variable<int>*)ref->m_handle;
             const auto &value = handle->get();
             if (handle->flags() & kPersist) {
-                u::fprint(file, "# %s\n", ref->m_description);
+                u::fprint(file, "# %s (integer value in range [%d, %d], defaults %d)\n",
+                    ref->m_description, handle->min(), handle->max(), handle->m_default);
                 u::fprint(file, "%s %d\n", name, value);
             }
         } else if (ref->m_type == kVarFloat) {
             const auto handle = (const Variable<float>*)ref->m_handle;
             const auto &value = handle->get();
             if (handle->flags() & kPersist) {
-                u::fprint(file, "# %s\n", ref->m_description);
+                u::fprint(file, "# %s (floating value in range [%.2f, %.2f] defaults %.2f)\n",
+                    ref->m_description, handle->min(), handle->max(), handle->m_default);
                 u::fprint(file, "%s %.2f\n", name, value);
             }
         } else if (ref->m_type == kVarString) {
@@ -51,7 +53,10 @@ bool Config::write(const u::string &path) {
             if (handle->flags() & kPersist) {
                 if (value.empty())
                     continue;
-                u::fprint(file, "# %s\n", ref->m_description);
+                if (handle->m_default && *handle->m_default)
+                    u::fprint(file, "# %s (defaults %s)\n", ref->m_description, handle->m_default);
+                else
+                    u::fprint(file, "# %s\n", ref->m_description);
                 u::fprint(file, "%s \"%s\"\n", name, escape(value));
             }
         }

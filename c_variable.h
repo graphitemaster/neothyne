@@ -66,6 +66,7 @@ struct Variable {
     void toggle();
 
 private:
+    friend struct Config;
     Reference m_reference;
     T m_min;
     T m_max;
@@ -87,6 +88,7 @@ struct Variable<u::string> {
 
 private:
     friend struct Console;
+    friend struct Config;
     Reference m_reference;
     const char *m_default;
     alignas(alignof(u::string)) unsigned char m_current[sizeof(u::string)];

@@ -161,16 +161,16 @@ static constexpr int kDefaultScreenWidth = 1024;
 static constexpr int kDefaultScreenHeight = 768;
 static constexpr size_t kRefreshRate = 60;
 
-VAR(int, vid_vsync, "vertical syncronization", -1, kSyncRefresh, kSyncNone);
-VAR(int, vid_fullscreen, "toggle fullscreen", 0, 1, 1);
-VAR(int, vid_width, "resolution width", 0, 15360, 0);
-VAR(int, vid_height, "resolution height", 0, 8640, 0);
-VAR(int, vid_maxfps, "cap framerate", 0, 3600, 0);
+VAR(int, vid_vsync, "vertical syncronization (-1 = late swap tearing, 0 = disabled, 1 = enabled, 2 = cap to refresh rate)", -1, kSyncRefresh, kSyncNone);
+VAR(int, vid_fullscreen, "toggle fullscreen (0 = windowed mode, 1 = fullscreen)", 0, 1, 1);
+VAR(int, vid_width, "resolution width (resuolution or if 0 and vid_height is also 0 engine uses desktop resolution)", 0, 15360, 0);
+VAR(int, vid_height, "resolution height (resolution or if 0 and vid_weight is also 0 engine uses desktop resolution)", 0, 8640, 0);
+VAR(int, vid_maxfps, "cap framerate (maximum fps allowed, 0 = unlimited)", 0, 3600, 0);
 VAR(u::string, vid_driver, "video driver");
-VAR(u::string, vid_display, "video display");
+VAR(u::string, vid_display, "name of the display to use for video");
 
 VAR(int, scr_info, "embed engine info in screenshot", 0, 1, 1);
-VAR(int, scr_format, "screenshot file format", 0, 3, 3);
+VAR(int, scr_format, "screenshot file format (0 = BMP, 1 = TGA, 2 = PNG, 3 = JPG)", 0, 3, 3);
 VAR(float, scr_quality, "screenshot quality", 0.0f, 1.0f, 1.0f);
 
 /// pimpl context
