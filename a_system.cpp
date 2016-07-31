@@ -41,13 +41,21 @@ void LockGuard::unlock() {
 }
 
 static void audioMixer(void *user, Uint8 *stream, int length) {
-    const int samples = length / 4;
-    short *buffer = (short *)stream;
     a::Audio *system = (a::Audio *)user;
-    float *data = (float *)system->m_mixerData;
-    system->mix(data, samples);
-    for (int i = 0; i < samples*2; i++)
-        buffer[i] = (short)m::floor(data[i] * 0x7fff);
+    if (system->m_hasFloat) {
+        // mix directly into SDL
+        const size_t samples = length / (2 * sizeof(float));
+        system->mix((float *)stream, samples);
+    } else {
+        // mix into temporary storage
+        float *data = (float *)system->m_mixerData;
+        uint16_t *dest = (uint16_t *)stream;
+        const size_t samples = size_t(length) / (2 * sizeof(uint16_t));
+        system->mix(data, samples);
+        // temporary storage into shorts
+        for (size_t i = 0; i < samples * 2; i++)
+            dest[i] = uint16_t(m::floor(data[i] * 0x7fff));
+    }
 }
 
 ///! SourceInstance
@@ -157,6 +165,7 @@ Audio::Audio(int flags)
     , m_sourceID(1)
     , m_mutex(nullptr)
     , m_mixerData(nullptr)
+    , m_hasFloat(false)
 {
     memset(m_filters, 0, sizeof m_filters);
     memset(m_filterInstances, 0, sizeof m_filterInstances);
@@ -232,7 +241,7 @@ Audio::Audio(int flags)
 
     SDL_AudioSpec wantFormat;
     wantFormat.freq = snd_frequency;
-    wantFormat.format = AUDIO_S16;
+    wantFormat.format = AUDIO_F32;
     wantFormat.channels = 2;
     wantFormat.samples = snd_samples;
     wantFormat.callback = &audioMixer;
@@ -245,16 +254,27 @@ Audio::Audio(int flags)
                                                    &haveFormat,
                                                    0);
 
-    if (device == 0)
-        neoFatal("failed to initialize audio (%s)", SDL_GetError());
+    if (device == 0) {
+        wantFormat.format = AUDIO_S16;
+        if ((device = SDL_OpenAudioDevice(deviceName,
+                                          0,
+                                          &wantFormat,
+                                          &haveFormat,
+                                          0)))
+        {
+            neoFatal("failed to initialize audio (%s)", SDL_GetError());
+        }
+    }
 
     // allocate mixer data and initialize the audio engine
     m_device = device;
     m_mutex = (void *)SDL_CreateMutex();
+    m_hasFloat = haveFormat.format == AUDIO_F32;
     m_mixerData = neoMalloc(sizeof(float) * haveFormat.samples*4);
 
-    u::print("[audio] => device `%s' configured for %d channels @ %dHz (%d samples)\n",
-        deviceName, haveFormat.channels, haveFormat.freq, haveFormat.samples);
+    u::print("[audio] => device `%s' configured for %d channels @ %dHz (%d %s samples)\n",
+        deviceName, haveFormat.channels, haveFormat.freq, haveFormat.samples,
+        haveFormat.format == AUDIO_S16 ? "singed int16" : "float");
 
     init(snd_voices, haveFormat.freq, haveFormat.samples * 2, flags);
 
@@ -348,6 +368,7 @@ int Audio::play(Source &sound, float volume, float pan, bool paused, int lane) {
         m_voices[voice]->m_laneHandle = lane;
         m_voices[voice]->init(m_playIndex, sound.m_baseSampleRate, sound.m_channels, sound.m_flags);
         m_playIndex++;
+
         if (paused)
             m_voices[voice]->m_flags |= SourceInstance::kPaused;
 
