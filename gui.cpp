@@ -512,7 +512,8 @@ bool button(const char *contents, bool enabled) {
     return result;
 }
 
-int selector(const char *title, int selected, const u::initializer_list<const char *> &elements, bool enabled) {
+template <typename T>
+int selector(const char *title, int selected, const u::vector<T> &elements, bool enabled) {
     const auto prev = (A << 16) | ++W.id;
     const auto next = (A << 16) | ++W.id;
 
@@ -555,10 +556,13 @@ int selector(const char *title, int selected, const u::initializer_list<const ch
             title, RGBA(255, 255, 255, 255));
 
     Q.addText(textX+textW/2-kButtonHeight/2, y+kButtonHeight/2-kTextHeight/2, kAlignCenter,
-        elements[selected], RGBA(255, 255, 225, 255));
+        elements.size() ? &elements[selected][0] : "", RGBA(255, 255, 225, 255));
 
     return selected;
 }
+
+template int selector<const char *>(const char *title, int selected, const u::vector<const char *> &elements, bool enabled);
+template int selector<u::string>(const char *title, int selected, const u::vector<u::string> &elements, bool enabled);
 
 bool item(const char *contents, bool enabled) {
     const auto id = (A << 16) | ++W.id;

@@ -21,6 +21,7 @@ VAR(u::string, snd_driver, "sound driver");
 VAR(int, snd_frequency, "sound frequency", 11025, 48000, 44100);
 VAR(int, snd_samples, "sound samples", 1024, 65536, 2048);
 VAR(int, snd_voices, "maximum voices for mixing", 16, 128, 32);
+VAR(int, snd_mute, "mute sound", 0, 1, 0);
 
 namespace a {
 
@@ -38,24 +39,6 @@ LockGuard::~LockGuard() {
 void LockGuard::unlock() {
     SDL_UnlockMutex((SDL_mutex *)m_mutex);
     m_mutex = nullptr;
-}
-
-static void audioMixer(void *user, Uint8 *stream, int length) {
-    a::Audio *system = (a::Audio *)user;
-    if (system->m_hasFloat) {
-        // mix directly into SDL
-        const size_t samples = length / (2 * sizeof(float));
-        system->mix((float *)stream, samples);
-    } else {
-        // mix into temporary storage
-        float *data = (float *)system->m_mixerData;
-        uint16_t *dest = (uint16_t *)stream;
-        const size_t samples = size_t(length) / (2 * sizeof(uint16_t));
-        system->mix(data, samples);
-        // temporary storage into shorts
-        for (size_t i = 0; i < samples * 2; i++)
-            dest[i] = uint16_t(m::floor(data[i] * 0x7fff));
-    }
 }
 
 ///! SourceInstance
@@ -153,6 +136,24 @@ void Source::setFilter(int filterHandle, Filter *filter) {
 }
 
 ///! Audio
+void Audio::mixer(void *user, unsigned char *stream, int length) {
+    a::Audio *system = (a::Audio *)user;
+    if (system->m_hasFloat) {
+        // mix directly into SDL
+        const size_t samples = length / (2 * sizeof(float));
+        system->mix((float *)stream, samples);
+    } else {
+        // mix into temporary storage
+        float *data = (float *)system->m_mixerData;
+        uint16_t *dest = (uint16_t *)stream;
+        const size_t samples = size_t(length) / (2 * sizeof(uint16_t));
+        system->mix(data, samples);
+        // temporary storage into shorts
+        for (size_t i = 0; i < samples * 2; i++)
+            dest[i] = uint16_t(m::floor(data[i] * 0x7fff));
+    }
+}
+
 Audio::Audio(int flags)
     : m_scratchNeeded(0)
     , m_sampleRate(0)
@@ -184,6 +185,7 @@ Audio::Audio(int flags)
     int driverSearch = checkDriver.empty() ? 0 : -1;
     for (int i = 0; i < driverCount; i++) {
         const char *name = SDL_GetAudioDriver(i);
+        m_drivers.push_back(name);
         if (checkDriver.size()) {
             // found a match for the "configured" driver in init.cfg
             u::print("[audio] => found %s driver `%s'\n",
@@ -220,6 +222,7 @@ Audio::Audio(int flags)
     // report the devices
     for (int i = 0; i < deviceCount; i++) {
         const char *name = SDL_GetAudioDeviceName(i, 0);
+        m_devices.push_back(name);
         if (checkDevice.size()) {
             // found a match for the "configured" device in init.cfg
             u::print("[audio] => found %s device `%s'\n",
@@ -244,7 +247,7 @@ Audio::Audio(int flags)
     wantFormat.format = AUDIO_F32;
     wantFormat.channels = 2;
     wantFormat.samples = snd_samples;
-    wantFormat.callback = &audioMixer;
+    wantFormat.callback = &mixer;
     wantFormat.userdata = (void *)this;
 
     SDL_AudioSpec haveFormat;
@@ -262,7 +265,8 @@ Audio::Audio(int flags)
                                           &haveFormat,
                                           0)) == 0)
         {
-            neoFatal("failed to initialize audio (%s)", SDL_GetError());
+            u::print("[audio] => failed to initialize audio\n");
+            return;
         }
     }
 
@@ -580,6 +584,12 @@ void Audio::setVolume(int voiceHandle, float volume) {
     setVoiceVolume(voice, volume);
 }
 
+void Audio::setVolumeAll(float volume) {
+    LockGuard lock(m_mutex);
+    for (size_t i = 0; i < m_voices.size(); i++)
+        setVoiceVolume(i, volume);
+}
+
 void Audio::setGlobalFilter(int filterHandle, Filter *filter) {
     if (filterHandle < 0 || filterHandle >= kMaxStreamFilters)
         return;
@@ -803,6 +813,11 @@ void Audio::mixLane(float *buffer, size_t samples, float *scratch, int lane) {
         const size_t read = m::ceil(samples * next);
 
         m_voices[i]->getAudio(scratch, read);
+
+        // note: muting has to advanced the stream otherwise it's more like
+        // pausing and not really "muting"
+        if (snd_mute)
+            continue;
 
         for (size_t j = 0; j < kMaxStreamFilters; j++) {
             if (m_voices[i]->m_filters[j] == nullptr)

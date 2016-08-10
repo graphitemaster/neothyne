@@ -133,7 +133,8 @@ inline constexpr uint32_t RGBA(unsigned char R, unsigned char G, unsigned char B
 
 /// Returns index in elements list based upon selection
 /// `title' is an optional string that gets left-justified on the selection bar
-int selector(const char *title, int selected, const u::initializer_list<const char *> &elements, bool enabled = true);
+template <typename T>
+int selector(const char *title, int selected, const u::vector<T> &elements, bool enabled = true);
 /// Returns true when clicked, false otherwise
 bool button(const char *contents, bool enabled = true);
 /// Returns true when clicked, false otherwise

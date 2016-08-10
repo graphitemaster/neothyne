@@ -106,8 +106,11 @@ NVAR(float, u_x, "", -180.0f, 360.0f, 0.0f);
 NVAR(float, u_y, "", -180.0f, 360.0f, 0.0f);
 NVAR(float, u_z, "", -180.0f, 360.0f, 0.0f);
 
+a::Audio *gAudio;
+
 int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, bool &shutdown) {
     gWorld.setRenderer(world_);
+    gAudio = &audio;
 
     // Setup rendering pipeline
     gPerspective.fov = cl_fov;

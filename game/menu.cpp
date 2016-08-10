@@ -47,17 +47,109 @@ static const char *kCreditsSpecialThanks[] = {
     "Forest 'LordHavoc' Hale"
 };
 
-#define RATIOS \
-    static const u::initializer_list<const char *> kAspectRatios =
-#include "res.h"
-#define _(X, Y) { X, Y }
-#define RESOLUTIONS \
-    static const u::initializer_list<u::initializer_list<u::pair<int, int>>> kResolutionPairs =
-#include "res.h"
-#define _(X, Y) #X"x"#Y
-#define RESOLUTIONS \
-    static const u::initializer_list<u::initializer_list<const char *>> kResolutionStrings =
-#include "res.h"
+static u::vector<const char*> kAspectRatios = {
+    "3:2", "4:3", "5:3", "5:4", "16:9", "16:10", "17:9"
+};
+
+struct Resolution {
+    int width;
+    int height;
+};
+
+static u::vector<u::vector<const char*>> kResolutionStrings = {
+{
+    "720x480",
+    "1152x768",
+    "1280x854",
+    "1440x960",
+    "2880x1920"
+},{
+    "320x240",
+    "640x480",
+    "800x600",
+    "1024x768",
+    "1152x864",
+    "1280x960",
+    "1400x1050",
+    "1600x1200",
+    "2048x1536",
+    "3200x2400",
+    "4000x3000",
+    "6400x4800"
+}, {
+    "800x480",
+    "1280x768"
+}, {
+    "1280x1024",
+    "2560x2048",
+    "5120x4096"
+}, {
+    "852x480",
+    "1280x720",
+    "1365x768",
+    "1600x900",
+    "1920x1080"
+}, {
+    "320x200",
+    "640x400",
+    "1280x800",
+    "1440x900",
+    "1680x1050",
+    "1920x1200",
+    "2560x1600",
+    "3840x2400",
+    "7680x4800"
+}, {
+    "2048,1080"
+}};
+
+static u::vector<u::vector<Resolution>> kResolutions = {
+{
+    { 720, 480 },
+    { 1152, 768 },
+    { 1280, 854 },
+    { 1440, 960 },
+    { 2880, 1920 }
+},{
+    { 320, 240 },
+    { 640, 480 },
+    { 800, 600 },
+    { 1024, 768 },
+    { 1152, 864 },
+    { 1280, 960 },
+    { 1400, 1050 },
+    { 1600, 1200 },
+    { 2048, 1536 },
+    { 3200, 2400 },
+    { 4000, 3000 },
+    { 6400, 4800 }
+}, {
+    { 800, 480 },
+    { 1280, 768 }
+}, {
+    { 1280, 1024 },
+    { 2560, 2048 },
+    { 5120, 4096 }
+}, {
+    { 852, 480 },
+    { 1280, 720 },
+    { 1365, 768 },
+    { 1600, 900 },
+    { 1920, 1080 }
+}, {
+    { 320, 200 },
+    { 640, 400 },
+    { 1280, 800 },
+    { 1440, 900 },
+    { 1680, 1050 },
+    { 1920, 1200 },
+    { 2560, 1600 },
+    { 3840, 2400 },
+    { 7680, 4800 }
+}, {
+    { 2048,1080 }
+}};
+
 
 static m::vec3 looking() {
     world::trace::hit h;
@@ -298,10 +390,10 @@ static void menuOptions() {
                 // Find matching resolution
                 int findRatio = -1;
                 int findResolution = -1;
-                for (auto &it : kResolutionPairs) {
+                for (auto &it : kResolutions) {
                     for (auto &jt : it) {
-                        if (jt.first == width.get() && jt.second == height.get()) {
-                            findRatio = &it - kResolutionPairs.begin();
+                        if (jt.width == width.get() && jt.height == height.get()) {
+                            findRatio = &it - kResolutions.begin();
                             findResolution = &jt - it.begin();
                             break;
                         }
@@ -311,14 +403,14 @@ static void menuOptions() {
                 if (findRatio != -1 && findResolution != -1) {
                     D(ratio) = findRatio;
                     D(resolution) = findResolution;
+
+                    D(ratio) = gui::selector(nullptr, D(ratio), kAspectRatios);
+                    D(resolution) = gui::selector(nullptr, D(resolution), kResolutionStrings[D(ratio)]);
                 }
 
-                D(ratio) = gui::selector(nullptr, D(ratio), kAspectRatios);
-                D(resolution) = gui::selector(nullptr, D(resolution), kResolutionStrings[D(ratio)]);
-
-                auto resolution = kResolutionPairs[D(ratio)][D(resolution)];
-                width.set(resolution.first);
-                height.set(resolution.second);
+                auto resolution = kResolutions[D(ratio)][D(resolution)];
+                width.set(resolution.width);
+                height.set(resolution.height);
             gui::dedent();
 
         }
@@ -342,6 +434,37 @@ static void menuOptions() {
                 if (gui::check("Texture compression", texcomp.get()))
                     texcomp.toggle();
                 gui::slider("Texture quality", texquality.get(), texquality.min(), texquality.max(), 0.01f);
+            gui::dedent();
+        }
+        if (gui::collapse("Audio", "", D(audio)))
+            D(audio) = !D(audio);
+        if (D(audio)) {
+            extern a::Audio *gAudio;
+            auto &driver = c::Console::value<u::string>("snd_driver");
+            auto &device = c::Console::value<u::string>("snd_device");
+            auto &drivers = gAudio->drivers();
+            auto &devices = gAudio->devices();
+            size_t findDriver = -1_z;
+            size_t findDevice = -1_z;
+            for (size_t i = 0; i < drivers.size(); i++)
+                if (drivers[i] == driver.get()) { findDriver = i; break; }
+            for (size_t i = 0; i < devices.size(); i++)
+                if (devices[i] == device.get()) { findDevice = i; break; }
+            D(driver) = findDriver != -1_z ? findDriver : 0;
+            D(device) = findDevice != -1_z ? findDevice : 0;
+            gui::indent();
+                if (drivers.size()) {
+                    gui::label("Driver");
+                    D(driver) = gui::selector(nullptr, D(driver), drivers);
+                }
+                if (devices.size()) {
+                    gui::label("Device");
+                    D(device) = gui::selector(nullptr, D(device), devices);
+                }
+                if (D(driver) != int(findDriver) && D(driver) < int(drivers.size()))
+                    driver.set(drivers[D(driver)]);
+                if (D(device) != int(findDevice) && D(device) < int(devices.size()))
+                    device.set(devices[D(device)]);
             gui::dedent();
         }
         if (gui::collapse("Input", "", D(input)))
@@ -555,7 +678,8 @@ static void menuEdit() {
                     int B = color.get() & 0xFF;
                     gui::label("Equation");
                     static const int kEquations[] = { r::fog::kLinear, r::fog::kExp, r::fog::kExp2 };
-                    D(fogSelect) = gui::selector(nullptr, D(fogSelect), { "Linear", "Exp", "Exp2" });
+                    static const u::vector<const char *> kFogs = { "Linear", "Exp", "Exp2" };
+                    D(fogSelect) = gui::selector(nullptr, D(fogSelect), kFogs);
                     equation.set(kEquations[D(fogSelect)]);
                     if (equation.get() == r::fog::kLinear) {
                         auto &start = c::Console::value<float>("map_fog_range_start");

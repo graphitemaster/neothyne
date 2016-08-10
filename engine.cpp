@@ -374,10 +374,10 @@ bool Engine::initContext() {
     const u::string &videoDriver = vid_driver.get();
     if (videoDriver.size()) {
         if (SDL_GL_LoadLibrary(videoDriver.c_str()) != 0) {
-            u::print("Failed to load video driver: %s\n", SDL_GetError());
+            u::print("[video] => failed to load video driver: %s\n", SDL_GetError());
             return false;
         } else {
-            u::print("Loaded video driver: %s\n", videoDriver);
+            u::print("[video] => loaded video driver: %s\n", videoDriver);
         }
     }
 
@@ -726,11 +726,13 @@ void Engine::swap() {
                 CTX(m_context)->begTextInput();
                 m_textInputHistoryCursor = m_textInputHistory.size();
                 break;
+            } else {
+                keyName = SDL_GetKeyName(e.key.keysym.sym);
+                snprintf(format, sizeof format, "%sDn", keyName);
+                callBind(format);
+                keyState(keyName, true);
+                break;
             }
-            keyName = SDL_GetKeyName(e.key.keysym.sym);
-            snprintf(format, sizeof format, "%sDn", keyName);
-            callBind(format);
-            keyState(keyName, true);
             break;
         case SDL_KEYUP:
             keyName = SDL_GetKeyName(e.key.keysym.sym);

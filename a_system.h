@@ -1,7 +1,10 @@
 #ifndef A_SYSTEM_HDR
 #define A_SYSTEM_HDR
 #include "m_vec.h"
+
 #include "u_vector.h"
+#include "u_string.h"
+
 #include "a_fader.h"
 
 namespace a {
@@ -141,6 +144,7 @@ struct Audio {
     void setPan(int voiceHandle, float panning);
     void setPanAbsolute(int voiceHandle, const m::vec2 &panning);
     void setVolume(int voiceHandle, float volume);
+    void setVolumeAll(float volume);
     void setGlobalFilter(int filterHandle, Filter *filter);
 
     void fadeVolume(int voiceHandle, float to, float time);
@@ -155,6 +159,9 @@ struct Audio {
     void oscPan(int voiceHandle, float from, float to, float time);
     void oscRelativePlaySpeed(int voiceHandle, float from, float to, float time);
     void oscGlobalVolume(float from, float to, float time);
+
+    const u::vector<u::string> &devices() const;
+    const u::vector<u::string> &drivers() const;
 
 private:
     friend struct LaneInstance;
@@ -183,6 +190,8 @@ private:
     void clip(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, const m::vec2 &volume);
     void interlace(const float *U_RESTRICT src, float *U_RESTRICT dst, size_t samples, size_t channels);
 
+    static void mixer(void *user, unsigned char *stream, int length);
+
     u::vector<float> m_scratch;
     size_t m_scratchNeeded;
     u::vector<SourceInstance *> m_voices;
@@ -198,12 +207,22 @@ private:
     Filter *m_filters[kMaxStreamFilters];
     FilterInstance *m_filterInstances[kMaxStreamFilters];
 
-public:
+    u::vector<u::string> m_devices;
+    u::vector<u::string> m_drivers;
+
     void *m_mutex;
     int m_device;
     float *m_mixerData;
     bool m_hasFloat;
 };
+
+inline const u::vector<u::string> &Audio::drivers() const {
+    return m_drivers;
+}
+
+inline const u::vector<u::string> &Audio::devices() const {
+    return m_devices;
+}
 
 }
 
