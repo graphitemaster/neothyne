@@ -274,7 +274,7 @@ Audio::Audio(int flags)
     m_device = device;
     m_mutex = (void *)SDL_CreateMutex();
     m_hasFloat = haveFormat.format == AUDIO_F32;
-    m_mixerData = neoMalloc(sizeof(float) * haveFormat.samples*4);
+    m_mixerData = (float *)neoMalloc(sizeof(float) * haveFormat.samples*4);
 
     u::print("[audio] => device `%s' configured for %d channels @ %dHz (%d %s samples)\n",
         deviceName, haveFormat.channels, haveFormat.freq, haveFormat.samples,

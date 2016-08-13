@@ -350,7 +350,7 @@ namespace detail {
     template <typename N>
     inline hash_node<N> *hash_insert_new(hash_base<N> &h, size_t hh) {
         if (!h.unused) {
-            hash_chunk<N> *chunk = neoMalloc(sizeof *chunk);
+            hash_chunk<N> *chunk = (hash_chunk<N>*)neoMalloc(sizeof *chunk);
             new (chunk) hash_chunk<N>();
             chunk->next = h.chunks;
             h.chunks = chunk;
