@@ -153,9 +153,9 @@ int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, 
     // fire and forget!
     int handle = audio.play(lane);
     lane.play(theme[0], 0.5f);
-    lane.play(theme[1], 0.5f);
+    //lane.play(theme[1], 0.5f);
 
-    audio.setRelativePlaySpeed(handle, 0.75f);
+    //audio.setRelativePlaySpeed(handle, 0.75f);
 #endif
 
 #if 1
