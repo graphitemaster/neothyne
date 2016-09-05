@@ -440,18 +440,31 @@ static void menuOptions() {
             D(audio) = !D(audio);
         if (D(audio)) {
             extern a::Audio *gAudio;
+
             auto &driver = c::Console::value<u::string>("snd_driver");
             auto &device = c::Console::value<u::string>("snd_device");
-            auto &drivers = gAudio->drivers();
-            auto &devices = gAudio->devices();
-            size_t findDriver = -1_z;
-            size_t findDevice = -1_z;
-            for (size_t i = 0; i < drivers.size(); i++)
-                if (drivers[i] == driver.get()) { findDriver = i; break; }
-            for (size_t i = 0; i < devices.size(); i++)
-                if (devices[i] == device.get()) { findDevice = i; break; }
-            D(driver) = findDriver != -1_z ? findDriver : 0;
-            D(device) = findDevice != -1_z ? findDevice : 0;
+
+            const auto& audioDrivers = gAudio->drivers();
+            // Copy the drivers for the selector line
+            u::vector<u::string> drivers;
+            for (const auto &it : audioDrivers)
+                drivers.push_back(it.name);
+            // Get the driver and device index for the current driver selected
+            u::vector<u::string> devices;
+            for (const auto &it : audioDrivers) {
+                if (it.name != driver.get())
+                    continue;
+                D(driver) = &it - audioDrivers.begin();
+                devices = it.devices;
+                for (const auto &jt : devices) {
+                    if (jt != device.get())
+                        continue;
+                    D(device) = &jt - devices.begin();
+                    break;
+                }
+                break;
+            }
+            // Draw the options
             gui::indent();
                 if (drivers.size()) {
                     gui::label("Driver");
@@ -461,10 +474,8 @@ static void menuOptions() {
                     gui::label("Device");
                     D(device) = gui::selector(nullptr, D(device), devices);
                 }
-                if (D(driver) != int(findDriver) && D(driver) < int(drivers.size()))
-                    driver.set(drivers[D(driver)]);
-                if (D(device) != int(findDevice) && D(device) < int(devices.size()))
-                    device.set(devices[D(device)]);
+                driver.set(drivers[D(driver)]);
+                device.set(devices[D(device)]);
             gui::dedent();
         }
         if (gui::collapse("Input", "", D(input)))

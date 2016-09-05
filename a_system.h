@@ -160,8 +160,17 @@ struct Audio {
     void oscRelativePlaySpeed(int voiceHandle, float from, float to, float time);
     void oscGlobalVolume(float from, float to, float time);
 
-    const u::vector<u::string> &devices() const;
-    const u::vector<u::string> &drivers() const;
+    // So a driver is what establishes a connection with the device(s) present on
+    // the system. Depending on the driver, the devices may be different. To actually
+    // get an understanding of which devices are present under which driver we
+    // effectively initialize the audio subsystem for each driver and read the
+    // device strings. Then we can present these options to the user.
+    struct Driver {
+        u::string name; // driver name
+        u::vector<u::string> devices;
+    };
+
+    const u::vector<Driver> &drivers() const;
 
 private:
     friend struct LaneInstance;
@@ -207,8 +216,7 @@ private:
     Filter *m_filters[kMaxStreamFilters];
     FilterInstance *m_filterInstances[kMaxStreamFilters];
 
-    u::vector<u::string> m_devices;
-    u::vector<u::string> m_drivers;
+    u::vector<Driver> m_drivers;
 
     void *m_mutex;
     int m_device;
@@ -216,12 +224,8 @@ private:
     bool m_hasFloat;
 };
 
-inline const u::vector<u::string> &Audio::drivers() const {
+inline const u::vector<Audio::Driver> &Audio::drivers() const {
     return m_drivers;
-}
-
-inline const u::vector<u::string> &Audio::devices() const {
-    return m_devices;
 }
 
 }
