@@ -207,7 +207,7 @@ Audio::Audio(int flags)
             SDL_AudioSpec haveFormat;
             u::print("[audio] => %d playback %s present for driver `%s'\n",
                 deviceCount, deviceCount > 1 ? "devices" : "device", driverName);
-            for ( int j = 0; j < deviceCount; j++ ) {
+            for (int j = 0; j < deviceCount; j++) {
                 const char *deviceName = SDL_GetAudioDeviceName(j, 0);
                 // see if we can even initialize this device
                 SDL_AudioDeviceID device = SDL_OpenAudioDevice(
