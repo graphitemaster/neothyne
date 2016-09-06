@@ -306,8 +306,8 @@ void Audio::init(int voices, int sampleRate, int bufferSize, int flags) {
     m_globalVolume = 1.0f;
     m_voices.resize(voices);
     m_sampleRate = sampleRate;
-    m_scratchNeeded = 2048;
-    m_scratch.resize(2048);
+    m_scratchNeeded = 4096;
+    m_scratch.resize(m_scratchNeeded);
     m_bufferSize = bufferSize;
     m_flags = flags;
     m_postClipScaler = 0.95f;
