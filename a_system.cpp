@@ -174,6 +174,14 @@ Audio::Audio(int flags)
     if (SDL_InitSubSystem(SDL_INIT_AUDIO))
         neoFatal("failed to initialize audio subsystem `%s'", SDL_GetError());
 
+    SDL_AudioSpec wantFormat;
+    wantFormat.freq = snd_frequency;
+    wantFormat.format = AUDIO_F32;
+    wantFormat.channels = 2;
+    wantFormat.samples = snd_samples;
+    wantFormat.callback = &mixer;
+    wantFormat.userdata = (void *)this;
+
     // first establish the drivers and devices present
     int driverCount = SDL_GetNumAudioDrivers();
     if (driverCount == -1)
@@ -181,6 +189,9 @@ Audio::Audio(int flags)
     u::print("[audio] => discovered %d drivers\n", driverCount);
     for (int i = 0; i < driverCount; i++) {
         const char *driverName = SDL_GetAudioDriver(i);
+        // skip disk drivers
+        if ( !strcmp(driverName, "disk" ) )
+            continue;
         // attempt to initialize the audio driver
         if (SDL_AudioInit(driverName)) {
             u::print("[audio] => found unusable driver `%s' (%s)\n",
@@ -193,17 +204,27 @@ Audio::Audio(int flags)
         // enumerate all devices discoverable with this driver
         const int deviceCount = SDL_GetNumAudioDevices(0);
         if (deviceCount) {
+            SDL_AudioSpec haveFormat;
             u::print("[audio] => %d playback %s present for driver `%s'\n",
                 deviceCount, deviceCount > 1 ? "devices" : "device", driverName);
-            for (int j = 0; j < deviceCount; j++) {
+            for ( int j = 0; j < deviceCount; j++ ) {
                 const char *deviceName = SDL_GetAudioDeviceName(j, 0);
-                u::print("             %s\n", deviceName);
-                discovered.devices.push_back(deviceName);
+                // see if we can even initialize this device
+                SDL_AudioDeviceID device = SDL_OpenAudioDevice(
+                    deviceName, 0, &wantFormat, &haveFormat, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+                if ( device != 0 ) {
+                    u::print("             usable: %s\n", deviceName );
+                    discovered.devices.push_back( deviceName );
+                    // no longer need the device
+                    SDL_CloseAudioDevice( device );
+                } else {
+                    u::print("             unusable: %s\n", deviceName );
+                }
             }
             m_drivers.push_back(discovered);
-        } else {
-            u::print("[audio] => no usable playback device(s) found for driver `%s'\n", driverName);
         }
+        if (discovered.devices.empty())
+            u::print("[audio] => no usable playback device(s) found for driver `%s'\n", driverName);
         SDL_AudioQuit();
     }
 
@@ -279,21 +300,13 @@ Audio::Audio(int flags)
     }
     if (deviceSearch == -1) {
         // Just get the default device
-        deviceSearch = 0;
+        deviceSearch = 1;
     }
 
     if (m_drivers[driverSearch].devices.empty())
         neoFatal("no audio devices present");
 
     const u::string &deviceName = m_drivers[driverSearch].devices[deviceSearch];
-
-    SDL_AudioSpec wantFormat;
-    wantFormat.freq = snd_frequency;
-    wantFormat.format = AUDIO_F32;
-    wantFormat.channels = 2;
-    wantFormat.samples = snd_samples;
-    wantFormat.callback = &mixer;
-    wantFormat.userdata = (void *)this;
 
     SDL_AudioSpec haveFormat;
     SDL_AudioDeviceID device = SDL_OpenAudioDevice(deviceName.c_str(),
@@ -302,6 +315,7 @@ Audio::Audio(int flags)
                                                    &haveFormat,
                                                    0);
 
+    // Couldn't initialize with float samples: attempt signed 16-bit samples
     if (device == 0) {
         wantFormat.format = AUDIO_S16;
         if ((device = SDL_OpenAudioDevice(deviceName.c_str(),
