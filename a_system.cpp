@@ -213,12 +213,12 @@ Audio::Audio(int flags)
                 SDL_AudioDeviceID device = SDL_OpenAudioDevice(
                     deviceName, 0, &wantFormat, &haveFormat, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
                 if ( device != 0 ) {
-                    u::print("             usable: %s\n", deviceName );
-                    discovered.devices.push_back( deviceName );
+                    u::print("             usable: %s\n", deviceName);
+                    discovered.devices.push_back(deviceName);
                     // no longer need the device
-                    SDL_CloseAudioDevice( device );
+                    SDL_CloseAudioDevice(device);
                 } else {
-                    u::print("             unusable: %s\n", deviceName );
+                    u::print("             unusable: %s\n", deviceName);
                 }
             }
             m_drivers.push_back(discovered);
