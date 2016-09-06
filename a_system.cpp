@@ -192,7 +192,8 @@ Audio::Audio(int flags)
     int driverCount = SDL_GetNumAudioDrivers();
     if (driverCount == -1)
         neoFatal("remote audio not supported");
-    u::print("[audio] => discovered %d drivers\n", driverCount);
+    u::print("[audio] => discovered %d %s\n", driverCount,
+        driverCount > 1 ? "drivers" : "driver");
     for (int i = 0; i < driverCount; i++) {
         const char *driverName = SDL_GetAudioDriver(i);
         // skip disk drivers
@@ -281,6 +282,8 @@ Audio::Audio(int flags)
 
     // find the appropriate device
     const size_t deviceCount = m_drivers[driverSearch].devices.size();
+    u::print("[audio] => have %zu usable %s\n", deviceCount,
+        deviceCount > 1 ? "devices" : "device");
     const u::string &checkDevice = snd_device;
     if (checkDevice.size())
         u::print("[audio] => searching for device `%s'\n", checkDevice);
