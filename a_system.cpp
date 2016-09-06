@@ -197,7 +197,7 @@ Audio::Audio(int flags)
     for (int i = 0; i < driverCount; i++) {
         const char *driverName = SDL_GetAudioDriver(i);
         // skip disk drivers
-        if ( !strcmp(driverName, "disk" ) )
+        if (!strcmp(driverName, "disk"))
             continue;
         // attempt to initialize the audio driver
         if (SDL_AudioInit(driverName)) {
@@ -219,7 +219,7 @@ Audio::Audio(int flags)
                 // see if we can even initialize this device
                 SDL_AudioDeviceID device = SDL_OpenAudioDevice(
                     deviceName, 0, &wantFormat, &haveFormat, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
-                if ( device != 0 ) {
+                if (device > 0) {
                     u::print("             usable: %s\n", deviceName);
                     discovered.devices.push_back(deviceName);
                     // no longer need the device
@@ -258,11 +258,11 @@ Audio::Audio(int flags)
         }
     }
     if (driverSearch == -1) {
-        // Just get the default driver
+        // just get the default driver
         SDL_QuitSubSystem(SDL_INIT_AUDIO);
         if (SDL_InitSubSystem(SDL_INIT_AUDIO))
             neoFatal("failed to initialize audio subsystem `%s'", SDL_GetError());
-        // Then find it in, it must exist
+        // then find it in the list: it must exist for we added it to that list
         const char *name = SDL_GetCurrentAudioDriver();
         for (const auto &it : m_drivers) {
             if (it.name != name)
@@ -271,7 +271,7 @@ Audio::Audio(int flags)
             break;
         }
     }
-    if (driverSearch == -1)
+    if (U_UNLIKELY(driverSearch == -1))
         neoFatal("no audio driver present");
 
     const u::string &driverName = m_drivers[driverSearch].name;
@@ -307,8 +307,8 @@ Audio::Audio(int flags)
             u::print("[audio] => found device `%s'\n", name);
         }
     }
-    if (deviceSearch == -1) {
-        // Just get the default device
+    if (U_UNLIKELY(deviceSearch == -1))) {
+        // just get the default device then
         deviceSearch = 1;
     }
 
