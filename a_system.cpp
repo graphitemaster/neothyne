@@ -154,6 +154,12 @@ void Audio::mixer(void *user, unsigned char *stream, int length) {
     }
 }
 
+// The following is an empty callback for SDL_AudioSpec. This is used
+// during device discovering opposed to the default mixer above
+static void empty(void *, unsigned char *, int) {
+    // Do nothing
+}
+
 Audio::Audio(int flags)
     : m_scratchNeeded(0)
     , m_sampleRate(0)
@@ -179,8 +185,8 @@ Audio::Audio(int flags)
     wantFormat.format = AUDIO_F32;
     wantFormat.channels = 2;
     wantFormat.samples = snd_samples;
-    wantFormat.callback = &mixer;
-    wantFormat.userdata = (void *)this;
+    wantFormat.callback = &empty;
+    wantFormat.userdata = nullptr;
 
     // first establish the drivers and devices present
     int driverCount = SDL_GetNumAudioDrivers();
@@ -307,6 +313,11 @@ Audio::Audio(int flags)
         neoFatal("no audio devices present");
 
     const u::string &deviceName = m_drivers[driverSearch].devices[deviceSearch];
+
+    // No longer using empty callback, actually opening the device we'll
+    // be using for playback.
+    wantFormat.callback = &mixer;
+    wantFormat.userdata = (void *)this;
 
     SDL_AudioSpec haveFormat;
     SDL_AudioDeviceID device = SDL_OpenAudioDevice(deviceName.c_str(),
