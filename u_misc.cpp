@@ -70,7 +70,7 @@ namespace detail {
             size = 128;
         while (ret == -1) {
             size *= 4;
-            s = neoRealloc(s, size);
+            s = (char *)neoRealloc(s, size);
             va_copy(copy, ap);
             ret = vsnprintf(s, size - kSizeCorrection, &format[0], copy);
             va_end(copy);

@@ -70,7 +70,7 @@ private:
     }
 
     static inline T *reserve_traits(T *first, T *last, size_t capacity, detail::is_pod<T, false>) {
-        T *memory = neoMalloc(sizeof *memory * capacity);
+        T *memory = (T*)neoMalloc(sizeof *memory * capacity);
         move_urange(memory, first, last);
         neoFree(first);
         return memory;
@@ -78,7 +78,7 @@ private:
 
     static inline T *reserve_traits(T *first, T *last, size_t capacity, detail::is_pod<T, true>) {
         (void)last;
-        return neoRealloc(first, sizeof(T) * capacity);
+        return (T*)neoRealloc(first, sizeof(T) * capacity);
     }
 
     static inline T *reserve(T *first, T *last, size_t capacity) {
@@ -298,7 +298,7 @@ inline void buffer<T>::shrink_to_fit() {
         capacity = first;
     } else if (capacity != last) {
         const size_t size = size_t(last - first);
-        T *resize = neoMalloc(sizeof *resize * size);
+        T *resize = (T*)neoMalloc(sizeof *resize * size);
         move_urange(resize, first, last);
         neoFree(first);
         first = resize;

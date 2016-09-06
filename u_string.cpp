@@ -79,7 +79,7 @@ inline void stringMemory::region::resize() {
 }
 
 inline stringMemory::stringMemory()
-    : m_head(neoMalloc(kMemorySize))
+    : m_head((region *)neoMalloc(kMemorySize))
 {
     memset(m_head, 0, kMemorySize);
     m_head->setSize(kMemorySize);

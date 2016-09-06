@@ -3315,7 +3315,7 @@ void Texture::writeJPG(u::vector<unsigned char> &outData) {
             calcBits(difference, bits);
             const uint16_t index = bits[1];
             static const uint16_t kZeroBits[2] = { 0, 0 };
-            writeBits(index < 12 ? htdc[index] : kZeroBits);
+            writeBits(index < 12 ? (const uint16_t (&)[2])htdc[index] : kZeroBits);
             writeBits(bits);
         } else {
             writeBits(htdc[0]);

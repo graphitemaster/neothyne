@@ -91,7 +91,7 @@ private:
     friend struct Config;
     Reference m_reference;
     const char *m_default;
-    alignas(alignof(u::string)) unsigned char m_current[sizeof(u::string)];
+    alignas(u::string) unsigned char m_current[sizeof(u::string)];
     int m_flags;
 };
 

@@ -10,6 +10,8 @@
 namespace c {
 
 struct Console {
+    typedef u::map<u::string, Reference> Map;
+
     enum {
         kVarSuccess = 1,
         kVarRangeError,
@@ -46,8 +48,6 @@ struct Console {
     static u::vector<u::string> suggestions(const u::string &prefix);
 
 private:
-    typedef u::map<u::string, Reference> Map;
-
     friend struct Config;
     friend struct Reference;
 

@@ -1,36 +1,11 @@
 #ifndef U_NEW_HDR
 #define U_NEW_HDR
-#include <stddef.h>
-
-// The following class type reintroduces C's implicit conversion of pointer
-// types to and from void*.
-struct voidptr {
-    voidptr(void *ptr);
-    template <typename T>
-    operator T *();
-    operator bool();
-private:
-    void *m_ptr;
-};
-
-inline voidptr::voidptr(void *ptr)
-    : m_ptr(ptr)
-{
-}
-
-template <typename T>
-inline voidptr::operator T*() {
-    return (T*)m_ptr;
-}
-
-inline voidptr::operator bool() {
-    return m_ptr;
-}
+#include "u_traits.h"
 
 // Raw memory allocation mechanism.
-voidptr neoMalloc(size_t size);
-voidptr neoRealloc(voidptr ptr, size_t size);
-void neoFree(voidptr ptr);
+U_MALLOC_LIKE void *neoMalloc(size_t size);
+U_MALLOC_LIKE void *neoRealloc(void *ptr, size_t size);
+void neoFree(void *ptr);
 
 inline void *operator new(size_t, void *ptr) {
     return ptr;

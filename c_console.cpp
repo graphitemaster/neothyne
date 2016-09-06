@@ -5,10 +5,10 @@
 
 namespace c {
 
-alignas(alignof(Console::Map))
+alignas(Console::Map)
 unsigned char Console::m_map[sizeof(Map)];
 
-alignas(alignof(Complete))
+alignas(Complete)
 unsigned char Console::m_complete[sizeof(Complete)];
 
 // Console variables are arranged into a linked list of references with the use
