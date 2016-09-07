@@ -307,7 +307,7 @@ Audio::Audio(int flags)
             u::print("[audio] => found device `%s'\n", name);
         }
     }
-    if (U_UNLIKELY(deviceSearch == -1))) {
+    if (U_UNLIKELY(deviceSearch == -1)) {
         // just get the default device then
         deviceSearch = 1;
     }
