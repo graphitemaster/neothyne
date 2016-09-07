@@ -249,10 +249,6 @@ Audio::Audio(int flags)
         }
     }
     if (driverSearch == -1) {
-        // just get the default driver
-        SDL_QuitSubSystem(SDL_INIT_AUDIO);
-        if (SDL_InitSubSystem(SDL_INIT_AUDIO))
-            neoFatal("failed to initialize audio subsystem `%s'", SDL_GetError());
         // then find it in the list: it must exist for we added it to that list
         const char *name = SDL_GetCurrentAudioDriver();
         for (const auto &it : m_drivers) {
