@@ -224,7 +224,6 @@ Audio::Audio(int flags)
         }
         if (discovered.devices.empty())
             u::print("[audio] => no usable playback device(s) found for driver `%s'\n", driverName);
-        SDL_AudioQuit();
     }
 
     // find the appropriate audio driver
