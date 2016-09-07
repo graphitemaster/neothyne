@@ -154,12 +154,6 @@ void Audio::mixer(void *user, unsigned char *stream, int length) {
     }
 }
 
-// The following is an empty callback for SDL_AudioSpec. This is used
-// during device discovering opposed to the default mixer above
-static void empty(void *, unsigned char *, int) {
-    // Do nothing
-}
-
 Audio::Audio(int flags)
     : m_scratchNeeded(0)
     , m_sampleRate(0)
@@ -185,7 +179,7 @@ Audio::Audio(int flags)
     wantFormat.format = AUDIO_F32;
     wantFormat.channels = 2;
     wantFormat.samples = snd_samples;
-    wantFormat.callback = &empty;
+    wantFormat.callback = nullptr;
     wantFormat.userdata = nullptr;
 
     // first establish the drivers and devices present
@@ -222,8 +216,6 @@ Audio::Audio(int flags)
                 if (device > 0) {
                     u::print("             usable: %s\n", deviceName);
                     discovered.devices.push_back(deviceName);
-                    // no longer need the device
-                    SDL_CloseAudioDevice(device);
                 } else {
                     u::print("             unusable: %s\n", deviceName);
                 }
@@ -367,8 +359,6 @@ Audio::~Audio() {
     stopAll();
     for (auto *it : m_filterInstances)
         delete it;
-    // stop the thread
-    SDL_CloseAudioDevice(m_device);
     // free the mixer data after shutting down the mixer thread
     neoFree(m_mixerData);
     // destroy the mutex after shutting down the mixer thread
