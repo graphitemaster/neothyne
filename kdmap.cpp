@@ -178,7 +178,7 @@ bool kdMap::sphereTriangleIntersectStatic(size_t triangleIndex, const m::vec3 &s
     const float d = m::vec4::dot(A, V);
     const float e = m::vec4::dot(V, V);
 
-    if (d * d <= rr * e) return false;
+    const bool sep1 = d * d > rr * e;
 
     const float aa = m::vec4::dot(A, A);
     const float ab = m::vec4::dot(A, B);
@@ -187,9 +187,9 @@ bool kdMap::sphereTriangleIntersectStatic(size_t triangleIndex, const m::vec3 &s
     const float bc = m::vec4::dot(B, C);
     const float cc = m::vec4::dot(C, C);
 
-    if ((aa <= rr) || (ab <= aa) || (ac <= aa)) return false;
-    if ((bb <= rr) || (ab <= bb) || (bc <= bb)) return false;
-    if ((cc <= rr) || (ac <= cc) || (bc <= cc)) return false;
+    const bool sep2 = aa > rr && ab > aa && ac > aa;
+    const bool sep3 = bb > rr && ab > bb && bc > bb;
+    const bool sep4 = cc > rr && ac > cc && bc > cc;
 
     const m::vec4 AB = B - A;
     const m::vec4 BC = C - B;
@@ -203,11 +203,11 @@ bool kdMap::sphereTriangleIntersectStatic(size_t triangleIndex, const m::vec3 &s
     const m::vec4 Q2 = B * e2 - (bc - bb) * BC;
     const m::vec4 Q3 = C * e3 - (ac - cc) * CA;
 
-    if (m::vec4::dot(Q1, Q1) <= rr * e1 * e1 || m::vec4::dot(Q1, C * e1 - Q1) <= 0.0f) return false;
-    if (m::vec4::dot(Q2, Q2) <= rr * e2 * e2 || m::vec4::dot(Q2, A * e2 - Q2) <= 0.0f) return false;
-    if (m::vec4::dot(Q3, Q3) <= rr * e3 * e3 || m::vec4::dot(Q3, B * e3 - Q3) <= 0.0f) return false;
+    const bool sep5 = m::vec4::dot(Q1, Q1) > rr * e1 * e1 && m::vec4::dot(Q1, C * e1 - Q1) > 0.0f;
+    const bool sep6 = m::vec4::dot(Q2, Q2) > rr * e2 * e2 && m::vec4::dot(Q2, A * e2 - Q2) > 0.0f;
+    const bool sep7 = m::vec4::dot(Q3, Q3) > rr * e3 * e3 && m::vec4::dot(Q3, B * e3 - Q3) > 0.0f;
 
-    return true;
+    return !(sep1 | sep2 | sep3 | sep4 | sep5 | sep6 | sep7 );
 }
 
 bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &spherePosition,
@@ -401,6 +401,7 @@ bool kdMap::isSphereStuck(const m::vec3 &position, float radius) {
 bool kdMap::isSphereStuck(const m::vec3 &position, float radius, int32_t root) {
     m_stack.reset();
     m_stack.push(root);
+
     while (m_stack) {
         int32_t node = m_stack.pop();
         // this is a leaf node?

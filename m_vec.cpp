@@ -84,9 +84,9 @@ bool vec3::raySphereIntersect(const vec3 &start, const vec3 &direction,
 }
 
 vec3 vec3::rand(float mx, float my, float mz) {
-    return { mx * ((float)(u::randu() % 20000) * 0.0001f - 1.0f),
-             my * ((float)(u::randu() % 20000) * 0.0001f - 1.0f),
-             mz * ((float)(u::randu() % 20000) * 0.0001f - 1.0f) };
+    return { mx * u::randf(),
+             my * u::randf(),
+             mz * u::randf() };
 }
 
 void vec4::endianSwap() {

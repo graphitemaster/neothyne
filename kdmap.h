@@ -40,7 +40,7 @@ struct kdStack {
     }
 
     operator bool() const {
-        return m_top;
+        return m_top != -1;
     }
 
 private:
