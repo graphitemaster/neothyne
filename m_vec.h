@@ -8,6 +8,13 @@
 
 #ifdef __SSE2__
 #include <xmmintrin.h>
+
+// When both arguments to _mm_shuffle_ps are the same we can achieve the
+// same result using pshufd instruction instead. This saves ~2 mov instructions
+// on average and has less latency; similarly, multiple pshufd instructions
+// can be scheduled in parallel and complete together.
+#define _mm_pshufd(xmm, mask) \
+    _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(xmm), mask))
 #endif
 
 namespace m {
@@ -271,12 +278,6 @@ inline vec3 operator/(const vec3 &a, float value) {
     return { a.x * inv, a.y * inv, a.z * inv };
 }
 
-inline vec3 operator^(const vec3 &a, const vec3 &b) {
-    return { (a.y * b.z - a.z * b.y),
-             (a.z * b.x - a.x * b.z),
-             (a.x * b.y - a.y * b.x) };
-}
-
 inline float operator*(const vec3 &a, const vec3 &b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
@@ -406,13 +407,6 @@ inline vec4 vec4::splat() const {
 }
 
 #ifdef __SSE2__
-// When both arguments to _mm_shuffle_ps are the same we can achieve the
-// same result using pshufd instruction instead. This saves ~2 mov instructions
-// on average and has less latency; similarly, multiple pshufd instructions
-// can be scheduled in parallel and complete together.
-#define _mm_pshufd(xmm, mask) \
-    _mm_castsi128_ps(_mm_shuffle_epi32(_mm_castps_si128(xmm), mask))
-
 inline constexpr vec4::vec4(__m128 v)
     : v(v)
 {
@@ -453,6 +447,13 @@ inline vec4 operator+(const vec4 &l, const vec4 &r) {
 
 inline vec4 operator-(const vec4 &l, const vec4 &r) {
     return _mm_sub_ps(l.v, r.v);
+}
+
+inline vec4 operator^(const vec4 &l, const vec4 &r) {
+    __m128 a_yzx = _mm_shuffle_ps(l.v, l.v, _MM_SHUFFLE(3, 0, 2, 1));
+    __m128 b_yzx = _mm_shuffle_ps(r.v, r.v, _MM_SHUFFLE(3, 0, 2, 1));
+    __m128 c = _mm_sub_ps(_mm_mul_ps(l.v, b_yzx), _mm_mul_ps(a_yzx, r.v));
+    return _mm_shuffle_ps(c, c, _MM_SHUFFLE(3, 0, 2, 1));
 }
 
 inline vec4 vec4::addw(float f) const {
@@ -505,6 +506,13 @@ inline vec4 operator-(const vec4 &l, const vec4 &r) {
     return { l.x-r.x, l.y-r.y, l.z-r.z, l.w-r.w };
 }
 
+inline vec4 operator^(const vec4 &l, const vec4 &r) {
+    return { l.y*r.z - l.z*r.y,
+             l.z*r.x - l.x*r.z,
+             l.x*r.y - l.y*r.x,
+             0.0f };
+}
+
 inline vec4 vec4::addw(float f) const {
     return { x, y, z, w + f };
 }
@@ -515,6 +523,13 @@ inline vec4 vec4::swizzle() const {
 }
 
 #endif
+
+inline vec3 operator^(const vec3 &l, const vec3 &r) {
+    const vec4 a { l, 0.0f };
+    const vec4 b { r, 0.0f };
+    const vec4 v = a ^ b;
+    return { v.x, v.y, v.z };
+}
 
 }
 

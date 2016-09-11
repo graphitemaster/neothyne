@@ -7,7 +7,9 @@
 #include "u_log.h"
 
 ///!kdMap
-kdMap::kdMap() {
+kdMap::kdMap()
+    : m_stack(4096)
+{
     // nothing
 }
 
@@ -157,52 +159,55 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
             }
         }
     }
+
     return true;
 }
 
 bool kdMap::sphereTriangleIntersectStatic(size_t triangleIndex, const m::vec3 &spherePosition, float sphereRadius) const {
-    const size_t vertexIndex1 = triangles[triangleIndex].v[0];
-    const size_t vertexIndex2 = triangles[triangleIndex].v[1];
-    const size_t vertexIndex3 = triangles[triangleIndex].v[2];
-    const m::vec3 &oa = vertices[vertexIndex1].vertex;
-    const m::vec3 &ob = vertices[vertexIndex2].vertex;
-    const m::vec3 &oc = vertices[vertexIndex3].vertex;
-    const m::vec3 A = oa - spherePosition;
-    const m::vec3 B = ob - spherePosition;
-    const m::vec3 C = oc - spherePosition;
+    const m::vec4 oa = m::vec4(vertices[triangles[triangleIndex].v[0]].vertex, 1.0f);
+    const m::vec4 ob = m::vec4(vertices[triangles[triangleIndex].v[1]].vertex, 1.0f);
+    const m::vec4 oc = m::vec4(vertices[triangles[triangleIndex].v[2]].vertex, 1.0f);
+
+    const m::vec4 A = oa - m::vec4(spherePosition, 1.0f);
+    const m::vec4 B = ob - m::vec4(spherePosition, 1.0f);
+    const m::vec4 C = oc - m::vec4(spherePosition, 1.0f);
+    const m::vec4 V = (B - A) ^ (C - A);
+
     const float rr = sphereRadius * sphereRadius;
-    const m::vec3 V = (B - A) ^ (C - A);
-    const float d = (A * V);
-    const float e = (V * V);
-    const bool sep1 = d * d > rr * e;
-    const float aa = (A * A);
-    const float ab = (A * B);
-    const float ac = (A * C);
-    const float bb = (B * B);
-    const float bc = (B * C);
-    const float cc = (C * C);
-    const bool sep2 = (aa > rr) && (ab > aa) && (ac > aa);
-    const bool sep3 = (bb > rr) && (ab > bb) && (bc > bb);
-    const bool sep4 = (cc > rr) && (ac > cc) && (bc > cc);
-    const m::vec3 AB = B - A;
-    const m::vec3 BC = C - B;
-    const m::vec3 CA = A - C;
-    const float d1 = ab - aa;
-    const float d2 = bc - bb;
-    const float d3 = ac - cc;
-    const float e1 = (AB * AB);
-    const float e2 = (BC * BC);
-    const float e3 = (CA * CA);
-    const m::vec3 Q1 = A * e1 - d1 * AB;
-    const m::vec3 Q2 = B * e2 - d2 * BC;
-    const m::vec3 Q3 = C * e3 - d3 * CA;
-    const m::vec3 QC = C * e1 - Q1;
-    const m::vec3 QA = A * e2 - Q2;
-    const m::vec3 QB = B * e3 - Q3;
-    const bool sep5 = ((Q1 * Q1) > rr * e1 * e1) && ((Q1 * QC) > 0.0f);
-    const bool sep6 = ((Q2 * Q2) > rr * e2 * e2) && ((Q2 * QA) > 0.0f);
-    const bool sep7 = ((Q3 * Q3) > rr * e3 * e3) && ((Q3 * QB) > 0.0f);
-    return !(sep1 | sep2 | sep3 | sep4 | sep5 | sep6 | sep7);
+
+    const float d = m::vec4::dot(A, V);
+    const float e = m::vec4::dot(V, V);
+
+    if (d * d <= rr * e) return false;
+
+    const float aa = m::vec4::dot(A, A);
+    const float ab = m::vec4::dot(A, B);
+    const float ac = m::vec4::dot(A, C);
+    const float bb = m::vec4::dot(B, B);
+    const float bc = m::vec4::dot(B, C);
+    const float cc = m::vec4::dot(C, C);
+
+    if ((aa <= rr) || (ab <= aa) || (ac <= aa)) return false;
+    if ((bb <= rr) || (ab <= bb) || (bc <= bb)) return false;
+    if ((cc <= rr) || (ac <= cc) || (bc <= cc)) return false;
+
+    const m::vec4 AB = B - A;
+    const m::vec4 BC = C - B;
+    const m::vec4 CA = A - C;
+
+    const float e1 = m::vec4::dot(AB, AB);
+    const float e2 = m::vec4::dot(BC, BC);
+    const float e3 = m::vec4::dot(CA, CA);
+
+    const m::vec4 Q1 = A * e1 - (ab - aa) * AB;
+    const m::vec4 Q2 = B * e2 - (bc - bb) * BC;
+    const m::vec4 Q3 = C * e3 - (ac - cc) * CA;
+
+    if (m::vec4::dot(Q1, Q1) <= rr * e1 * e1 || m::vec4::dot(Q1, C * e1 - Q1) <= 0.0f) return false;
+    if (m::vec4::dot(Q2, Q2) <= rr * e2 * e2 || m::vec4::dot(Q2, A * e2 - Q2) <= 0.0f) return false;
+    if (m::vec4::dot(Q3, Q3) <= rr * e3 * e3 || m::vec4::dot(Q3, B * e3 - Q3) <= 0.0f) return false;
+
+    return true;
 }
 
 bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &spherePosition,
@@ -287,12 +292,13 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
     return *fraction != kdTree::kMaxTraceDistance;
 }
 
-void kdMap::traceSphere(kdSphereTrace *trace) const {
+void kdMap::traceSphere(kdSphereTrace *trace) {
     trace->fraction = kdTree::kMaxTraceDistance;
     traceSphere(trace, 0);
 }
 
-void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
+void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) {
+    // TODO(daleweiler): make iterative!
     if (node < 0) {
         // leaf node
         const size_t leafIndex = -node - 1;
@@ -359,67 +365,80 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) const {
     *trace = (traceFront.fraction < traceBack.fraction) ? traceFront : traceBack;
 }
 
-bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius, int32_t node) const {
-    // is this a leaf node?
-    if (node < 0) {
-        const size_t leafIndex = -node - 1;
-        const size_t triangleCount = leafs[leafIndex].triangles.size();
-        for (size_t i = 0; i < triangleCount; i++) {
-            const size_t triangleIndex = leafs[leafIndex].triangles[i];
-            if (sphereTriangleIntersectStatic(triangleIndex, position, radius))
-                triangleIndices.push_back(triangleIndex);
+bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius, int32_t root) {
+    m_stack.reset();
+    m_stack.push(root);
+    while (m_stack) {
+        int32_t node = m_stack.pop();
+        if (node < 0) {
+            const size_t leafIndex = -node - 1;
+            const size_t triangleCount = leafs[leafIndex].triangles.size();
+            for (size_t i = 0; i < triangleCount; i++) {
+                const size_t triangleIndex = leafs[leafIndex].triangles[i];
+                if (sphereTriangleIntersectStatic(triangleIndex, position, radius))
+                    triangleIndices.push_back(triangleIndex);
+            }
+        } else {
+            m_stack.push(nodes[node].children[0]);
+            m_stack.push(nodes[node].children[1]);
         }
-    } else {
-        inSphere(triangleIndices, position, radius, nodes[node].children[0]);
-        inSphere(triangleIndices, position, radius, nodes[node].children[1]);
     }
     return true;
 }
 
-bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius) const {
+bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius) {
     if (nodes.size() == 0)
         return false;
     return inSphere(triangleIndices, position, radius, 0);
 }
 
-bool kdMap::isSphereStuck(const m::vec3 &position, float radius) const {
+bool kdMap::isSphereStuck(const m::vec3 &position, float radius) {
     if (nodes.size() == 0)
         return false;
     return isSphereStuck(position, radius, 0);
 }
 
-bool kdMap::isSphereStuck(const m::vec3 &position, float radius, int32_t node) const {
-    // this is a leaf node?
-    if (node < 0) {
-        const size_t leafIndex = -node - 1;
-        const size_t triangleCount = leafs[leafIndex].triangles.size();
-        for (size_t i = 0; i < triangleCount; i++) {
-            const size_t triangleIndex = leafs[leafIndex].triangles[i];
-            if (sphereTriangleIntersectStatic(triangleIndex, position, radius))
-                return true;
+bool kdMap::isSphereStuck(const m::vec3 &position, float radius, int32_t root) {
+    m_stack.reset();
+    m_stack.push(root);
+    while (m_stack) {
+        int32_t node = m_stack.pop();
+        // this is a leaf node?
+        if (node < 0) {
+            const size_t leafIndex = -node - 1;
+            const size_t triangleCount = leafs[leafIndex].triangles.size();
+            for (size_t i = 0; i < triangleCount; i++) {
+                const size_t triangleIndex = leafs[leafIndex].triangles[i];
+                if (sphereTriangleIntersectStatic(triangleIndex, position, radius))
+                    return true;
+            }
+            return false;
         }
-        return false;
+
+        m::plane::point location;
+        m::plane plane = planes[nodes[node].plane];
+
+        // check if everything is in front of the plane
+        plane.d -= radius;
+        location = plane.classify(position, kdTree::kEpsilon);
+        if (location == m::plane::kFront) {
+            m_stack.push(nodes[node].children[0]);
+            continue;
+        }
+
+        // check if everything is behind the plane
+        plane.d = planes[nodes[node].plane].d + radius;
+        location = plane.classify(position, kdTree::kEpsilon);
+        if (location == m::plane::kBack) {
+            m_stack.push(nodes[node].children[0]);
+            continue;
+        }
+
+        // check both
+        m_stack.push(nodes[node].children[0]);
+        m_stack.push(nodes[node].children[1]);
     }
-
-    m::plane::point location;
-    m::plane plane = planes[nodes[node].plane];
-
-    // check if everything is in front of the plane
-    plane.d -= radius;
-    location = plane.classify(position, kdTree::kEpsilon);
-    if (location == m::plane::kFront)
-        return isSphereStuck(position, radius, nodes[node].children[0]);
-
-    // check if everything is behind the plane
-    plane.d = planes[nodes[node].plane].d + radius;
-    location = plane.classify(position, kdTree::kEpsilon);
-    if (location == m::plane::kBack)
-        return isSphereStuck(position, radius, nodes[node].children[1]);
-
-    // check both
-    if (isSphereStuck(position, radius, nodes[node].children[0]))
-        return true;
-    return isSphereStuck(position, radius, nodes[node].children[1]);
+    return false;
 }
 
 void kdMap::clipVelocity(const m::vec3 &in, const m::vec3 &normal, m::vec3 &out, float overBounce) {

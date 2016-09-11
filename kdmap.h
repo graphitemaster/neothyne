@@ -10,6 +10,45 @@ struct kdSphereTrace {
     m::plane plane;
 };
 
+// stack to do iterative depth-first traversals on the tree
+struct kdStack {
+    kdStack(size_t size)
+        : m_data((int32_t *)neoMalloc(sizeof *m_data * size))
+        , m_top(-1)
+        , m_size(size)
+    {
+    }
+
+    ~kdStack() {
+        neoFree(m_data);
+    }
+
+    void push(int32_t node) {
+        if (m_top == m_size-1) {
+            m_size *= 2;
+            m_data = (int32_t *)neoRealloc(m_data, sizeof *m_data * m_size);
+        }
+        m_data[++m_top] = node;
+    }
+
+    void reset() {
+        m_top = -1;
+    }
+
+    int32_t pop() {
+        return m_data[m_top--];
+    }
+
+    operator bool() const {
+        return m_top;
+    }
+
+private:
+    int32_t *m_data;
+    int32_t m_top;
+    int32_t m_size;
+};
+
 struct kdMap {
     kdMap();
     ~kdMap();
@@ -17,9 +56,9 @@ struct kdMap {
     bool load(const u::vector<unsigned char> &data);
     void unload();
 
-    void traceSphere(kdSphereTrace *trace) const;
-    bool inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius) const;
-    bool isSphereStuck(const m::vec3 &position, float radius) const;
+    void traceSphere(kdSphereTrace *trace);
+    bool inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius);
+    bool isSphereStuck(const m::vec3 &position, float radius);
 
     bool isLoaded() const;
 
@@ -50,9 +89,11 @@ private:
     // static
     bool sphereTriangleIntersectStatic(size_t triangleIndex, const m::vec3 &spherePosition, float sphereRadius) const;
 
-    void traceSphere(kdSphereTrace *trace, int32_t node) const;
-    bool isSphereStuck(const m::vec3 &position, float radius, int32_t node) const;
-    bool inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius, int32_t node) const;
+    void traceSphere(kdSphereTrace *trace, int32_t node);
+    bool isSphereStuck(const m::vec3 &position, float radius, int32_t node);
+    bool inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius, int32_t node);
+
+    kdStack m_stack;
 };
 
 #endif
