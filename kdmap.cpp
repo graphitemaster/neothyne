@@ -4,6 +4,7 @@
 
 #include "u_zlib.h"
 #include "u_misc.h"
+#include "u_log.h"
 
 ///!kdMap
 kdMap::kdMap() {
@@ -133,7 +134,7 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
     mapUnserialize(&endMark, data, seek);
     endMark = u::endianSwap(endMark);
     if (endMark != kdBinHeader::kMagic) {
-        u::print("INTEGRITY CHECK FAILED!\n");
+        u::Log::err("integrity check failed");
         return false;
     }
 

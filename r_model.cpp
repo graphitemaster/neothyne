@@ -6,6 +6,7 @@
 
 #include "u_misc.h"
 #include "u_file.h"
+#include "u_log.h"
 
 #include "c_console.h"
 
@@ -275,7 +276,7 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
     const u::string fileName = neoGamePath() + materialName + ".cfg";
     auto fp = u::fopen(fileName, "r");
     if (!fp) {
-        u::print("Failed to load material: %s (%s)\n", materialName, fileName);
+        u::Log::err("[material] => failed to load: %s (%s)\n", materialName, fileName);
         return false;
     }
 
@@ -337,7 +338,7 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
                 textures[ident] = release;
                 *store = release;
                 if (colorized != -1) {
-                    u::print("[material] => `%s' colorized with 0x%08X\n", ident, colorized);
+                    u::Log::out("[material] => `%s' colorized with 0x%08X\n", ident, colorized);
                     (*store)->colorize(colorized);
                 }
             } else {
@@ -367,7 +368,7 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
     // Sanitize animated inputs
     auto checkSize = [this, &fileName](texture2D *tex) {
         if (tex && m_animFrameWidth*m_animFramesPerRow > int(tex->width())) {
-            u::print("[material] => `%s' animation frame width and frames per row exceeds animation texture width\n", fileName);
+            u::Log::err("[material] => `%s' animation frame width and frames per row exceeds animation texture width\n", fileName);
             return false;
         }
         return true;
@@ -377,7 +378,7 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
         if (m_animFrameWidth <= 0 || m_animFrameHeight <= 0 ||
             m_animFramerate <= 0 || m_animFrames <= 0)
         {
-            u::print("[material] => `%s' invalid animation sequence\n", fileName);
+            u::Log::err("[material] => `%s' invalid animation sequence\n", fileName);
             return false;
         }
 
@@ -391,11 +392,11 @@ bool material::load(u::map<u::string, texture2D*> &textures, const u::string &ma
         m_animHeight = float(m_animFrameHeight) / diffuse->height();
 
         if (m_animFrames / m_animFramesPerRow > int(diffuse->height()) / m_animFrameHeight) {
-            u::print("[material] => `%s' frame-count exceeds the geometry of the animation sequence\n", fileName);
+            u::Log::err("[material] => `%s' frame-count exceeds the geometry of the animation sequence\n", fileName);
             return false;
         }
         if (m_animFramerate > m_animFrames) {
-            u::print("[material] => `%s' frame-rate exceeds the amount of frames in animation sequence\n", fileName);
+            u::Log::err("[material] => `%s' frame-rate exceeds the amount of frames in animation sequence\n", fileName);
             return false;
         }
     }
@@ -577,7 +578,7 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
                 materialNames.push_back(split[1]);
                 materialFiles.push_back(split[2]);
             } else {
-                u::print("[model] => invalid use of `material' key\n");
+                u::Log::err("[model] => invalid use of `material' key\n");
                 return false;
             }
         } else if (split[0] == "half") {
@@ -614,7 +615,7 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
 
         const auto &meshNames = m_model.meshNames();
         if (materialNames.size() != meshNames.size()) {
-            u::print("[model] => config contains %s materials than meshes\n",
+            u::Log::err("[model] => config contains %s materials than meshes\n",
                 materialNames.size() > meshNames.size() ? "more" : "less");
             return false;
         }
@@ -623,7 +624,7 @@ bool model::load(u::map<u::string, texture2D*> &textures, const u::string &file)
         for (size_t i = 0; i < materialNames.size(); i++) {
             auto find = u::find(meshNames.begin(), meshNames.end(), materialNames[i]);
             if (find == meshNames.end()) {
-                u::print("[model] => config contains `%s' material but model doesn't\n",
+                u::Log::err("[model] => config contains `%s' material but model doesn't\n",
                     materialNames[i]);
                 return false;
             }
@@ -742,7 +743,7 @@ bool model::upload() {
     }
 
     const size_t materials = m_model.meshNames().size();
-    u::print("[model] => loaded %s model `%s' (containing %zu %s) using %s-precision float\n",
+    u::Log::out("[model] => loaded %s model `%s' (containing %zu %s) using %s-precision float\n",
         state, u::fixPath(m_model.name()), materials, materials > 1 ? "materials" : "material", precision);
 
     return true;

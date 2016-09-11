@@ -13,6 +13,7 @@
 
 #include "u_file.h"
 #include "u_misc.h"
+#include "u_log.h"
 
 #include "a_filter.h" // audio filtering
 #include "a_lane.h" // audio lanes
@@ -365,19 +366,19 @@ int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, 
                 if (values.size() == 2) {
                     switch (c::Console::change(values[0], values[1])) {
                     case c::Console::kVarSuccess:
-                        u::print("changed `%s' to `%s'\n", values[0], values[1]);
+                        u::Log::out("changed `%s' to `%s'\n", values[0], values[1]);
                         break;
                     case c::Console::kVarRangeError:
-                        u::print("invalid range for `%s'\n", values[0]);
+                        u::Log::err("invalid range for `%s'\n", values[0]);
                         break;
                     case c::Console::kVarTypeError:
-                        u::print("invalid type for `%s'\n", values[0]);
+                        u::Log::err("invalid type for `%s'\n", values[0]);
                         break;
                     case c::Console::kVarNotFoundError:
-                        u::print("variable `%s' not found\n", values[0]);
+                        u::Log::err("variable `%s' not found\n", values[0]);
                         break;
                     case c::Console::kVarReadOnlyError:
-                        u::print("variable `%s' is read-only\n", values[0]);
+                        u::Log::err("variable `%s' is read-only\n", values[0]);
                         break;
                     }
                 } else if (values.size() == 1) {

@@ -7,6 +7,7 @@
 #include "u_hash.h"
 #include "u_zip.h"
 #include "u_set.h"
+#include "u_log.h"
 
 namespace r {
 
@@ -265,13 +266,15 @@ static bool mountCache() {
         // Cache already exists: open
         if (!gMethodCache.open(cacheFile))
             return false;
-        u::print("[cache] => mounted method cache `%s'\n", cacheFile);
+        u::Log::out("[cache] => mounted method cache `%s'\n", cacheFile);
         return true;
     }
     // Cache does not exist: create the file
-    if (!gMethodCache.create(cacheFile))
+    if (!gMethodCache.create(cacheFile)) {
+        u::Log::err("[cache] => failed to create cache file `%s'\n", cacheFile);
         return false;
-    u::print("[cache] => created method cache `%s'\n", cacheFile);
+    }
+    u::Log::out("[cache] => created method cache `%s'\n", cacheFile);
     return true;
 }
 
@@ -326,13 +329,13 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             // Verify that this program is valid (linked)
             gl::GetProgramiv(m_program, GL_LINK_STATUS, &status);
             if (status) {
-                u::print("[cache] => loaded (method) %s\n", hash.hex());
+                u::Log::out("[cache] => loaded (method) %s\n", hash.hex());
                 notUsingCache = false;
             }
             break;
         }
         // Not supported, remove it
-        u::print("[cache] => failed loading `%s'\n", hash.hex());
+        u::Log::err("[cache] => failed loading `%s'\n", hash.hex());
         gMethodCache.remove(hash.hex());
         break;
     }
@@ -361,10 +364,10 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
 
             u::vector<char> log(length+1);
             gl::GetShaderInfoLog(shader_.object, length, nullptr, &log[0]);
-            u::print("shader compilation error `%s':\n%s\n%s",
-                     shader_.shaderFile,
-                     &log[0],
-                     source);
+            u::Log::err("[shader] => compilation error `%s':\n%s\n%s",
+                        shader_.shaderFile,
+                        &log[0],
+                        source);
             return false;
         };
         for (auto &it : m_shaders)
@@ -393,7 +396,7 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             gl::GetProgramiv(m_program, GL_INFO_LOG_LENGTH, &infoLogLength);
             infoLog.resize(infoLogLength);
             gl::GetProgramInfoLog(m_program, infoLogLength, nullptr, &infoLog[0]);
-            u::print("shader link error:\n%s\n", infoLog);
+            u::Log::err("[shader] => link error:\n%s\n", infoLog);
             return false;
         }
 
@@ -433,10 +436,12 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
             memcpy(&serialize[0], &header, sizeof header);
             memcpy(&serialize[sizeof header], &programBinary[0], programBinary.size());
 
-            if (gMethodCache.write(hash.hex(), serialize))
-                u::print("[cache] => wrote (method) %s\n", hash.hex());
-            else
+            if (gMethodCache.write(hash.hex(), serialize)) {
+                u::Log::out("[cache] => wrote (method) %s\n", hash.hex());
+            } else {
+                u::Log::err("[cache] => failed writing (method) %s\n", hash.hex());
                 return false;
+            }
         }
 
         // Don't need these anymore
@@ -463,9 +468,9 @@ bool method::finalize(const u::initializer_list<const char *> &attributes,
 
     const char *const whence = initial ? "loaded" : "reloaded";
     if (contents.empty())
-        u::print("[method] => %s `%s' program\n", whence, m_description);
+        u::Log::out("[method] => %s `%s' program\n", whence, m_description);
     else
-        u::print("[method] => %s `%s' program using [%s]\n", whence, m_description, contents);
+        u::Log::out("[method] => %s `%s' program using [%s]\n", whence, m_description, contents);
     return true;
 }
 

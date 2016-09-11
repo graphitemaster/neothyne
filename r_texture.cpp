@@ -7,6 +7,7 @@
 #include "u_algorithm.h"
 #include "u_misc.h"
 #include "u_zip.h"
+#include "u_log.h"
 
 #include "m_const.h"
 
@@ -442,13 +443,15 @@ static bool mountCache() {
         // Cache already exists: open
         if (!gTextureCache.open(cacheFile))
             return false;
-        u::print("[cache] => mounted texture cache `%s'\n", cacheFile);
+        u::Log::out("[cache] => mounted texture cache `%s'\n", cacheFile);
         return true;
     }
     // Cache does not exist: create the file
-    if (!gTextureCache.create(cacheFile))
+    if (!gTextureCache.create(cacheFile)) {
+        u::Log::err("[cache] failed crearting texture cache `%s'\n", cacheFile);
         return false;
-    u::print("[cache] => created texture cache `%s'\n", cacheFile);
+    }
+    u::Log::out("[cache] => created texture cache `%s'\n", cacheFile);
     return true;
 }
 
@@ -511,7 +514,7 @@ static bool readCache(Texture &tex, GLuint &internal) {
     // Now swap!
     tex.unload();
     tex.from(data, length, head.width, head.height, false, TextureFormat(head.format), head.mips);
-    u::print("[cache] => loaded (texture) %s %s (%s)\n", cacheName,
+    u::Log::out("[cache] => loaded (texture) %s %s (%s)\n", cacheName,
         cacheFormat(head.internal), u::sizeMetric(length));
     return true;
 }
@@ -573,22 +576,22 @@ static bool writeCacheData(TextureFormat format,
     memcpy(&data[0], &head, sizeof head);
     memcpy(&data[0] + sizeof head, compressedData, compressedSize);
 
-    u::print("[cache] => wrote (texture) %s %s (compressed %s to %s with %s compressor)",
-        hash,
-        cacheFormat(internal),
-        // TODO: calculate 33% more for mip levels
-        u::sizeMetric(texSize),
-        u::sizeMetric(compressedSize),
-        from
+    u::Log::out("[cache] => wrote (texture) %s %s (compressed %s to %s with %s compressor)",
+                hash,
+                cacheFormat(internal),
+                // TODO: calculate 33% more for mip levels
+                u::sizeMetric(texSize),
+                u::sizeMetric(compressedSize),
+                from
     );
 
     if (dxt && dxtOptimCount) {
         const float blockCount = (compressedWidth / 4.0f) * (compressedHeight / 4.0f);
         const float blockDifference = blockCount - dxtOptimCount;
         const float blockPercent = (blockDifference / blockCount) * 100.0f;
-        u::print(" (optimized endpoints in %.2f%% of blocks)", blockPercent);
+        u::Log::out(" (optimized endpoints in %.2f%% of blocks)", blockPercent);
     }
-    u::print("\n");
+    u::Log::out("\n");
 
     // Write it out
     return gTextureCache.write(hash, data);

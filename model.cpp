@@ -3,6 +3,7 @@
 
 #include "u_file.h"
 #include "u_map.h"
+#include "u_log.h"
 
 #include "m_quat.h"
 #include "m_half.h"
@@ -660,7 +661,7 @@ bool IQM::load(const u::string &file, Model *store, const u::vector<u::string> &
             continue;
         if (animHdr->numAnims > 0 && !loadAnims(animHdr, &animData[0], store))
             continue;
-        u::print("[model] => loaded animation `%s' for `%s'\n", it, u::fixPath(file));
+        u::Log::out("[model] => loaded animation `%s' for `%s'\n", it, u::fixPath(file));
     }
 
     return true;

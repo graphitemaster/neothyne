@@ -21,6 +21,7 @@
 #include "u_file.h"
 #include "u_misc.h"
 #include "u_set.h"
+#include "u_log.h"
 
 #include "m_vec.h"
 
@@ -241,13 +242,13 @@ inline void Context::addController(int id) {
     Controller cntrl(id);
     m_controllers.insert({ cntrl.instance(), cntrl });
 
-    u::print("[input] => gamepad %d (%s) connected\n", cntrl.m_instance, cntrl.name());
+    u::Log::out("[input] => gamepad %d (%s) connected\n", cntrl.m_instance, cntrl.name());
 }
 
 inline void Context::delController(int instance) {
     auto cntrl = getController(instance);
     if (!cntrl) return;
-    u::print("[input] => gamepad %d (%s) disconnected\n", instance, cntrl->name());
+    u::Log::out("[input] => gamepad %d (%s) disconnected\n", instance, cntrl->name());
     cntrl->close();
 }
 
@@ -374,10 +375,10 @@ bool Engine::initContext() {
     const u::string &videoDriver = vid_driver.get();
     if (videoDriver.size()) {
         if (SDL_GL_LoadLibrary(videoDriver.c_str()) != 0) {
-            u::print("[video] => failed to load video driver: %s\n", SDL_GetError());
+            u::Log::err("[video] => failed to load video driver: %s\n", SDL_GetError());
             return false;
         } else {
-            u::print("[video] => loaded video driver: %s\n", videoDriver);
+            u::Log::out("[video] => loaded video driver: %s\n", videoDriver);
         }
     }
 
@@ -385,20 +386,20 @@ bool Engine::initContext() {
     const u::string &displayName = vid_display.get();
     int display = -1;
     int displays = SDL_GetNumVideoDisplays();
-    u::print("[video] => found %d displays\n", displays);
+    u::Log::out("[video] => found %d displays\n", displays);
     if (displayName.size())
-        u::print("[video] => searching for display `%s'\n", displayName);
+        u::Log::out("[video] => searching for display `%s'\n", displayName);
     for (int i = 0; i < displays; i++) {
         const char *name = SDL_GetDisplayName(i);
-        u::print("[video] => found %s display `%s' ",
+        u::Log::out("[video] => found %s display `%s' ",
             name == displayName ? "matching" : "a", name);
         if (name == displayName)
             display = i;
         SDL_Rect bounds;
         if (SDL_GetDisplayBounds(i, &bounds))
-            u::print("\n");
+            u::Log::out("\n");
         else
-            u::print("(%d x %d)\n", bounds.w, bounds.h);
+            u::Log::out("(%d x %d)\n", bounds.w, bounds.h);
     }
     if (display == -1) {
         // by default SDL uses display 0
@@ -409,7 +410,7 @@ bool Engine::initContext() {
     }
     const char *selectedDisplayName = SDL_GetDisplayName(display);
     if (selectedDisplayName)
-        u::print("[video] => using display `%s'\n", selectedDisplayName);
+        u::Log::out("[video] => using display `%s'\n", selectedDisplayName);
 
     // Get the display mode resolution
     SDL_DisplayMode mode;
@@ -584,7 +585,7 @@ bool Engine::initData(int &argc, char **argv) {
     if (directory) {
         fixedDirectory = u::fixPath(directory);
         if (!u::exists(fixedDirectory, u::kDirectory)) {
-            u::print("Game directory `%s' doesn't exist (falling back to %s)\n",
+            u::Log::out("Game directory `%s' doesn't exist (falling back to %s)\n",
                 fixedDirectory, u::fixPath("./game/"));
         }
     }
@@ -597,7 +598,7 @@ bool Engine::initData(int &argc, char **argv) {
 
     // Verify that path even exists
     if (!u::exists(m_gamePath, u::kDirectory)) {
-        u::print("Game directory `%s' doesn't exist", u::fixPath(m_gamePath));
+        u::Log::err("Game directory `%s' doesn't exist", u::fixPath(m_gamePath));
         return false;
     }
 
@@ -896,7 +897,7 @@ void Engine::screenShot() {
     auto format = SaveFormat(scr_format.get());
 
     if (screenShot.save(file, format, scr_quality))
-        u::print("[screenshot] => %s.%s\n", fixedPath, kSaveFormatExtensions[scr_format]);
+        u::Log::out("[screenshot] => %s.%s\n", fixedPath, kSaveFormatExtensions[scr_format]);
 }
 
 const u::string &Engine::userPath() const {
@@ -1018,6 +1019,8 @@ void *neoGetProcAddress(const char *proc) {
     return SDL_GL_GetProcAddress(proc);
 }
 
+#include "u_log.h"
+
 ///
 /// On Window the entry point is entered as such:
 ///     WinMain -> entryPoint -> neoMain
@@ -1070,20 +1073,20 @@ static int entryPoint(int argc, char **argv) {
         dxtCompressor.set(1);
     }
 
-    u::print("[video] => Vendor: %s\n", vendor);
-    u::print("[video] => Renderer: %s\n", renderer);
-    u::print("[video] => Driver: %s\n", version);
-    u::print("[video] => Shading: %s (using %s)\n", shader, gl::glslVersionString());
-    u::print("[video] => Extensions:\n");
+    u::Log::out("[video] => Vendor: %s\n", vendor);
+    u::Log::out("[video] => Renderer: %s\n", renderer);
+    u::Log::out("[video] => Driver: %s\n", version);
+    u::Log::out("[video] => Shading: %s (using %s)\n", shader, gl::glslVersionString());
+    u::Log::out("[video] => Extensions:\n");
 
     for (const auto &it : gl::extensions())
-        u::print("            %s\n", gl::extensionString(it));
+        u::Log::out("            %s\n", gl::extensionString(it));
 
-    u::print("[system] => OS: %s\n", gOperatingSystem);
-    u::print("[system] => CPU: %s\n", u::CPUDesc());
-    u::print("[system] => RAM: %s\n", u::RAMDesc());
-    u::print("[system] => Game: %s\n", gEngine.gamePath());
-    u::print("[system] => User: %s\n", gEngine.userPath());
+    u::Log::out("[system] => OS: %s\n", gOperatingSystem);
+    u::Log::out("[system] => CPU: %s\n", u::CPUDesc());
+    u::Log::out("[system] => RAM: %s\n", u::RAMDesc());
+    u::Log::out("[system] => Game: %s\n", gEngine.gamePath());
+    u::Log::out("[system] => User: %s\n", gEngine.userPath());
 
     a::Audio *audio = new a::Audio(a::Audio::kClipRoundOff);
     r::World *world = new r::World();

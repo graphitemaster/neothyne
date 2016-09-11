@@ -48,6 +48,7 @@ UTIL_SOURCES = \
 	u_misc.cpp \
 	u_new.cpp \
 	u_hash.cpp \
+	u_log.cpp \
 	u_string.cpp \
 	u_zip.cpp \
 	u_zlib.cpp

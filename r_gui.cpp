@@ -8,18 +8,19 @@
 #include "u_file.h"
 #include "u_misc.h"
 #include "u_algorithm.h"
+#include "u_log.h"
 
 namespace r {
 
 #if defined(DEBUG_GUI)
 static void printLine(const ::gui::Line &it) {
-    u::print("    [0] = { x: %d, y: %d }\n", it.x[0], it.y[0]);
-    u::print("    [1] = { x: %d, y: %d }\n", it.x[1], it.y[0]);
-    u::print("    r = %d\n", it.r);
+    u::Log::out("[gui] =>     [0] = { x: %d, y: %d }\n", it.x[0], it.y[0]);
+    u::Log::out("[gui] =>     [1] = { x: %d, y: %d }\n", it.x[1], it.y[0]);
+    u::Log::out("[gui] =>     r = %d\n", it.r);
 }
 
 static void printRectangle(const ::gui::Rectangle &it) {
-    u::print("    { x: %d, y: %d, w: %d, h: %d, r: %d }\n", it.x, it.y, it.w,
+    u::Log::out("[gui] =>     { x: %d, y: %d, w: %d, h: %d, r: %d }\n", it.x, it.y, it.w,
         it.h, it.r);
 }
 
@@ -32,66 +33,67 @@ static void printText(const ::gui::Text &it) {
         }
         return "";
     };
-    u::print("    { x: %d, y: %d, align: %s, contents: `%s' }\n", it.x, it.y,
+    u::Log::out("[gui] =>     { x: %d, y: %d, align: %s, contents: `%s' }\n", it.x, it.y,
         align(it.align), it.contents);
 }
 
 static void printScissor(const ::gui::Scissor &it) {
-    u::print("    { x: %d, y: %d, w: %d, h: %d }\n", it.x, it.y, it.w, it.h);
+    u::Log::out("[gui] =>     { x: %d, y: %d, w: %d, h: %d }\n", it.x, it.y, it.w, it.h);
 }
 
 static void printTriangle(const ::gui::Triangle &it) {
-    u::print("    { x: %d, y: %d, w: %d, h: %d }\n", it.x, it.y, it.w, it.h);
+    u::Log::out("[gui] =>     { x: %d, y: %d, w: %d, h: %d }\n", it.x, it.y, it.w, it.h);
 }
 
 static void printImage(const ::gui::Image &it) {
-    u::print("    { x: %d, y: %d, w: %d, h: %d, path: %s }\n",
+    u::Log::out("[gui] =>     { x: %d, y: %d, w: %d, h: %d, path: %s }\n",
         it.x, it.y, it.w, it.h, it.path);
 }
 
 static void printModel(const ::gui::Model &it) {
-    u::print("    { x: %d, y: %d, w: %d, h: %d, path: %s\n",
+    u::Log::out("[gui] =>     { x: %d, y: %d, w: %d, h: %d, path: %s\n",
         it.x, it.y, it.w, it.h, it.path);
-    u::print("      wvp: {\n");
+    u::Log::out("[gui] =>       wvp: {\n");
     for (size_t i = 0; i < 4; i++) {
-        u::print("          [%f, %f, %f, %f]\n",
+        u::Log::out("           [%f, %f, %f, %f]\n",
             it.wvp.m[i][0], it.wvp.m[i][1], it.wvp.m[i][2], it.wvp.m[i][3]);
     }
-    u::print("      }\n");
-    u::print("    }\n");
+    u::Log::out("[gui] =>       }\n");
+    u::Log::out("[gui] =>     }\n");
 }
 
 static void printCommand(const ::gui::Command &it) {
     switch (it.type) {
     case ::gui::kCommandLine:
-        u::print("line:      (color: #%X)\n", it.color);
+        u::Log::out("[gui] => line:      (color: #%X)\n", it.color);
         printLine(it.asLine);
         break;
     case ::gui::kCommandRectangle:
-        u::print("rectangle: (color: #%X)\n", it.color);
+
+        u::Log::out("[gui] => rectangle: (color: #%X)\n", it.color);
         printRectangle(it.asRectangle);
         break;
     case ::gui::kCommandScissor:
-        u::print("scissor:\n");
+        u::Log::out("[gui] => scissor:\n");
         printScissor(it.asScissor);
         break;
     case ::gui::kCommandText:
-        u::print("text:      (color: #%X)\n", it.color);
+        u::Log::out("[gui] => text:      (color: #%X)\n", it.color);
         printText(it.asText);
         break;
     case ::gui::kCommandTriangle:
-        u::print("triangle:  (flags: %d | color: #%X)\n", it.flags, it.color);
+        u::Log::out("[gui] => triangle:  (flags: %d | color: #%X)\n", it.flags, it.color);
         printTriangle(it.asTriangle);
         break;
     case ::gui::kCommandImage:
-        u::print("image:\n");
+        u::Log::out("[gui] => image:\n");
         printImage(it.asImage);
     case ::gui::kCommandModel:
-        u::print("model:\n");
+        u::Log::out("[gui] => model:\n");
         printModel(it.asModel);
         break;
     }
-    u::print("\n");
+    u::Log::out("\n");
 }
 #endif
 
@@ -339,7 +341,7 @@ gui::~gui() {
     saveAtlas.from(m_atlasData, kAtlasSize*kAtlasSize*4, kAtlasSize, kAtlasSize,
         false, kTexFormatRGBA);
     if (saveAtlas.save("ui_atlas", kSaveTGA))
-        u::print("wrote ui texture atlas to `ui_atlas.tga'\n");
+        u::Log::out("[gui] => wrote ui texture atlas to `ui_atlas.tga'\n");
 #endif
 
     delete [] m_atlasData;
@@ -409,7 +411,7 @@ gui::atlas::node *gui::atlasPack(const u::string &file) {
             }
         }
     }
-    u::print("[atlas] => inserted (%zux%zu) at (%d,%d) (%.2f%% usage)\n",
+    u::Log::out("[atlas] => inserted (%zux%zu) at (%d,%d) (%.2f%% usage)\n",
         tex.width(), tex.height(), node->x, node->y, m_atlas.occupancy()*100.0f);
     return node;
 }
@@ -702,7 +704,7 @@ void gui::render(const pipeline &pl) {
     m_batches.destroy();
 
 #if defined(DEBUG_GUI)
-    u::printf(">> COMPLETE GUI FRAME\n\n");
+    u::Log::out("[gui] => completed frame\n");
 #endif
 
     gl::Enable(GL_DEPTH_TEST);

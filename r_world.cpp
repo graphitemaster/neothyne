@@ -6,6 +6,8 @@
 #include "r_stats.h"
 #include "r_world.h"
 
+#include "u_log.h"
+
 // Debug visualizations
 enum {
     kDebugDepth = 1,
@@ -473,7 +475,7 @@ bool World::load(kdMap *map) {
         neoFatal("failed to load gun");
 
     m_stats = r::stat::add("world", "Map");
-    u::print("[world] => loaded\n");
+    u::Log::out("[world] => loaded\n");
     return true;
 }
 
@@ -663,7 +665,7 @@ bool World::upload(const m::perspective &p) {
     m_shadowMapMethod.enable();
     m_shadowMapMethod.setWVP(m::mat4::kIdentity);
 
-    u::print("[world] => uploaded\n");
+    u::Log::out("[world] => uploaded\n");
     return m_uploaded = true;
 }
 
@@ -691,7 +693,7 @@ void World::unload(bool destroy) {
     m_stats->decVBOMemory(m_kdWorld->vertices.size() * sizeof(kdBinVertex));
 
     m_uploaded = false;
-    u::print("[world] => unloaded\n");
+    u::Log::out("[world] => unloaded\n");
 }
 
 void World::render(const pipeline &pl) {

@@ -11,6 +11,7 @@
 #include "u_new.h"
 #include "u_misc.h"
 #include "u_memory.h"
+#include "u_log.h"
 
 #include "engine.h"
 
@@ -186,7 +187,7 @@ Audio::Audio(int flags)
     int driverCount = SDL_GetNumAudioDrivers();
     if (driverCount == -1)
         neoFatal("remote audio not supported");
-    u::print("[audio] => discovered %d %s\n", driverCount,
+    u::Log::out("[audio] => discovered %d %s\n", driverCount,
         driverCount > 1 ? "drivers" : "driver");
     for (int i = 0; i < driverCount; i++) {
         const char *driverName = SDL_GetAudioDriver(i);
@@ -195,18 +196,18 @@ Audio::Audio(int flags)
             continue;
         // attempt to initialize the audio driver
         if (SDL_AudioInit(driverName)) {
-            u::print("[audio] => found unusable driver `%s' (%s)\n",
+            u::Log::out("[audio] => found unusable driver `%s' (%s)\n",
                 driverName, SDL_GetError());
             continue;
         }
-        u::print("[audio] => found driver `%s'\n", driverName);
+        u::Log::out("[audio] => found driver `%s'\n", driverName);
         Driver discovered;
         discovered.name = driverName;
         // enumerate all devices discoverable with this driver
         const int deviceCount = SDL_GetNumAudioDevices(0);
         if (deviceCount) {
             SDL_AudioSpec haveFormat;
-            u::print("[audio] => %d playback %s present for driver `%s'\n",
+            u::Log::out("[audio] => %d playback %s present for driver `%s'\n",
                 deviceCount, deviceCount > 1 ? "devices" : "device", driverName);
             for (int j = 0; j < deviceCount; j++) {
                 const char *deviceName = SDL_GetAudioDeviceName(j, 0);
@@ -214,26 +215,26 @@ Audio::Audio(int flags)
                 SDL_AudioDeviceID device = SDL_OpenAudioDevice(
                     deviceName, 0, &wantFormat, &haveFormat, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
                 if (device > 0) {
-                    u::print("             usable: %s\n", deviceName);
+                    u::Log::out("             usable: %s\n", deviceName);
                     discovered.devices.push_back(deviceName);
                 } else {
-                    u::print("             unusable: %s\n", deviceName);
+                    u::Log::out("             unusable: %s\n", deviceName);
                 }
             }
             m_drivers.push_back(discovered);
         }
         if (discovered.devices.empty())
-            u::print("[audio] => no usable playback device(s) found for driver `%s'\n", driverName);
+            u::Log::err("[audio] => no usable playback device(s) found for driver `%s'\n", driverName);
     }
 
     // find the appropriate audio driver
     driverCount = int(m_drivers.size());
     const u::string &checkDriver = snd_driver.get();
     if (driverCount)
-        u::print("[audio] => have %d usable %s\n",
+        u::Log::out("[audio] => have %d usable %s\n",
             driverCount, driverCount > 1 ? "drivers" : "driver");
     if (checkDriver.size())
-        u::print("[audio] => searching for driver `%s'\n", checkDriver);
+        u::Log::out("[audio] => searching for driver `%s'\n", checkDriver);
 
     int driverSearch = checkDriver.empty() ? 0 : -1;
     for (int i = 0; i < driverCount; i++) {
@@ -241,7 +242,7 @@ Audio::Audio(int flags)
         if (checkDriver.empty())
             continue;
         // found a match for the "configured" driver in init.cfg
-        u::print("[audio] => found %s driver `%s'\n",
+        u::Log::out("[audio] => found %s driver `%s'\n",
             name == checkDriver ? "matching" : "a", name);
         if (name == checkDriver) {
             driverSearch = i;
@@ -258,24 +259,29 @@ Audio::Audio(int flags)
             break;
         }
     }
-    if (U_UNLIKELY(driverSearch == -1))
-        neoFatal("no audio driver present");
+    if (U_UNLIKELY(driverSearch == -1)) {
+        u::Log::err("no audio driver present");
+        return;
+    }
 
     const u::string &driverName = m_drivers[driverSearch].name;
-    if (SDL_AudioInit(driverName.c_str()))
-        neoFatal("failed to initialize audio driver `%s'", driverName);
+    if (SDL_AudioInit(driverName.c_str())) {
+        u::Log::err("failed to initialize audio driver `%s'", driverName);
+        return;
+    }
+
     snd_driver.set(driverName);
-    u::print("[audio] => using driver `%s'\n", driverName);
+    u::Log::out("[audio] => using driver `%s'\n", driverName);
 
     // find the appropriate device
     const size_t deviceCount = m_drivers[driverSearch].devices.size();
-    u::print("[audio] => have %zu usable %s\n", deviceCount,
+    u::Log::out("[audio] => have %zu usable %s\n", deviceCount,
         deviceCount > 1 ? "devices" : "device");
     const u::string &checkDevice = snd_device;
     if (checkDevice.size())
-        u::print("[audio] => searching for device `%s'\n", checkDevice);
+        u::Log::out("[audio] => searching for device `%s'\n", checkDevice);
     if (deviceCount) {
-        u::print("[audio] => discovered %zu playback %s\n",
+        u::Log::out("[audio] => discovered %zu playback %s\n",
             deviceCount, deviceCount > 1 ? "devices" : "device");
     }
     int deviceSearch = checkDevice.empty() ? 0 : -1;
@@ -284,14 +290,14 @@ Audio::Audio(int flags)
         const u::string &name = m_drivers[driverSearch].devices[i];
         if (checkDevice.size()) {
             // found a match for the "configured" device in init.cfg
-            u::print("[audio] => found %s device `%s'\n",
+            u::Log::out("[audio] => found %s device `%s'\n",
                 name == checkDevice ? "matching" : "a", name);
             if (name == checkDevice) {
                 deviceSearch = i;
                 break;
             }
         } else if (name.size()) {
-            u::print("[audio] => found device `%s'\n", name);
+            u::Log::out("[audio] => found device `%s'\n", name);
         }
     }
     if (U_UNLIKELY(deviceSearch == -1)) {
@@ -299,8 +305,10 @@ Audio::Audio(int flags)
         deviceSearch = 1;
     }
 
-    if (m_drivers[driverSearch].devices.empty())
-        neoFatal("no audio devices present");
+    if (m_drivers[driverSearch].devices.empty()) {
+        u::Log::err("no audio devices present");
+        return;
+    }
 
     const u::string &deviceName = m_drivers[driverSearch].devices[deviceSearch];
 
@@ -325,7 +333,7 @@ Audio::Audio(int flags)
                                           &haveFormat,
                                           0)) == 0)
         {
-            u::print("[audio] => failed to initialize audio\n");
+            u::Log::err("[audio] => failed to initialize audio\n");
             return;
         }
     }
@@ -336,7 +344,7 @@ Audio::Audio(int flags)
     m_hasFloat = haveFormat.format == AUDIO_F32;
     m_mixerData = (float *)neoMalloc(sizeof(float) * haveFormat.samples*4);
 
-    u::print("[audio] => device `%s' configured for %d channels @ %dHz (%d %s samples)\n",
+    u::Log::out("[audio] => device `%s' configured for %d channels @ %dHz (%d %s samples)\n",
         deviceName, haveFormat.channels, haveFormat.freq, haveFormat.samples,
         haveFormat.format == AUDIO_S16 ? "singed int16" : "float");
 
@@ -369,7 +377,7 @@ void Audio::init(int voices, int sampleRate, int bufferSize, int flags) {
     m_bufferSize = bufferSize;
     m_flags = flags;
     m_postClipScaler = 0.95f;
-    u::print("[audio] => initialized for %d voices @ %dHz with %s buffer\n",
+    u::Log::out("[audio] => initialized for %d voices @ %dHz with %s buffer\n",
         voices, sampleRate, u::sizeMetric(bufferSize));
 }
 

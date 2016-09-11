@@ -7,6 +7,7 @@
 #include "u_algorithm.h"
 #include "u_misc.h"
 #include "u_traits.h"
+#include "u_log.h"
 
 #include "m_const.h"
 #include "m_trig.h"
@@ -2501,7 +2502,7 @@ template <typename T>
 bool Texture::decode(const u::vector<unsigned char> &data, const char *name, float quality) {
     auto decode = u::unique_ptr<T>(new T(data));
     if (decode->status() != Decoder::kSuccess) {
-        u::print("failed to decode `%s' %s\n", name, decode->error());
+        u::Log::err("[texture] => failed to decode `%s' %s\n", name, decode->error());
         return false;
     }
 
@@ -2652,7 +2653,7 @@ bool Texture::load(const u::string &file, float quality) {
         return decode<PNMDecoder>(data, fileName, quality);
     else if (PCXDecoder::test(data))
         return decode<PCXDecoder>(data, fileName, quality);
-    u::print("no decoder found for `%s'\n", fileName);
+    u::Log::err("[texture] => no decoder found for `%s'\n", fileName);
     return false;
 }
 

@@ -11,6 +11,7 @@
 #include "u_set.h"
 #include "u_misc.h"
 #include "u_file.h"
+#include "u_log.h"
 
 extern bool gPlaying;
 extern bool gRunning;
@@ -325,9 +326,9 @@ static void menuDeveloper() {
                 for (const auto &it : u::dir(cachePath)) {
                     const u::string cacheFile = cachePath + u::kPathSep + it;
                     if (u::remove(cacheFile))
-                        u::print("[cache] => removed cache%c%s\n", u::kPathSep, it);
+                        u::Log::out("[cache] => removed cache%c%s\n", u::kPathSep, it);
                 }
-                u::print("[cache] => cleared\n");
+                u::Log::out("[cache] => cleared\n");
             }
             if (gui::button("Reset configuration"))
                 neoDeleteConfig();
