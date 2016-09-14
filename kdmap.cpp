@@ -297,72 +297,77 @@ void kdMap::traceSphere(kdSphereTrace *trace) {
     traceSphere(trace, 0);
 }
 
-void kdMap::traceSphere(kdSphereTrace *trace, int32_t node) {
-    // TODO(daleweiler): make iterative!
-    if (node < 0) {
-        // leaf node
-        const size_t leafIndex = -node - 1;
-        const size_t triangleCount = leafs[leafIndex].triangles.size();
+void kdMap::traceSphere(kdSphereTrace *trace, int32_t rootNode) {
+    m_stack.reset();
+    m_stack.push(rootNode);
 
-        float fraction = 0.0f;
-        float minFraction = trace->fraction;
-        m::plane hitPlane;
-        m::vec3 hitNormal;
-        m::vec3 hitPoint;
-        m::vec3 normal;
+    while (m_stack) {
+        int32_t node = m_stack.pop();
 
-        // check every triangle in the leaf
-        for (size_t i = 0; i < triangleCount; i++) {
-            const size_t triangleIndex = leafs[leafIndex].triangles[i];
-            // did we collide against a triangle in this leaf?
-            if (sphereTriangleIntersect(triangleIndex, trace->start, trace->radius,
-                    trace->direction, &fraction, &hitNormal, &hitPoint))
-            {
-                // safely shift along the traced path, keeping the sphere kDistEpsilon
-                // away from the plane along the planes normal.
-                fraction += kDistEpsilon / (hitNormal * trace->direction);
-                if (fraction < kMinFraction)
-                    fraction = 0.0f; // prevent small noise
-                if (fraction < minFraction) {
-                    hitPlane = { hitPoint, hitNormal };
-                    trace->plane = hitPlane;
-                    trace->fraction = fraction;
-                    minFraction = fraction;
+        if (node < 0) {
+            // leaf node
+            const size_t leafIndex = -node - 1;
+            const size_t triangleCount = leafs[leafIndex].triangles.size();
+
+            float fraction = 0.0f;
+            float minFraction = trace->fraction;
+            m::plane hitPlane;
+            m::vec3 hitNormal;
+            m::vec3 hitPoint;
+            m::vec3 normal;
+
+            // check every triangle in the leaf
+            for (size_t i = 0; i < triangleCount; i++) {
+                const size_t triangleIndex = leafs[leafIndex].triangles[i];
+                // did we collide against a triangle in this leaf?
+                if (sphereTriangleIntersect(triangleIndex, trace->start, trace->radius,
+                        trace->direction, &fraction, &hitNormal, &hitPoint))
+                {
+                    // safely shift along the traced path, keeping the sphere kDistEpsilon
+                    // away from the plane along the planes normal.
+                    fraction += kDistEpsilon / (hitNormal * trace->direction);
+                    if (fraction < kMinFraction)
+                        fraction = 0.0f; // prevent small noise
+                    if (fraction < minFraction) {
+                        hitPlane = { hitPoint, hitNormal };
+                        trace->plane = hitPlane;
+                        trace->fraction = fraction;
+                        minFraction = fraction;
+                    }
                 }
             }
+            continue;
         }
-        return;
+        // not a leaf node
+        m::plane::point start;
+        m::plane::point end;
+
+        // check if everything is infront of the splitting plane
+        m::plane checkPlane = planes[nodes[node].plane];
+        checkPlane.d -= trace->radius;
+        start = checkPlane.classify(trace->start, kdTree::kEpsilon);
+        end = checkPlane.classify(trace->start + trace->direction, kdTree::kEpsilon);
+        if (start > m::plane::kOn && end > m::plane::kOn) {
+            m_stack.push(nodes[node].children[0]);
+            continue;
+        }
+
+        // check if everything is behind of the splitting plane
+        checkPlane.d = planes[nodes[node].plane].d + trace->radius;
+        start = checkPlane.classify(trace->start, kdTree::kEpsilon);
+        end = checkPlane.classify(trace->start + trace->direction, kdTree::kEpsilon);
+        if (start < m::plane::kOn && end < m::plane::kOn) {
+            m_stack.push(nodes[node].children[1]);
+            continue;
+        }
+
+        // TODO(daleweiler): make iterative
+        kdSphereTrace traceFront = *trace;
+        kdSphereTrace traceBack = *trace;
+        traceSphere(&traceFront, nodes[node].children[0]);
+        traceSphere(&traceBack, nodes[node].children[1]);
+        *trace = (traceFront.fraction < traceBack.fraction) ? traceFront : traceBack;
     }
-    // not a leaf node
-    m::plane::point start;
-    m::plane::point end;
-
-    // check if everything is infront of the splitting plane
-    m::plane checkPlane = planes[nodes[node].plane];
-    checkPlane.d -= trace->radius;
-    start = checkPlane.classify(trace->start, kdTree::kEpsilon);
-    end = checkPlane.classify(trace->start + trace->direction, kdTree::kEpsilon);
-    if (start > m::plane::kOn && end > m::plane::kOn) {
-        traceSphere(trace, nodes[node].children[0]);
-        return;
-    }
-
-    // check if everything is behind of the splitting plane
-    checkPlane.d = planes[nodes[node].plane].d + trace->radius;
-    start = checkPlane.classify(trace->start, kdTree::kEpsilon);
-    end = checkPlane.classify(trace->start + trace->direction, kdTree::kEpsilon);
-    if (start < m::plane::kOn && end < m::plane::kOn) {
-        traceSphere(trace, nodes[node].children[1]);
-        return;
-    }
-
-    kdSphereTrace traceFront = *trace;
-    kdSphereTrace traceBack = *trace;
-
-    traceSphere(&traceFront, nodes[node].children[0]);
-    traceSphere(&traceBack, nodes[node].children[1]);
-
-    *trace = (traceFront.fraction < traceBack.fraction) ? traceFront : traceBack;
 }
 
 bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius, int32_t root) {
