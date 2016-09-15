@@ -12,10 +12,10 @@ struct kdSphereTrace {
 
 // stack to do iterative depth-first traversals on the tree
 struct kdStack {
-    kdStack(size_t size)
-        : m_data((int32_t *)neoMalloc(sizeof *m_data * size))
-        , m_top(-1)
-        , m_size(size)
+    kdStack()
+        : m_data(nullptr)
+        , m_top(-1_z)
+        , m_size(0)
     {
     }
 
@@ -32,7 +32,12 @@ struct kdStack {
     }
 
     void reset() {
-        m_top = -1;
+        m_top = -1_z;
+    }
+
+    void resize(size_t size) {
+        m_data = (int32_t*)neoRealloc(m_data, sizeof *m_data * size);
+        m_size = size;
     }
 
     int32_t pop() {
@@ -40,13 +45,13 @@ struct kdStack {
     }
 
     operator bool() const {
-        return m_top != -1;
+        return m_top != -1_z;
     }
 
 private:
     int32_t *m_data;
-    int32_t m_top;
-    int32_t m_size;
+    size_t m_top;
+    size_t m_size;
 };
 
 struct kdMap {

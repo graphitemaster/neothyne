@@ -7,9 +7,7 @@
 #include "u_log.h"
 
 ///!kdMap
-kdMap::kdMap()
-    : m_stack(4096)
-{
+kdMap::kdMap() {
     // nothing
 }
 
@@ -160,6 +158,7 @@ bool kdMap::load(const u::vector<unsigned char> &compressedData) {
         }
     }
 
+    m_stack.resize(nodes.size());
     return true;
 }
 
@@ -214,13 +213,9 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
     float sphereRadius, const m::vec3 &direction, float *fraction, m::vec3 *hitNormal, m::vec3 *hitPoint) const
 {
     // sweeping collision check
-
-    const size_t v1 = triangles[triangleIndex].v[0];
-    const size_t v2 = triangles[triangleIndex].v[1];
-    const size_t v3 = triangles[triangleIndex].v[2];
-    const m::vec3 &p0 = vertices[v1].vertex;
-    const m::vec3 &p1 = vertices[v2].vertex;
-    const m::vec3 &p2 = vertices[v3].vertex;
+    const m::vec3 &p0 = vertices[triangles[triangleIndex].v[0]].vertex;
+    const m::vec3 &p1 = vertices[triangles[triangleIndex].v[1]].vertex;
+    const m::vec3 &p2 = vertices[triangles[triangleIndex].v[2]].vertex;
 
     m::plane plane(p0, p1, p2); // triangle plane
     plane.d -= sphereRadius;
@@ -255,11 +250,24 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
         }
     }
 
+    // vertex detection
+    for (size_t i = 0; i < 3; i++) {
+        const m::vec3 &vertex = vertices[triangles[triangleIndex].v[i]].vertex;
+
+        if (!m::vec3::raySphereIntersect(spherePosition, direction, vertex, sphereRadius, &fractional))
+            continue;
+
+        if (fractional < *fraction && fractional >= 0.0f) {
+            *fraction = fractional;
+            *hitPoint = spherePosition + direction * fractional;
+            *hitNormal = (*hitPoint - vertex).normalized();
+        }
+    }
+
     // edge detection (for all edges of a triangle)
     for (size_t i = 0; i < 3; i++) {
         const m::vec3 &from = vertices[triangles[triangleIndex].v[i]].vertex;
-        const size_t nextIndex = (i + 1) % 3;
-        const m::vec3 &to = vertices[triangles[triangleIndex].v[nextIndex]].vertex;
+        const m::vec3 &to = vertices[triangles[triangleIndex].v[(i + 1) % 3]].vertex;
 
         if (!m::vec3::rayCylinderIntersect(spherePosition, direction, from, to, sphereRadius, &fractional))
             continue;
@@ -274,21 +282,6 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
         }
     }
 
-    // vertex detection
-    for (size_t i = 0; i < 3; i++) {
-        const m::vec3 &vertex = vertices[triangles[triangleIndex].v[i]].vertex;
-
-        if (!m::vec3::raySphereIntersect(spherePosition, direction, vertex, sphereRadius, &fractional))
-            continue;
-
-        if (fractional < *fraction && fractional >= 0.0f) {
-            *fraction = fractional;
-            *hitPoint = spherePosition + direction * fractional;
-            *hitNormal = *hitPoint - vertex;
-            hitNormal->normalize();
-        }
-    }
-
     return *fraction != kdTree::kMaxTraceDistance;
 }
 
@@ -298,13 +291,16 @@ void kdMap::traceSphere(kdSphereTrace *trace) {
 }
 
 void kdMap::traceSphere(kdSphereTrace *trace, int32_t rootNode) {
+    kdSphereTrace minTrace = *trace;
+
     m_stack.reset();
     m_stack.push(rootNode);
-
     while (m_stack) {
         int32_t node = m_stack.pop();
 
         if (node < 0) {
+            kdSphereTrace newTrace = *trace;
+
             // leaf node
             const size_t leafIndex = -node - 1;
             const size_t triangleCount = leafs[leafIndex].triangles.size();
@@ -320,22 +316,24 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t rootNode) {
             for (size_t i = 0; i < triangleCount; i++) {
                 const size_t triangleIndex = leafs[leafIndex].triangles[i];
                 // did we collide against a triangle in this leaf?
-                if (sphereTriangleIntersect(triangleIndex, trace->start, trace->radius,
-                        trace->direction, &fraction, &hitNormal, &hitPoint))
+                if (sphereTriangleIntersect(triangleIndex, newTrace.start, newTrace.radius,
+                    newTrace.direction, &fraction, &hitNormal, &hitPoint))
                 {
                     // safely shift along the traced path, keeping the sphere kDistEpsilon
                     // away from the plane along the planes normal.
-                    fraction += kDistEpsilon / (hitNormal * trace->direction);
+                    fraction += kDistEpsilon / (hitNormal * newTrace.direction);
                     if (fraction < kMinFraction)
                         fraction = 0.0f; // prevent small noise
                     if (fraction < minFraction) {
                         hitPlane = { hitPoint, hitNormal };
-                        trace->plane = hitPlane;
-                        trace->fraction = fraction;
+                        newTrace.plane = hitPlane;
+                        newTrace.fraction = fraction;
                         minFraction = fraction;
                     }
                 }
             }
+            if (newTrace.fraction < minTrace.fraction)
+                minTrace = newTrace;
             continue;
         }
         // not a leaf node
@@ -361,13 +359,10 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t rootNode) {
             continue;
         }
 
-        // TODO(daleweiler): make iterative
-        kdSphereTrace traceFront = *trace;
-        kdSphereTrace traceBack = *trace;
-        traceSphere(&traceFront, nodes[node].children[0]);
-        traceSphere(&traceBack, nodes[node].children[1]);
-        *trace = (traceFront.fraction < traceBack.fraction) ? traceFront : traceBack;
+        m_stack.push(nodes[node].children[1]);
+        m_stack.push(nodes[node].children[0]);
     }
+    *trace = minTrace;
 }
 
 bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius, int32_t root) {
