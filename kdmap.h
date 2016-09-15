@@ -24,10 +24,8 @@ struct kdStack {
     }
 
     void push(int32_t node) {
-        if (m_top == m_size-1) {
-            m_size *= 2;
-            m_data = (int32_t *)neoRealloc(m_data, sizeof *m_data * m_size);
-        }
+        if (m_top == m_size-1)
+            resize(m_size * 2);
         m_data[++m_top] = node;
     }
 
