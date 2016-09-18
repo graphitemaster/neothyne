@@ -32,6 +32,8 @@ struct vec2 {
     float operator[](size_t index) const;
     float &operator[](size_t index);
 
+    bool equals(const vec2& cmp, float epsilon = m::kEpsilon) const;
+
     void endianSwap();
 };
 
@@ -67,6 +69,11 @@ inline float &vec2::operator[](size_t index) {
     return f[index];
 }
 
+inline bool vec2::equals(const vec2 &cmp, float epsilon) const {
+    return (m::abs(x - cmp.x) < epsilon)
+        && (m::abs(y - cmp.y) < epsilon);
+}
+
 vec2 sincos(float x);
 
 struct vec3 {
@@ -89,8 +96,8 @@ struct vec3 {
     bool isNormalized() const;
     bool isNull() const;
 
-    bool isNullEpsilon(const float epsilon = kEpsilon) const;
-    bool equals(const vec3 &cmp, const float epsilon) const;
+    bool isNullEpsilon(float epsilon = kEpsilon) const;
+    bool equals(const vec3 &cmp, float epsilon = m::kEpsilon) const;
 
     void setLength(float scaleLength);
     void maxLength(float length);
@@ -178,11 +185,11 @@ inline bool vec3::isNull() const {
     return x == 0.0f && y == 0.0f && z == 0.0f;
 }
 
-inline bool vec3::isNullEpsilon(const float epsilon) const {
+inline bool vec3::isNullEpsilon(float epsilon) const {
     return equals(origin, epsilon);
 }
 
-inline bool vec3::equals(const vec3 &cmp, const float epsilon) const {
+inline bool vec3::equals(const vec3 &cmp, float epsilon) const {
     return (m::abs(x - cmp.x) < epsilon)
         && (m::abs(y - cmp.y) < epsilon)
         && (m::abs(z - cmp.z) < epsilon);
@@ -336,6 +343,8 @@ struct vec4 {
 
     void endianSwap();
 
+    bool equals(const vec4 &cmp, float epsilon = m::kEpsilon) const;
+
     static float dot(const vec4 &l, const vec4 &r);
 
     friend vec4 operator*(const vec4 &l, const vec4 &r);
@@ -404,6 +413,13 @@ inline const float &vec4::operator[](size_t index) const {
 template <size_t N>
 inline vec4 vec4::splat() const {
     return swizzle<N,N,N,N>();
+}
+
+inline bool vec4::equals(const vec4 &cmp, const float epsilon) const {
+    return (m::abs(x - cmp.x) < epsilon)
+        && (m::abs(y - cmp.y) < epsilon)
+        && (m::abs(z - cmp.z) < epsilon)
+        && (m::abs(w - cmp.w) < epsilon);
 }
 
 #ifdef __SSE2__

@@ -482,7 +482,7 @@ bool gui::upload() {
     gl::GenBuffers(sizeof m_vbos / sizeof *m_vbos, m_vbos);
     for (auto &vbo : m_vbos) {
         gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-        gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertex), 0, GL_STREAM_DRAW);
+        gl::BufferData(GL_ARRAY_BUFFER, sizeof(vertex), 0, GL_DYNAMIC_DRAW);
         gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::position));
         gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::coordinate));
         gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::color));
@@ -524,12 +524,17 @@ void gui::render(const pipeline &pl) {
     gl::Enable(GL_BLEND);
     gl::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    m_methods[kMethodNormal].enable();
-    m_methods[kMethodNormal].setPerspective(perspective);
-    m_methods[kMethodFont].enable();
-    m_methods[kMethodFont].setPerspective(perspective);
-    m_methods[kMethodImage].enable();
-    m_methods[kMethodImage].setPerspective(perspective);
+    // handle resolution changes
+    const m::vec2 resolution = { perspective.width, perspective.height };
+    if (!m_resolution.equals(resolution)) {
+        m_methods[kMethodNormal].enable();
+        m_methods[kMethodNormal].setPerspective(perspective);
+        m_methods[kMethodImage].enable();
+        m_methods[kMethodImage].setPerspective(perspective);
+        m_methods[kMethodFont].enable();
+        m_methods[kMethodFont].setPerspective(perspective);
+        m_resolution = resolution;
+    }
 
     for (const auto &it : ::gui::commands()()) {
         U_ASSERT(it.type != -1);
@@ -588,13 +593,9 @@ void gui::render(const pipeline &pl) {
             }
             break;
         case ::gui::kCommandText:
-            m_methods[kMethodFont].enable();
-            m_methods[kMethodFont].setPerspective(perspective);
             drawText(it.asText.x, it.asText.y, it.asText.contents, it.asText.align, it.color);
             break;
         case ::gui::kCommandImage:
-            m_methods[kMethodImage].enable();
-            m_methods[kMethodImage].setPerspective(perspective);
             drawImage(it.asImage.x,
                       it.asImage.y,
                       it.asImage.w,
@@ -609,8 +610,6 @@ void gui::render(const pipeline &pl) {
             }
             break;
         case ::gui::kCommandTexture:
-            m_methods[kMethodImage].enable();
-            m_methods[kMethodImage].setPerspective(perspective);
             drawTexture(it.asTexture.x,
                         it.asTexture.y,
                         it.asTexture.w,
@@ -629,49 +628,35 @@ void gui::render(const pipeline &pl) {
     // Invalidate next buffer a frame in advance to hint the driver that we're
     // doing double-buffering
     gl::BindBuffer(GL_ARRAY_BUFFER, m_vbos[m_bufferIndex]);
-    gl::BufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_STREAM_DRAW);
+    gl::BufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
 
     // Blast it all out in one giant shot
     gl::BindVertexArray(m_vao);
     gl::BindBuffer(GL_ARRAY_BUFFER, vbo);
-    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(vertex), &m_vertices[0], GL_STREAM_DRAW);
+    gl::BufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(vertex), &m_vertices[0], GL_DYNAMIC_DRAW);
     gl::VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::position));
     gl::VertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::coordinate));
     gl::VertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex), u::offset_of(&vertex::color));
 
-    bool rebind = true;
+    enum { kTextureText, kTextureMisc, kTextureAtlas };
+    int texture = -1;
     int method = -1;
     batch *b = &m_batches[0];
     gl::Disable(GL_SCISSOR_TEST);
+
+    auto drawBatch = [&]() {
+        // avoid changing program states if we're already using the correct one
+        if (b->method != method) {
+            method = b->method;
+            m_methods[method].enable();
+        }
+        // draw the batch
+        gl::DrawArrays(GL_TRIANGLES, b->start, b->count);
+        b++;
+    };
+
     for (auto &it : ::gui::commands()()) {
-        if (it.type == ::gui::kCommandScissor) {
-            if (it.flags) {
-                gl::Enable(GL_SCISSOR_TEST);
-                gl::Scissor(it.asScissor.x, it.asScissor.y, it.asScissor.w, it.asScissor.h);
-            } else {
-                gl::Disable(GL_SCISSOR_TEST);
-            }
-        } else if (it.type != ::gui::kCommandModel) {
-            if (b->method != method) {
-                method = b->method;
-                m_methods[method].enable();
-            }
-            if (it.type == ::gui::kCommandText) {
-                m_font.bind(GL_TEXTURE0);
-                rebind = true;
-            } else if (it.type == ::gui::kCommandTexture) {
-                gl::ActiveTexture(GL_TEXTURE0);
-                gl::BindTexture(GL_TEXTURE_2D, m_miscTexture);
-                rebind = true;
-            } else if (rebind) {
-                gl::ActiveTexture(GL_TEXTURE0);
-                gl::BindTexture(GL_TEXTURE_2D, m_atlasTexture);
-                rebind = false;
-            }
-            gl::DrawArrays(GL_TRIANGLES, b->start, b->count);
-            b++;
-        } else if (it.type == ::gui::kCommandModel) {
-            rebind = true;
+        if (it.type == ::gui::kCommandModel) {
             gl::Enable(GL_DEPTH_TEST);
             gl::Clear(GL_DEPTH_BUFFER_BIT);
             if (m_models.find(it.asModel.path) == m_models.end()) {
@@ -694,8 +679,42 @@ void gui::render(const pipeline &pl) {
             }
             mdl->render();
             gl::Disable(GL_DEPTH_TEST);
+
+            // reset viewport and ui render buffer
             gl::Viewport(0, 0, neoWidth(), neoHeight());
             gl::BindVertexArray(m_vao);
+
+            // rebind texture atlas for ui
+            gl::ActiveTexture(GL_TEXTURE0);
+            gl::BindTexture(GL_TEXTURE_2D, m_atlasTexture);
+            texture = kTextureAtlas;
+        } else if (it.type == ::gui::kCommandScissor) {
+            if (it.flags) {
+                gl::Enable(GL_SCISSOR_TEST);
+                gl::Scissor(it.asScissor.x, it.asScissor.y, it.asScissor.w, it.asScissor.h);
+            } else {
+                gl::Disable(GL_SCISSOR_TEST);
+            }
+        } else if (it.type == ::gui::kCommandText) {
+            if (texture != kTextureText) {
+                m_font.bind(GL_TEXTURE0);
+                texture = kTextureText;
+            }
+            drawBatch();
+        } else if (it.type == ::gui::kCommandTexture) {
+            if (texture != kTextureMisc) {
+                gl::ActiveTexture(GL_TEXTURE0);
+                gl::BindTexture(GL_TEXTURE_2D, m_miscTexture);
+                texture = kTextureMisc;
+            }
+            drawBatch();
+        } else {
+            if (texture != kTextureAtlas) {
+                gl::ActiveTexture(GL_TEXTURE0);
+                gl::BindTexture(GL_TEXTURE_2D, m_atlasTexture);
+                texture = kTextureAtlas;
+            }
+            drawBatch();
         }
     }
 

@@ -17,12 +17,14 @@ uniform::uniform() {
 }
 
 void uniform::set(int value) {
+    if (asInt == value) return;
     U_ASSERT(m_type == kInt);
     asInt = value;
     post();
 }
 
 void uniform::set(int x, int y) {
+    if (asInt2[0] == x && asInt2[1] == y) return;
     U_ASSERT(m_type == kInt2);
     asInt2[0] = x;
     asInt2[1] = y;
@@ -30,30 +32,35 @@ void uniform::set(int x, int y) {
 }
 
 void uniform::set(float value) {
+    if (asFloat == value) return;
     U_ASSERT(m_type == kFloat);
     asFloat = value;
     post();
 }
 
 void uniform::set(const m::vec2 &value) {
+    if (asVec2.equals(value)) return;
     U_ASSERT(m_type == kVec2);
     asVec2 = value;
     post();
 }
 
 void uniform::set(const m::vec3 &value) {
+    if (asVec3.equals(value)) return;
     U_ASSERT(m_type == kVec3);
     asVec3 = value;
     post();
 }
 
 void uniform::set(const m::vec4 &value) {
+    if (asVec4.equals(value)) return;
     U_ASSERT(m_type == kVec4);
     asVec4 = value;
     post();
 }
 
 void uniform::set(const m::mat4 &value) {
+    if (!memcmp(asMat4.ptr(), value.ptr(), sizeof value)) return;
     U_ASSERT(m_type == kMat4);
     asMat4 = value;
     post();
@@ -69,6 +76,9 @@ void uniform::set(size_t count, const float *mats) {
 }
 
 void uniform::post() {
+    if (m_method != method::m_currentMethod)
+        return;
+
     // Can't post change because the uniform handle is invalid. This is likely the
     // result of using a uniform that is not found. This is allowed by the engine
     // to make shader permutations less annoying to deal with. We waste some memory
@@ -118,9 +128,9 @@ inline void MethodCacheHeader::endianSwap() {
     format = u::endianSwap(format);
 }
 
-
 ///! method
 m::mat3x4 method::m_mat3x4Scratch[method::kMat3x4Space];
+const method *method::m_currentMethod;
 
 method::method()
     : m_program(0)
@@ -239,13 +249,19 @@ bool method::addShader(GLenum type, const char *shaderFile) {
 }
 
 void method::enable() {
+    // avoid binding this multiple times
+    if (m_currentMethod == this)
+        return;
+    m_currentMethod = this;
     gl::UseProgram(m_program);
 }
 
 void method::post() {
-    // Lookup all uniform locations
-    for (auto &it : m_uniforms)
+    // Lookup all uniform locations and assign their owners
+    for (auto &it : m_uniforms) {
         it.second.m_handle = gl::GetUniformLocation(m_program, it.first.c_str());
+        it.second.m_method = this;
+    }
 }
 
 uniform *method::getUniform(const u::string &name, uniform::type type) {

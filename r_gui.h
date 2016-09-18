@@ -164,6 +164,8 @@ private:
     unsigned char *m_atlasData;
     GLuint m_atlasTexture;
     GLuint m_miscTexture; // miscellaneous texture for drawTexture
+
+    m::vec2 m_resolution;
 };
 
 }

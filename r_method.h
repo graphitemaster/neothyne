@@ -17,6 +17,7 @@ struct perspective;
 
 namespace r {
 
+struct method;
 struct uniform {
     enum type {
         kInt,
@@ -48,6 +49,7 @@ private:
     friend struct method;
 
     type m_type;
+    const method *m_method;
     union {
         int asInt;
         int asInt2[2];
@@ -101,7 +103,10 @@ protected:
     void post();
 
 private:
+    friend struct uniform;
+
     static m::mat3x4 m_mat3x4Scratch[kMat3x4Space];
+    static const method *m_currentMethod;
 
     struct shader {
         shader();
