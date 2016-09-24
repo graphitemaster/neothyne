@@ -48,6 +48,10 @@ struct Object {
 
     void set(const char *key, Object *value);
 
+    enum {
+        kClosed = 1 << 0 // when set no additional properties can be added
+    };
+
     int m_flags;
     Object *m_parent;
     Table m_table;

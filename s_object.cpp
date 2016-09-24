@@ -46,6 +46,7 @@ void Table::set(const char *key, Object *value) {
 
 ///! Object
 void Object::set(const char *key, Object *value) {
+    U_ASSERT(!(m_flags & kClosed));
     Table::Entry *free = nullptr;
     Object **find = m_table.lookup(key, &free);
     if (!find) {

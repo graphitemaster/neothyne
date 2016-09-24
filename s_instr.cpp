@@ -33,6 +33,12 @@ AllocIntObjectInstr::AllocIntObjectInstr(Slot target, int value)
 {
 }
 
+CloseObjectInstr::CloseObjectInstr(Slot slot)
+    : Instr(kCloseObject)
+    , m_slot(slot)
+{
+}
+
 AccessInstr::AccessInstr(Slot target, Slot object, const char *key)
     : Instr(kAccess)
     , m_targetSlot(target)

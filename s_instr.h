@@ -15,6 +15,7 @@ struct Instr {
         kGetContext,     // gc
         kAllocObject,    // ao
         kAllocIntObject, // aio
+        kCloseObject,    // co
         kAccess,         // ref
         kAssign,         // mov
         kCall,           // call
@@ -46,6 +47,11 @@ struct AllocIntObjectInstr : Instr {
     AllocIntObjectInstr(Slot target, int value);
     Slot m_targetSlot;
     int m_value;
+};
+
+struct CloseObjectInstr : Instr {
+    CloseObjectInstr(Slot slot);
+    Slot m_slot;
 };
 
 struct AccessInstr : Instr {

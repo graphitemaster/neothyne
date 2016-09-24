@@ -128,6 +128,16 @@ Object *call(Object *context, UserFunction *function, Object **args, size_t leng
             slots[target] = Object::newInt(context, value);
         } break;
 
+        case Instr::kCloseObject: {
+            CloseObjectInstr *i = (CloseObjectInstr *)instr;
+            Slot slot = i->m_slot;
+            U_ASSERT(slot < numSlots);
+            Object *object = slots[slot];
+            U_ASSERT(object);
+            U_ASSERT(!(object->m_flags & Object::kClosed));
+            object->m_flags |= Object::kClosed;
+        } break;
+
         case Instr::kCall: {
             auto *call = (CallInstr *)instr;
             size_t targetSlot = call->m_targetSlot;
