@@ -1,5 +1,6 @@
 #include "s_object.h"
 #include "s_instr.h"
+#include "s_codegen.h"
 
 #include "u_log.h"
 
@@ -109,6 +110,11 @@ void test() {
 
     Object *result = handler(root, ack, args, 2);
     u::Log::out("ack(3, 7) = %d\n", ((IntObject *)result)->m_value);
+
+    // try codegen
+    FunctionCodegen cg;
+    cg.setName("test");
+    cg.newBlock();
 }
 
 }
