@@ -59,6 +59,12 @@ CONSOLE_SOURCES = \
 	c_console.cpp \
 	c_variable.cpp
 
+SCRIPTING_SOURCES = \
+	s_instr.cpp \
+	s_object.cpp \
+	s_runtime.cpp \
+	s_test.cpp
+
 ENGINE_SOURCES = \
 	engine.cpp \
 	kdmap.cpp \
@@ -71,6 +77,7 @@ ENGINE_SOURCES = \
 	$(AUDIO_SOURCES) \
 	$(UTIL_SOURCES) \
 	$(CONSOLE_SOURCES) \
+	$(SCRIPTING_SOURCES) \
 	$(MATH_SOURCES) \
 	$(RENDERER_SOURCES)
 

@@ -1021,6 +1021,10 @@ void *neoGetProcAddress(const char *proc) {
 
 #include "u_log.h"
 
+namespace s {
+    extern void test();
+}
+
 ///
 /// On Window the entry point is entered as such:
 ///     WinMain -> entryPoint -> neoMain
@@ -1090,6 +1094,8 @@ static int entryPoint(int argc, char **argv) {
 
     a::Audio *audio = new a::Audio(a::Audio::kClipRoundOff);
     r::World *world = new r::World();
+
+    s::test();
 
     // Launch the game
     const int status = neoMain(gEngine.m_frameTimer, *audio, *world, argc, argv, (bool &)gShutdown);
