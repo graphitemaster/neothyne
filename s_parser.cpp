@@ -32,13 +32,28 @@ static inline bool isDigit (int ch) {
     return ch >= '0' && ch <= '9';
 }
 
-void Parser::consumeWhitespace(char **contents) {
-    while ((*contents)[0] == ' ' || (*contents)[0] == '\t')
-        (*contents)++;
-}
-
 void Parser::consumeFiller(char **contents) {
-    consumeWhitespace(contents);
+    size_t commentDepth = 0;
+    while (**contents) {
+        if (commentDepth) {
+            if (startsWith(contents, "*/")) {
+                commentDepth--;
+            } else {
+                (*contents)++;
+            }
+        } else {
+            if (startsWith(contents, "/*")) {
+                commentDepth++;
+            } else if (startsWith(contents, "//")) {
+                while (**contents && **contents != '\n')
+                    (*contents)++;
+            } else if (**contents == ' ' || **contents == '\n') {
+                (*contents)++;
+            } else {
+                break;
+            }
+        }
+    }
 }
 
 bool Parser::consumeString(char **contents, const char *identifier) {
@@ -87,10 +102,20 @@ bool Parser::parseInteger(char **contents, int *out) {
     char *text = *contents;
     consumeFiller(&text);
     char *start = text;
+    int base = 10;
     if (*text && *text == '-')
         text++;
-    while (*text && isDigit(*text))
-        text++;
+    if (text[0] == '0' && text[1] == 'x') {
+        base = 16;
+        text += 2;
+    }
+    while (*text) {
+        if (base >= 10 && isDigit(*text))
+            text++;
+        else if (base >= 16 && isAlpha(*text))
+            text++;
+        else break;
+    }
     if (text == start)
         return false;
     *contents = text;
@@ -98,7 +123,7 @@ bool Parser::parseInteger(char **contents, int *out) {
     char *result = (char *)neoMalloc(length + 1);
     memcpy(result, start, length);
     result[length] = '\0';
-    *out = atoi(result);
+    *out = strtol(result, nullptr, base);
     neoFree(result);
     return true;
 }

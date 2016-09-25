@@ -10,7 +10,6 @@ struct UserFunction;
 
 struct Parser {
     // Lexer
-    static void consumeWhitespace(char **contents);
     static void consumeFiller(char **contents);
     static bool consumeString(char **contents, const char *identifier);
     static bool consumeKeyword(char **contents, const char *keyword);
