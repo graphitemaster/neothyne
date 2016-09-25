@@ -13,15 +13,15 @@ void test() {
     void *entry = GC::addRoots(&root, 1);
 
     char data[] =
-    "let ack = fn(m, n) {"
+    "let obj = { a = 5 };"
+    "fn ack(m, n) {"
     "   if (m == 0) return n + 1;"
     "   if (n == 0) return ack(m - 1, 1);"
     "   return ack(m - 1, ack(m, n - 1));"
-    "};"
-    "print(3, \", hello world, \" + \"nope \", 3.14);";
+    "}"
+    "print(obj.a);";
 
     char *text = data;
-
     UserFunction *module = Parser::parseModule(&text);
     module->dump();
 

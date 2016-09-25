@@ -33,9 +33,10 @@ static bool startsWith(char **contents, const char *compare) {
 }
 
 ///! Parser
-Parser::Reference::Reference(Slot base, const char *key)
+Parser::Reference::Reference(Slot base, const char *key, bool isVariable)
     : m_base(base)
     , m_key(key)
+    , m_isVariable(isVariable)
 {
 }
 
@@ -43,13 +44,18 @@ Slot Parser::Reference::access(FunctionCodegen *generator) {
     return generator ? (m_key ? generator->addAccess(m_base, m_key) : m_base) : 0;
 }
 
-void Parser::Reference::assignExisting(FunctionCodegen *generator, int value) {
+void Parser::Reference::assign(FunctionCodegen *generator, Slot value) {
+    U_ASSERT(m_key);
+    generator->addAssign(m_base, m_key, value);
+}
+
+void Parser::Reference::assignExisting(FunctionCodegen *generator, Slot value) {
     U_ASSERT(m_key);
     generator->addAssignExisting(m_base, m_key, value);
 }
 
 Parser::Reference Parser::Reference::getScope(FunctionCodegen *generator, const char *name) {
-    return { generator ? generator->getScope() : 0, name };
+    return { generator ? generator->getScope() : 0, name, true };
 }
 
 void Parser::consumeWhitespace(char **contents) {
@@ -186,9 +192,9 @@ Parser::Reference Parser::parseExpressionStem(char **contents, FunctionCodegen *
         float value = 0.0f;
         if (parseFloat(&text, &value)) {
             *contents = text;
-            if (!generator) return { 0, nullptr };
+            if (!generator) return { 0, nullptr, false };
             Slot slot = generator->addAllocFloatObject(generator->getScope(), value);
-            return { slot, nullptr };
+            return { slot, nullptr, false };
         }
     }
     // int?
@@ -196,9 +202,9 @@ Parser::Reference Parser::parseExpressionStem(char **contents, FunctionCodegen *
         int value = 0;
         if (parseInteger(&text, &value)) {
             *contents = text;
-            if (!generator) return { 0, nullptr };
+            if (!generator) return { 0, nullptr, false };
             Slot slot = generator->addAllocIntObject(generator->getScope(), value);
-            return { slot, nullptr };
+            return { slot, nullptr, false };
         }
     }
     // string?
@@ -206,9 +212,18 @@ Parser::Reference Parser::parseExpressionStem(char **contents, FunctionCodegen *
         char *value = nullptr;
         if (parseString(&text, &value)) {
             *contents = text;
-            if (!generator) return { 0, nullptr };
+            if (!generator) return { 0, nullptr, false };
             Slot slot = generator->addAllocStringObject(generator->getScope(), value);
-            return { slot, nullptr };
+            return { slot, nullptr, false };
+        }
+    }
+
+    // object literal
+    {
+        Reference value = { 0, nullptr, false };
+        if (parseObjectLiteral(&text, generator, &value)) {
+            *contents = text;
+            return value;
         }
     }
 
@@ -223,9 +238,10 @@ Parser::Reference Parser::parseExpressionStem(char **contents, FunctionCodegen *
 
     if (consumeKeyword(&text, "fn")) {
         UserFunction *function = parseFunctionExpression(&text);
+        if (!generator) return { 0, nullptr, false };
         Slot slot = generator->addAllocClosureObject(generator->getScope(), function);
         *contents = text;
-        return { slot, nullptr };
+        return { slot, nullptr, false };
     }
 
     U_ASSERT(0 && "expected expression");
@@ -236,6 +252,8 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
     Reference expression = parseExpressionStem(contents, generator);
     for (;;) {
         if (parseCall(contents, generator, &expression))
+            continue;
+        if (parsePropertyAccess(contents, generator, &expression))
             continue;
         break;
     }
@@ -264,7 +282,60 @@ bool Parser::parseCall(char **contents, FunctionCodegen *generator, Reference *e
     if (!generator)
         return true;
 
-    *expression = { generator->addCall(expression->access(generator), arguments, length), nullptr };
+    *expression = {
+        generator->addCall(expression->access(generator), arguments, length),
+        nullptr,
+        false
+    };
+
+    return true;
+}
+
+bool Parser::parsePropertyAccess(char **contents, FunctionCodegen *generator, Reference *expression) {
+    char *text = *contents;
+    if (!consumeString(&text, "."))
+        return false;
+    const char *name = parseIdentifier(&text);
+    *contents = text;
+    *expression = {
+        expression->access(generator),
+        name,
+        false
+    };
+    return true;
+}
+
+bool Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Reference *reference) {
+    char *text = *contents;
+    consumeFiller(&text);
+
+    if (!consumeString(&text, "{"))
+        return false;
+
+    Slot objectSlot = generator ? generator->addAllocObject(generator->makeNullSlot()) : 0;
+
+    while (!consumeString(&text, "}")) {
+        const char *key = parseIdentifier(&text);
+        if (!consumeString(&text, "=")) {
+            U_ASSERT(0 && "object literal expects 'name = value'");
+        }
+
+        Reference value = parseExpression(&text, generator, 0);
+        if (generator) {
+            Slot valueSlot = value.access(generator);
+            generator->addAssign(objectSlot, key, valueSlot);
+        }
+
+        if (consumeString(&text, ","))
+            continue;
+        if (consumeString(&text, "}"))
+            break;
+
+        U_ASSERT(0 && "expected initializer or closing brace");
+    }
+
+    *contents = text;
+    *reference = { objectSlot, nullptr, false };
     return true;
 }
 
@@ -291,7 +362,7 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
             if (!generator)
                 continue;
             Slot mulFunction = generator->addAccess(generator->getScope(), "*");
-            expression = { generator->addCall(mulFunction, expression.access(generator), argument), nullptr };
+            expression = { generator->addCall(mulFunction, expression.access(generator), argument), nullptr, false };
             continue;
         }
         if (consumeString(&text, "/")) {
@@ -299,7 +370,7 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
             if (!generator)
                 continue;
             Slot divFunction = generator->addAccess(generator->getScope(), "/");
-            expression = { generator->addCall(divFunction, expression.access(generator), argument), nullptr };
+            expression = { generator->addCall(divFunction, expression.access(generator), argument), nullptr, false };
             continue;
         }
         break;
@@ -317,7 +388,7 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
             if (!generator)
                 continue;
             Slot addFunction = generator->addAccess(generator->getScope(), "+");
-            expression = { generator->addCall(addFunction, expression.access(generator), argument), nullptr };
+            expression = { generator->addCall(addFunction, expression.access(generator), argument), nullptr, false };
             continue;
         }
         if (consumeString(&text, "-")) {
@@ -325,7 +396,7 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
             if (!generator)
                 continue;
             Slot subFunction = generator->addAccess(generator->getScope(), "-");
-            expression = { generator->addCall(subFunction, expression.access(generator), argument), nullptr };
+            expression = { generator->addCall(subFunction, expression.access(generator), argument), nullptr, false };
             continue;
         }
         break;
@@ -342,7 +413,7 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
         Slot argument = parseExpression(&text, generator, 2).access(generator);
         if (generator) {
             Slot equalFunction = generator->addAccess(generator->getScope(), "=");
-            expression = { generator->addCall(equalFunction, expression.access(generator), argument), nullptr };
+            expression = { generator->addCall(equalFunction, expression.access(generator), argument), nullptr, false };
         }
     }
 
@@ -455,7 +526,10 @@ void Parser::parseStatement(char **contents, FunctionCodegen *generator) {
             U_ASSERT(0 && "internal compiler error");
         }
         Slot value = parseExpression(&text, generator, 0).access(generator);
-        target.assignExisting(generator, value);
+        if (target.isVariable())
+            target.assignExisting(generator, value);
+        else
+            target.assign(generator, value);
 
         if (!consumeString(&text, ";")) {
             U_ASSERT(0 && "expected `;' to close assignment");
