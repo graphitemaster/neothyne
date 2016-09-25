@@ -28,6 +28,8 @@ static void vmGetContext(Object *context, GetContextInstr *instruction, Object *
 }
 
 static void vmAccess(Object *context, AccessInstr *instruction, Object **slots, size_t numSlots) {
+    (void)context;
+
     Slot targetSlot = instruction->m_targetSlot;
     Slot objectSlot = instruction->m_objectSlot;
     Slot keySlot = instruction->m_keySlot;
@@ -51,6 +53,8 @@ static void vmAccess(Object *context, AccessInstr *instruction, Object **slots, 
 }
 
 static void vmAssignNormal(Object *context, AssignNormalInstr *instruction, Object **slots, size_t numSlots) {
+    (void)context;
+
     Slot objectSlot = instruction->m_objectSlot;
     Slot valueSlot = instruction->m_valueSlot;
     Slot keySlot = instruction->m_keySlot;
@@ -67,6 +71,8 @@ static void vmAssignNormal(Object *context, AssignNormalInstr *instruction, Obje
 }
 
 static void vmAssignExisting(Object *context, AssignExistingInstr *instruction, Object **slots, size_t numSlots) {
+    (void)context;
+
     Slot objectSlot = instruction->m_objectSlot;
     Slot valueSlot = instruction->m_valueSlot;
     Slot keySlot = instruction->m_keySlot;
@@ -83,6 +89,8 @@ static void vmAssignExisting(Object *context, AssignExistingInstr *instruction, 
 }
 
 static void vmAssignShadowing(Object *context, AssignShadowingInstr *instruction, Object **slots, size_t numSlots) {
+    (void)context;
+
     Slot objectSlot = instruction->m_objectSlot;
     Slot valueSlot = instruction->m_valueSlot;
     Slot keySlot = instruction->m_keySlot;
@@ -99,6 +107,8 @@ static void vmAssignShadowing(Object *context, AssignShadowingInstr *instruction
 }
 
 static void vmAllocateObject(Object *context, AllocObjectInstr *instruction, Object **slots, size_t numSlots) {
+    (void)context;
+
     Slot targetSlot = instruction->m_targetSlot;
     Slot parentSlot = instruction->m_parentSlot;
 
@@ -109,6 +119,8 @@ static void vmAllocateObject(Object *context, AllocObjectInstr *instruction, Obj
 }
 
 static void vmAllocateClosureObject(Object *context, AllocClosureObjectInstr *instruction, Object **slots, size_t numSlots) {
+    (void)context;
+
     Slot targetSlot = instruction->m_targetSlot;
     Slot contextSlot = instruction->m_contextSlot;
 
@@ -146,6 +158,8 @@ static void vmAllocateStringObject(Object *context, AllocStringObjectInstr *inst
 }
 
 static void vmCloseObject(Object *context, CloseObjectInstr *instruction, Object **slots, size_t numSlots) {
+    (void)context;
+
     Slot slot = instruction->m_slot;
     U_ASSERT(slot < numSlots);
     Object *object = slots[slot];

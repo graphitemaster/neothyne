@@ -40,61 +40,67 @@ void Instr::dump(int level) {
     u::vector<UserFunction *> otherFunctions;
     switch (m_type) {
     case kGetRoot:
-        output(level, "gr: %zu\n", ((GetRootInstr *)this)->m_slot);
+        output(level, "top %zu\n", ((GetRootInstr *)this)->m_slot);
         break;
     break; case kGetContext:
-        output(level, "gc: %zu\n", ((GetContextInstr *)this)->m_slot);
+        output(level, "ctx %zu\n", ((GetContextInstr *)this)->m_slot);
         break;
     break; case kAllocObject:
-        output(level, "ao: %zu = new object(%zu)\n",
+        output(level, "no %zu (%zu)\n",
             ((AllocObjectInstr *)this)->m_targetSlot,
             ((AllocObjectInstr *)this)->m_parentSlot);
         break;
     case kAllocIntObject:
-        output(level, "aio: %zu = new int(%d)\n",
+        output(level, "ni %zu (%d)\n",
             ((AllocIntObjectInstr *)this)->m_targetSlot,
             ((AllocIntObjectInstr *)this)->m_value);
         break;
     case kAllocFloatObject:
-        output(level, "afo: %zu = new float(%f)\n",
+        output(level, "nf %zu (%f)\n",
             ((AllocFloatObjectInstr *)this)->m_targetSlot,
             ((AllocFloatObjectInstr *)this)->m_value);
         break;
     case kAllocStringObject:
-        output(level, "aso: %zu = new string(\"%s\")\n",
+        output(level, "ns %zu (\"%s\")\n",
             ((AllocStringObjectInstr *)this)->m_targetSlot,
             ((AllocStringObjectInstr *)this)->m_value);
         break;
     case kAllocClosureObject:
-        output(level, "aco: %zu = new fn(%zu)\n",
+        output(level, "nc %zu (%zu)\n",
             ((AllocClosureObjectInstr *)this)->m_targetSlot,
             ((AllocClosureObjectInstr *)this)->m_contextSlot);
         otherFunctions.push_back(((AllocClosureObjectInstr *)this)->m_function);
         break;
     case kCloseObject:
-        output(level, "co: %zu\n", ((CloseObjectInstr *)this)->m_slot);
+        output(level, "close %zu\n", ((CloseObjectInstr *)this)->m_slot);
         break;
     case kAccess:
-        output(level, "ref: %zu = %zu . %zu\n",
+        output(level, "get %zu (%zu . %zu)\n",
             ((AccessInstr *)this)->m_targetSlot,
             ((AccessInstr *)this)->m_objectSlot,
             ((AccessInstr *)this)->m_keySlot);
         break;
     case kAssignNormal:
-        output(level, "mov: %zu . %zu = %zu\n",
+        output(level, "setn %zu . %zu (%zu)\n",
             ((AssignNormalInstr *)this)->m_objectSlot,
             ((AssignNormalInstr *)this)->m_keySlot,
             ((AssignNormalInstr *)this)->m_valueSlot);
         break;
     case kAssignExisting:
-        output(level, "move: %zu . %zu = %zu\n",
+        output(level, "sete %zu . %zu (%zu)\n",
             ((AssignExistingInstr *)this)->m_objectSlot,
             ((AssignExistingInstr *)this)->m_keySlot,
             ((AssignExistingInstr *)this)->m_valueSlot);
         break;
+    case kAssignShadowing:
+        output(level, "sets %zu . %zu (%zu)\n",
+            ((AssignShadowingInstr *)this)->m_objectSlot,
+            ((AssignShadowingInstr *)this)->m_keySlot,
+            ((AssignShadowingInstr *)this)->m_valueSlot);
+        break;
     case kCall:
         // this one is a tad annoying but still doable
-        output(level, "call: %zu = %zu . %zu ( ",
+        output(level, "call %zu (%zu . %zu [ ",
             ((CallInstr *)this)->m_targetSlot,
             ((CallInstr *)this)->m_functionSlot,
             ((CallInstr *)this)->m_thisSlot);
@@ -102,16 +108,16 @@ void Instr::dump(int level) {
             if (i) u::Log::out(", ");
             u::Log::out("%zu", ((CallInstr *)this)->m_arguments[i]);
         }
-        u::Log::out(" )\n");
+        u::Log::out(" ])\n");
         break;
     case kReturn:
-        output(level, "ret: %zu\n", ((ReturnInstr *)this)->m_returnSlot);
+        output(level, "ret %zu\n", ((ReturnInstr *)this)->m_returnSlot);
         break;
     case kBranch:
-        output(level, "br: <%zu>\n", ((BranchInstr *)this)->m_block);
+        output(level, "br <%zu>\n", ((BranchInstr *)this)->m_block);
         break;
     case kTestBranch:
-        output(level, "tbr: %zu ? <%zu> : <%zu>\n",
+        output(level, "tbr %zu ? <%zu> : <%zu>\n",
             ((TestBranchInstr *)this)->m_testSlot,
             ((TestBranchInstr *)this)->m_trueBlock,
             ((TestBranchInstr *)this)->m_falseBlock);

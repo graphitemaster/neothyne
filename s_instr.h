@@ -16,29 +16,24 @@ struct Instr {
 
     void dump(int level = 0);
 
+    //top,ctx,no,ni,nf,ns,nc,close,get,set,call,ret,br,tbr
     enum {
-        kGetRoot,            // gr
-        kGetContext,         // gc
-
-        kAllocObject,        // ao
-        kAllocIntObject,     // aio
-        kAllocFloatObject,   // afo
-        kAllocStringObject,  // aso
-        kAllocClosureObject, // aco
-
-        kCloseObject,        // co
-
-        kAccess,             // ref
-
-        kAssignNormal,       // movn
-        kAssignExisting,     // move
-        kAssignShadowing,    // movs
-
-        kCall,               // call
-        kReturn,             // ret
-
-        kBranch,             // br
-        kTestBranch          // tbr
+        kGetRoot,
+        kGetContext,
+        kAllocObject,
+        kAllocIntObject,
+        kAllocFloatObject,
+        kAllocStringObject,
+        kAllocClosureObject,
+        kCloseObject,
+        kAccess,
+        kAssignNormal,
+        kAssignExisting,
+        kAssignShadowing,
+        kCall,
+        kReturn,
+        kBranch,
+        kTestBranch
     };
 
     int m_type;

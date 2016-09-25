@@ -104,6 +104,7 @@ Slot FunctionCodegen::addAllocClosureObject(Slot contextSlot, UserFunction *func
 }
 
 Slot FunctionCodegen::addAllocIntObject(Slot contextSlot, int value) {
+    (void)contextSlot;
     auto *instruction = allocate<AllocIntObjectInstr>();
     instruction->m_type = Instr::kAllocIntObject;
     instruction->m_targetSlot = m_slotBase++;
@@ -113,6 +114,7 @@ Slot FunctionCodegen::addAllocIntObject(Slot contextSlot, int value) {
 }
 
 Slot FunctionCodegen::addAllocFloatObject(Slot contextSlot, float value) {
+    (void)contextSlot;
     auto *instruction = allocate<AllocFloatObjectInstr>();
     instruction->m_type = Instr::kAllocFloatObject;
     instruction->m_targetSlot = m_slotBase++;
@@ -122,6 +124,7 @@ Slot FunctionCodegen::addAllocFloatObject(Slot contextSlot, float value) {
 }
 
 Slot FunctionCodegen::addAllocStringObject(Slot contextSlot, const char *value) {
+    (void)contextSlot;
     auto *instruction = allocate<AllocStringObjectInstr>();
     instruction->m_type = Instr::kAllocStringObject;
     instruction->m_targetSlot = m_slotBase++;
