@@ -69,11 +69,11 @@ struct AssignInstr : Instr {
 };
 
 struct CallInstr : Instr {
-    CallInstr(Slot target, Slot function, size_t *args, size_t length);
+    CallInstr(Slot target, Slot function, Slot *arguments, size_t length);
     Slot m_targetSlot;
     Slot m_functionSlot;
-    size_t *m_argsData;
-    size_t m_argsLength;
+    Slot *m_arguments;
+    size_t m_length;
 };
 
 struct ReturnInstr : Instr {
@@ -91,6 +91,16 @@ struct TestBranchInstr : Instr {
     Slot m_testSlot;
     size_t m_trueBlock;
     size_t m_falseBlock;
+};
+
+struct InstrBlock {
+    Instr **m_instrs;
+    size_t m_length;
+};
+
+struct FunctionBody {
+    InstrBlock *m_blocks;
+    size_t m_length;
 };
 
 }

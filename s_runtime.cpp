@@ -70,7 +70,7 @@ Object *call(Object *context, UserFunction *function, Object **args, size_t leng
         switch (instr->m_type) {
         case Instr::kGetRoot: {
             auto *getRoot = (GetRootInstr *)instr;
-            size_t slot = getRoot->m_slot;
+            Slot slot = getRoot->m_slot;
             Object *root = context;
             while (root->m_parent) root = root->m_parent;
             U_ASSERT(slot < numSlots && !slots[slot]);
@@ -79,15 +79,15 @@ Object *call(Object *context, UserFunction *function, Object **args, size_t leng
 
         case Instr::kGetContext: {
             auto *getContext = (GetContextInstr *)instr;
-            size_t slot = getContext->m_slot;
+            Slot slot = getContext->m_slot;
             U_ASSERT(slot < numSlots && !slots[slot]);
             slots[slot] = context;
         } break;
 
         case Instr::kAccess: {
             auto *access = (AccessInstr *)instr;
-            size_t targetSlot = access->m_targetSlot;
-            size_t objectSlot = access->m_objectSlot;
+            Slot targetSlot = access->m_targetSlot;
+            Slot objectSlot = access->m_objectSlot;
             const char *key = access->m_key;
             U_ASSERT(targetSlot < numSlots && !slots[targetSlot]);
             U_ASSERT(objectSlot < numSlots);
@@ -140,9 +140,9 @@ Object *call(Object *context, UserFunction *function, Object **args, size_t leng
 
         case Instr::kCall: {
             auto *call = (CallInstr *)instr;
-            size_t targetSlot = call->m_targetSlot;
-            size_t functionSlot = call->m_functionSlot;
-            size_t argsLength = call->m_argsLength;
+            Slot targetSlot = call->m_targetSlot;
+            Slot functionSlot = call->m_functionSlot;
+            Slot argsLength = call->m_length;
             U_ASSERT(targetSlot < numSlots && !slots[targetSlot]);
             U_ASSERT(functionSlot < numSlots);
             Object *functionObject = slots[functionSlot];
@@ -157,7 +157,7 @@ Object *call(Object *context, UserFunction *function, Object **args, size_t leng
             // form the argument array from slots
             Object **args = (Object **)neoMalloc(sizeof *args * argsLength);
             for (size_t i = 0; i < argsLength; i++) {
-                size_t argSlot = call->m_argsData[i];
+                Slot argSlot = call->m_arguments[i];
                 U_ASSERT(argSlot < numSlots);
                 args[i] = slots[argSlot];
             }
@@ -168,7 +168,7 @@ Object *call(Object *context, UserFunction *function, Object **args, size_t leng
 
         case Instr::kReturn: {
             auto *ret = (ReturnInstr *)instr;
-            size_t returnSlot = ret->m_returnSlot;
+            Slot returnSlot = ret->m_returnSlot;
             U_ASSERT(returnSlot < numSlots);
             Object *result = slots[returnSlot];
             neoFree(slots);
@@ -185,7 +185,7 @@ Object *call(Object *context, UserFunction *function, Object **args, size_t leng
 
         case Instr::kTestBranch: {
             auto *testBranch = (TestBranchInstr *)instr;
-            size_t testSlot = testBranch->m_testSlot;
+            Slot testSlot = testBranch->m_testSlot;
             size_t trueBlock = testBranch->m_trueBlock;
             size_t falseBlock = testBranch->m_falseBlock;
             U_ASSERT(testSlot < numSlots);

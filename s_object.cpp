@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "s_object.h"
+#include "s_runtime.h"
 
 #include "u_new.h"
 #include "u_assert.h"

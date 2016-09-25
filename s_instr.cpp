@@ -55,12 +55,12 @@ AssignInstr::AssignInstr(Slot object, Slot value, const char *key)
 {
 }
 
-CallInstr::CallInstr(Slot target, Slot function, size_t *args, size_t length)
+CallInstr::CallInstr(Slot target, Slot function, Slot *arguments, size_t length)
     : Instr(kCall)
     , m_targetSlot(target)
     , m_functionSlot(function)
-    , m_argsData(args)
-    , m_argsLength(length)
+    , m_arguments(arguments)
+    , m_length(length)
 {
 }
 

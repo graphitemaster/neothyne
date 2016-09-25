@@ -1,6 +1,9 @@
+#include "s_runtime.h"
 #include "s_object.h"
 #include "s_instr.h"
 #include "s_codegen.h"
+
+#include "s_parser.h"
 
 #include "u_log.h"
 
@@ -16,6 +19,8 @@ Instr *allocInstr(const T &value) {
 void test() {
     Object *root = createRoot();
 
+    // Raw test
+#if 0
     // ackermans function
     UserFunction *ackFn = allocate<UserFunction>();
     ackFn->m_arity = 2;
@@ -102,6 +107,23 @@ void test() {
 
     Object *ack = Object::newUserFunction(root, ackFn);
     root->set("ack", ack);
+#else
+
+    // Parser test!
+    char data[] =
+    "fn ack(m, n) {"
+    "   if (m == 0) return n + 1;"
+    "   if (n == 0) return ack(m - 1, 1);"
+    "   return ack(m - 1, ack(m, n - 1));"
+    "}";
+
+    char *text = data;
+
+    UserFunction *function = Parser::parseFunction(&text);
+
+    Object *ack = Object::newUserFunction(root, function);
+    root->set("ack", ack);
+#endif
 
     // call it
     Object **args = allocate<Object *>(2);
@@ -110,11 +132,6 @@ void test() {
 
     Object *result = handler(root, ack, args, 2);
     u::Log::out("ack(3, 7) = %d\n", ((IntObject *)result)->m_value);
-
-    // try codegen
-    FunctionCodegen cg;
-    cg.setName("test");
-    cg.newBlock();
 }
 
 }

@@ -63,6 +63,7 @@ SCRIPTING_SOURCES = \
 	s_codegen.cpp \
 	s_instr.cpp \
 	s_object.cpp \
+	s_parser.cpp \
 	s_runtime.cpp \
 	s_test.cpp
 

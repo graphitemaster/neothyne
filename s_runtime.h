@@ -9,16 +9,6 @@ struct Instr;
 struct Object;
 struct UserFunction;
 
-struct InstrBlock {
-    Instr **m_instrs;
-    size_t m_length;
-};
-
-struct FunctionBody {
-    InstrBlock *m_blocks;
-    size_t m_length;
-};
-
 // builtin functions
 Object *equals(Object *context, Object *function, Object **args, size_t length);
 Object *add(Object *context, Object *function, Object **args, size_t length);

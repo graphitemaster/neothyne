@@ -3,7 +3,8 @@
 
 #include <string.h>
 
-#include "s_runtime.h"
+#include "s_instr.h"
+
 #include "u_new.h"
 
 namespace s {
