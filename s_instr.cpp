@@ -24,7 +24,7 @@ void UserFunction::dump(int level) {
     FunctionBody *body = &m_body;
     output(level, "fn %s (%zu), %zu slots [\n", m_name, m_arity, m_slots);
     for (size_t i = 0; i < body->m_length; i++) {
-        output(level + 1, "cblock <%zu> [\n", i);
+        output(level + 1, "block <%zu> [\n", i);
         InstrBlock *block = &body->m_blocks[i];
         for (size_t j = 0; j < block->m_length; j++) {
             Instr *instruction = block->m_instrs[j];
