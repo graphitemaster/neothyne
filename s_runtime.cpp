@@ -197,7 +197,9 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             auto *access = (AccessInstr *)instr;
             Slot targetSlot = access->m_targetSlot;
             Slot objectSlot = access->m_objectSlot;
-            const char *key = access->m_key;
+            Slot keySlot = access->m_keySlot;
+            U_ASSERT(keySlot < numSlots && slots[keySlot]);
+            const char *key = ((StringObject *)slots[keySlot])->m_value;
             U_ASSERT(targetSlot < numSlots && !slots[targetSlot]);
             U_ASSERT(objectSlot < numSlots);
             for (Object *object = slots[objectSlot]; object; object = object->m_parent) {
@@ -213,7 +215,9 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             AssignInstr *i = (AssignInstr *)instr;
             Slot objectSlot = i->m_objectSlot;
             Slot valueSlot = i->m_valueSlot;
-            const char *key = i->m_key;
+            Slot keySlot = i->m_keySlot;
+            U_ASSERT(keySlot < numSlots && slots[keySlot]);
+            const char *key = ((StringObject *)slots[keySlot])->m_value;
             U_ASSERT(objectSlot < numSlots);
             U_ASSERT(valueSlot < numSlots);
             Object *object = slots[objectSlot];
@@ -224,7 +228,9 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             AssignExistingInstr *i = (AssignExistingInstr *)instr;
             Slot objectSlot = i->m_objectSlot;
             Slot valueSlot = i->m_valueSlot;
-            const char *key = i->m_key;
+            Slot keySlot = i->m_keySlot;
+            U_ASSERT(keySlot < numSlots && slots[keySlot]);
+            const char *key = ((StringObject *)slots[keySlot])->m_value;
             U_ASSERT(objectSlot < numSlots);
             U_ASSERT(valueSlot < numSlots);
             Object *object = slots[objectSlot];

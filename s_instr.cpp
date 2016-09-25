@@ -75,21 +75,21 @@ void Instr::dump(int level) {
         output(level, "co: %zu\n", ((CloseObjectInstr *)this)->m_slot);
         break;
     case kAccess:
-        output(level, "ref: %zu = %zu . '%s'\n",
+        output(level, "ref: %zu = %zu . %zu\n",
             ((AccessInstr *)this)->m_targetSlot,
             ((AccessInstr *)this)->m_objectSlot,
-            ((AccessInstr *)this)->m_key);
+            ((AccessInstr *)this)->m_keySlot);
         break;
     case kAssign:
-        output(level, "mov: %zu . '%s' = %zu\n",
+        output(level, "mov: %zu . %zu = %zu\n",
             ((AssignInstr *)this)->m_objectSlot,
-            ((AssignInstr *)this)->m_key,
+            ((AssignInstr *)this)->m_keySlot,
             ((AssignInstr *)this)->m_valueSlot);
         break;
     case kAssignExisting:
-        output(level, "move: %zu . '%s' = %zu\n",
+        output(level, "move: %zu . %zu = %zu\n",
             ((AssignExistingInstr *)this)->m_objectSlot,
-            ((AssignExistingInstr *)this)->m_key,
+            ((AssignExistingInstr *)this)->m_keySlot,
             ((AssignExistingInstr *)this)->m_valueSlot);
         break;
     case kCall:
@@ -167,27 +167,27 @@ CloseObjectInstr::CloseObjectInstr(Slot slot)
 {
 }
 
-AccessInstr::AccessInstr(Slot target, Slot object, const char *key)
+AccessInstr::AccessInstr(Slot target, Slot object, Slot keySlot)
     : Instr(kAccess)
     , m_targetSlot(target)
     , m_objectSlot(object)
-    , m_key(key)
+    , m_keySlot(keySlot)
 {
 }
 
-AssignInstr::AssignInstr(Slot object, Slot value, const char *key)
+AssignInstr::AssignInstr(Slot object, Slot value, Slot keySlot)
     : Instr(kAssign)
     , m_objectSlot(object)
     , m_valueSlot(value)
-    , m_key(key)
+    , m_keySlot(keySlot)
 {
 }
 
-AssignExistingInstr::AssignExistingInstr(Slot object, Slot value, const char *key)
+AssignExistingInstr::AssignExistingInstr(Slot object, Slot value, Slot keySlot)
     : Instr(kAssignExisting)
     , m_objectSlot(object)
     , m_valueSlot(value)
-    , m_key(key)
+    , m_keySlot(keySlot)
 {
 }
 

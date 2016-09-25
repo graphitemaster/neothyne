@@ -41,17 +41,24 @@ Parser::Reference::Reference(Slot base, const char *key, bool isVariable)
 }
 
 Slot Parser::Reference::access(FunctionCodegen *generator) {
-    return generator ? (m_key ? generator->addAccess(m_base, m_key) : m_base) : 0;
+    if (!generator) return 0;
+    if (m_key) {
+        Slot keySlot = generator->addAllocStringObject(generator->getScope(), m_key);
+        return generator->addAccess(m_base, keySlot);
+    }
+    return m_base;
 }
 
 void Parser::Reference::assign(FunctionCodegen *generator, Slot value) {
     U_ASSERT(m_key);
-    generator->addAssign(m_base, m_key, value);
+    Slot keySlot = generator->addAllocStringObject(generator->getScope(), m_key);
+    generator->addAssign(m_base, keySlot, value);
 }
 
 void Parser::Reference::assignExisting(FunctionCodegen *generator, Slot value) {
     U_ASSERT(m_key);
-    generator->addAssignExisting(m_base, m_key, value);
+    Slot keySlot = generator->addAllocStringObject(generator->getScope(), m_key);
+    generator->addAssignExisting(m_base, keySlot, value);
 }
 
 Parser::Reference Parser::Reference::getScope(FunctionCodegen *generator, const char *name) {
@@ -322,8 +329,9 @@ bool Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Ref
 
         Reference value = parseExpression(&text, generator, 0);
         if (generator) {
+            Slot keySlot = generator->addAllocStringObject(generator->getScope(), key);
             Slot valueSlot = value.access(generator);
-            generator->addAssign(objectSlot, key, valueSlot);
+            generator->addAssign(objectSlot, keySlot, valueSlot);
         }
 
         if (consumeString(&text, ","))
@@ -361,16 +369,26 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
             Slot argument = parseExpression(&text, generator, 3).access(generator);
             if (!generator)
                 continue;
-            Slot mulFunction = generator->addAccess(generator->getScope(), "*");
-            expression = { generator->addCall(mulFunction, expression.access(generator), argument), nullptr, false };
+            Slot mulFunction = generator->addAccess(generator->getScope(),
+                generator->addAllocStringObject(generator->getScope(), "*"));
+            expression = {
+                generator->addCall(mulFunction, expression.access(generator), argument),
+                nullptr,
+                false
+            };
             continue;
         }
         if (consumeString(&text, "/")) {
             Slot argument = parseExpression(&text, generator, 3).access(generator);
             if (!generator)
                 continue;
-            Slot divFunction = generator->addAccess(generator->getScope(), "/");
-            expression = { generator->addCall(divFunction, expression.access(generator), argument), nullptr, false };
+            Slot divFunction = generator->addAccess(generator->getScope(),
+                generator->addAllocStringObject(generator->getScope(), "/"));
+            expression = {
+                generator->addCall(divFunction, expression.access(generator), argument),
+                nullptr,
+                false
+            };
             continue;
         }
         break;
@@ -387,16 +405,26 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
             Slot argument = parseExpression(&text, generator, 2).access(generator);
             if (!generator)
                 continue;
-            Slot addFunction = generator->addAccess(generator->getScope(), "+");
-            expression = { generator->addCall(addFunction, expression.access(generator), argument), nullptr, false };
+            Slot addFunction = generator->addAccess(generator->getScope(),
+                generator->addAllocStringObject(generator->getScope(), "+"));
+            expression = {
+                generator->addCall(addFunction, expression.access(generator), argument),
+                nullptr,
+                false
+            };
             continue;
         }
         if (consumeString(&text, "-")) {
             Slot argument = parseExpression(&text, generator, 2).access(generator);
             if (!generator)
                 continue;
-            Slot subFunction = generator->addAccess(generator->getScope(), "-");
-            expression = { generator->addCall(subFunction, expression.access(generator), argument), nullptr, false };
+            Slot subFunction = generator->addAccess(generator->getScope(),
+                generator->addAllocStringObject(generator->getScope(), "-"));
+            expression = {
+                generator->addCall(subFunction, expression.access(generator), argument),
+                nullptr,
+                false
+            };
             continue;
         }
         break;
@@ -412,8 +440,13 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
     if (consumeString(&text, "==")) {
         Slot argument = parseExpression(&text, generator, 2).access(generator);
         if (generator) {
-            Slot equalFunction = generator->addAccess(generator->getScope(), "=");
-            expression = { generator->addCall(equalFunction, expression.access(generator), argument), nullptr, false };
+            Slot equalFunction = generator->addAccess(generator->getScope(),
+                generator->addAllocStringObject(generator->getScope(), "="));
+            expression = {
+                generator->addCall(equalFunction, expression.access(generator), argument),
+                nullptr,
+                false
+            };
         }
     }
 
@@ -428,13 +461,14 @@ void Parser::parseLetDeclaration(char **contents, FunctionCodegen *generator) {
 
     const char *variableName = parseIdentifier(contents);
     Slot value;
+    Slot slot = generator->addAllocStringObject(generator->getScope(), variableName);
     if (!consumeString(contents, "=")) {
         value = generator->makeNullSlot();
     } else {
         value = parseExpression(contents, generator, 0).access(generator);
     }
 
-    generator->addAssign(generator->getScope(), variableName, value);
+    generator->addAssign(generator->getScope(), slot, value);
     generator->addCloseObject(generator->getScope());
 
     // let a, b
@@ -451,8 +485,9 @@ void Parser::parseLetDeclaration(char **contents, FunctionCodegen *generator) {
 void Parser::parseFunctionDeclaration(char **contents, FunctionCodegen *generator) {
     generator->setScope(generator->addAllocObject(generator->getScope()));
     UserFunction *function = parseFunctionExpression(contents);
+    Slot nameSlot = generator->addAllocStringObject(generator->getScope(), function->m_name);
     Slot slot = generator->addAllocClosureObject(generator->getScope(), function);
-    generator->addAssign(generator->getScope(), function->m_name, slot);
+    generator->addAssign(generator->getScope(), nameSlot, slot);
     generator->addCloseObject(generator->getScope());
 }
 
@@ -589,8 +624,10 @@ UserFunction *Parser::parseFunctionExpression(char **contents) {
     generator.newBlock();
     Slot contextSlot = generator.addGetContext();
     generator.setScope(generator.addAllocObject(contextSlot));
-    for (size_t i = 0; i < length; i++)
-        generator.addAssign(generator.getScope(), arguments[i], i);
+    for (size_t i = 0; i < length; i++) {
+        Slot argumentNameSlot = generator.addAllocStringObject(generator.getScope(), arguments[i]);
+        generator.addAssign(generator.getScope(), argumentNameSlot, i);
+    }
     generator.addCloseObject(generator.getScope());
 
     parseBlock(contents, &generator);

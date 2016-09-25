@@ -32,31 +32,31 @@ void FunctionCodegen::addInstr(Instr *instruction) {
     block->m_instrs[block->m_length - 1] = instruction;
 }
 
-Slot FunctionCodegen::addAccess(Slot objectSlot, const char *identifier) {
+Slot FunctionCodegen::addAccess(Slot objectSlot, Slot keySlot) {
     auto *instruction = allocate<AccessInstr>();
     instruction->m_type = Instr::kAccess;
     instruction->m_targetSlot = m_slotBase++;
     instruction->m_objectSlot = objectSlot;
-    instruction->m_key = identifier;
+    instruction->m_keySlot = keySlot;
     addInstr((Instr *)instruction);
     return instruction->m_targetSlot;
 }
 
-void FunctionCodegen::addAssign(Slot object, const char *name, Slot slot) {
+void FunctionCodegen::addAssign(Slot object, Slot keySlot, Slot slot) {
     auto *instruction = allocate<AssignInstr>();
     instruction->m_type = Instr::kAssign;
     instruction->m_objectSlot = object;
     instruction->m_valueSlot = slot;
-    instruction->m_key = name;
+    instruction->m_keySlot = keySlot;
     addInstr((Instr *)instruction);
 }
 
-void FunctionCodegen::addAssignExisting(Slot object, const char *name, Slot slot) {
+void FunctionCodegen::addAssignExisting(Slot object, Slot keySlot, Slot slot) {
     auto *instruction = allocate<AssignExistingInstr>();
     instruction->m_type = Instr::kAssignExisting;
     instruction->m_objectSlot = object;
     instruction->m_valueSlot = slot;
-    instruction->m_key = name;
+    instruction->m_keySlot = keySlot;
     addInstr((Instr *)instruction);
 }
 

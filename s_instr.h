@@ -82,24 +82,24 @@ struct CloseObjectInstr : Instr {
 };
 
 struct AccessInstr : Instr {
-    AccessInstr(Slot target, Slot object, const char *key);
+    AccessInstr(Slot target, Slot object, Slot keySlot);
     Slot m_targetSlot;
     Slot m_objectSlot;
-    const char *m_key;
+    Slot m_keySlot;
 };
 
 struct AssignInstr : Instr {
-    AssignInstr(Slot object, Slot value, const char *key);
+    AssignInstr(Slot object, Slot value, Slot keySlot);
     Slot m_objectSlot;
     Slot m_valueSlot;
-    const char *m_key;
+    Slot m_keySlot;
 };
 
 struct AssignExistingInstr : Instr {
-    AssignExistingInstr(Slot object, Slot value, const char *key);
+    AssignExistingInstr(Slot object, Slot value, Slot keySlot);
     Slot m_objectSlot;
     Slot m_valueSlot;
-    const char *m_key;
+    Slot m_keySlot;
 };
 
 struct CallInstr : Instr {
