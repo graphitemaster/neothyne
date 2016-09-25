@@ -61,6 +61,7 @@ CONSOLE_SOURCES = \
 
 SCRIPTING_SOURCES = \
 	s_codegen.cpp \
+	s_gc.cpp \
 	s_instr.cpp \
 	s_object.cpp \
 	s_parser.cpp \

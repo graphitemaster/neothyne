@@ -28,12 +28,16 @@ struct Table {
     void set(const char *key, Object *value);
 
 private:
+    friend struct GC;
+    friend struct Object;
     Entry m_entry;
 };
 
-typedef Object *(*FunctionPointer)(Object *, Object *, Object **, size_t);
+typedef Object *(*FunctionPointer)(Object *, Object *, Object *, Object **, size_t);
 
 struct Object {
+    static void *alloc(size_t size);
+
     static Object *newObject(Object *parent);
     static Object *newInt(Object *context, int value);
     static Object *newFloat(Object *context, float value);
@@ -45,14 +49,23 @@ struct Object {
     void set(const char *key, Object *value);
     void setExisting(const char *key, Object *value);
 
+    void mark();
+    void free();
+
     enum {
         kClosed    = 1 << 0, // when set no additional properties can be added
-        kImmutable = 1 << 1  // cannot be modified
+        kImmutable = 1 << 1, // cannot be modified
+        kMarked    = 1 << 2  // reachable in the GC mark phase
     };
 
     int m_flags;
     Object *m_parent;
+    Object *m_prev;
     Table m_table;
+
+    static Object *m_lastAllocated;
+    static size_t m_numAllocated;
+    static size_t m_nextGCRun;
 };
 
 struct FunctionObject : Object {

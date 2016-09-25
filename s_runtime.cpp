@@ -2,6 +2,7 @@
 
 #include "s_object.h"
 #include "s_instr.h"
+#include "s_gc.h"
 
 #include "u_assert.h"
 #include "u_new.h"
@@ -11,9 +12,12 @@
 
 namespace s {
 
-static Object *equals(Object *context, Object *function, Object **args, size_t length) {
+static Object *equals(Object *context, Object *self, Object *function, Object **args, size_t length) {
     (void)function;
+    (void)self;
+
     U_ASSERT(length == 2);
+
     Object *root = context;
     while (root->m_parent) root = root->m_parent;
     Object *intBase = root->m_table.lookup("int");
@@ -38,8 +42,9 @@ static Object *equals(Object *context, Object *function, Object **args, size_t l
 }
 
 #define MATHOP(NAME, OP) \
-static Object *NAME(Object *context, Object *function, Object **args, size_t length) { \
+static Object *NAME(Object *context, Object *self, Object *function, Object **args, size_t length) { \
     (void)function; \
+    (void)self; \
     U_ASSERT(length == 2); \
     Object *root = context; \
     while (root->m_parent) \
@@ -67,7 +72,21 @@ MATHOP(sub, -)
 MATHOP(mul, *)
 MATHOP(div, /)
 
-static Object *print(Object *context, Object *function, Object **arguments, size_t length) {
+static Object *mark(Object *context, Object *self, Object *function, Object **args, size_t length) {
+    (void)context;
+    (void)function;
+    (void)args;
+    (void)length;
+    ClosureObject *closureObject = (ClosureObject *)self;
+    if (closureObject->m_context)
+        closureObject->m_context->mark();
+    return nullptr;
+}
+
+static Object *print(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
+    (void)self;
+    (void)function;
+
     Object *root = context;
     while (root->m_parent)
         root = root->m_parent;
@@ -98,6 +117,7 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
     // allocate slots for arguments and locals
     size_t numSlots = function->m_arity + function->m_slots;
     Object **slots = allocate<Object *>(numSlots);
+    void *frameRoots = GC::addRoots(slots, numSlots);
 
     // ensure this call is valid
     U_ASSERT(length == function->m_arity);
@@ -235,9 +255,11 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             while (root->m_parent) root = root->m_parent;
             // validate function type
             Object *functionBase = root->m_table.lookup("function");
+            Object *closureBase = root->m_table.lookup("closure");
             Object *functionType = functionObject->m_parent;
-            while (functionType->m_parent) functionType = functionType->m_parent;
-            U_ASSERT(functionType == functionBase);
+            while (functionType->m_parent)
+                functionType = functionType->m_parent;
+            U_ASSERT(functionType == functionBase || functionType == closureBase);
             FunctionObject *function = (FunctionObject *)functionObject;
             // form the argument array from slots
             Object **args = (Object **)neoMalloc(sizeof *args * argsLength);
@@ -247,7 +269,7 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
                 args[i] = slots[argSlot];
             }
             // now call
-            slots[targetSlot] = function->m_function(context, functionObject, args, argsLength);
+            slots[targetSlot] = function->m_function(context, nullptr, functionObject, args, argsLength);
             neoFree(args);
         } break;
 
@@ -256,7 +278,7 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             Slot returnSlot = ret->m_returnSlot;
             U_ASSERT(returnSlot < numSlots);
             Object *result = slots[returnSlot];
-            neoFree(slots);
+            GC::removeRoots(frameRoots);
             return result;
         } break;
 
@@ -302,23 +324,47 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
     }
 }
 
-Object *closureHandler(Object *context, Object *function, Object **args, size_t length) {
+Object *functionHandler(Object *callingContext, Object *self, Object *function, Object **args, size_t length) {
+    // disacard calling context and self (lexical scoping)
+    (void)callingContext;
+    (void)self;
     ClosureObject *closureObject = (ClosureObject *)function;
     return callFunction(closureObject->m_context, &closureObject->m_userFunction, args, length);
 }
 
+Object *methodHandler(Object *callingContext, Object *self, Object *function, Object **args, size_t length) {
+    (void)callingContext;
+    ClosureObject *closureObject = (ClosureObject *)function;
+    Object *context = Object::newObject(closureObject->m_context);
+    context->set("self", self);
+    return callFunction(context, &closureObject->m_userFunction, args, length);
+}
+
 Object *createRoot() {
     Object *root = Object::newObject(nullptr);
+    Object *functionObject = Object::newObject(nullptr);
+
+    UserFunction magic;
+    Object *closureObject = Object::newClosure(root, &magic);
+    ((ClosureObject *)closureObject)->m_context = nullptr;
+    ((ClosureObject *)closureObject)->m_function = nullptr;
+
+    closureObject->set("mark", Object::newFunction(root, mark));
+
     root->set("int", Object::newObject(nullptr));
     root->set("boolean", Object::newObject(nullptr));
     root->set("float", Object::newObject(nullptr));
     root->set("string", Object::newObject(nullptr));
-    root->set("function", Object::newObject(nullptr));
+
+    root->set("function", functionObject);
+    root->set("closure", closureObject);
+
     root->set("=", Object::newFunction(root, equals));
     root->set("+", Object::newFunction(root, add));
     root->set("-", Object::newFunction(root, sub));
     root->set("*", Object::newFunction(root, mul));
     root->set("/", Object::newFunction(root, div));
+
     root->set("print", Object::newFunction(root, print));
     return root;
 }

@@ -1,7 +1,6 @@
 #include "s_runtime.h"
 #include "s_object.h"
-#include "s_instr.h"
-#include "s_codegen.h"
+#include "s_gc.h"
 
 #include "s_parser.h"
 
@@ -9,21 +8,16 @@
 
 namespace s {
 
-template <typename T>
-Instr *allocInstr(const T &value) {
-    T *instr = allocate<T>();
-    *instr = value;
-    return (Instr *)instr;
-}
-
 void test() {
     Object *root = createRoot();
+    void *entry = GC::addRoots(&root, 1);
+
     char data[] =
-    "fn ack(m, n) {"
+    "let ack = fn(m, n) {"
     "   if (m == 0) return n + 1;"
     "   if (n == 0) return ack(m - 1, 1);"
     "   return ack(m - 1, ack(m, n - 1));"
-    "}"
+    "};"
     "print(3, \", hello world, \", 3.14);";
 
     char *text = data;
@@ -40,8 +34,11 @@ void test() {
     args[0] = Object::newInt(root, 3);
     args[1] = Object::newInt(root, 7);
 
-    Object *result = closureHandler(root, ack, args, 2);
+    Object *result = functionHandler(root, nullptr, ack, args, 2);
     u::Log::out("ack(3, 7) = %d\n", ((IntObject *)result)->m_value);
+
+    GC::removeRoots(entry);
+    GC::run();
 }
 
 }
