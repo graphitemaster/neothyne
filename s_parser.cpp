@@ -255,16 +255,25 @@ void Parser::parseLetDeclaration(char **contents, FunctionCodegen *generator) {
     generator->setScope(generator->addAllocObject(generator->getScope()));
 
     const char *variableName = parseIdentifier(contents);
+    Slot value;
     if (!consumeString(contents, "=")) {
-        U_ASSERT(0 && "expected `=`");
-    }
-
-    Slot value = parseExpression(contents, generator, 0);
-    if (!consumeString(contents, ";")) {
-        U_ASSERT(0 && "expected `;' to close `let' declaration");
+        value = generator->makeNullSlot();
+    } else {
+        value = parseExpression(contents, generator, 0);
     }
 
     generator->addAssign(generator->getScope(), variableName, value);
+    generator->addCloseObject(generator->getScope());
+
+    // let a, b
+    if (consumeString(contents, ",")) {
+        parseLetDeclaration(contents, generator);
+        return;
+    }
+
+    if (!consumeString(contents, ";")) {
+        U_ASSERT(0 && "expected `;' to terminate `let' declaration");
+    }
 }
 
 void Parser::parseIfStatement(char **contents, FunctionCodegen *generator) {

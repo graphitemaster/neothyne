@@ -144,4 +144,8 @@ UserFunction *FunctionCodegen::build() {
     return function;
 }
 
+Slot FunctionCodegen::makeNullSlot() {
+    return m_slotBase++;
+}
+
 }

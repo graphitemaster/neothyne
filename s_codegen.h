@@ -23,6 +23,7 @@ struct FunctionCodegen {
     void addReturn(Slot slot);
     Slot addAllocClosureObject(Slot contextSlot, UserFunction *function);
     UserFunction *build();
+    Slot makeNullSlot();
 
     // Note: these are dangerous to use
     Slot getScope() const { return m_scope; }
