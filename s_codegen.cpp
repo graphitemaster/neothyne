@@ -111,22 +111,29 @@ Slot FunctionCodegen::addAllocStringObject(Slot contextSlot, const char *value) 
     return instruction->m_targetSlot;
 }
 
-Slot FunctionCodegen::addCall(Slot function, Slot *arguments, size_t length) {
+Slot FunctionCodegen::addCall(Slot function, Slot thisSlot, Slot *arguments, size_t length) {
     auto *instruction = allocate<CallInstr>();
     instruction->m_type = Instr::kCall;
     instruction->m_targetSlot = m_slotBase++;
     instruction->m_functionSlot = function;
+    instruction->m_thisSlot = thisSlot;
     instruction->m_length = length;
     instruction->m_arguments = arguments;
     addInstr((Instr *)instruction);
     return instruction->m_targetSlot;
 }
 
-Slot FunctionCodegen::addCall(Slot function, Slot arg0, Slot arg1) {
+Slot FunctionCodegen::addCall(Slot function, Slot thisSlot, Slot arg0) {
+    Slot *arguments = (Slot *)neoMalloc(sizeof *arguments * 1);
+    arguments[0] = arg0;
+    return addCall(function, thisSlot, arguments, 1);
+}
+
+Slot FunctionCodegen::addCall(Slot function, Slot thisSlot, Slot arg0, Slot arg1) {
     Slot *arguments = (Slot *)neoMalloc(sizeof *arguments * 2);
     arguments[0] = arg0;
     arguments[1] = arg1;
-    return addCall(function, arguments, 2);
+    return addCall(function, thisSlot, arguments, 2);
 }
 
 void FunctionCodegen::addTestBranch(Slot test, size_t **trueBranch, size_t **falseBranch) {

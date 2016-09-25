@@ -103,9 +103,10 @@ struct AssignExistingInstr : Instr {
 };
 
 struct CallInstr : Instr {
-    CallInstr(Slot target, Slot function, Slot *arguments, size_t length);
+    CallInstr(Slot target, Slot function, Slot thisSlot, Slot *arguments, size_t length);
     Slot m_targetSlot;
     Slot m_functionSlot;
+    Slot m_thisSlot;
     Slot *m_arguments;
     size_t m_length;
 };

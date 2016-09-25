@@ -12,6 +12,88 @@
 
 namespace s {
 
+// int
+#define INT_BUILTIN_BINOP(NAME, OPERATOR) \
+static Object *int_##NAME(Object *context, Object *self, Object *function, Object **args, size_t length) { \
+    (void)function; \
+    U_ASSERT(length == 1); \
+    Object *root = context; \
+    while (root->m_parent) \
+        root = root->m_parent; \
+    Object *intBase = root->m_table.lookup("int"); \
+    Object *obj1 = self; \
+    Object *obj2 = *args; \
+    if (obj2->m_parent == intBase) { \
+        int lhs = ((IntObject *)obj1)->m_value; \
+        int rhs = ((IntObject *)obj2)->m_value; \
+        return Object::newInt(context, lhs OPERATOR rhs); \
+    } \
+    Object *floatBase = root->m_table.lookup("float"); \
+    if (obj2->m_parent == floatBase || obj2->m_parent == intBase) { \
+        float lhs = ((IntObject *)obj1)->m_value; \
+        float rhs = 0.0f; \
+        if (obj2->m_parent == floatBase) \
+            rhs = ((IntObject *)obj2)->m_value; \
+        else \
+            rhs = ((FloatObject *)obj2)->m_value; \
+        return Object::newFloat(context, lhs OPERATOR rhs); \
+    } \
+    U_UNREACHABLE(); \
+}
+
+// float
+#define FLT_BUILTIN_BINOP(NAME, OPERATOR) \
+static Object *flt_##NAME(Object *context, Object *self, Object *function, Object **args, size_t length) { \
+    (void)function; \
+    U_ASSERT(length == 1); \
+    Object *root = context; \
+    while (root->m_parent) \
+        root = root->m_parent; \
+    Object *intBase = root->m_table.lookup("int"); \
+    Object *floatBase = root->m_table.lookup("float"); \
+    Object *obj1 = self; \
+    Object *obj2 = *args; \
+    if (obj2->m_parent == floatBase || obj2->m_parent == intBase) { \
+        float lhs = ((FloatObject *)obj1)->m_value; \
+        float rhs = 0.0f; \
+        if (obj2->m_parent == floatBase) \
+            rhs = ((FloatObject *)obj2)->m_value; \
+        else \
+            rhs = ((IntObject *)obj2)->m_value; \
+        return Object::newFloat(context, lhs OPERATOR rhs); \
+    } \
+    U_UNREACHABLE(); \
+}
+
+INT_BUILTIN_BINOP(add, +)
+INT_BUILTIN_BINOP(sub, -)
+INT_BUILTIN_BINOP(mul, *)
+INT_BUILTIN_BINOP(div, /)
+
+FLT_BUILTIN_BINOP(add, +)
+FLT_BUILTIN_BINOP(sub, -)
+FLT_BUILTIN_BINOP(mul, *)
+FLT_BUILTIN_BINOP(div, /)
+
+static Object *str_add(Object *context, Object *self, Object *function, Object **args, size_t length) {
+    U_ASSERT(length == 1);
+
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+
+    Object *stringBase = root->m_table.lookup("string");
+
+    Object *obj1 = self;
+    Object *obj2 = *args;
+    if (obj1->m_parent == stringBase && obj2->m_parent == stringBase) {
+        const char *string1 = ((StringObject *)obj1)->m_value;
+        const char *string2 = ((StringObject *)obj2)->m_value;
+        return Object::newString(context, u::format("%s%s", string1, string2).c_str());
+    }
+    U_UNREACHABLE();
+}
+
 static Object *equals(Object *context, Object *self, Object *function, Object **args, size_t length) {
     (void)function;
     (void)self;
@@ -19,7 +101,9 @@ static Object *equals(Object *context, Object *self, Object *function, Object **
     U_ASSERT(length == 2);
 
     Object *root = context;
-    while (root->m_parent) root = root->m_parent;
+    while (root->m_parent)
+        root = root->m_parent;
+
     Object *intBase = root->m_table.lookup("int");
     Object *floatBase = root->m_table.lookup("float");
 
@@ -40,77 +124,6 @@ static Object *equals(Object *context, Object *self, Object *function, Object **
 
     U_UNREACHABLE();
 }
-
-static Object *add(Object *context, Object *self, Object *function, Object **args, size_t length) { \
-    (void)function;
-    (void)self;
-
-    U_ASSERT(length == 2);
-
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-
-    Object *intBase = root->m_table.lookup("int");
-    Object *floatBase = root->m_table.lookup("float");
-    Object *stringBase = root->m_table.lookup("string");
-
-    Object *object1 = args[0];
-    Object *object2 = args[1];
-
-    if (object1->m_parent == intBase && object2->m_parent == intBase) {
-        int result = ((IntObject *)object1)->m_value + ((IntObject *)object2)->m_value;
-        return Object::newInt(context, result);
-    }
-
-    if ((object1->m_parent == floatBase || object1->m_parent == intBase) &&
-        (object2->m_parent == floatBase || object2->m_parent == intBase))
-    {
-        float value1 = object1->m_parent == floatBase ? ((FloatObject *)object1)->m_value : ((IntObject *)object1)->m_value;
-        float value2 = object2->m_parent == floatBase ? ((FloatObject *)object2)->m_value : ((IntObject *)object2)->m_value;
-        return Object::newFloat(context, value1 + value2);
-    }
-
-    // string concatenation
-    if (object1->m_parent == stringBase && object2->m_parent == stringBase) {
-        const char *string1 = ((StringObject *)object1)->m_value;
-        const char *string2 = ((StringObject *)object2)->m_value;
-        return Object::newString(context, u::format("%s%s", string1, string2).c_str());
-    }
-
-    U_UNREACHABLE();
-}
-
-
-#define MATHOP(NAME, OP) \
-static Object *NAME(Object *context, Object *self, Object *function, Object **args, size_t length) { \
-    (void)function; \
-    (void)self; \
-    U_ASSERT(length == 2); \
-    Object *root = context; \
-    while (root->m_parent) \
-        root = root->m_parent; \
-    Object *intBase = root->m_table.lookup("int"); \
-    Object *floatBase = root->m_table.lookup("float"); \
-    Object *object1 = args[0]; \
-    Object *object2 = args[1]; \
-    if (object1->m_parent == intBase && object2->m_parent == intBase) { \
-        int result = ((IntObject *)object1)->m_value OP ((IntObject *)object2)->m_value; \
-        return Object::newInt(context, result); \
-    } \
-    if ((object1->m_parent == floatBase || object1->m_parent == intBase) && \
-        (object2->m_parent == floatBase || object2->m_parent == intBase)) \
-    { \
-        float value1 = object1->m_parent == floatBase ? ((FloatObject *)object1)->m_value : ((IntObject *)object1)->m_value; \
-        float value2 = object2->m_parent == floatBase ? ((FloatObject *)object2)->m_value : ((IntObject *)object2)->m_value; \
-        return Object::newFloat(context, value1 OP value2); \
-    } \
-    U_UNREACHABLE(); \
-}
-
-MATHOP(sub, -)
-MATHOP(mul, *)
-MATHOP(div, /)
 
 static Object *mark(Object *context, Object *self, Object *function, Object **args, size_t length) {
     (void)context;
@@ -293,19 +306,25 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             auto *call = (CallInstr *)instr;
             Slot targetSlot = call->m_targetSlot;
             Slot functionSlot = call->m_functionSlot;
+            Slot thisSlot = call->m_thisSlot;
             Slot argsLength = call->m_length;
             U_ASSERT(targetSlot < numSlots && !slots[targetSlot]);
             U_ASSERT(functionSlot < numSlots);
+            U_ASSERT(thisSlot < numSlots);
+            Object *thisObject = slots[thisSlot];
             Object *functionObject = slots[functionSlot];
             Object *root = context;
             while (root->m_parent) root = root->m_parent;
             // validate function type
             Object *functionBase = root->m_table.lookup("function");
             Object *closureBase = root->m_table.lookup("closure");
-            Object *functionType = functionObject->m_parent;
-            while (functionType->m_parent)
-                functionType = functionType->m_parent;
-            U_ASSERT(functionType == functionBase || functionType == closureBase);
+            //
+            // TODO(dalweiler):figure out what the fuck broke here
+            //Object *functionType = functionObject->m_parent;
+            //while (functionType->m_parent)
+            //    functionType = functionType->m_parent;
+            //U_ASSERT(functionType == functionBase || functionType == closureBase);
+            //
             FunctionObject *function = (FunctionObject *)functionObject;
             // form the argument array from slots
             Object **args = (Object **)neoMalloc(sizeof *args * argsLength);
@@ -315,7 +334,7 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
                 args[i] = slots[argSlot];
             }
             // now call
-            slots[targetSlot] = function->m_function(context, nullptr, functionObject, args, argsLength);
+            slots[targetSlot] = function->m_function(context, thisObject, functionObject, args, argsLength);
             neoFree(args);
         } break;
 
@@ -388,30 +407,42 @@ Object *methodHandler(Object *callingContext, Object *self, Object *function, Ob
 
 Object *createRoot() {
     Object *root = Object::newObject(nullptr);
-    Object *functionObject = Object::newObject(nullptr);
+    void *pin = GC::addRoots(&root, 1);
+
+    Object *intObject = Object::newObject(nullptr);
+    root->set("int", intObject);
+    intObject->set("+", Object::newFunction(root, int_add));
+    intObject->set("-", Object::newFunction(root, int_sub));
+    intObject->set("*", Object::newFunction(root, int_mul));
+    intObject->set("/", Object::newFunction(root, int_div));
+
+    Object *fltObject = Object::newObject(nullptr);
+    root->set("float", fltObject);
+    fltObject->set("+", Object::newFunction(root, flt_add));
+    fltObject->set("-", Object::newFunction(root, flt_sub));
+    fltObject->set("*", Object::newFunction(root, flt_mul));
+    fltObject->set("/", Object::newFunction(root, flt_div));
+
+    Object *strObject = Object::newObject(nullptr);
+    root->set("string", strObject);
+    strObject->set("+", Object::newFunction(root, str_add));
+
+    root->set("boolean", Object::newObject(nullptr));
+    root->set("function", Object::newObject(nullptr));
 
     UserFunction magic;
     Object *closureObject = Object::newClosure(root, &magic);
     ((ClosureObject *)closureObject)->m_context = nullptr;
     ((ClosureObject *)closureObject)->m_function = nullptr;
-
+    root->set("closure", closureObject);
     closureObject->set("mark", Object::newFunction(root, mark));
 
-    root->set("int", Object::newObject(nullptr));
-    root->set("boolean", Object::newObject(nullptr));
-    root->set("float", Object::newObject(nullptr));
-    root->set("string", Object::newObject(nullptr));
-
-    root->set("function", functionObject);
-    root->set("closure", closureObject);
-
     root->set("=", Object::newFunction(root, equals));
-    root->set("+", Object::newFunction(root, add));
-    root->set("-", Object::newFunction(root, sub));
-    root->set("*", Object::newFunction(root, mul));
-    root->set("/", Object::newFunction(root, div));
 
     root->set("print", Object::newFunction(root, print));
+
+    GC::removeRoots(pin);
+
     return root;
 }
 

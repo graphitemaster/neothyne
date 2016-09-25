@@ -94,9 +94,10 @@ void Instr::dump(int level) {
         break;
     case kCall:
         // this one is a tad annoying but still doable
-        output(level, "call: %zu = %zu ( ",
+        output(level, "call: %zu = %zu . %zu ( ",
             ((CallInstr *)this)->m_targetSlot,
-            ((CallInstr *)this)->m_functionSlot);
+            ((CallInstr *)this)->m_functionSlot,
+            ((CallInstr *)this)->m_thisSlot);
         for (size_t i = 0; i < ((CallInstr *)this)->m_length; ++i) {
             if (i) u::Log::out(", ");
             u::Log::out("%zu", ((CallInstr *)this)->m_arguments[i]);
@@ -191,10 +192,11 @@ AssignExistingInstr::AssignExistingInstr(Slot object, Slot value, Slot keySlot)
 {
 }
 
-CallInstr::CallInstr(Slot target, Slot function, Slot *arguments, size_t length)
+CallInstr::CallInstr(Slot target, Slot function, Slot thisSlot, Slot *arguments, size_t length)
     : Instr(kCall)
     , m_targetSlot(target)
     , m_functionSlot(function)
+    , m_thisSlot(thisSlot)
     , m_arguments(arguments)
     , m_length(length)
 {

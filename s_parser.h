@@ -24,6 +24,8 @@ struct Parser {
         void assignExisting(FunctionCodegen *generator, Slot value);
         static Reference getScope(FunctionCodegen *generator, const char *name);
         bool isVariable() const { return m_isVariable; }
+        Slot getSlot() const { return m_base; }
+        bool hasKey() const { return m_key; }
     private:
         Slot m_base;
         const char *m_key;

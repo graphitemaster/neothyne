@@ -25,7 +25,7 @@ CXXFLAGS = \
 	-I. \
 	-DDEBUG_GL \
 	-DDXT_COMPRESSOR \
-	-g3
+	-O3
 
 ifneq (, $(findstring -g, $(CXXFLAGS)))
 	STRIP = true
