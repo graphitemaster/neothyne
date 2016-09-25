@@ -93,6 +93,15 @@ Slot FunctionCodegen::addAllocIntObject(Slot contextSlot, int value) {
     return instruction->m_targetSlot;
 }
 
+Slot FunctionCodegen::addAllocFloatObject(Slot contextSlot, float value) {
+    auto *instruction = allocate<AllocFloatObjectInstr>();
+    instruction->m_type = Instr::kAllocFloatObject;
+    instruction->m_targetSlot = m_slotBase++;
+    instruction->m_value = value;
+    addInstr((Instr *)instruction);
+    return instruction->m_targetSlot;
+}
+
 Slot FunctionCodegen::addCall(Slot function, Slot *arguments, size_t length) {
     auto *instruction = allocate<CallInstr>();
     instruction->m_type = Instr::kCall;

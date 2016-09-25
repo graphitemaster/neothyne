@@ -92,6 +92,17 @@ Object *Object::newInt(Object *context, int value) {
     return (Object *)object;
 }
 
+Object *Object::newFloat(Object *context, float value) {
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *floatBase = root->m_table.lookup("float");
+    auto *object = allocate<FloatObject>();
+    object->m_parent = floatBase;
+    object->m_value = value;
+    return (Object *)object;
+}
+
 Object *Object::newBoolean(Object *context, bool value) {
     Object *root = context;
     while (root->m_parent)

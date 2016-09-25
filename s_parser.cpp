@@ -107,6 +107,8 @@ bool Parser::parseInteger(char **contents, int *out) {
     char *text = *contents;
     consumeFiller(&text);
     char *start = text;
+    if (*text && *text == '-')
+        text++;
     while (*text && isDigit(*text))
         text++;
     if (text == start)
@@ -117,6 +119,28 @@ bool Parser::parseInteger(char **contents, int *out) {
     memcpy(result, start, length);
     result[length] = '\0';
     *out = atoi(result);
+    neoFree(result);
+    return true;
+}
+
+bool Parser::parseFloat(char **contents, float *out) {
+    char *text = *contents;
+    consumeFiller(&text);
+    char *start = text;
+    if (*text && *text == '-')
+        text++;
+    while (*text && isDigit(*text))
+        text++;
+    if (!*text || *text != '.')
+        return false;
+    text++;
+    while (*text && isDigit(*text))
+        text++;
+    *contents = text;
+    size_t length = text - start;
+    char *result = (char *)neoMalloc(length + 1);
+    memcpy(result, start, length);
+    *out = atof(result);
     neoFree(result);
     return true;
 }
@@ -138,11 +162,23 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
         return Reference::getScope(generator, identifier);
     }
 
-    int value = 0;
-    if (parseInteger(&text, &value)) {
-        *contents = text;
-        Slot slot = generator->addAllocIntObject(generator->getScope(), value);
-        return { slot, nullptr };
+    // float?
+    {
+        float value = 0.0f;
+        if (parseFloat(&text, &value)) {
+            *contents = text;
+            Slot slot = generator->addAllocFloatObject(generator->getScope(), value);
+            return { slot, nullptr };
+        }
+    }
+    // int?
+    {
+        int value = 0;
+        if (parseInteger(&text, &value)) {
+            *contents = text;
+            Slot slot = generator->addAllocIntObject(generator->getScope(), value);
+            return { slot, nullptr };
+        }
     }
 
     if (consumeString(&text, "(")) {
@@ -362,6 +398,25 @@ void Parser::parseStatement(char **contents, FunctionCodegen *generator) {
         parseLetDeclaration(contents, generator);
         return;
     }
+
+    // variable assignment
+    char *next = text;
+    parseExpression(&next, nullptr);
+    if (consumeString(&next, "=")) {
+        Reference target = parseExpression(&text, generator);
+        if (!consumeString(&text, "=")) {
+            U_ASSERT(0 && "internal compiler error");
+        }
+        Slot value = parseExpression(&text, generator, 0).access(generator);
+        target.assignExisting(generator, value);
+
+        if (!consumeString(&text, ";")) {
+            U_ASSERT(0 && "expected `;' to close assignment");
+        }
+        *contents = text;
+        return;
+    }
+
     U_ASSERT(0 && "unknown statement");
     U_UNREACHABLE();
 }

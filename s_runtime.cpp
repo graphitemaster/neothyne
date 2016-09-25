@@ -16,12 +16,23 @@ Object *equals(Object *context, Object *function, Object **args, size_t length) 
     Object *root = context;
     while (root->m_parent) root = root->m_parent;
     Object *intBase = root->m_table.lookup("int");
+    Object *floatBase = root->m_table.lookup("float");
+
     Object *object1 = args[0];
     Object *object2 = args[1];
     if (object1->m_parent == intBase && object2->m_parent == intBase) {
         bool test = ((IntObject *)object1)->m_value == ((IntObject *)object2)->m_value;
         return Object::newBoolean(context, test);
     }
+
+    if ((object1->m_parent == floatBase || object1->m_parent == intBase) &&
+        (object2->m_parent == floatBase || object2->m_parent == intBase))
+    {
+        float value1 = object1->m_parent == floatBase ? ((FloatObject *)object1)->m_value : ((IntObject *)object1)->m_value;
+        float value2 = object2->m_parent == floatBase ? ((FloatObject *)object2)->m_value : ((IntObject *)object2)->m_value;
+        return Object::newBoolean(context, value1 == value2);
+    }
+
     U_UNREACHABLE();
 }
 
@@ -30,13 +41,22 @@ Object *NAME(Object *context, Object *function, Object **args, size_t length) { 
     (void)function; \
     U_ASSERT(length == 2); \
     Object *root = context; \
-    while (root->m_parent) root = root->m_parent; \
+    while (root->m_parent) \
+        root = root->m_parent; \
     Object *intBase = root->m_table.lookup("int"); \
+    Object *floatBase = root->m_table.lookup("float"); \
     Object *object1 = args[0]; \
     Object *object2 = args[1]; \
     if (object1->m_parent == intBase && object2->m_parent == intBase) { \
         int result = ((IntObject *)object1)->m_value OP ((IntObject *)object2)->m_value; \
         return Object::newInt(context, result); \
+    } \
+    if ((object1->m_parent == floatBase || object1->m_parent == intBase) && \
+        (object2->m_parent == floatBase || object2->m_parent == intBase)) \
+    { \
+        float value1 = object1->m_parent == floatBase ? ((FloatObject *)object1)->m_value : ((IntObject *)object1)->m_value; \
+        float value2 = object2->m_parent == floatBase ? ((FloatObject *)object2)->m_value : ((IntObject *)object2)->m_value; \
+        return Object::newFloat(context, value1 OP value2); \
     } \
     U_UNREACHABLE(); \
 }
@@ -44,6 +64,7 @@ Object *NAME(Object *context, Object *function, Object **args, size_t length) { 
 MATHOP(add, +)
 MATHOP(sub, -)
 MATHOP(mul, *)
+MATHOP(div, /)
 
 Object *callFunction(Object *context, UserFunction *function, Object **args, size_t length) {
     // allocate slots for arguments and locals
@@ -146,6 +167,14 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             int value = i->m_value;
             U_ASSERT(target < numSlots && !slots[target]);
             slots[target] = Object::newInt(context, value);
+        } break;
+
+        case Instr::kAllocFloatObject: {
+            AllocFloatObjectInstr *i = (AllocFloatObjectInstr *)instr;
+            Slot target = i->m_targetSlot;
+            int value = i->m_value;
+            U_ASSERT(target < numSlots && !slots[target]);
+            slots[target] = Object::newFloat(context, value);
         } break;
 
         case Instr::kCloseObject: {

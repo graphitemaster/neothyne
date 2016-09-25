@@ -36,6 +36,7 @@ typedef Object *(*FunctionPointer)(Object *, Object *, Object **, size_t);
 struct Object {
     static Object *newObject(Object *parent);
     static Object *newInt(Object *context, int value);
+    static Object *newFloat(Object *context, float value);
     static Object *newBoolean(Object *context, bool value);
     static Object *newFunction(Object *context, FunctionPointer function);
     static Object *newClosure(Object *context, UserFunction *function);
@@ -68,6 +69,10 @@ struct IntObject : Object {
 
 struct BooleanObject : Object {
     bool m_value;
+};
+
+struct FloatObject : Object {
+    float m_value;
 };
 
 }

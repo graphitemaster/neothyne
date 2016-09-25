@@ -55,6 +55,11 @@ void Instr::dump(int level) {
             ((AllocIntObjectInstr *)this)->m_targetSlot,
             ((AllocIntObjectInstr *)this)->m_value);
         break;
+    case kAllocFloatObject:
+        output(level, "afo: %zu = new float(%f)\n",
+            ((AllocFloatObjectInstr *)this)->m_targetSlot,
+            ((AllocFloatObjectInstr *)this)->m_value);
+        break;
     case kAllocClosureObject:
         output(level, "aco: %zu = new fn(%zu)\n",
             ((AllocClosureObjectInstr *)this)->m_targetSlot,
@@ -130,6 +135,13 @@ AllocObjectInstr::AllocObjectInstr(Slot target, Slot parent)
 }
 
 AllocIntObjectInstr::AllocIntObjectInstr(Slot target, int value)
+    : Instr(kAllocIntObject)
+    , m_targetSlot(target)
+    , m_value(value)
+{
+}
+
+AllocFloatObjectInstr::AllocFloatObjectInstr(Slot target, float value)
     : Instr(kAllocIntObject)
     , m_targetSlot(target)
     , m_value(value)

@@ -31,6 +31,8 @@ struct Parser {
     static const char *parseIdentifierAll(char **contents);
 
     static bool parseInteger(char **contents, int *out);
+    static bool parseFloat(char **contents, float *out);
+
     static Reference parseExpression(char **contents, FunctionCodegen *generator, int level);
     static Reference parseExpression(char **contents, FunctionCodegen *generator);
     static Reference parseExpressionTail(char **contents, FunctionCodegen *generator);
