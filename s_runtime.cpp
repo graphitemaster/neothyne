@@ -41,6 +41,47 @@ static Object *equals(Object *context, Object *self, Object *function, Object **
     U_UNREACHABLE();
 }
 
+static Object *add(Object *context, Object *self, Object *function, Object **args, size_t length) { \
+    (void)function;
+    (void)self;
+
+    U_ASSERT(length == 2);
+
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+
+    Object *intBase = root->m_table.lookup("int");
+    Object *floatBase = root->m_table.lookup("float");
+    Object *stringBase = root->m_table.lookup("string");
+
+    Object *object1 = args[0];
+    Object *object2 = args[1];
+
+    if (object1->m_parent == intBase && object2->m_parent == intBase) {
+        int result = ((IntObject *)object1)->m_value + ((IntObject *)object2)->m_value;
+        return Object::newInt(context, result);
+    }
+
+    if ((object1->m_parent == floatBase || object1->m_parent == intBase) &&
+        (object2->m_parent == floatBase || object2->m_parent == intBase))
+    {
+        float value1 = object1->m_parent == floatBase ? ((FloatObject *)object1)->m_value : ((IntObject *)object1)->m_value;
+        float value2 = object2->m_parent == floatBase ? ((FloatObject *)object2)->m_value : ((IntObject *)object2)->m_value;
+        return Object::newFloat(context, value1 + value2);
+    }
+
+    // string concatenation
+    if (object1->m_parent == stringBase && object2->m_parent == stringBase) {
+        const char *string1 = ((StringObject *)object1)->m_value;
+        const char *string2 = ((StringObject *)object2)->m_value;
+        return Object::newString(context, u::format("%s%s", string1, string2).c_str());
+    }
+
+    U_UNREACHABLE();
+}
+
+
 #define MATHOP(NAME, OP) \
 static Object *NAME(Object *context, Object *self, Object *function, Object **args, size_t length) { \
     (void)function; \
@@ -67,7 +108,6 @@ static Object *NAME(Object *context, Object *self, Object *function, Object **ar
     U_UNREACHABLE(); \
 }
 
-MATHOP(add, +)
 MATHOP(sub, -)
 MATHOP(mul, *)
 MATHOP(div, /)

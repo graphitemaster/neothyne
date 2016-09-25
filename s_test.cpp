@@ -18,7 +18,7 @@ void test() {
     "   if (n == 0) return ack(m - 1, 1);"
     "   return ack(m - 1, ack(m, n - 1));"
     "};"
-    "print(3, \", hello world, \", 3.14);";
+    "print(3, \", hello world, \" + \"nope \", 3.14);";
 
     char *text = data;
 
