@@ -90,7 +90,7 @@ struct FloatObject : Object {
 };
 
 struct StringObject : Object {
-    const char *m_value;
+    char *m_value;
 };
 
 }

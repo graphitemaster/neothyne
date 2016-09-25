@@ -150,10 +150,13 @@ Object *Object::newString(Object *context, const char *value) {
     while (root->m_parent)
         root = root->m_parent;
     Object *stringBase = root->m_table.lookup("string");
-    auto *object = (StringObject *)alloc(sizeof(StringObject));
+    size_t length = strlen(value);
+    // string gets allocated as part of the object
+    auto *object = (StringObject *)alloc(sizeof(StringObject) + length + 1);
     object->m_parent = stringBase;
     object->m_flags = kImmutable | kClosed;
-    object->m_value = value;
+    object->m_value = ((char *)object) + sizeof(StringObject);
+    strncpy(object->m_value, value, length + 1);
     return (Object *)object;
 }
 
