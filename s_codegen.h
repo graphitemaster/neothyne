@@ -12,6 +12,7 @@ struct FunctionCodegen {
     void addInstr(Instr *instr);
     Slot addAccess(Slot objectSlot, const char *identifer);
     void addAssign(Slot objectSlot, const char *name, Slot slot);
+    void addAssignExisting(Slot object, const char *name, Slot slot);
     void addCloseObject(Slot object);
     Slot addGetContext();
     Slot addAllocObject(Slot parent);

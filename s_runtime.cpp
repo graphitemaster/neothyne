@@ -111,6 +111,17 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             object->set(key, slots[valueSlot]);
         } break;
 
+        case Instr::kAssignExisting: {
+            AssignExistingInstr *i = (AssignExistingInstr *)instr;
+            Slot objectSlot = i->m_objectSlot;
+            Slot valueSlot = i->m_valueSlot;
+            const char *key = i->m_key;
+            U_ASSERT(objectSlot < numSlots);
+            U_ASSERT(valueSlot < numSlots);
+            Object *object = slots[objectSlot];
+            object->setExisting(key, slots[valueSlot]);
+        } break;
+
         case Instr::kAllocObject: {
             AllocObjectInstr *i = (AllocObjectInstr *)instr;
             Slot targetSlot = i->m_targetSlot;

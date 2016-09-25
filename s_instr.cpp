@@ -76,6 +76,12 @@ void Instr::dump(int level) {
             ((AssignInstr *)this)->m_key,
             ((AssignInstr *)this)->m_valueSlot);
         break;
+    case kAssignExisting:
+        output(level, "move: %zu . '%s' = %zu\n",
+            ((AssignExistingInstr *)this)->m_objectSlot,
+            ((AssignExistingInstr *)this)->m_key,
+            ((AssignExistingInstr *)this)->m_valueSlot);
+        break;
     case kCall:
         // this one is a tad annoying but still doable
         output(level, "call: %zu = %zu ( ",
@@ -154,6 +160,14 @@ AccessInstr::AccessInstr(Slot target, Slot object, const char *key)
 
 AssignInstr::AssignInstr(Slot object, Slot value, const char *key)
     : Instr(kAssign)
+    , m_objectSlot(object)
+    , m_valueSlot(value)
+    , m_key(key)
+{
+}
+
+AssignExistingInstr::AssignExistingInstr(Slot object, Slot value, const char *key)
+    : Instr(kAssignExisting)
     , m_objectSlot(object)
     , m_valueSlot(value)
     , m_key(key)

@@ -15,14 +15,26 @@ struct Parser {
     static bool consumeString(char **contents, const char *identifier);
     static bool consumeKeyword(char **contents, const char *keyword);
 
+    // reference to a Slot
+    // generates accesses and assignments when working with a Slot
+    struct Reference {
+        Reference(Slot base, const char *key);
+        Slot access(FunctionCodegen *generator);
+        void assignExisting(FunctionCodegen *generator, int value);
+        static Reference getScope(FunctionCodegen *generator, const char *name);
+    private:
+        Slot m_base;
+        const char *m_key;
+    };
+
     static const char *parseIdentifier(char **contents);
     static const char *parseIdentifierAll(char **contents);
 
     static bool parseInteger(char **contents, int *out);
-    static Slot parseExpression(char **contents, FunctionCodegen *generator, int level);
-    static Slot parseExpression(char **contents, FunctionCodegen *generator);
-    static Slot parseExpressionTail(char **contents, FunctionCodegen *generator);
-    static bool parseCall(char **contents, FunctionCodegen *generator, Slot *expression);
+    static Reference parseExpression(char **contents, FunctionCodegen *generator, int level);
+    static Reference parseExpression(char **contents, FunctionCodegen *generator);
+    static Reference parseExpressionTail(char **contents, FunctionCodegen *generator);
+    static bool parseCall(char **contents, FunctionCodegen *generator, Reference *expression);
 
     static void parseBlock(char **contents, FunctionCodegen *generator);
     static void parseIfStatement(char **contents, FunctionCodegen *generator);

@@ -41,9 +41,11 @@ struct Object {
     static Object *newClosure(Object *context, UserFunction *function);
 
     void set(const char *key, Object *value);
+    void setExisting(const char *key, Object *value);
 
     enum {
-        kClosed = 1 << 0 // when set no additional properties can be added
+        kClosed    = 1 << 0, // when set no additional properties can be added
+        kImmutable = 1 << 1  // cannot be modified
     };
 
     int m_flags;

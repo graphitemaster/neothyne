@@ -23,6 +23,7 @@ struct Instr {
         kCloseObject,        // co
         kAccess,             // ref
         kAssign,             // mov
+        kAssignExisting,     // move
         kCall,               // call
         kReturn,             // ret
         kBranch,             // br
@@ -75,6 +76,13 @@ struct AccessInstr : Instr {
 
 struct AssignInstr : Instr {
     AssignInstr(Slot object, Slot value, const char *key);
+    Slot m_objectSlot;
+    Slot m_valueSlot;
+    const char *m_key;
+};
+
+struct AssignExistingInstr : Instr {
+    AssignExistingInstr(Slot object, Slot value, const char *key);
     Slot m_objectSlot;
     Slot m_valueSlot;
     const char *m_key;

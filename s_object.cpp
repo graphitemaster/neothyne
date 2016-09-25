@@ -48,14 +48,31 @@ void Table::set(const char *key, Object *value) {
 
 ///! Object
 void Object::set(const char *key, Object *value) {
-    U_ASSERT(!(m_flags & kClosed));
     Table::Entry *free = nullptr;
     Object **find = m_table.lookup(key, &free);
-    if (!find) {
+    if (find) {
+        U_ASSERT(!(m_flags & kImmutable));
+    } else {
+        U_ASSERT(!(m_flags & kClosed));
         free->m_name = key;
         find = &free->m_value;
     }
     *find = value;
+}
+
+// changes a propery in place
+void Object::setExisting(const char *key, Object *value) {
+    Object *current = this;
+    while (current) {
+        Object **find = current->m_table.lookup(key, nullptr);
+        if (find) {
+            U_ASSERT(!(m_flags & kImmutable));
+            *find = value;
+            return;
+        }
+        current = current->m_parent;
+    }
+    U_UNREACHABLE();
 }
 
 Object *Object::newObject(Object *parent) {

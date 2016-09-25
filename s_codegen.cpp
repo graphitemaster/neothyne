@@ -51,6 +51,15 @@ void FunctionCodegen::addAssign(Slot object, const char *name, Slot slot) {
     addInstr((Instr *)instruction);
 }
 
+void FunctionCodegen::addAssignExisting(Slot object, const char *name, Slot slot) {
+    auto *instruction = allocate<AssignExistingInstr>();
+    instruction->m_type = Instr::kAssignExisting;
+    instruction->m_objectSlot = object;
+    instruction->m_valueSlot = slot;
+    instruction->m_key = name;
+    addInstr((Instr *)instruction);
+}
+
 void FunctionCodegen::addCloseObject(Slot object) {
     auto *instruction = allocate<CloseObjectInstr>();
     instruction->m_type = Instr::kCloseObject;

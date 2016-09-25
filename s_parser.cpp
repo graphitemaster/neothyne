@@ -32,6 +32,26 @@ static bool startsWith(char **contents, const char *compare) {
     return true;
 }
 
+///! Parser
+Parser::Reference::Reference(Slot base, const char *key)
+    : m_base(base)
+    , m_key(key)
+{
+}
+
+Slot Parser::Reference::access(FunctionCodegen *generator) {
+    return m_key ? generator->addAccess(m_base, m_key) : m_base;
+}
+
+void Parser::Reference::assignExisting(FunctionCodegen *generator, int value) {
+    U_ASSERT(m_key);
+    generator->addAssignExisting(m_base, m_key, value);
+}
+
+Parser::Reference Parser::Reference::getScope(FunctionCodegen *generator, const char *name) {
+    return { generator ? generator->getScope() : 0, name };
+}
+
 void Parser::consumeWhitespace(char **contents) {
     while ((*contents)[0] == ' ' || (*contents)[0] == '\t')
         (*contents)++;
@@ -110,22 +130,23 @@ bool Parser::consumeKeyword(char **contents, const char *keyword) {
     return true;
 }
 
-Slot Parser::parseExpression(char **contents, FunctionCodegen *generator) {
+Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *generator) {
     char *text = *contents;
     const char *identifier = parseIdentifier(&text);
     if (identifier) {
         *contents = text;
-        return generator->addAccess(generator->getScope(), identifier);
+        return Reference::getScope(generator, identifier);
     }
 
     int value = 0;
     if (parseInteger(&text, &value)) {
         *contents = text;
-        return generator->addAllocIntObject(generator->getScope(), value);
+        Slot slot = generator->addAllocIntObject(generator->getScope(), value);
+        return { slot, nullptr };
     }
 
     if (consumeString(&text, "(")) {
-        Slot result = parseExpression(&text, generator, 0);
+        Reference result = parseExpression(&text, generator, 0);
         if (!consumeString(&text, ")")) {
             U_ASSERT(0 && "expected closing paren");
         }
@@ -135,16 +156,16 @@ Slot Parser::parseExpression(char **contents, FunctionCodegen *generator) {
 
     if (consumeKeyword(&text, "fn")) {
         UserFunction *function = parseFunctionExpression(&text);
-        Slot result = generator->addAllocClosureObject(generator->getScope(), function);
+        Slot slot = generator->addAllocClosureObject(generator->getScope(), function);
         *contents = text;
-        return result;
+        return { slot, nullptr };
     }
 
     U_ASSERT(0 && "expected identifier, function or expression");
     U_UNREACHABLE();
 }
 
-bool Parser::parseCall(char **contents, FunctionCodegen *generator, Slot *expression) {
+bool Parser::parseCall(char **contents, FunctionCodegen *generator, Reference *expression) {
     char *text = *contents;
     if (!consumeString(&text, "("))
         return false;
@@ -156,16 +177,16 @@ bool Parser::parseCall(char **contents, FunctionCodegen *generator, Slot *expres
         if (length && !consumeString(contents, ",")) {
             U_ASSERT(0 && "expected comma");
         }
-        Slot slot = parseExpression(contents, generator, 0);
+        Slot slot = parseExpression(contents, generator, 0).access(generator);
         arguments = (Slot *)neoRealloc(arguments, sizeof(Slot) * ++length);
         arguments[length - 1] = slot;
     }
-    *expression = generator->addCall(*expression, arguments, length);
+    *expression = { generator->addCall(expression->access(generator), arguments, length), nullptr };
     return true;
 }
 
-Slot Parser::parseExpressionTail(char **contents, FunctionCodegen *generator) {
-    Slot expression = parseExpression(contents, generator);
+Parser::Reference Parser::parseExpressionTail(char **contents, FunctionCodegen *generator) {
+    Reference expression = parseExpression(contents, generator);
     for (;;) {
         if (parseCall(contents, generator, &expression))
             continue;
@@ -180,10 +201,10 @@ Slot Parser::parseExpressionTail(char **contents, FunctionCodegen *generator) {
 // 0: ==
 // 1: + -
 // 2: * /
-Slot Parser::parseExpression(char **contents, FunctionCodegen *generator, int level) {
+Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *generator, int level) {
     char *text = *contents;
 
-    Slot expression = parseExpressionTail(&text, generator);
+    Reference expression = parseExpressionTail(&text, generator);
 
     // level 2: ( *, / )
     if (level > 2) {
@@ -193,15 +214,15 @@ Slot Parser::parseExpression(char **contents, FunctionCodegen *generator, int le
 
     for (;;) {
         if (consumeString(&text, "*")) {
-            Slot argument = parseExpression(&text, generator, 3);
+            Slot argument = parseExpression(&text, generator, 3).access(generator);
             Slot mulFunction = generator->addAccess(generator->getScope(), "*");
-            expression = generator->addCall(mulFunction, expression, argument);
+            expression = { generator->addCall(mulFunction, expression.access(generator), argument), nullptr };
             continue;
         }
         if (consumeString(&text, "/")) {
-            Slot argument = parseExpression(&text, generator, 3);
+            Slot argument = parseExpression(&text, generator, 3).access(generator);
             Slot divFunction = generator->addAccess(generator->getScope(), "/");
-            expression = generator->addCall(divFunction, expression, argument);
+            expression = { generator->addCall(divFunction, expression.access(generator), argument), nullptr };
             continue;
         }
         break;
@@ -215,15 +236,15 @@ Slot Parser::parseExpression(char **contents, FunctionCodegen *generator, int le
 
     for (;;) {
         if (consumeString(&text, "+")) {
-            Slot argument = parseExpression(&text, generator, 2);
+            Slot argument = parseExpression(&text, generator, 2).access(generator);
             Slot addFunction = generator->addAccess(generator->getScope(), "+");
-            expression = generator->addCall(addFunction, expression, argument);
+            expression = { generator->addCall(addFunction, expression.access(generator), argument), nullptr };
             continue;
         }
         if (consumeString(&text, "-")) {
-            Slot argument = parseExpression(&text, generator, 2);
+            Slot argument = parseExpression(&text, generator, 2).access(generator);
             Slot subFunction = generator->addAccess(generator->getScope(), "-");
-            expression = generator->addCall(subFunction, expression, argument);
+            expression = { generator->addCall(subFunction, expression.access(generator), argument), nullptr };
             continue;
         }
         break;
@@ -235,14 +256,11 @@ Slot Parser::parseExpression(char **contents, FunctionCodegen *generator, int le
         return expression;
     }
 
-    for (;;) {
-        if (consumeString(&text, "==")) {
-            Slot argument = parseExpression(&text, generator, 2);
-            Slot equalFunction = generator->addAccess(generator->getScope(), "=");
-            expression = generator->addCall(equalFunction, expression, argument);
-            continue;
-        }
-        break;
+
+    if (consumeString(&text, "==")) {
+        Slot argument = parseExpression(&text, generator, 2).access(generator);
+        Slot equalFunction = generator->addAccess(generator->getScope(), "=");
+        expression = { generator->addCall(equalFunction, expression.access(generator), argument), nullptr };
     }
 
     *contents = text;
@@ -259,7 +277,7 @@ void Parser::parseLetDeclaration(char **contents, FunctionCodegen *generator) {
     if (!consumeString(contents, "=")) {
         value = generator->makeNullSlot();
     } else {
-        value = parseExpression(contents, generator, 0);
+        value = parseExpression(contents, generator, 0).access(generator);
     }
 
     generator->addAssign(generator->getScope(), variableName, value);
@@ -289,7 +307,7 @@ void Parser::parseIfStatement(char **contents, FunctionCodegen *generator) {
     if (!consumeString(&text, "(")) {
         U_ASSERT(0 && "expected open paren after if");
     }
-    Slot testSlot = parseExpression(&text, generator, 0);
+    Slot testSlot = parseExpression(&text, generator, 0).access(generator);
     if (!consumeString(&text, ")")) {
         U_ASSERT(0 && "expected close parent after if");
     }
@@ -315,7 +333,7 @@ void Parser::parseIfStatement(char **contents, FunctionCodegen *generator) {
 }
 
 void Parser::parseReturnStatement(char **contents, FunctionCodegen *generator) {
-    Slot value = parseExpression(contents, generator, 0);
+    Slot value = parseExpression(contents, generator, 0).access(generator);
     if (!consumeString(contents, ";")) {
         U_ASSERT(0 && "expected semicolon");
     }
