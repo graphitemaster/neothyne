@@ -22,6 +22,7 @@ struct FunctionCodegen {
     Slot addCall(Slot function, Slot thisSlot, Slot *arguments, size_t length);
     Slot addCall(Slot function, Slot thisSlot, Slot arg0, Slot arg1); // specialization just for relational operators
     Slot addCall(Slot function, Slot thisSlot, Slot arh0);            // specialization for binary operators (lhs.operator+(arg0))
+    Slot addCall(Slot function, Slot thisSlot);
     void addTestBranch(Slot test, size_t **trueBranch, size_t **falseBranch);
     void addBranch(size_t **branch);
     void addReturn(Slot slot);

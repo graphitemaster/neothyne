@@ -123,6 +123,10 @@ Slot FunctionCodegen::addCall(Slot function, Slot thisSlot, Slot *arguments, siz
     return instruction->m_targetSlot;
 }
 
+Slot FunctionCodegen::addCall(Slot function, Slot thisSlot) {
+    return addCall(function, thisSlot, nullptr, 0);
+}
+
 Slot FunctionCodegen::addCall(Slot function, Slot thisSlot, Slot arg0) {
     Slot *arguments = (Slot *)neoMalloc(sizeof *arguments * 1);
     arguments[0] = arg0;

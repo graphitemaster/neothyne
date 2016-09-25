@@ -434,17 +434,63 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
         return expression;
     }
 
+    // comparison operators
+    bool negate = false;
     if (consumeString(&text, "==")) {
-        Slot argument = parseExpression(&text, generator, 2).access(generator);
+        Slot rhs = parseExpression(&text, generator, 1).access(generator);
         if (generator) {
-            Slot equalFunction = generator->addAccess(generator->getScope(),
-                generator->addAllocStringObject(generator->getScope(), "="));
-            expression = {
-                generator->addCall(equalFunction, generator->makeNullSlot(), expression.access(generator), argument),
-                nullptr,
-                false
-            };
+            Slot lhs = expression.access(generator);
+            Slot equalFunction = generator->addAccess(lhs, generator->addAllocStringObject(generator->getScope(), "=="));
+            expression = { generator->addCall(equalFunction, lhs, rhs), nullptr, false };
         }
+    } else if (consumeString(&text, "!=")) {
+        Slot rhs = parseExpression(&text, generator, 1).access(generator);
+        if (generator) {
+            Slot lhs = expression.access(generator);
+            Slot equalFunction = generator->addAccess(lhs, generator->addAllocStringObject(generator->getScope(), "=="));
+            expression = { generator->addCall(equalFunction, lhs, rhs), nullptr, false };
+            negate = true;
+        }
+    } else {
+        if (consumeString(&text, "!"))
+            negate = true;
+        if (consumeString(&text, ">=")) {
+            Slot rhs = parseExpression(&text, generator, 1).access(generator);
+            if (generator) {
+                Slot lhs = expression.access(generator);
+                Slot geFunction = generator->addAccess(lhs, generator->addAllocStringObject(generator->getScope(), ">="));
+                expression = { generator->addCall(geFunction, lhs, rhs), nullptr, false };
+            }
+        } else if (consumeString(&text, "<=")) {
+            Slot rhs = parseExpression(&text, generator, 1).access(generator);
+            if (generator) {
+                Slot lhs = expression.access(generator);
+                Slot leFunction = generator->addAccess(lhs, generator->addAllocStringObject(generator->getScope(), "<="));
+                expression = { generator->addCall(leFunction, lhs, rhs), nullptr, false };
+            }
+        } else if (consumeString(&text, ">")) {
+            Slot rhs = parseExpression(&text, generator, 1).access(generator);
+            if (generator) {
+                Slot lhs = expression.access(generator);
+                Slot gtFunction = generator->addAccess(lhs, generator->addAllocStringObject(generator->getScope(), ">"));
+                expression = { generator->addCall(gtFunction, lhs, rhs), nullptr, false };
+            }
+        } else if (consumeString(&text, "<")) {
+            Slot rhs = parseExpression(&text, generator, 1).access(generator);
+            if (generator) {
+                Slot lhs = expression.access(generator);
+                Slot leFunction = generator->addAccess(lhs, generator->addAllocStringObject(generator->getScope(), "<"));
+                expression = { generator->addCall(leFunction, lhs, rhs), nullptr, false };
+            }
+        } else if (negate) {
+            U_ASSERT(0 && "expected comparison operator");
+        }
+    }
+
+    if (negate && generator) {
+        Slot lhs = expression.access(generator);
+        Slot notFunction = generator->addAccess(lhs, generator->addAllocStringObject(generator->getScope(), "!"));
+        expression = { generator->addCall(notFunction, lhs), nullptr, false };
     }
 
     *contents = text;
