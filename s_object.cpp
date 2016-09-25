@@ -139,9 +139,9 @@ Object *Object::newBoolean(Object *context, bool value) {
     Object *root = context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *booleanBase = root->lookup("boolean", nullptr);
+    Object *boolBase = root->lookup("bool", nullptr);
     auto *object = (BooleanObject *)alloc(sizeof(BooleanObject));
-    object->m_parent = booleanBase;
+    object->m_parent = boolBase;
     object->m_flags = kImmutable | kClosed;
     object->m_value = value;
     return (Object *)object;

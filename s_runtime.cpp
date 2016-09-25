@@ -288,11 +288,11 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             Object *root = context;
             while (root->m_parent)
                 root = root->m_parent;
-            Object *booleanBase = root->lookup("boolean", nullptr);
+            Object *boolBase = root->lookup("bool", nullptr);
             Object *intBase = root->lookup("int", nullptr);
 
             bool test = false;
-            if (testValue && testValue->m_parent == booleanBase) {
+            if (testValue && testValue->m_parent == boolBase) {
                 if (((BooleanObject *)testValue)->m_value == true)
                     test = true;
             } else if (testValue && testValue->m_parent == intBase) {
@@ -615,6 +615,7 @@ static Object *print(Object *context, Object *self, Object *function, Object **a
     Object *intBase = root->lookup("int", nullptr);
     Object *floatBase = root->lookup("float", nullptr);
     Object *stringBase = root->lookup("string", nullptr);
+    Object *boolBase = root->lookup("bool", nullptr);
 
     for (size_t i = 0; i < length; i++) {
         Object *argument = arguments[i];
@@ -628,6 +629,10 @@ static Object *print(Object *context, Object *self, Object *function, Object **a
         }
         if (argument->m_parent == stringBase) {
             u::Log::out("%s", ((StringObject *)argument)->m_value);
+            continue;
+        }
+        if (argument->m_parent == boolBase) {
+            u::Log::out("%s", ((BooleanObject *)argument)->m_value ? "true" : "false");
             continue;
         }
     }
@@ -658,9 +663,9 @@ Object *createRoot() {
     root->setNormal("closure", closureObject);
     closureObject->setNormal("mark", Object::newFunction(root, mark));
 
-    Object *booleanObject = Object::newObject(nullptr);
-    root->setNormal("boolean", booleanObject);
-    booleanObject->setNormal("!", Object::newFunction(root, bool_not));
+    Object *boolObject = Object::newObject(nullptr);
+    root->setNormal("bool", boolObject);
+    boolObject->setNormal("!", Object::newFunction(root, bool_not));
 
     Object *intObject = Object::newObject(nullptr);
     intObject->m_flags &= ~Object::kClosed;
