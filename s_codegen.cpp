@@ -3,28 +3,28 @@
 #include "s_object.h"
 #include "s_codegen.h"
 
+#include "u_assert.h"
+
 namespace s {
 
-FunctionCodegen::FunctionCodegen(const char **arguments, size_t length, const char *name)
-    : m_arguments(arguments)
-    , m_length(length)
-    , m_name(name)
-    , m_scope(0)
-    , m_slotBase(length)
-{
-    memset(&m_body, 0, sizeof m_body);
-}
-
 size_t FunctionCodegen::newBlock() {
+    U_ASSERT(m_terminated);
     FunctionBody *body = &m_body;
     body->m_length++;
     body->m_blocks = (InstrBlock *)neoRealloc(body->m_blocks, body->m_length * sizeof(InstrBlock));
     body->m_blocks[body->m_length - 1].m_instrs = nullptr;
     body->m_blocks[body->m_length - 1].m_length = 0;
+    m_terminated = false;
     return body->m_length - 1;
 }
 
+void FunctionCodegen::terminate() {
+    // return null
+    addReturn(m_slotBase++);
+}
+
 void FunctionCodegen::addInstr(Instr *instruction) {
+    U_ASSERT(!m_terminated);
     FunctionBody *body = &m_body;
     InstrBlock *block = &body->m_blocks[body->m_length - 1];
     block->m_length++;
@@ -42,9 +42,9 @@ Slot FunctionCodegen::addAccess(Slot objectSlot, Slot keySlot) {
     return instruction->m_targetSlot;
 }
 
-void FunctionCodegen::addAssign(Slot object, Slot keySlot, Slot slot) {
-    auto *instruction = allocate<AssignInstr>();
-    instruction->m_type = Instr::kAssign;
+void FunctionCodegen::addAssignNormal(Slot object, Slot keySlot, Slot slot) {
+    auto *instruction = allocate<AssignNormalInstr>();
+    instruction->m_type = Instr::kAssignNormal;
     instruction->m_objectSlot = object;
     instruction->m_valueSlot = slot;
     instruction->m_keySlot = keySlot;
@@ -54,6 +54,15 @@ void FunctionCodegen::addAssign(Slot object, Slot keySlot, Slot slot) {
 void FunctionCodegen::addAssignExisting(Slot object, Slot keySlot, Slot slot) {
     auto *instruction = allocate<AssignExistingInstr>();
     instruction->m_type = Instr::kAssignExisting;
+    instruction->m_objectSlot = object;
+    instruction->m_valueSlot = slot;
+    instruction->m_keySlot = keySlot;
+    addInstr((Instr *)instruction);
+}
+
+void FunctionCodegen::addAssignShadowing(Slot object, Slot keySlot, Slot slot) {
+    auto *instruction = allocate<AssignShadowingInstr>();
+    instruction->m_type = Instr::kAssignShadowing;
     instruction->m_objectSlot = object;
     instruction->m_valueSlot = slot;
     instruction->m_keySlot = keySlot;
@@ -80,6 +89,16 @@ Slot FunctionCodegen::addAllocObject(Slot parent) {
     instruction->m_type = Instr::kAllocObject;
     instruction->m_targetSlot = m_slotBase++;
     instruction->m_parentSlot = parent;
+    addInstr((Instr *)instruction);
+    return instruction->m_targetSlot;
+}
+
+Slot FunctionCodegen::addAllocClosureObject(Slot contextSlot, UserFunction *function) {
+    auto *instruction = allocate<AllocClosureObjectInstr>();
+    instruction->m_type = Instr::kAllocClosureObject;
+    instruction->m_targetSlot = m_slotBase++;
+    instruction->m_contextSlot = contextSlot;
+    instruction->m_function = function;
     addInstr((Instr *)instruction);
     return instruction->m_targetSlot;
 }
@@ -147,6 +166,7 @@ void FunctionCodegen::addTestBranch(Slot test, size_t **trueBranch, size_t **fal
     *trueBranch = &instruction->m_trueBlock;
     *falseBranch = &instruction->m_falseBlock;
     addInstr((Instr *)instruction);
+    m_terminated = true;
 }
 
 void FunctionCodegen::addBranch(size_t **branch) {
@@ -154,6 +174,7 @@ void FunctionCodegen::addBranch(size_t **branch) {
     instruction->m_type = Instr::kBranch;
     *branch = &instruction->m_block;
     addInstr((Instr *)instruction);
+    m_terminated = true;
 }
 
 void FunctionCodegen::addReturn(Slot slot) {
@@ -161,29 +182,17 @@ void FunctionCodegen::addReturn(Slot slot) {
     instruction->m_type = Instr::kReturn;
     instruction->m_returnSlot = slot;
     addInstr((Instr *)instruction);
-}
-
-Slot FunctionCodegen::addAllocClosureObject(Slot contextSlot, UserFunction *function) {
-    auto *instruction = allocate<AllocClosureObjectInstr>();
-    instruction->m_type = Instr::kAllocClosureObject;
-    instruction->m_targetSlot = m_slotBase++;
-    instruction->m_contextSlot = contextSlot;
-    instruction->m_function = function;
-    addInstr((Instr *)instruction);
-    return instruction->m_targetSlot;
+    m_terminated = true;
 }
 
 UserFunction *FunctionCodegen::build() {
+    U_ASSERT(m_terminated);
     auto *function = allocate<UserFunction>();
     function->m_arity = m_length;
     function->m_slots = m_slotBase;
     function->m_name = m_name;
     function->m_body = m_body;
     return function;
-}
-
-Slot FunctionCodegen::makeNullSlot() {
-    return m_slotBase++;
 }
 
 }

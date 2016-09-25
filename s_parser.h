@@ -15,21 +15,25 @@ struct Parser {
     static bool consumeString(char **contents, const char *identifier);
     static bool consumeKeyword(char **contents, const char *keyword);
 
-    // reference to a Slot
-    // generates accesses and assignments when working with a Slot
     struct Reference {
-        Reference(Slot base, const char *key, bool isVariable);
-        Slot access(FunctionCodegen *generator);
-        void assign(FunctionCodegen *generator, Slot value);
-        void assignExisting(FunctionCodegen *generator, Slot value);
+        static constexpr Slot NoSlot = (Slot)-1;
+
+        enum Mode {
+            kNone = -1, // not a reference
+            kVariable,  // overwrite the key if found, otherwise error
+            kObject,    // shadow the key if found, otherwise error
+            kIndex      // write the key
+        };
+
         static Reference getScope(FunctionCodegen *generator, const char *name);
-        bool isVariable() const { return m_isVariable; }
-        Slot getSlot() const { return m_base; }
-        bool hasKey() const { return m_key; }
-    private:
+        static Slot access(FunctionCodegen *generator, Reference reference);
+        static void assignNormal(FunctionCodegen *generator, Reference reference, Slot value);
+        static void assignExisting(FunctionCodegen *generator, Reference reference, Slot value);
+        static void assignShadowing(FunctionCodegen *generator, Reference reference, Slot value);
+
         Slot m_base;
-        const char *m_key;
-        bool m_isVariable;
+        Slot m_key;
+        Mode m_mode;
     };
 
     static const char *parseIdentifier(char **contents);
@@ -46,6 +50,7 @@ struct Parser {
     static bool parseCall(char **contents, FunctionCodegen *generator, Reference *expression);
     static bool parseObjectLiteral(char **contents, FunctionCodegen *generator, Reference *reference);
     static bool parsePropertyAccess(char **contents, FunctionCodegen *generator, Reference *expression);
+    static bool parseArrayAccess(char **contents, FunctionCodegen *generator, Reference *expression);
 
     static void parseBlock(char **contents, FunctionCodegen *generator);
     static void parseIfStatement(char **contents, FunctionCodegen *generator);

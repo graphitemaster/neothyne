@@ -23,11 +23,11 @@ struct Table {
         Entry *m_next;
     };
 
-    Object **lookup(const char *key, Entry **first);
-    Object *lookup(const char *key);
-    void set(const char *key, Object *value);
+    Object *lookup(const char *key, bool *found);
 
 private:
+    Object **lookupReference(const char *key, Entry **first);
+
     friend struct GC;
     friend struct Object;
     Entry m_entry;
@@ -46,8 +46,11 @@ struct Object {
     static Object *newFunction(Object *context, FunctionPointer function);
     static Object *newClosure(Object *context, UserFunction *function);
 
-    void set(const char *key, Object *value);
+    Object *lookup(const char *key, bool *found);
+
+    void setNormal(const char *key, Object *value);
     void setExisting(const char *key, Object *value);
+    void setShadowing(const char *key, Object *value);
 
     void mark();
     void free();

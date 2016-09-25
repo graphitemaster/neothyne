@@ -11,11 +11,13 @@
 namespace s {
 
 ///! Table
-Object **Table::lookup(const char *key, Table::Entry **first) {
+Object **Table::lookupReference(const char *key, Table::Entry **first) {
     if (!m_entry.m_name) {
-        if (first) *first = &m_entry;
+        if (first)
+            *first = &m_entry;
         return nullptr;
     }
+
     Entry *entry = &m_entry;
     Entry *prev;
     while (entry) {
@@ -24,27 +26,26 @@ Object **Table::lookup(const char *key, Table::Entry **first) {
         prev = entry;
         entry = entry->m_next;
     }
+
     if (first) {
         Entry *next = allocate<Entry>();
         prev->m_next = next;
         *first = next;
     }
+
     return nullptr;
 };
 
-Object *Table::lookup(const char *key) {
-    Object **find = lookup(key, nullptr);
-    return find ? *find : nullptr;
-}
-
-void Table::set(const char *key, Object *value) {
-    Entry *free;
-    Object **find = lookup(key, &free);
+Object *Table::lookup(const char *key, bool *found) {
+    Object **find = lookupReference(key, nullptr);
     if (!find) {
-        free->m_name = key;
-        find = &free->m_value;
+        if (found)
+            *found = false;
+        return nullptr;
     }
-    *find = value;
+    if (found)
+        *found = true;
+    return *find;
 }
 
 ///! Object
@@ -73,7 +74,8 @@ void Object::mark() {
     }
 
     // mark the closures
-    Object *markFunction = m_table.lookup("mark");
+    bool markFound;
+    Object *markFunction = lookup("mark", &markFound);
     if (markFunction) {
         FunctionObject *markFunctionObject = (FunctionObject *)markFunction;
         markFunctionObject->m_function(nullptr, this, markFunction, nullptr, 0);
@@ -114,7 +116,7 @@ Object *Object::newInt(Object *context, int value) {
     Object *root = context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *intBase = root->m_table.lookup("int");
+    Object *intBase = root->lookup("int", nullptr);
     auto *object = (IntObject *)alloc(sizeof(IntObject));
     object->m_parent = intBase;
     object->m_value = value;
@@ -125,7 +127,7 @@ Object *Object::newFloat(Object *context, float value) {
     Object *root = context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *floatBase = root->m_table.lookup("float");
+    Object *floatBase = root->lookup("float", nullptr);
     auto *object = (FloatObject *)alloc(sizeof(FloatObject));
     object->m_parent = floatBase;
     object->m_flags = kImmutable | kClosed;
@@ -137,7 +139,7 @@ Object *Object::newBoolean(Object *context, bool value) {
     Object *root = context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *booleanBase = root->m_table.lookup("boolean");
+    Object *booleanBase = root->lookup("boolean", nullptr);
     auto *object = (BooleanObject *)alloc(sizeof(BooleanObject));
     object->m_parent = booleanBase;
     object->m_flags = kImmutable | kClosed;
@@ -149,7 +151,7 @@ Object *Object::newString(Object *context, const char *value) {
     Object *root = context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *stringBase = root->m_table.lookup("string");
+    Object *stringBase = root->lookup("string", nullptr);
     size_t length = strlen(value);
     // string gets allocated as part of the object
     auto *object = (StringObject *)alloc(sizeof(StringObject) + length + 1);
@@ -164,7 +166,7 @@ Object *Object::newFunction(Object *context, FunctionPointer function) {
     Object *root = context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *functionBase = root->m_table.lookup("function");
+    Object *functionBase = root->lookup("function", nullptr);
     auto *object = (FunctionObject*)alloc(sizeof(FunctionObject));
     object->m_parent = functionBase;
     object->m_function = function;
@@ -175,18 +177,39 @@ Object *Object::newClosure(Object *context, UserFunction *function) {
     Object *root = context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *closureBase = root->m_table.lookup("closure");
+    Object *closureBase = root->lookup("closure", nullptr);
     auto *object = (ClosureObject*)alloc(sizeof(ClosureObject));
     object->m_parent = closureBase;
-    object->m_function = functionHandler;
+    if (function->m_isMethod)
+        object->m_function = methodHandler;
+    else
+        object->m_function = functionHandler;
     object->m_context = context;
     object->m_userFunction = *function;
     return (Object *)object;
 }
 
-void Object::set(const char *key, Object *value) {
+Object *Object::lookup(const char *key, bool *found) {
+    Object *object = this;
+    while (object) {
+        bool keyFound;
+        Object *value = object->m_table.lookup(key, &keyFound);
+        if (keyFound) {
+            if (found)
+                *found = true;
+            return value;
+        }
+        object = object->m_parent;
+    }
+    if (found)
+        *found = false;
+    return nullptr;
+}
+
+// set property
+void Object::setNormal(const char *key, Object *value) {
     Table::Entry *free = nullptr;
-    Object **find = m_table.lookup(key, &free);
+    Object **find = m_table.lookupReference(key, &free);
     if (find) {
         U_ASSERT(!(m_flags & kImmutable));
     } else {
@@ -201,7 +224,7 @@ void Object::set(const char *key, Object *value) {
 void Object::setExisting(const char *key, Object *value) {
     Object *current = this;
     while (current) {
-        Object **find = current->m_table.lookup(key, nullptr);
+        Object **find = current->m_table.lookupReference(key, nullptr);
         if (find) {
             U_ASSERT(!(m_flags & kImmutable));
             *find = value;
@@ -209,6 +232,22 @@ void Object::setExisting(const char *key, Object *value) {
         }
         current = current->m_parent;
     }
+    U_UNREACHABLE();
+}
+
+// change a propery only if it exists somewhere in the prototype chain
+void Object::setShadowing(const char *key, Object *value) {
+    Object *current = this;
+    while (current) {
+        Object **find = current->m_table.lookupReference(key, nullptr);
+        if (find) {
+            // Create it in the object
+            setNormal(key, value);
+            return;
+        }
+        current = current->m_parent;
+    }
+
     U_UNREACHABLE();
 }
 

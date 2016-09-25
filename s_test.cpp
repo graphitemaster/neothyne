@@ -10,19 +10,26 @@ namespace s {
 
 void test() {
     Object *root = createRoot();
-    //void *entry = GC::addRoots(&root, 1);
 
     char data[] =
-    "let obj = { a = 5 };"
-    "print(obj.a * 2);";
-
+    "let obj = {"
+    "  a = 5,"
+    "  b = null,"
+    "  bar = mfn() {"
+    "    print(this.a - this.b);"
+    "  }"
+    "};"
+    "obj.b = 7;"
+    "obj[\"foo\"] = mfn() { print(this.a + this.b); };"
+    "obj.foo();"
+    "obj.bar();";
     char *text = data;
+
     UserFunction *module = Parser::parseModule(&text);
     module->dump();
 
     root = callFunction(root, module, nullptr, 0);
 
-    //GC::removeRoots(entry);
     GC::run();
 }
 

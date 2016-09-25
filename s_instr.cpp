@@ -80,11 +80,11 @@ void Instr::dump(int level) {
             ((AccessInstr *)this)->m_objectSlot,
             ((AccessInstr *)this)->m_keySlot);
         break;
-    case kAssign:
+    case kAssignNormal:
         output(level, "mov: %zu . %zu = %zu\n",
-            ((AssignInstr *)this)->m_objectSlot,
-            ((AssignInstr *)this)->m_keySlot,
-            ((AssignInstr *)this)->m_valueSlot);
+            ((AssignNormalInstr *)this)->m_objectSlot,
+            ((AssignNormalInstr *)this)->m_keySlot,
+            ((AssignNormalInstr *)this)->m_valueSlot);
         break;
     case kAssignExisting:
         output(level, "move: %zu . %zu = %zu\n",
@@ -119,108 +119,6 @@ void Instr::dump(int level) {
 
     for (auto *function : otherFunctions)
         function->dump(level);
-}
-
-GetRootInstr::GetRootInstr(Slot slot)
-    : Instr(kGetRoot)
-    , m_slot(slot)
-{
-}
-
-GetContextInstr::GetContextInstr(Slot slot)
-    : Instr(kGetContext)
-    , m_slot(slot)
-{
-}
-
-AllocObjectInstr::AllocObjectInstr(Slot target, Slot parent)
-    : Instr(kAllocObject)
-    , m_targetSlot(target)
-    , m_parentSlot(parent)
-{
-}
-
-AllocIntObjectInstr::AllocIntObjectInstr(Slot target, int value)
-    : Instr(kAllocIntObject)
-    , m_targetSlot(target)
-    , m_value(value)
-{
-}
-
-AllocFloatObjectInstr::AllocFloatObjectInstr(Slot target, float value)
-    : Instr(kAllocIntObject)
-    , m_targetSlot(target)
-    , m_value(value)
-{
-}
-
-AllocClosureObjectInstr::AllocClosureObjectInstr(Slot target, Slot context, UserFunction *function)
-    : Instr(kAllocClosureObject)
-    , m_targetSlot(target)
-    , m_contextSlot(context)
-    , m_function(function)
-{
-}
-
-CloseObjectInstr::CloseObjectInstr(Slot slot)
-    : Instr(kCloseObject)
-    , m_slot(slot)
-{
-}
-
-AccessInstr::AccessInstr(Slot target, Slot object, Slot keySlot)
-    : Instr(kAccess)
-    , m_targetSlot(target)
-    , m_objectSlot(object)
-    , m_keySlot(keySlot)
-{
-}
-
-AssignInstr::AssignInstr(Slot object, Slot value, Slot keySlot)
-    : Instr(kAssign)
-    , m_objectSlot(object)
-    , m_valueSlot(value)
-    , m_keySlot(keySlot)
-{
-}
-
-AssignExistingInstr::AssignExistingInstr(Slot object, Slot value, Slot keySlot)
-    : Instr(kAssignExisting)
-    , m_objectSlot(object)
-    , m_valueSlot(value)
-    , m_keySlot(keySlot)
-{
-}
-
-CallInstr::CallInstr(Slot target, Slot function, Slot thisSlot, Slot *arguments, size_t length)
-    : Instr(kCall)
-    , m_targetSlot(target)
-    , m_functionSlot(function)
-    , m_thisSlot(thisSlot)
-    , m_arguments(arguments)
-    , m_length(length)
-{
-}
-
-
-ReturnInstr::ReturnInstr(Slot slot)
-    : Instr(kReturn)
-    , m_returnSlot(slot)
-{
-}
-
-BranchInstr::BranchInstr(size_t block)
-    : Instr(kBranch)
-    , m_block(block)
-{
-}
-
-TestBranchInstr::TestBranchInstr(Slot testSlot, size_t trueBlock, size_t falseBlock)
-    : Instr(kTestBranch)
-    , m_testSlot(testSlot)
-    , m_trueBlock(trueBlock)
-    , m_falseBlock(falseBlock)
-{
 }
 
 }
