@@ -1,6 +1,7 @@
 #include "s_instr.h"
 
 #include "u_log.h"
+#include "u_vector.h"
 
 namespace s {
 
@@ -9,41 +10,75 @@ Instr::Instr(int type)
 {
 }
 
-void Instr::dump() {
+static inline void output(int level, const char *format, ...) {
+    va_list va;
+    va_start(va, format);
+    u::Log::out("[script] => ");
+    for (int i = 0; i < level; i++)
+        u::Log::out("  ");
+    u::Log::out("%s", u::format(format, va));
+    va_end(va);
+}
+
+void UserFunction::dump(int level) {
+    FunctionBody *body = &m_body;
+    output(level, "fn %s (%zu), %zu slots [\n", m_name, m_arity, m_slots);
+    for (size_t i = 0; i < body->m_length; i++) {
+        output(level + 1, "cblock <%zu> [\n", i);
+        InstrBlock *block = &body->m_blocks[i];
+        for (size_t j = 0; j < block->m_length; j++) {
+            Instr *instruction = block->m_instrs[j];
+            instruction->dump(level + 2);
+        }
+        output(level + 1, "]\n");
+    }
+    output(level, "]\n");
+}
+
+void Instr::dump(int level) {
+    // these get dumped later
+    u::vector<UserFunction *> otherFunctions;
     switch (m_type) {
     case kGetRoot:
-        u::Log::out("[script] =>     gr: %zu\n", ((GetRootInstr *)this)->m_slot);
+        output(level, "gr: %zu\n", ((GetRootInstr *)this)->m_slot);
         break;
     break; case kGetContext:
-        u::Log::out("[script] =>     gc: %zu\n", ((GetContextInstr *)this)->m_slot);
+        output(level, "gc: %zu\n", ((GetContextInstr *)this)->m_slot);
         break;
     break; case kAllocObject:
-        u::Log::out("[script] =>     ao: %zu = new object(%zu)\n",
+        output(level, "ao: %zu = new object(%zu)\n",
             ((AllocObjectInstr *)this)->m_targetSlot,
             ((AllocObjectInstr *)this)->m_parentSlot);
         break;
     case kAllocIntObject:
-        u::Log::out("[script] =>     aio: %zu = new int(%d)\n",
+        output(level, "aio: %zu = new int(%d)\n",
             ((AllocIntObjectInstr *)this)->m_targetSlot,
             ((AllocIntObjectInstr *)this)->m_value);
         break;
+    case kAllocClosureObject:
+        output(level, "aco: %zu = new fn(%zu)\n",
+            ((AllocClosureObjectInstr *)this)->m_targetSlot,
+            ((AllocClosureObjectInstr *)this)->m_contextSlot);
+        otherFunctions.push_back(((AllocClosureObjectInstr *)this)->m_function);
+        break;
     case kCloseObject:
-        u::Log::out("[script] =>     co: %zu\n", ((CloseObjectInstr *)this)->m_slot);
+        output(level, "co: %zu\n", ((CloseObjectInstr *)this)->m_slot);
         break;
     case kAccess:
-        u::Log::out("[script] =>     ref: %zu = %zu . '%s'\n",
+        output(level, "ref: %zu = %zu . '%s'\n",
             ((AccessInstr *)this)->m_targetSlot,
             ((AccessInstr *)this)->m_objectSlot,
             ((AccessInstr *)this)->m_key);
         break;
     case kAssign:
-        u::Log::out("[script] =>     mov: %zu . '%s' = %zu\n",
+        output(level, "mov: %zu . '%s' = %zu\n",
             ((AssignInstr *)this)->m_objectSlot,
             ((AssignInstr *)this)->m_key,
             ((AssignInstr *)this)->m_valueSlot);
         break;
     case kCall:
-        u::Log::out("[script] =>     call: %zu = %zu ( ",
+        // this one is a tad annoying but still doable
+        output(level, "call: %zu = %zu ( ",
             ((CallInstr *)this)->m_targetSlot,
             ((CallInstr *)this)->m_functionSlot);
         for (size_t i = 0; i < ((CallInstr *)this)->m_length; ++i) {
@@ -53,16 +88,21 @@ void Instr::dump() {
         u::Log::out(" )\n");
         break;
     case kReturn:
-        u::Log::out("[script] =>     ret: %zu\n", ((ReturnInstr *)this)->m_returnSlot);
+        output(level, "ret: %zu\n", ((ReturnInstr *)this)->m_returnSlot);
         break;
     case kBranch:
-        u::Log::out("[script] =>     br: <%zu>\n", ((BranchInstr *)this)->m_block);
+        output(level, "br: <%zu>\n", ((BranchInstr *)this)->m_block);
         break;
     case kTestBranch:
-        u::Log::out("[script] =>     tbr: %zu ? <%zu> : <%zu>\n",
+        output(level, "tbr: %zu ? <%zu> : <%zu>\n",
             ((TestBranchInstr *)this)->m_testSlot,
             ((TestBranchInstr *)this)->m_trueBlock,
             ((TestBranchInstr *)this)->m_falseBlock);
+    }
+
+    for (auto *function : otherFunctions) {
+        function->dump(level);
+        level++;
     }
 }
 
@@ -89,6 +129,14 @@ AllocIntObjectInstr::AllocIntObjectInstr(Slot target, int value)
     : Instr(kAllocIntObject)
     , m_targetSlot(target)
     , m_value(value)
+{
+}
+
+AllocClosureObjectInstr::AllocClosureObjectInstr(Slot target, Slot context, UserFunction *function)
+    : Instr(kAllocClosureObject)
+    , m_targetSlot(target)
+    , m_contextSlot(context)
+    , m_function(function)
 {
 }
 

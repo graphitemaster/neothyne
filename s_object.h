@@ -33,21 +33,12 @@ private:
 
 typedef Object *(*FunctionPointer)(Object *, Object *, Object **, size_t);
 
-struct UserFunction {
-    void dump();
-
-    size_t m_arity;
-    size_t m_slots;
-    const char *m_name;
-    FunctionBody m_body;
-};
-
 struct Object {
     static Object *newObject(Object *parent);
     static Object *newInt(Object *context, int value);
     static Object *newBoolean(Object *context, bool value);
     static Object *newFunction(Object *context, FunctionPointer function);
-    static Object *newUserFunction(Object *context, UserFunction *function);
+    static Object *newClosure(Object *context, UserFunction *function);
 
     void set(const char *key, Object *value);
 
@@ -64,7 +55,8 @@ struct FunctionObject : Object {
     FunctionPointer m_function;
 };
 
-struct UserFunctionObject : FunctionObject {
+struct ClosureObject : FunctionObject {
+    Object *m_context;
     UserFunction m_userFunction;
 };
 

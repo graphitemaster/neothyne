@@ -45,7 +45,7 @@ MATHOP(add, +)
 MATHOP(sub, -)
 MATHOP(mul, *)
 
-Object *call(Object *context, UserFunction *function, Object **args, size_t length) {
+Object *callFunction(Object *context, UserFunction *function, Object **args, size_t length) {
     // allocate slots for arguments and locals
     size_t numSlots = function->m_arity + function->m_slots;
     Object **slots = allocate<Object *>(numSlots);
@@ -118,6 +118,15 @@ Object *call(Object *context, UserFunction *function, Object **args, size_t leng
             U_ASSERT(targetSlot < numSlots && !slots[targetSlot]);
             U_ASSERT(parentSlot < numSlots);
             slots[targetSlot] = Object::newObject(slots[parentSlot]);
+        } break;
+
+        case Instr::kAllocClosureObject: {
+            AllocClosureObjectInstr *i = (AllocClosureObjectInstr *)instr;
+            Slot targetSlot = i->m_targetSlot;
+            Slot contextSlot = i->m_contextSlot;
+            U_ASSERT(targetSlot < numSlots && !slots[targetSlot]);
+            U_ASSERT(contextSlot < numSlots);
+            slots[targetSlot] = Object::newClosure(slots[contextSlot], i->m_function);
         } break;
 
         case Instr::kAllocIntObject: {
@@ -217,9 +226,9 @@ Object *call(Object *context, UserFunction *function, Object **args, size_t leng
     }
 }
 
-Object *handler(Object *context, Object *function, Object **args, size_t length) {
-    UserFunctionObject *functionObject = (UserFunctionObject *)function;
-    return call(context, &functionObject->m_userFunction, args, length);
+Object *closureHandler(Object *context, Object *function, Object **args, size_t length) {
+    ClosureObject *closureObject = (ClosureObject *)function;
+    return callFunction(closureObject->m_context, &closureObject->m_userFunction, args, length);
 }
 
 Object *createRoot() {

@@ -7,23 +7,26 @@ namespace s {
 
 typedef size_t Slot;
 
+struct UserFunction;
+
 struct Instr {
     Instr(int type);
 
-    void dump();
+    void dump(int level = 0);
 
     enum {
-        kGetRoot,        // gr
-        kGetContext,     // gc
-        kAllocObject,    // ao
-        kAllocIntObject, // aio
-        kCloseObject,    // co
-        kAccess,         // ref
-        kAssign,         // mov
-        kCall,           // call
-        kReturn,         // ret
-        kBranch,         // br
-        kTestBranch      // tbr
+        kGetRoot,            // gr
+        kGetContext,         // gc
+        kAllocObject,        // ao
+        kAllocIntObject,     // aio
+        kAllocClosureObject, // aco
+        kCloseObject,        // co
+        kAccess,             // ref
+        kAssign,             // mov
+        kCall,               // call
+        kReturn,             // ret
+        kBranch,             // br
+        kTestBranch          // tbr
     };
 
     int m_type;
@@ -49,6 +52,13 @@ struct AllocIntObjectInstr : Instr {
     AllocIntObjectInstr(Slot target, int value);
     Slot m_targetSlot;
     int m_value;
+};
+
+struct AllocClosureObjectInstr : Instr {
+    AllocClosureObjectInstr(Slot target, Slot context, UserFunction *function);
+    Slot m_targetSlot;
+    Slot m_contextSlot;
+    UserFunction *m_function;
 };
 
 struct CloseObjectInstr : Instr {
@@ -103,6 +113,14 @@ struct InstrBlock {
 struct FunctionBody {
     InstrBlock *m_blocks;
     size_t m_length;
+};
+
+struct UserFunction {
+    void dump(int level = 0);
+    size_t m_arity;
+    size_t m_slots;
+    const char *m_name;
+    FunctionBody m_body;
 };
 
 }

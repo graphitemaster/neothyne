@@ -75,7 +75,7 @@ Slot FunctionCodegen::addAllocObject(Slot parent) {
     return instruction->m_targetSlot;
 }
 
-Slot FunctionCodegen::addAllocIntObject(int value) {
+Slot FunctionCodegen::addAllocIntObject(Slot contextSlot, int value) {
     auto *instruction = allocate<AllocIntObjectInstr>();
     instruction->m_type = Instr::kAllocIntObject;
     instruction->m_targetSlot = m_slotBase++;
@@ -123,6 +123,16 @@ void FunctionCodegen::addReturn(Slot slot) {
     instruction->m_type = Instr::kReturn;
     instruction->m_returnSlot = slot;
     addInstr((Instr *)instruction);
+}
+
+Slot FunctionCodegen::addAllocClosureObject(Slot contextSlot, UserFunction *function) {
+    auto *instruction = allocate<AllocClosureObjectInstr>();
+    instruction->m_type = Instr::kAllocClosureObject;
+    instruction->m_targetSlot = m_slotBase++;
+    instruction->m_contextSlot = contextSlot;
+    instruction->m_function = function;
+    addInstr((Instr *)instruction);
+    return instruction->m_targetSlot;
 }
 
 UserFunction *FunctionCodegen::build() {

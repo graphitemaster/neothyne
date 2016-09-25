@@ -37,9 +37,13 @@ void Parser::consumeWhitespace(char **contents) {
         (*contents)++;
 }
 
+void Parser::consumeFiller(char **contents) {
+    consumeWhitespace(contents);
+}
+
 bool Parser::consumeString(char **contents, const char *identifier) {
     char *text = *contents;
-    consumeWhitespace(&text);
+    consumeFiller(&text);
     if (startsWith(&text, identifier)) {
         *contents = text;
         return true;
@@ -48,26 +52,40 @@ bool Parser::consumeString(char **contents, const char *identifier) {
 }
 
 // returns memory which can leak
-const char *Parser::parseIdentifier(char **contents) {
+const char *Parser::parseIdentifierAll(char **contents) {
     char *text = *contents;
-    consumeWhitespace(&text);
+    consumeFiller(&text);
     char *start = text;
     if (*text && (isAlpha(*text) || *text == '_'))
         text++;
     else return nullptr;
     while (*text && (isAlpha(*text) || isDigit(*text) || *text == '_'))
         text++;
-    *contents = text;
     size_t length = text - start;
     char *result = (char *)neoMalloc(length + 1);
     memcpy(result, start, length);
     result[length] = '\0';
+    *contents = text;
+    return result;
+}
+
+const char *Parser::parseIdentifier(char **contents) {
+    char *text = *contents;
+    const char *result = parseIdentifierAll(&text);
+    if (!result)
+        return nullptr;
+    if (!strncmp(result, "fn", 2)) {
+        // reserved identifier
+        neoFree((char *)result);
+        return nullptr;
+    }
+    *contents = text;
     return result;
 }
 
 bool Parser::parseInteger(char **contents, int *out) {
     char *text = *contents;
-    consumeWhitespace(&text);
+    consumeFiller(&text);
     char *start = text;
     while (*text && isDigit(*text))
         text++;
@@ -85,7 +103,7 @@ bool Parser::parseInteger(char **contents, int *out) {
 
 bool Parser::consumeKeyword(char **contents, const char *keyword) {
     char *text = *contents;
-    const char *compare = parseIdentifier(&text);
+    const char *compare = parseIdentifierAll(&text);
     if (!compare || strcmp(compare, keyword) != 0)
         return false;
     *contents = text;
@@ -103,10 +121,7 @@ Slot Parser::parseExpression(char **contents, FunctionCodegen *generator) {
     int value = 0;
     if (parseInteger(&text, &value)) {
         *contents = text;
-        Slot contextSlot = generator->addGetContext();
-        // TODO(daleweiler): pass context
-        (void)contextSlot;
-        return generator->addAllocIntObject(value);
+        return generator->addAllocIntObject(generator->getScope(), value);
     }
 
     if (consumeString(&text, "(")) {
@@ -118,7 +133,14 @@ Slot Parser::parseExpression(char **contents, FunctionCodegen *generator) {
         return result;
     }
 
-    U_ASSERT(0 && "expected identifier, number or expression");
+    if (consumeKeyword(&text, "fn")) {
+        UserFunction *function = parseFunctionExpression(&text);
+        Slot result = generator->addAllocClosureObject(generator->getScope(), function);
+        *contents = text;
+        return result;
+    }
+
+    U_ASSERT(0 && "expected identifier, function or expression");
     U_UNREACHABLE();
 }
 
@@ -172,15 +194,13 @@ Slot Parser::parseExpression(char **contents, FunctionCodegen *generator, int le
     for (;;) {
         if (consumeString(&text, "*")) {
             Slot argument = parseExpression(&text, generator, 3);
-            Slot contextSlot = generator->addGetContext();
-            Slot mulFunction = generator->addAccess(contextSlot, "*");
+            Slot mulFunction = generator->addAccess(generator->getScope(), "*");
             expression = generator->addCall(mulFunction, expression, argument);
             continue;
         }
         if (consumeString(&text, "/")) {
             Slot argument = parseExpression(&text, generator, 3);
-            Slot contextSlot = generator->addGetContext();
-            Slot divFunction = generator->addAccess(contextSlot, "/");
+            Slot divFunction = generator->addAccess(generator->getScope(), "/");
             expression = generator->addCall(divFunction, expression, argument);
             continue;
         }
@@ -196,15 +216,13 @@ Slot Parser::parseExpression(char **contents, FunctionCodegen *generator, int le
     for (;;) {
         if (consumeString(&text, "+")) {
             Slot argument = parseExpression(&text, generator, 2);
-            Slot contextSlot = generator->addGetContext();
-            Slot addFunction = generator->addAccess(contextSlot, "+");
+            Slot addFunction = generator->addAccess(generator->getScope(), "+");
             expression = generator->addCall(addFunction, expression, argument);
             continue;
         }
         if (consumeString(&text, "-")) {
             Slot argument = parseExpression(&text, generator, 2);
-            Slot contextSlot = generator->addGetContext();
-            Slot subFunction = generator->addAccess(contextSlot, "-");
+            Slot subFunction = generator->addAccess(generator->getScope(), "-");
             expression = generator->addCall(subFunction, expression, argument);
             continue;
         }
@@ -220,8 +238,7 @@ Slot Parser::parseExpression(char **contents, FunctionCodegen *generator, int le
     for (;;) {
         if (consumeString(&text, "==")) {
             Slot argument = parseExpression(&text, generator, 2);
-            Slot contextSlot = generator->addGetContext();
-            Slot equalFunction = generator->addAccess(contextSlot, "=");
+            Slot equalFunction = generator->addAccess(generator->getScope(), "=");
             expression = generator->addCall(equalFunction, expression, argument);
             continue;
         }
@@ -230,6 +247,24 @@ Slot Parser::parseExpression(char **contents, FunctionCodegen *generator, int le
 
     *contents = text;
     return expression;
+}
+
+void Parser::parseLetDeclaration(char **contents, FunctionCodegen *generator) {
+    // allocate a new scope immediately to allow recursion for closures
+    // i.e allow: let foo = fn() { foo(); };
+    generator->setScope(generator->addAllocObject(generator->getScope()));
+
+    const char *variableName = parseIdentifier(contents);
+    if (!consumeString(contents, "=")) {
+        U_ASSERT(0 && "expected `=`");
+    }
+
+    Slot value = parseExpression(contents, generator, 0);
+    if (!consumeString(contents, ";")) {
+        U_ASSERT(0 && "expected `;' to close `let' declaration");
+    }
+
+    generator->addAssign(generator->getScope(), variableName, value);
 }
 
 void Parser::parseIfStatement(char **contents, FunctionCodegen *generator) {
@@ -282,6 +317,11 @@ void Parser::parseStatement(char **contents, FunctionCodegen *generator) {
         parseReturnStatement(contents, generator);
         return;
     }
+    if (consumeKeyword(&text, "let")) {
+        *contents = text;
+        parseLetDeclaration(contents, generator);
+        return;
+    }
     U_ASSERT(0 && "unknown statement");
     U_UNREACHABLE();
 }
@@ -299,10 +339,8 @@ void Parser::parseBlock(char **contents, FunctionCodegen *generator) {
     generator->setScope(currentScope);
 }
 
-UserFunction *Parser::parseFunction(char **contents) {
+UserFunction *Parser::parseFunctionExpression(char **contents) {
     char *text = *contents;
-    if (!consumeKeyword(&text, "fn"))
-        return nullptr;
     const char *name = parseIdentifier(&text);
 
     if (!consumeString(&text, "(")) {
@@ -337,6 +375,22 @@ UserFunction *Parser::parseFunction(char **contents) {
 
     parseBlock(contents, &generator);
 
+    return generator.build();
+}
+
+UserFunction *Parser::parseModule(char **contents) {
+    FunctionCodegen generator(0, 0, nullptr);
+    generator.newBlock();
+    generator.setScope(generator.addGetContext());
+
+    for (;;) {
+        consumeFiller(contents);
+        if ((*contents)[0] == '\0')
+            break;
+        parseStatement(contents, &generator);
+    }
+
+    generator.addReturn(generator.getScope());
     return generator.build();
 }
 

@@ -9,22 +9,6 @@
 
 namespace s {
 
-///! UserFunction
-void UserFunction::dump() {
-    FunctionBody *body = &m_body;
-    u::Log::out("[script] => fn %s (%zu), %zu slots [\n", m_name, m_arity, m_slots);
-    for (size_t i = 0; i < body->m_length; i++) {
-        u::Log::out("[script] =>   block <%zu> [\n", i);
-        InstrBlock *block = &body->m_blocks[i];
-        for (size_t j = 0; j < block->m_length; j++) {
-            Instr *instruction = block->m_instrs[j];
-            instruction->dump();
-        }
-        u::Log::out("[script] =>   ]\n");
-    }
-    u::Log::out("[script] => ]\n");
-}
-
 ///! Table
 Object **Table::lookup(const char *key, Table::Entry **first) {
     if (!m_entry.m_name) {
@@ -113,14 +97,15 @@ Object *Object::newFunction(Object *context, FunctionPointer function) {
     return (Object *)object;
 }
 
-Object *Object::newUserFunction(Object *context, UserFunction *function) {
+Object *Object::newClosure(Object *context, UserFunction *function) {
     Object *root = context;
     while (root->m_parent)
         root = root->m_parent;
     Object *functionBase = root->m_table.lookup("function");
-    auto *object = allocate<UserFunctionObject>();
+    auto *object = allocate<ClosureObject>();
     object->m_parent = functionBase;
-    object->m_function = handler;
+    object->m_function = closureHandler;
+    object->m_context = context;
     object->m_userFunction = *function;
     return (Object *)object;
 }
