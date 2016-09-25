@@ -33,7 +33,18 @@ void test() {
     "fn level2() { level1(); }"
     "fn level3() { level2(); }"
     "let obj = { a = level3 };"
-    "obj[\"a\"]();";
+    "obj[\"a\"]();"
+    "print(\"2 != 2 => \", 2 != 2);"
+    "print(\"2 !< 2 => \", 2 !< 2);"
+    "print(\"2 !> 2 => \", 2 !> 2);"
+    "print(\"2 !<= 2 => \", 2 !<= 2);"
+    "print(\"2 !>= 2 => \", 2 !>= 2);"
+    "print(\"string \" + \"concatenation\");"
+    "let A = { value = 1337 };"
+    "let B = { value = A };"
+    "let C = { value = B };"
+    "let D = { value = C };"
+    "print(D.value.value.value.value);";
     char *text = data;
 
     UserFunction *module = Parser::parseModule(&text);
