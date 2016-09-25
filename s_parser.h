@@ -54,6 +54,7 @@ struct Parser {
 
     static void parseBlock(char **contents, FunctionCodegen *generator);
     static void parseIfStatement(char **contents, FunctionCodegen *generator);
+    static void parseWhile(char **contents, FunctionCodegen *generator);
     static void parseReturnStatement(char **contents, FunctionCodegen *generator);
     static void parseLetDeclaration(char **contents, FunctionCodegen *generator);
     static void parseFunctionDeclaration(char **contents, FunctionCodegen *generator);

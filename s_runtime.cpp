@@ -17,13 +17,13 @@ static void vmGetRoot(Object *context, GetRootInstr *instruction, Object **slots
     Object *root = context;
     while (root->m_parent)
         root = root->m_parent;
-    U_ASSERT(slot < numSlots && !slots[slot]);
+    U_ASSERT(slot < numSlots);
     slots[slot] = root;
 }
 
 static void vmGetContext(Object *context, GetContextInstr *instruction, Object **slots, size_t numSlots) {
     Slot slot = instruction->m_slot;
-    U_ASSERT(slot < numSlots && !slots[slot]);
+    U_ASSERT(slot < numSlots);
     slots[slot] = context;
 }
 
@@ -36,7 +36,7 @@ static void vmAccess(Object *context, AccessInstr *instruction, Object **slots, 
 
     const char *key = ((StringObject *)slots[keySlot])->m_value;
 
-    U_ASSERT(targetSlot < numSlots && !slots[targetSlot]);
+    U_ASSERT(targetSlot < numSlots);
     U_ASSERT(objectSlot < numSlots);
 
     Object *object = slots[objectSlot];
@@ -102,7 +102,7 @@ static void vmAllocateObject(Object *context, AllocObjectInstr *instruction, Obj
     Slot targetSlot = instruction->m_targetSlot;
     Slot parentSlot = instruction->m_parentSlot;
 
-    U_ASSERT(targetSlot < numSlots && !slots[targetSlot]);
+    U_ASSERT(targetSlot < numSlots);
     U_ASSERT(parentSlot < numSlots);
 
     slots[targetSlot] = Object::newObject(slots[parentSlot]);
@@ -112,7 +112,7 @@ static void vmAllocateClosureObject(Object *context, AllocClosureObjectInstr *in
     Slot targetSlot = instruction->m_targetSlot;
     Slot contextSlot = instruction->m_contextSlot;
 
-    U_ASSERT(targetSlot < numSlots && !slots[targetSlot]);
+    U_ASSERT(targetSlot < numSlots);
     U_ASSERT(contextSlot < numSlots);
 
     slots[targetSlot] = Object::newClosure(slots[contextSlot], instruction->m_function);
@@ -122,7 +122,7 @@ static void vmAllocateIntObject(Object *context, AllocIntObjectInstr *instructio
     Slot target = instruction->m_targetSlot;
     int value = instruction->m_value;
 
-    U_ASSERT(target < numSlots && !slots[target]);
+    U_ASSERT(target < numSlots);
 
     slots[target] = Object::newInt(context, value);
 }
@@ -131,7 +131,7 @@ static void vmAllocateFloatObject(Object *context, AllocFloatObjectInstr *instru
     Slot target = instruction->m_targetSlot;
     float value = instruction->m_value;
 
-    U_ASSERT(target < numSlots && !slots[target]);
+    U_ASSERT(target < numSlots);
 
     slots[target] = Object::newFloat(context, value);
 }
@@ -140,7 +140,7 @@ static void vmAllocateStringObject(Object *context, AllocStringObjectInstr *inst
     Slot target = instruction->m_targetSlot;
     const char *value = instruction->m_value;
 
-    U_ASSERT(target < numSlots && !slots[target]);
+    U_ASSERT(target < numSlots);
 
     slots[target] = Object::newString(context, value);
 }
@@ -160,7 +160,7 @@ static void vmCall(Object *context, CallInstr *instruction, Object **slots, size
     Slot thisSlot = instruction->m_thisSlot;
     Slot argsLength = instruction->m_length;
 
-    U_ASSERT(targetSlot < numSlots && !slots[targetSlot]);
+    U_ASSERT(targetSlot < numSlots);
     U_ASSERT(functionSlot < numSlots);
     U_ASSERT(thisSlot < numSlots);
 

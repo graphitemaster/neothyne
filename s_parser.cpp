@@ -550,6 +550,36 @@ void Parser::parseIfStatement(char **contents, FunctionCodegen *generator) {
     *contents = text;
 }
 
+void Parser::parseWhile(char **contents, FunctionCodegen *generator) {
+    char *text = *contents;
+    if (!consumeString(&text, "(")) {
+        U_ASSERT(0 && "expected openening parenthesis after 'while'");
+    }
+
+    size_t *testBlock = nullptr;
+    generator->addBranch(&testBlock);
+    *testBlock = generator->newBlock();
+
+    size_t *loopBlock = nullptr;
+    size_t *endBlock = nullptr;
+    Slot testSlot = Reference::access(generator, parseExpression(&text, generator, 0));
+    if (!consumeString(&text, ")")) {
+        U_ASSERT(0 && "expected closing parenthesis after 'while'");
+    }
+
+    generator->addTestBranch(testSlot, &loopBlock, &endBlock);
+
+    *loopBlock = generator->newBlock();
+    parseBlock(&text, generator);
+
+    size_t *overBlock = nullptr;
+    generator->addBranch(&overBlock);
+    *overBlock = *testBlock;
+
+    *endBlock = generator->newBlock();
+    *contents = text;
+}
+
 void Parser::parseReturnStatement(char **contents, FunctionCodegen *generator) {
     Slot value = Reference::access(generator, parseExpression(contents, generator, 0));
     if (!consumeString(contents, ";")) {
@@ -617,6 +647,11 @@ void Parser::parseStatement(char **contents, FunctionCodegen *generator) {
     if (consumeKeyword(&text, "fn")) {
         *contents = text;
         parseFunctionDeclaration(contents, generator);
+        return;
+    }
+    if (consumeKeyword(&text, "while")) {
+        *contents = text;
+        parseWhile(contents, generator);
         return;
     }
 

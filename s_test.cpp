@@ -21,8 +21,12 @@ void test() {
     "};"
     "obj.b = 7;"
     "obj[\"foo\"] = mfn() { print(this.a + this.b); };"
-    "obj.foo();"
-    "obj.bar();";
+    "let a = 10;"
+    "while (a > 0) {"
+    "  obj.foo();"
+    "  obj.bar();"
+    "  a = a - 1;"
+    "}";
     char *text = data;
 
     UserFunction *module = Parser::parseModule(&text);
