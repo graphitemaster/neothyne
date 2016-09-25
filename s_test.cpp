@@ -120,6 +120,7 @@ void test() {
     char *text = data;
 
     UserFunction *function = Parser::parseFunction(&text);
+    function->dump();
 
     Object *ack = Object::newUserFunction(root, function);
     root->set("ack", ack);

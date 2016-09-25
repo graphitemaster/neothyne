@@ -5,8 +5,25 @@
 
 #include "u_new.h"
 #include "u_assert.h"
+#include "u_log.h"
 
 namespace s {
+
+///! UserFunction
+void UserFunction::dump() {
+    FunctionBody *body = &m_body;
+    u::Log::out("[script] => fn %s (%zu), %zu slots [\n", m_name, m_arity, m_slots);
+    for (size_t i = 0; i < body->m_length; i++) {
+        u::Log::out("[script] =>   block <%zu> [\n", i);
+        InstrBlock *block = &body->m_blocks[i];
+        for (size_t j = 0; j < block->m_length; j++) {
+            Instr *instruction = block->m_instrs[j];
+            instruction->dump();
+        }
+        u::Log::out("[script] =>   ]\n");
+    }
+    u::Log::out("[script] => ]\n");
+}
 
 ///! Table
 Object **Table::lookup(const char *key, Table::Entry **first) {

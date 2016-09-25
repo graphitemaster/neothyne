@@ -10,6 +10,8 @@ typedef size_t Slot;
 struct Instr {
     Instr(int type);
 
+    void dump();
+
     enum {
         kGetRoot,        // gr
         kGetContext,     // gc

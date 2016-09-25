@@ -1,10 +1,69 @@
 #include "s_instr.h"
 
+#include "u_log.h"
+
 namespace s {
 
 Instr::Instr(int type)
     : m_type(type)
 {
+}
+
+void Instr::dump() {
+    switch (m_type) {
+    case kGetRoot:
+        u::Log::out("[script] =>     gr: %zu\n", ((GetRootInstr *)this)->m_slot);
+        break;
+    break; case kGetContext:
+        u::Log::out("[script] =>     gc: %zu\n", ((GetContextInstr *)this)->m_slot);
+        break;
+    break; case kAllocObject:
+        u::Log::out("[script] =>     ao: %zu = new object(%zu)\n",
+            ((AllocObjectInstr *)this)->m_targetSlot,
+            ((AllocObjectInstr *)this)->m_parentSlot);
+        break;
+    case kAllocIntObject:
+        u::Log::out("[script] =>     aio: %zu = new int(%d)\n",
+            ((AllocIntObjectInstr *)this)->m_targetSlot,
+            ((AllocIntObjectInstr *)this)->m_value);
+        break;
+    case kCloseObject:
+        u::Log::out("[script] =>     co: %zu\n", ((CloseObjectInstr *)this)->m_slot);
+        break;
+    case kAccess:
+        u::Log::out("[script] =>     ref: %zu = %zu . '%s'\n",
+            ((AccessInstr *)this)->m_targetSlot,
+            ((AccessInstr *)this)->m_objectSlot,
+            ((AccessInstr *)this)->m_key);
+        break;
+    case kAssign:
+        u::Log::out("[script] =>     mov: %zu . '%s' = %zu\n",
+            ((AssignInstr *)this)->m_objectSlot,
+            ((AssignInstr *)this)->m_key,
+            ((AssignInstr *)this)->m_valueSlot);
+        break;
+    case kCall:
+        u::Log::out("[script] =>     call: %zu = %zu ( ",
+            ((CallInstr *)this)->m_targetSlot,
+            ((CallInstr *)this)->m_functionSlot);
+        for (size_t i = 0; i < ((CallInstr *)this)->m_length; ++i) {
+            if (i) u::Log::out(", ");
+            u::Log::out("%zu", ((CallInstr *)this)->m_arguments[i]);
+        }
+        u::Log::out(" )\n");
+        break;
+    case kReturn:
+        u::Log::out("[script] =>     ret: %zu\n", ((ReturnInstr *)this)->m_returnSlot);
+        break;
+    case kBranch:
+        u::Log::out("[script] =>     br: <%zu>\n", ((BranchInstr *)this)->m_block);
+        break;
+    case kTestBranch:
+        u::Log::out("[script] =>     tbr: %zu ? <%zu> : <%zu>\n",
+            ((TestBranchInstr *)this)->m_testSlot,
+            ((TestBranchInstr *)this)->m_trueBlock,
+            ((TestBranchInstr *)this)->m_falseBlock);
+    }
 }
 
 GetRootInstr::GetRootInstr(Slot slot)

@@ -34,6 +34,8 @@ private:
 typedef Object *(*FunctionPointer)(Object *, Object *, Object **, size_t);
 
 struct UserFunction {
+    void dump();
+
     size_t m_arity;
     size_t m_slots;
     const char *m_name;
