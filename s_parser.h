@@ -28,6 +28,7 @@ struct Parser {
     static void parseIfStatement(char **contents, FunctionCodegen *generator);
     static void parseReturnStatement(char **contents, FunctionCodegen *generator);
     static void parseLetDeclaration(char **contents, FunctionCodegen *generator);
+    static void parseFunctionDeclaration(char **contents, FunctionCodegen *generator);
     static void parseStatement(char **contents, FunctionCodegen *generator);
 
     static UserFunction *parseFunctionExpression(char **contents);

@@ -276,6 +276,14 @@ void Parser::parseLetDeclaration(char **contents, FunctionCodegen *generator) {
     }
 }
 
+void Parser::parseFunctionDeclaration(char **contents, FunctionCodegen *generator) {
+    generator->setScope(generator->addAllocObject(generator->getScope()));
+    UserFunction *function = parseFunctionExpression(contents);
+    Slot slot = generator->addAllocClosureObject(generator->getScope(), function);
+    generator->addAssign(generator->getScope(), function->m_name, slot);
+    generator->addCloseObject(generator->getScope());
+}
+
 void Parser::parseIfStatement(char **contents, FunctionCodegen *generator) {
     char *text = *contents;
     if (!consumeString(&text, "(")) {
@@ -319,6 +327,11 @@ void Parser::parseStatement(char **contents, FunctionCodegen *generator) {
     if (consumeKeyword(&text, "if")) {
         *contents = text;
         parseIfStatement(contents, generator);
+        return;
+    }
+    if (consumeKeyword(&text, "fn")) {
+        *contents = text;
+        parseFunctionDeclaration(contents, generator);
         return;
     }
     if (consumeKeyword(&text, "return")) {
