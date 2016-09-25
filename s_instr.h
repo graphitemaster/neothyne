@@ -6,6 +6,8 @@
 namespace s {
 
 typedef size_t Slot;
+typedef size_t Block;
+typedef size_t *BlockRef;
 
 struct UserFunction;
 
@@ -117,13 +119,13 @@ struct ReturnInstr : Instr {
 };
 
 struct BranchInstr : Instr {
-    size_t m_block;
+    Block m_block;
 };
 
 struct TestBranchInstr : Instr {
     Slot m_testSlot;
-    size_t m_trueBlock;
-    size_t m_falseBlock;
+    Block m_trueBlock;
+    Block m_falseBlock;
 };
 
 struct InstrBlock {

@@ -6,7 +6,7 @@
 namespace s {
 
 struct FunctionCodegen {
-    size_t newBlock();
+    Block newBlock();
 
     // terminates with "return null"
     void terminate();
@@ -33,8 +33,8 @@ struct FunctionCodegen {
     Slot addCall(Slot function, Slot thisSlot, Slot arh0);            // specialization for binary operators (lhs.operator+(arg0))
     Slot addCall(Slot function, Slot thisSlot);
 
-    void addTestBranch(Slot test, size_t **trueBranch, size_t **falseBranch);
-    void addBranch(size_t **branch);
+    void addTestBranch(Slot test, Block **trueBranch, Block **falseBranch);
+    void addBranch(Block **branch);
     void addReturn(Slot slot);
 
     Slot addAllocClosureObject(Slot contextSlot, UserFunction *function);

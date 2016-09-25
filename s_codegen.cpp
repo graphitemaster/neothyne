@@ -7,7 +7,7 @@
 
 namespace s {
 
-size_t FunctionCodegen::newBlock() {
+Block FunctionCodegen::newBlock() {
     U_ASSERT(m_terminated);
     FunctionBody *body = &m_body;
     body->m_length++;
@@ -159,7 +159,7 @@ Slot FunctionCodegen::addCall(Slot function, Slot thisSlot, Slot arg0, Slot arg1
     return addCall(function, thisSlot, arguments, 2);
 }
 
-void FunctionCodegen::addTestBranch(Slot test, size_t **trueBranch, size_t **falseBranch) {
+void FunctionCodegen::addTestBranch(Slot test, Block **trueBranch, Block **falseBranch) {
     auto *instruction = allocate<TestBranchInstr>();
     instruction->m_type = Instr::kTestBranch;
     instruction->m_testSlot = test;
@@ -169,7 +169,7 @@ void FunctionCodegen::addTestBranch(Slot test, size_t **trueBranch, size_t **fal
     m_terminated = true;
 }
 
-void FunctionCodegen::addBranch(size_t **branch) {
+void FunctionCodegen::addBranch(Block **branch) {
     auto *instruction = allocate<BranchInstr>();
     instruction->m_type = Instr::kBranch;
     *branch = &instruction->m_block;

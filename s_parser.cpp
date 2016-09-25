@@ -529,23 +529,22 @@ void Parser::parseIfStatement(char **contents, FunctionCodegen *generator) {
         U_ASSERT(0 && "expected close parent after if");
     }
 
-    // TODO(daleweiler): cleanup
-    size_t *trueBlock = nullptr;
-    size_t *falseBlock = nullptr;
-    size_t *endBlock = nullptr;
-    generator->addTestBranch(testSlot, &trueBlock, &falseBlock);
+    Block *tBlock = nullptr;
+    Block *fBlock = nullptr;
+    Block *eBlock = nullptr;
+    generator->addTestBranch(testSlot, &tBlock, &fBlock);
 
-    *trueBlock = generator->newBlock();
+    *tBlock = generator->newBlock();
     parseBlock(&text, generator);
-    generator->addBranch(&endBlock);
+    generator->addBranch(&eBlock);
 
-    *falseBlock = generator->newBlock();
+    *fBlock = generator->newBlock();
     if (consumeString(&text, "else")) {
         parseBlock(&text, generator);
-        generator->addBranch(&endBlock);
-        *endBlock = generator->newBlock();
+        generator->addBranch(&eBlock);
+        *eBlock = generator->newBlock();
     } else {
-        *endBlock = *falseBlock;
+        *eBlock = *fBlock;
     }
     *contents = text;
 }
@@ -556,27 +555,27 @@ void Parser::parseWhile(char **contents, FunctionCodegen *generator) {
         U_ASSERT(0 && "expected openening parenthesis after 'while'");
     }
 
-    size_t *testBlock = nullptr;
-    generator->addBranch(&testBlock);
-    *testBlock = generator->newBlock();
+    Block *tBlock = nullptr;
+    Block *lBlock = nullptr;
+    Block *eBlock = nullptr;
+    Block *oBlock = nullptr;
 
-    size_t *loopBlock = nullptr;
-    size_t *endBlock = nullptr;
+    generator->addBranch(&tBlock);
+    *tBlock = generator->newBlock();
     Slot testSlot = Reference::access(generator, parseExpression(&text, generator, 0));
     if (!consumeString(&text, ")")) {
         U_ASSERT(0 && "expected closing parenthesis after 'while'");
     }
 
-    generator->addTestBranch(testSlot, &loopBlock, &endBlock);
+    generator->addTestBranch(testSlot, &lBlock, &eBlock);
 
-    *loopBlock = generator->newBlock();
+    *lBlock = generator->newBlock();
     parseBlock(&text, generator);
+    generator->addBranch(&oBlock);
 
-    size_t *overBlock = nullptr;
-    generator->addBranch(&overBlock);
-    *overBlock = *testBlock;
+    *oBlock = *tBlock;
+    *eBlock = generator->newBlock();
 
-    *endBlock = generator->newBlock();
     *contents = text;
 }
 
