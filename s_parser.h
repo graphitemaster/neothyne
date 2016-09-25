@@ -32,10 +32,11 @@ struct Parser {
 
     static bool parseInteger(char **contents, int *out);
     static bool parseFloat(char **contents, float *out);
+    static bool parseString(char **contents, char **out);
 
     static Reference parseExpression(char **contents, FunctionCodegen *generator, int level);
     static Reference parseExpression(char **contents, FunctionCodegen *generator);
-    static Reference parseExpressionTail(char **contents, FunctionCodegen *generator);
+    static Reference parseExpressionStem(char **contents, FunctionCodegen *generator);
     static bool parseCall(char **contents, FunctionCodegen *generator, Reference *expression);
 
     static void parseBlock(char **contents, FunctionCodegen *generator);

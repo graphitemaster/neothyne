@@ -20,6 +20,7 @@ struct Instr {
         kAllocObject,        // ao
         kAllocIntObject,     // aio
         kAllocFloatObject,   // afo
+        kAllocStringObject,  // aso
         kAllocClosureObject, // aco
         kCloseObject,        // co
         kAccess,             // ref
@@ -60,6 +61,12 @@ struct AllocFloatObjectInstr : Instr {
     AllocFloatObjectInstr(Slot target, float value);
     Slot m_targetSlot;
     float m_value;
+};
+
+struct AllocStringObjectInstr : Instr {
+    AllocStringObjectInstr(Slot target, const char *value);
+    Slot m_targetSlot;
+    const char *m_value;
 };
 
 struct AllocClosureObjectInstr : Instr {

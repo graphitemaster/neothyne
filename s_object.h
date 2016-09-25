@@ -38,6 +38,7 @@ struct Object {
     static Object *newInt(Object *context, int value);
     static Object *newFloat(Object *context, float value);
     static Object *newBoolean(Object *context, bool value);
+    static Object *newString(Object *content,const char *value);
     static Object *newFunction(Object *context, FunctionPointer function);
     static Object *newClosure(Object *context, UserFunction *function);
 
@@ -73,6 +74,10 @@ struct BooleanObject : Object {
 
 struct FloatObject : Object {
     float m_value;
+};
+
+struct StringObject : Object {
+    const char *m_value;
 };
 
 }

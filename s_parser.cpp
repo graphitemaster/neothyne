@@ -145,6 +145,25 @@ bool Parser::parseFloat(char **contents, float *out) {
     return true;
 }
 
+bool Parser::parseString(char **contents, char **out) {
+    char *text = *contents;
+    consumeFiller(&text);
+    char *start = text;
+    if (*text != '"')
+        return false;
+    text++;
+    while (*text != '"') // TODO(daleweiler): string escaping
+        text++;
+    text++;
+    *contents = text;
+    size_t length = text - start;
+    char *result = (char *)neoMalloc(length - 2 + 1);
+    memcpy(result, start + 1, length - 2);
+    result[length - 2] = '\0';
+    *out = result;
+    return true;
+}
+
 bool Parser::consumeKeyword(char **contents, const char *keyword) {
     char *text = *contents;
     const char *compare = parseIdentifierAll(&text);
@@ -154,7 +173,7 @@ bool Parser::consumeKeyword(char **contents, const char *keyword) {
     return true;
 }
 
-Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *generator) {
+Parser::Reference Parser::parseExpressionStem(char **contents, FunctionCodegen *generator) {
     char *text = *contents;
     const char *identifier = parseIdentifier(&text);
     if (identifier) {
@@ -167,6 +186,7 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
         float value = 0.0f;
         if (parseFloat(&text, &value)) {
             *contents = text;
+            if (!generator) return { 0, nullptr };
             Slot slot = generator->addAllocFloatObject(generator->getScope(), value);
             return { slot, nullptr };
         }
@@ -176,7 +196,18 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
         int value = 0;
         if (parseInteger(&text, &value)) {
             *contents = text;
+            if (!generator) return { 0, nullptr };
             Slot slot = generator->addAllocIntObject(generator->getScope(), value);
+            return { slot, nullptr };
+        }
+    }
+    // string?
+    {
+        char *value = nullptr;
+        if (parseString(&text, &value)) {
+            *contents = text;
+            if (!generator) return { 0, nullptr };
+            Slot slot = generator->addAllocStringObject(generator->getScope(), value);
             return { slot, nullptr };
         }
     }
@@ -197,8 +228,18 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
         return { slot, nullptr };
     }
 
-    U_ASSERT(0 && "expected identifier, function or expression");
+    U_ASSERT(0 && "expected expression");
     U_UNREACHABLE();
+}
+
+Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *generator) {
+    Reference expression = parseExpressionStem(contents, generator);
+    for (;;) {
+        if (parseCall(contents, generator, &expression))
+            continue;
+        break;
+    }
+    return expression;
 }
 
 bool Parser::parseCall(char **contents, FunctionCodegen *generator, Reference *expression) {
@@ -213,22 +254,18 @@ bool Parser::parseCall(char **contents, FunctionCodegen *generator, Reference *e
         if (length && !consumeString(contents, ",")) {
             U_ASSERT(0 && "expected comma");
         }
-        Slot slot = parseExpression(contents, generator, 0).access(generator);
+        //Slot slot = parseExpression(contents, generator, 0).access(generator);
+        Reference argument = parseExpression(contents, generator, 0);
+        Slot slot = generator ? argument.access(generator) : 0;
         arguments = (Slot *)neoRealloc(arguments, sizeof(Slot) * ++length);
         arguments[length - 1] = slot;
     }
+
+    if (!generator)
+        return true;
+
     *expression = { generator->addCall(expression->access(generator), arguments, length), nullptr };
     return true;
-}
-
-Parser::Reference Parser::parseExpressionTail(char **contents, FunctionCodegen *generator) {
-    Reference expression = parseExpression(contents, generator);
-    for (;;) {
-        if (parseCall(contents, generator, &expression))
-            continue;
-        break;
-    }
-    return expression;
 }
 
 // precedence climbing technique using ordered-level splitting
@@ -240,7 +277,7 @@ Parser::Reference Parser::parseExpressionTail(char **contents, FunctionCodegen *
 Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *generator, int level) {
     char *text = *contents;
 
-    Reference expression = parseExpressionTail(&text, generator);
+    Reference expression = parseExpression(&text, generator);
 
     // level 2: ( *, / )
     if (level > 2) {
@@ -417,8 +454,12 @@ void Parser::parseStatement(char **contents, FunctionCodegen *generator) {
         return;
     }
 
-    U_ASSERT(0 && "unknown statement");
-    U_UNREACHABLE();
+    // expression as statement
+    parseExpression(&text, generator);
+    if (!consumeString(&text, ";")) {
+        U_ASSERT(0 && "expected `;' to close expression");
+    }
+    *contents = text;
 }
 
 void Parser::parseBlock(char **contents, FunctionCodegen *generator) {

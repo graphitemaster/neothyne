@@ -20,10 +20,12 @@ void test() {
     Object *root = createRoot();
     char data[] =
     "fn ack(m, n) {"
-    "   if (m == 0.) return n + 1.;"
-    "   if (n == 0.) return ack(m - 1., 1.);"
-    "   return ack(m - 1., ack(m, n - 1.));"
-    "}";
+    "   if (m == 0) return n + 1;"
+    "   if (n == 0) return ack(m - 1, 1);"
+    "   return ack(m - 1, ack(m, n - 1));"
+    "}"
+    "print(3, \", hello world, \", 3.14);";
+
     char *text = data;
 
     UserFunction *module = Parser::parseModule(&text);

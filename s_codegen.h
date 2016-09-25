@@ -18,6 +18,7 @@ struct FunctionCodegen {
     Slot addAllocObject(Slot parent);
     Slot addAllocIntObject(Slot contextSlot, int value);
     Slot addAllocFloatObject(Slot contextSlot, float value);
+    Slot addAllocStringObject(Slot contextSlot, const char *value);
     Slot addCall(Slot function, Slot *arguments, size_t length);
     Slot addCall(Slot function, Slot arg0, Slot arg1); // specialization just for binary operator calls
     void addTestBranch(Slot test, size_t **trueBranch, size_t **falseBranch);

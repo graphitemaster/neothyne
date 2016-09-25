@@ -114,6 +114,18 @@ Object *Object::newBoolean(Object *context, bool value) {
     return (Object *)object;
 }
 
+Object *Object::newString(Object *context, const char *value) {
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *stringBase = root->m_table.lookup("string");
+    auto *object = allocate<StringObject>();
+    object->m_parent = stringBase;
+    object->m_flags = kImmutable | kClosed;
+    object->m_value = value;
+    return (Object *)object;
+}
+
 Object *Object::newFunction(Object *context, FunctionPointer function) {
     Object *root = context;
     while (root->m_parent)

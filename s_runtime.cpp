@@ -5,12 +5,13 @@
 
 #include "u_assert.h"
 #include "u_new.h"
+#include "u_log.h"
 
 #include "engine.h" // neoFatal
 
 namespace s {
 
-Object *equals(Object *context, Object *function, Object **args, size_t length) {
+static Object *equals(Object *context, Object *function, Object **args, size_t length) {
     (void)function;
     U_ASSERT(length == 2);
     Object *root = context;
@@ -37,7 +38,7 @@ Object *equals(Object *context, Object *function, Object **args, size_t length) 
 }
 
 #define MATHOP(NAME, OP) \
-Object *NAME(Object *context, Object *function, Object **args, size_t length) { \
+static Object *NAME(Object *context, Object *function, Object **args, size_t length) { \
     (void)function; \
     U_ASSERT(length == 2); \
     Object *root = context; \
@@ -65,6 +66,33 @@ MATHOP(add, +)
 MATHOP(sub, -)
 MATHOP(mul, *)
 MATHOP(div, /)
+
+static Object *print(Object *context, Object *function, Object **arguments, size_t length) {
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *intBase = root->m_table.lookup("int");
+    Object *floatBase = root->m_table.lookup("float");
+    Object *stringBase = root->m_table.lookup("string");
+
+    for (size_t i = 0; i < length; i++) {
+        Object *argument = arguments[i];
+        if (argument->m_parent == intBase) {
+            u::Log::out("%d", ((IntObject *)argument)->m_value);
+            continue;
+        }
+        if (argument->m_parent == floatBase) {
+            u::Log::out("%f", ((FloatObject *)argument)->m_value);
+            continue;
+        }
+        if (argument->m_parent == stringBase) {
+            u::Log::out("%s", ((StringObject *)argument)->m_value);
+            continue;
+        }
+    }
+    u::Log::out("\n");
+    return nullptr;
+}
 
 Object *callFunction(Object *context, UserFunction *function, Object **args, size_t length) {
     // allocate slots for arguments and locals
@@ -172,9 +200,17 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
         case Instr::kAllocFloatObject: {
             AllocFloatObjectInstr *i = (AllocFloatObjectInstr *)instr;
             Slot target = i->m_targetSlot;
-            int value = i->m_value;
+            float value = i->m_value;
             U_ASSERT(target < numSlots && !slots[target]);
             slots[target] = Object::newFloat(context, value);
+        } break;
+
+        case Instr::kAllocStringObject: {
+            AllocStringObjectInstr *i = (AllocStringObjectInstr *)instr;
+            Slot target = i->m_targetSlot;
+            const char *value = i->m_value;
+            U_ASSERT(target < numSlots && !slots[target]);
+            slots[target] = Object::newString(context, value);
         } break;
 
         case Instr::kCloseObject: {
@@ -275,11 +311,15 @@ Object *createRoot() {
     Object *root = Object::newObject(nullptr);
     root->set("int", Object::newObject(nullptr));
     root->set("boolean", Object::newObject(nullptr));
+    root->set("float", Object::newObject(nullptr));
+    root->set("string", Object::newObject(nullptr));
     root->set("function", Object::newObject(nullptr));
     root->set("=", Object::newFunction(root, equals));
     root->set("+", Object::newFunction(root, add));
     root->set("-", Object::newFunction(root, sub));
     root->set("*", Object::newFunction(root, mul));
+    root->set("/", Object::newFunction(root, div));
+    root->set("print", Object::newFunction(root, print));
     return root;
 }
 

@@ -60,6 +60,11 @@ void Instr::dump(int level) {
             ((AllocFloatObjectInstr *)this)->m_targetSlot,
             ((AllocFloatObjectInstr *)this)->m_value);
         break;
+    case kAllocStringObject:
+        output(level, "aso: %zu = new string(\"%s\")\n",
+            ((AllocStringObjectInstr *)this)->m_targetSlot,
+            ((AllocStringObjectInstr *)this)->m_value);
+        break;
     case kAllocClosureObject:
         output(level, "aco: %zu = new fn(%zu)\n",
             ((AllocClosureObjectInstr *)this)->m_targetSlot,
