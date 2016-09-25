@@ -100,10 +100,8 @@ void Instr::dump(int level) {
             ((TestBranchInstr *)this)->m_falseBlock);
     }
 
-    for (auto *function : otherFunctions) {
+    for (auto *function : otherFunctions)
         function->dump(level);
-        level++;
-    }
 }
 
 GetRootInstr::GetRootInstr(Slot slot)
