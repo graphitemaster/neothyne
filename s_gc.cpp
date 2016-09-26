@@ -3,50 +3,47 @@
 
 namespace s {
 
-static GC::State state;
+static GarbageCollector::State gState;
 
-void *GC::addRoots(Object **objects, size_t length) {
-    RootSet *prevTail = state.m_tail;
-    state.m_tail = (RootSet *)neoMalloc(sizeof(RootSet));
-    if (prevTail)
-        prevTail->m_next = state.m_tail;
-    state.m_tail->m_prev = prevTail;
-    state.m_tail->m_next = nullptr;
-    state.m_tail->m_objects = objects;
-    state.m_tail->m_length = length;
-    return (void *)state.m_tail;
+void *GarbageCollector::addRoots(Object **objects, size_t length) {
+    RootSet *tail = gState.m_tail;
+    gState.m_tail = (RootSet *)neoMalloc(sizeof *gState.m_tail);
+    if (tail)
+        tail->m_next = gState.m_tail;
+    gState.m_tail->m_prev = tail;
+    gState.m_tail->m_next = nullptr;
+    gState.m_tail->m_objects = objects;
+    gState.m_tail->m_length = length;
+    return gState.m_tail;
 }
 
-void GC::removeRoots(void *base) {
-    RootSet *entry = (RootSet *)base;
-    if (entry == state.m_tail)
-        state.m_tail = entry->m_prev;
-    if (entry->m_prev)
-        entry->m_prev->m_next = entry->m_next;
-    if (entry->m_next)
-        entry->m_next->m_prev = entry->m_prev;
-    neoFree(entry);
+void GarbageCollector::delRoots(void *root) {
+    RootSet *object = (RootSet *)root;
+    if (object == gState.m_tail)
+        gState.m_tail = object->m_prev;
+    if (object->m_prev)
+        object->m_prev->m_next = object->m_next;
+    if (object->m_next)
+        object->m_next->m_prev = object->m_prev;
+    neoFree(object);
 }
 
-// mark roots
-void GC::mark() {
-    RootSet *set = state.m_tail;
-    while (set) {
-        for (size_t i = 0; i < set->m_length; i++) {
-            if (set->m_objects[i])
-                set->m_objects[i]->mark();
-        }
-        set = set->m_prev;
+void GarbageCollector::mark(Object *context) {
+    RootSet *tail = gState.m_tail;
+    while (tail) {
+        for (size_t i = 0; i < tail->m_length; i++)
+            Object::mark(context, tail->m_objects[i]);
+        tail = tail->m_prev;
     }
 }
 
-// scan allocated objects freeing those that are not marked
-void GC::sweep() {
+void GarbageCollector::sweep() {
+    // TODO(daleweiler): cleanup
     Object **current = &Object::m_lastAllocated;
     while (*current) {
         if (!((*current)->m_flags & Object::kMarked)) {
             Object *prev = (*current)->m_prev;
-            (*current)->free();
+            Object::free(*current);
             Object::m_numAllocated--;
             *current = prev;
         } else {
@@ -56,8 +53,8 @@ void GC::sweep() {
     }
 }
 
-void GC::run() {
-    mark();
+void GarbageCollector::run(Object *context) {
+    mark(context);
     sweep();
 }
 

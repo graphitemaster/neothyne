@@ -7,7 +7,7 @@ namespace s {
 
 struct Object;
 
-struct GC {
+struct GarbageCollector {
     struct RootSet {
         Object **m_objects;
         size_t m_length;
@@ -20,12 +20,11 @@ struct GC {
     };
 
     static void *addRoots(Object **objects, size_t length);
-    static void removeRoots(void *base);
-    static void run();
+    static void delRoots(void *base);
 
-private:
-    static void mark();
+    static void mark(Object *context);
     static void sweep();
+    static void run(Object *context);
 };
 
 }

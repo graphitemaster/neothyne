@@ -120,7 +120,7 @@ void test() {
 
     root = callFunction(root, module, nullptr, 0);
 
-    GC::run();
+    GarbageCollector::run(root);
 }
 
 }

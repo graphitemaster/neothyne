@@ -36,9 +36,9 @@ private:
 typedef Object *(*FunctionPointer)(Object *, Object *, Object *, Object **, size_t);
 
 struct Object {
-    static void *alloc(size_t size);
+    static void *alloc(Object *context, size_t size);
 
-    static Object *newObject(Object *parent);
+    static Object *newObject(Object *context, Object *parent);
     static Object *newInt(Object *context, int value);
     static Object *newFloat(Object *context, float value);
     static Object *newBoolean(Object *context, bool value);
@@ -48,14 +48,14 @@ struct Object {
 
     static Object *instanceOf(Object *object, Object *prototype);
 
+    static void free(Object *object);
+    static void mark(Object *context, Object *object);
+
     Object *lookup(const char *key, bool *found);
 
     void setNormal(const char *key, Object *value);
     void setExisting(const char *key, Object *value);
     void setShadowing(const char *key, Object *value);
-
-    void mark();
-    void free();
 
     enum {
         kClosed    = 1 << 0, // when set no additional properties can be added

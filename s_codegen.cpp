@@ -195,6 +195,7 @@ UserFunction *FunctionCodegen::build() {
     function->m_slots = m_slotBase;
     function->m_name = m_name;
     function->m_body = m_body;
+    function->m_isMethod = false;
     return function;
 }
 

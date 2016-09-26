@@ -12,22 +12,21 @@
 
 namespace s {
 
-static void vmGetRoot(Object *context, GetRootInstr *instruction, Object **slots, size_t numSlots) {
+static void vmGetRoot(Object *root, Object *context, GetRootInstr *instruction, Object **slots, size_t numSlots) {
+    (void)context;
     Slot slot = instruction->m_slot;
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
     U_ASSERT(slot < numSlots);
     slots[slot] = root;
 }
 
-static void vmGetContext(Object *context, GetContextInstr *instruction, Object **slots, size_t numSlots) {
+static void vmGetContext(Object *root, Object *context, GetContextInstr *instruction, Object **slots, size_t numSlots) {
+    (void)root;
     Slot slot = instruction->m_slot;
     U_ASSERT(slot < numSlots);
     slots[slot] = context;
 }
 
-static void vmAccess(Object *context, AccessInstr *instruction, Object **slots, size_t numSlots) {
+static void vmAccess(Object *root, Object *context, AccessInstr *instruction, Object **slots, size_t numSlots) {
     (void)context;
 
     Slot targetSlot = instruction->m_targetSlot;
@@ -36,77 +35,85 @@ static void vmAccess(Object *context, AccessInstr *instruction, Object **slots, 
 
     U_ASSERT(keySlot < numSlots && slots[keySlot]);
 
-    const char *key = ((StringObject *)slots[keySlot])->m_value;
+    Object *stringBase = root->lookup("string", nullptr);
+    StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
+    U_ASSERT(stringKey);
 
-    U_ASSERT(targetSlot < numSlots);
+    const char *key = stringKey->m_value;
+
     U_ASSERT(objectSlot < numSlots);
-
     Object *object = slots[objectSlot];
 
-    bool found;
-    Object *value = object->lookup(key, &found);
-    if (!found) {
+    bool objectFound;
+    Object *value = object->lookup(key, &objectFound);
+    if (!objectFound) {
         U_ASSERT(0 && "identifier not found");
     }
 
+    U_ASSERT(targetSlot < numSlots);
     slots[targetSlot] = value;
 }
 
-static void vmAssignNormal(Object *context, AssignNormalInstr *instruction, Object **slots, size_t numSlots) {
+static void vmAssignNormal(Object *root, Object *context, AssignNormalInstr *instruction, Object **slots, size_t numSlots) {
     (void)context;
 
     Slot objectSlot = instruction->m_objectSlot;
     Slot valueSlot = instruction->m_valueSlot;
     Slot keySlot = instruction->m_keySlot;
-
-    U_ASSERT(keySlot < numSlots && slots[keySlot]);
-
-    const char *key = ((StringObject *)slots[keySlot])->m_value;
-
     U_ASSERT(objectSlot < numSlots);
     U_ASSERT(valueSlot < numSlots);
+    U_ASSERT(keySlot < numSlots && slots[keySlot]);
 
+    Object *stringBase = root->lookup("string", nullptr);
+    StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
+    U_ASSERT(stringKey);
+
+    const char *key = stringKey->m_value;
     Object *object = slots[objectSlot];
+    if (!object) {
+        U_ASSERT(0 && "assignment to null object");
+    }
+
     object->setNormal(key, slots[valueSlot]);
 }
 
-static void vmAssignExisting(Object *context, AssignExistingInstr *instruction, Object **slots, size_t numSlots) {
+static void vmAssignExisting(Object *root, Object *context, AssignExistingInstr *instruction, Object **slots, size_t numSlots) {
     (void)context;
 
     Slot objectSlot = instruction->m_objectSlot;
     Slot valueSlot = instruction->m_valueSlot;
     Slot keySlot = instruction->m_keySlot;
-
-    U_ASSERT(keySlot < numSlots && slots[keySlot]);
-
-    const char *key = ((StringObject *)slots[keySlot])->m_value;
-
     U_ASSERT(objectSlot < numSlots);
     U_ASSERT(valueSlot < numSlots);
+    U_ASSERT(keySlot < numSlots && slots[keySlot]);
 
+    Object *stringBase = root->lookup("string", nullptr);
+    StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
+    U_ASSERT(stringKey);
+
+    const char *key = stringKey->m_value;
     Object *object = slots[objectSlot];
     object->setExisting(key, slots[valueSlot]);
 }
 
-static void vmAssignShadowing(Object *context, AssignShadowingInstr *instruction, Object **slots, size_t numSlots) {
-    (void)context;
-
+static void vmAssignShadowing(Object *root, Object *context, AssignShadowingInstr *instruction, Object **slots, size_t numSlots) {
     Slot objectSlot = instruction->m_objectSlot;
     Slot valueSlot = instruction->m_valueSlot;
     Slot keySlot = instruction->m_keySlot;
-
-    U_ASSERT(keySlot < numSlots && slots[keySlot]);
-
-    const char *key = ((StringObject *)slots[keySlot])->m_value;
-
     U_ASSERT(objectSlot < numSlots);
     U_ASSERT(valueSlot < numSlots);
+    U_ASSERT(keySlot < numSlots && slots[keySlot]);
 
+    Object *stringBase = root->lookup("string", nullptr);
+    StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
+    U_ASSERT(stringKey);
+
+    const char *key = stringKey->m_value;
     Object *object = slots[objectSlot];
     object->setShadowing(key, slots[valueSlot]);
 }
 
-static void vmAllocateObject(Object *context, AllocObjectInstr *instruction, Object **slots, size_t numSlots) {
+static void vmAllocateObject(Object *root, Object *context, AllocObjectInstr *instruction, Object **slots, size_t numSlots) {
     (void)context;
 
     Slot targetSlot = instruction->m_targetSlot;
@@ -115,10 +122,49 @@ static void vmAllocateObject(Object *context, AllocObjectInstr *instruction, Obj
     U_ASSERT(targetSlot < numSlots);
     U_ASSERT(parentSlot < numSlots);
 
-    slots[targetSlot] = Object::newObject(slots[parentSlot]);
+    Object *parentObject = slots[parentSlot];
+    if (parentObject) {
+        // TODO(daleweiler): diasslow inheriting
+    }
+    Object *object = Object::newObject(root, slots[parentSlot]);
+    slots[targetSlot] = object;
 }
 
-static void vmAllocateClosureObject(Object *context, AllocClosureObjectInstr *instruction, Object **slots, size_t numSlots) {
+static void vmAllocateIntObject(Object *root, Object *context, AllocIntObjectInstr *instruction, Object **slots, size_t numSlots) {
+    (void)root;
+
+    Slot target = instruction->m_targetSlot;
+    int value = instruction->m_value;
+
+    U_ASSERT(target < numSlots);
+
+    slots[target] = Object::newInt(context, value);
+}
+
+static void vmAllocateFloatObject(Object *root, Object *context, AllocFloatObjectInstr *instruction, Object **slots, size_t numSlots) {
+    (void)root;
+
+    Slot target = instruction->m_targetSlot;
+    float value = instruction->m_value;
+
+    U_ASSERT(target < numSlots);
+
+    slots[target] = Object::newFloat(context, value);
+}
+
+static void vmAllocateStringObject(Object *root, Object *context, AllocStringObjectInstr *instruction, Object **slots, size_t numSlots) {
+    (void)root;
+
+    Slot target = instruction->m_targetSlot;
+    const char *value = instruction->m_value;
+
+    U_ASSERT(target < numSlots);
+
+    slots[target] = Object::newString(context, value);
+}
+
+static void vmAllocateClosureObject(Object *root, Object *context, AllocClosureObjectInstr *instruction, Object **slots, size_t numSlots) {
+    (void)root;
     (void)context;
 
     Slot targetSlot = instruction->m_targetSlot;
@@ -130,34 +176,8 @@ static void vmAllocateClosureObject(Object *context, AllocClosureObjectInstr *in
     slots[targetSlot] = Object::newClosure(slots[contextSlot], instruction->m_function);
 }
 
-static void vmAllocateIntObject(Object *context, AllocIntObjectInstr *instruction, Object **slots, size_t numSlots) {
-    Slot target = instruction->m_targetSlot;
-    int value = instruction->m_value;
-
-    U_ASSERT(target < numSlots);
-
-    slots[target] = Object::newInt(context, value);
-}
-
-static void vmAllocateFloatObject(Object *context, AllocFloatObjectInstr *instruction, Object **slots, size_t numSlots) {
-    Slot target = instruction->m_targetSlot;
-    float value = instruction->m_value;
-
-    U_ASSERT(target < numSlots);
-
-    slots[target] = Object::newFloat(context, value);
-}
-
-static void vmAllocateStringObject(Object *context, AllocStringObjectInstr *instruction, Object **slots, size_t numSlots) {
-    Slot target = instruction->m_targetSlot;
-    const char *value = instruction->m_value;
-
-    U_ASSERT(target < numSlots);
-
-    slots[target] = Object::newString(context, value);
-}
-
-static void vmCloseObject(Object *context, CloseObjectInstr *instruction, Object **slots, size_t numSlots) {
+static void vmCloseObject(Object *root, Object *context, CloseObjectInstr *instruction, Object **slots, size_t numSlots) {
+    (void)root;
     (void)context;
 
     Slot slot = instruction->m_slot;
@@ -168,11 +188,11 @@ static void vmCloseObject(Object *context, CloseObjectInstr *instruction, Object
 }
 
 // Marshalls all argument data into slots of the functions locals
-static void vmCall(Object *context, CallInstr *instruction, Object **slots, size_t numSlots) {
+static void vmCall(Object *root, Object *context, CallInstr *instruction, Object **slots, size_t numSlots) {
     Slot targetSlot = instruction->m_targetSlot;
     Slot functionSlot = instruction->m_functionSlot;
     Slot thisSlot = instruction->m_thisSlot;
-    Slot argsLength = instruction->m_length;
+    size_t length = instruction->m_length;
 
     U_ASSERT(targetSlot < numSlots);
     U_ASSERT(functionSlot < numSlots);
@@ -180,37 +200,40 @@ static void vmCall(Object *context, CallInstr *instruction, Object **slots, size
 
     Object *thisObject = slots[thisSlot];
     Object *functionObject = slots[functionSlot];
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
 
     // validate function type
-    Object *functionBase = root->lookup("function", nullptr);
     Object *closureBase = root->lookup("closure", nullptr);
-    Object *functionType = functionObject->m_parent;
-    while (functionType->m_parent)
-        functionType = functionType->m_parent;
-    U_ASSERT(functionType == functionBase || functionType == closureBase);
+    Object *functionBase = root->lookup("function", nullptr);
+    FunctionObject *function = (FunctionObject *)Object::instanceOf(functionObject, functionBase);
+    ClosureObject *closure = (ClosureObject *)Object::instanceOf(functionObject, closureBase);
+    U_ASSERT(function || closure);
 
-    FunctionObject *function = (FunctionObject *)functionObject;
-
-    // form the argument array from slots
-    Object **args = (Object **)neoMalloc(sizeof *args * argsLength);
-    for (size_t i = 0; i < argsLength; i++) {
-        Slot argSlot = instruction->m_arguments[i];
-        U_ASSERT(argSlot < numSlots);
-        args[i] = slots[argSlot];
+    // form argument array from slots
+    u::vector<Object *> arguments(length);
+    for (size_t i = 0; i < length; i++) {
+        Slot argumentSlot = instruction->m_arguments[i];
+        U_ASSERT(argumentSlot < numSlots);
+        arguments[i] = slots[argumentSlot];
     }
 
-    slots[targetSlot] = function->m_function(context, thisObject, functionObject, args, argsLength);
-    neoFree(args);
+    Object *object;
+    if (closure)
+        object = closure->m_function(context, thisObject, functionObject, &arguments[0], arguments.size());
+    else
+        object = function->m_function(context, thisObject, functionObject, &arguments[0], arguments.size());
+    slots[targetSlot] = object;
 }
 
 Object *callFunction(Object *context, UserFunction *function, Object **args, size_t length) {
     // allocate slots for arguments and locals
     size_t numSlots = function->m_arity + function->m_slots;
+
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+
     Object **slots = allocate<Object *>(numSlots);
-    void *frameRoots = GC::addRoots(slots, numSlots);
+    void *frameRoots = GarbageCollector::addRoots(slots, numSlots);
 
     // ensure this call is valid
     U_ASSERT(length == function->m_arity);
@@ -221,7 +244,6 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
 
     // ensure this function has code
     U_ASSERT(function->m_body.m_length);
-
     InstrBlock *block = &function->m_body.m_blocks[0];
     size_t offset = 0;
     for (;;) {
@@ -232,43 +254,43 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
 
         switch (instr->m_type) {
         case Instr::kGetRoot:
-            vmGetRoot(context, (GetRootInstr *)instr, slots, numSlots);
+            vmGetRoot(root, context, (GetRootInstr *)instr, slots, numSlots);
             break;
         case Instr::kGetContext:
-            vmGetContext(context, (GetContextInstr *)instr, slots, numSlots);
+            vmGetContext(root, context, (GetContextInstr *)instr, slots, numSlots);
             break;
         case Instr::kAccess:
-            vmAccess(context, (AccessInstr *)instr, slots, numSlots);
+            vmAccess(root, context, (AccessInstr *)instr, slots, numSlots);
             break;
         case Instr::kAssignNormal:
-            vmAssignNormal(context, (AssignNormalInstr *)instr, slots, numSlots);
+            vmAssignNormal(root, context, (AssignNormalInstr *)instr, slots, numSlots);
             break;
         case Instr::kAssignExisting:
-            vmAssignExisting(context, (AssignExistingInstr *)instr, slots, numSlots);
+            vmAssignExisting(root, context, (AssignExistingInstr *)instr, slots, numSlots);
             break;
         case Instr::kAssignShadowing:
-            vmAssignShadowing(context, (AssignShadowingInstr *)instr, slots, numSlots);
+            vmAssignShadowing(root, context, (AssignShadowingInstr *)instr, slots, numSlots);
             break;
         case Instr::kAllocObject:
-            vmAllocateObject(context, (AllocObjectInstr *)instr, slots, numSlots);
+            vmAllocateObject(root, context, (AllocObjectInstr *)instr, slots, numSlots);
             break;
         case Instr::kAllocClosureObject:
-            vmAllocateClosureObject(context, (AllocClosureObjectInstr *)instr, slots, numSlots);
+            vmAllocateClosureObject(root, context, (AllocClosureObjectInstr *)instr, slots, numSlots);
             break;
         case Instr::kAllocIntObject:
-            vmAllocateIntObject(context, (AllocIntObjectInstr *)instr, slots, numSlots);
+            vmAllocateIntObject(root, context, (AllocIntObjectInstr *)instr, slots, numSlots);
             break;
         case Instr::kAllocFloatObject:
-            vmAllocateFloatObject(context, (AllocFloatObjectInstr *)instr, slots, numSlots);
+            vmAllocateFloatObject(root, context, (AllocFloatObjectInstr *)instr, slots, numSlots);
             break;
         case Instr::kAllocStringObject:
-            vmAllocateStringObject(context, (AllocStringObjectInstr *)instr, slots, numSlots);
+            vmAllocateStringObject(root, context, (AllocStringObjectInstr *)instr, slots, numSlots);
             break;
         case Instr::kCloseObject:
-            vmCloseObject(context, (CloseObjectInstr *)instr, slots, numSlots);
+            vmCloseObject(root, context, (CloseObjectInstr *)instr, slots, numSlots);
             break;
         case Instr::kCall:
-            vmCall(context, (CallInstr *)instr, slots, numSlots);
+            vmCall(root, context, (CallInstr *)instr, slots, numSlots);
             break;
 
         // The following instructions change the program counter
@@ -277,7 +299,7 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             Slot returnSlot = ret->m_returnSlot;
             U_ASSERT(returnSlot < numSlots);
             Object *result = slots[returnSlot];
-            GC::removeRoots(frameRoots);
+            GarbageCollector::delRoots(frameRoots);
             return result;
         } break;
 
@@ -298,10 +320,6 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             size_t falseBlock = testBranch->m_falseBlock;
             U_ASSERT(testSlot < numSlots);
             Object *testValue = slots[testSlot];
-
-            Object *root = context;
-            while (root->m_parent)
-                root = root->m_parent;
 
             bool test = false;
 
@@ -339,7 +357,7 @@ Object *functionHandler(Object *callingContext, Object *self, Object *function, 
 Object *methodHandler(Object *callingContext, Object *self, Object *function, Object **args, size_t length) {
     (void)callingContext;
     ClosureObject *closureObject = (ClosureObject *)function;
-    Object *context = Object::newObject(closureObject->m_context);
+    Object *context = Object::newObject(closureObject->m_context, closureObject->m_context);
     context->setNormal("this", self);
     return callFunction(context, &closureObject->m_userFunction, args, length);
 }
@@ -632,14 +650,18 @@ static Object *float_ge(Object *context, Object *self, Object *function, Object 
     return float_compare(context, self, function, arguments, length, kGe);
 }
 
-static Object *mark(Object *context, Object *self, Object *function, Object **args, size_t length) {
-    (void)context;
+static Object *mark(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
     (void)function;
-    (void)args;
+    (void)arguments;
     (void)length;
-    ClosureObject *closureObject = (ClosureObject *)self;
-    if (closureObject->m_context)
-        closureObject->m_context->mark();
+
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *closureBase = root->lookup("closure", nullptr);
+    ClosureObject *closureObject = (ClosureObject *)Object::instanceOf(self, closureBase);
+    if (closureObject)
+        Object::mark(context, closureObject->m_context);
     return nullptr;
 }
 
@@ -659,25 +681,21 @@ static Object *print(Object *context, Object *self, Object *function, Object **a
     for (size_t i = 0; i < length; i++) {
         Object *argument = arguments[i];
         Object *instance = nullptr;
-
         instance = Object::instanceOf(argument, intBase);
         if (instance) {
             u::Log::out("%d", ((IntObject *)instance)->m_value);
             continue;
         }
-
         instance = Object::instanceOf(argument, floatBase);
         if (instance) {
             u::Log::out("%f", ((FloatObject *)instance)->m_value);
             continue;
         }
-
         instance = Object::instanceOf(argument, stringBase);
         if (instance) {
             u::Log::out("%s", ((StringObject *)instance)->m_value);
             continue;
         }
-
         instance = Object::instanceOf(argument, boolBase);
         if (instance) {
             u::Log::out("%s", ((BooleanObject *)instance)->m_value ? "true" : "false");
@@ -689,33 +707,25 @@ static Object *print(Object *context, Object *self, Object *function, Object **a
 }
 
 Object *createRoot() {
-    Object *root = Object::newObject(nullptr);
+    Object *root = Object::newObject(nullptr, nullptr);
 
-    // pin the root when creating the root so the garbage collector doesn't
-    // delete our objects while initializing
-    void *pinned = GC::addRoots(&root, 1);
+    void *pinned = GarbageCollector::addRoots(&root, 1);
 
     // the null value
     root->setNormal("null", nullptr);
 
-    Object *functionObject = Object::newObject(nullptr);
+    Object *functionObject = Object::newObject(root, nullptr);
     root->setNormal("function", functionObject);
 
-    // "closure" is the prototype for all closures, which means it contains a mark
-    // function for the garbage collector. This means the prototype has to be a
-    // closure itself without a context or function
-    UserFunction closure;
-    Object *closureObject = Object::newClosure(root, &closure);
-    ((ClosureObject *)closureObject)->m_context = nullptr;
-    ((ClosureObject *)closureObject)->m_function = nullptr;
+    Object *closureObject = Object::newObject(root, nullptr);
     root->setNormal("closure", closureObject);
     closureObject->setNormal("mark", Object::newFunction(root, mark));
 
-    Object *boolObject = Object::newObject(nullptr);
+    Object *boolObject = Object::newObject(root, nullptr);
     root->setNormal("bool", boolObject);
     boolObject->setNormal("!", Object::newFunction(root, bool_not));
 
-    Object *intObject = Object::newObject(nullptr);
+    Object *intObject = Object::newObject(root, nullptr);
     intObject->m_flags &= ~Object::kClosed;
     root->setNormal("int", intObject);
     intObject->setNormal("+", Object::newFunction(root, int_add));
@@ -728,7 +738,7 @@ Object *createRoot() {
     intObject->setNormal("<=", Object::newFunction(root, int_le));
     intObject->setNormal(">=", Object::newFunction(root, int_ge));
 
-    Object *floatObject = Object::newObject(nullptr);
+    Object *floatObject = Object::newObject(root, nullptr);
     floatObject->m_flags &= ~Object::kClosed;
     root->setNormal("float", floatObject);
     floatObject->setNormal("+", Object::newFunction(root, float_add));
@@ -741,13 +751,13 @@ Object *createRoot() {
     floatObject->setNormal("<=", Object::newFunction(root, float_le));
     floatObject->setNormal(">=", Object::newFunction(root, float_ge));
 
-    Object *stringObject = Object::newObject(nullptr);
+    Object *stringObject = Object::newObject(root, nullptr);
     root->setNormal("string", stringObject);
     stringObject->setNormal("+", Object::newFunction(root, string_add));
 
     root->setNormal("print", Object::newFunction(root, print));
 
-    GC::removeRoots(pinned);
+    GarbageCollector::delRoots(pinned);
 
     return root;
 }
