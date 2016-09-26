@@ -87,6 +87,28 @@ test.test();
 let foo = new 5 { a = 7 };
 print(foo); // prints 5
 
+// operator overloads
+let Overload = {
+    a = 10,
+    b = 40
+};
+
+Overload["+"] = method(other) {
+    let value = {
+        a = this.a + other.a,
+        b = this.b + other.b
+    };
+    value["+"] = Overload["+"];
+    return value;
+};
+
+let A = new Overload;
+let B = new Overload;
+let C = A + B; // 10+10, 40+40 => (20, 80)
+let D = C + A; // 20+10, 80+40 => (30, 120)
+
+print("a = ", D.a, ", B = ", D.b);
+
 )";
 
 void test() {
