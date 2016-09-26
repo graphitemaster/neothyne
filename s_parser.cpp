@@ -7,6 +7,7 @@
 
 #include "u_new.h"
 #include "u_assert.h"
+#include "u_vector.h"
 
 namespace s {
 
@@ -256,6 +257,50 @@ bool Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Ref
     return true;
 }
 
+void Parser::parseArrayLiteral(char **contents, FunctionCodegen *generator, Slot objectSlot) {
+    u::vector<Reference> values;
+    while (!consumeString(contents, "]")) {
+        Reference value = parseExpression(contents, generator, 0);
+        if (generator)
+            values.push_back(value);
+        if (consumeString(contents, ","))
+            continue;
+        if (consumeString(contents, "]"))
+            break;
+        U_ASSERT(0 && "expected comma or closing square bracket");
+    }
+    if (generator) {
+        Slot keySlot1 = generator->addAllocStringObject(generator->m_scope, "resize");
+        Slot keySlot2 = generator->addAllocStringObject(generator->m_scope, "[]=");
+        Slot resizeFunction = Reference::access(generator, { objectSlot, keySlot1, Reference::kObject });
+        Slot assignFunction = Reference::access(generator, { objectSlot, keySlot2, Reference::kObject });
+        Slot resizeSlot = generator->addAllocIntObject(generator->m_scope, values.size());
+        objectSlot = generator->addCall(resizeFunction, objectSlot, resizeSlot);
+        for (size_t i = 0; i < values.size(); i++) {
+            Slot indexSlot = generator->addAllocIntObject(generator->m_scope, i);
+            generator->addCall(assignFunction, objectSlot, indexSlot, Reference::access(generator, values[i]));
+        }
+    }
+}
+
+bool Parser::parseArrayLiteral(char **contents, FunctionCodegen *generator, Reference *reference) {
+    char *text = *contents;
+    consumeFiller(&text);
+
+    if (!consumeString(&text, "["))
+        return false;
+
+    Slot objectSlot = 0;
+    if (generator)
+        objectSlot = generator->addAllocArrayObject(generator->m_scope);
+
+    *contents = text;
+    *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
+
+    parseArrayLiteral(contents, generator, objectSlot);
+    return true;
+}
+
 Parser::Reference Parser::parseExpressionStem(char **contents, FunctionCodegen *generator) {
     char *text = *contents;
     const char *identifier = parseIdentifier(&text);
@@ -302,6 +347,15 @@ Parser::Reference Parser::parseExpressionStem(char **contents, FunctionCodegen *
     {
         Reference value;
         if (parseObjectLiteral(&text, generator, &value)) {
+            *contents = text;
+            return value;
+        }
+    }
+
+    // array literal
+    {
+        Reference value;
+        if (parseArrayLiteral(&text, generator, &value)) {
             *contents = text;
             return value;
         }

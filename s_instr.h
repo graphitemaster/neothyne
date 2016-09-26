@@ -16,13 +16,14 @@ struct Instr {
 
     void dump(int level = 0);
 
-    //top,ctx,no,ni,nf,ns,nc,close,get,set,call,ret,br,tbr
+    //top,ctx,no,ni,nf,na,ns,nc,close,get,set,call,ret,br,tbr
     enum {
         kGetRoot,
         kGetContext,
         kAllocObject,
         kAllocIntObject,
         kAllocFloatObject,
+        kAllocArrayObject,
         kAllocStringObject,
         kAllocClosureObject,
         kCloseObject,
@@ -58,6 +59,10 @@ struct AllocIntObjectInstr : Instr {
 struct AllocFloatObjectInstr : Instr {
     Slot m_targetSlot;
     float m_value;
+};
+
+struct AllocArrayObjectInstr : Instr {
+    Slot m_targetSlot;
 };
 
 struct AllocStringObjectInstr : Instr {

@@ -42,7 +42,8 @@ struct Object {
     static Object *newInt(Object *context, int value);
     static Object *newFloat(Object *context, float value);
     static Object *newBoolean(Object *context, bool value);
-    static Object *newString(Object *content,const char *value);
+    static Object *newString(Object *content, const char *value);
+    static Object *newArray(Object *context, Object **contents, size_t length);
     static Object *newFunction(Object *context, FunctionPointer function);
     static Object *newClosure(Object *context, UserFunction *function);
 
@@ -96,6 +97,13 @@ struct FloatObject : Object {
 
 struct StringObject : Object {
     char *m_value;
+};
+
+struct ArrayObject : Object {
+    Object **m_contents;
+    // Note: this would normally be size_t if this were not representing the
+    //       size for the scripting language which only has signed integers
+    int m_length;
 };
 
 }

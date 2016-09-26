@@ -109,6 +109,22 @@ let D = C + A; // 20+10, 80+40 => (30, 120)
 
 print("a = ", D.a, ", B = ", D.b);
 
+// arrays
+let e = [ 2, 3, 4 ];
+e[1] = 7;
+let v = e.push(5).pop();
+print(v); // prints 5
+
+let nested = [
+  { a = [ 1, 2, 3 ] },
+  "hi",
+  [ 1, 2, 3 ]
+];
+
+print(nested[0].a[0]); // 1
+print(nested[1]);      // hi
+print(nested[2][1]);   // 2
+
 )";
 
 void test() {

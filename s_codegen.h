@@ -23,6 +23,7 @@ struct FunctionCodegen {
     Slot addAllocObject(Slot parent);
     Slot addAllocIntObject(Slot contextSlot, int value);
     Slot addAllocFloatObject(Slot contextSlot, float value);
+    Slot addAllocArrayObject(Slot contextSlot);
     Slot addAllocStringObject(Slot contextSlot, const char *value);
 
     Slot addCall(Slot function, Slot thisSlot, Slot *arguments, size_t length);

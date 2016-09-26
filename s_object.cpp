@@ -232,6 +232,19 @@ Object *Object::newString(Object *context, const char *value) {
     return (Object *)object;
 }
 
+Object *Object::newArray(Object *context, Object **contents, size_t length) {
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *arrayBase = root->lookup("array", nullptr);
+    auto *object = (ArrayObject *)alloc(context, sizeof(ArrayObject));
+    object->m_parent = arrayBase;
+    object->m_contents = contents;
+    object->m_length = length;
+    ((Object *)object)->setNormal("length", newInt(context, length));
+    return (Object *)object;
+}
+
 Object *Object::newFunction(Object *context, FunctionPointer function) {
     Object *root = context;
     while (root->m_parent)

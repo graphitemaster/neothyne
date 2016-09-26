@@ -69,6 +69,10 @@ void Instr::dump(int level) {
             ((AllocFloatObjectInstr *)this)->m_targetSlot,
             ((AllocFloatObjectInstr *)this)->m_value);
         break;
+    case kAllocArrayObject:
+        output(level, "na %zu\n",
+            ((AllocArrayObjectInstr *)this)->m_targetSlot);
+        break;
     case kAllocStringObject:
         output(level, "ns %zu (\"%s\")\n",
             ((AllocStringObjectInstr *)this)->m_targetSlot,

@@ -28,26 +28,42 @@ static void vmGetContext(Object *root, Object *context, GetContextInstr *instruc
 
 static void vmAccess(Object *root, Object *context, AccessInstr *instruction, Object **slots, size_t numSlots) {
     (void)context;
-
     Slot targetSlot = instruction->m_targetSlot;
     Slot objectSlot = instruction->m_objectSlot;
-    Slot keySlot = instruction->m_keySlot;
-
-    U_ASSERT(keySlot < numSlots && slots[keySlot]);
-
-    Object *stringBase = root->lookup("string", nullptr);
-    StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
-    U_ASSERT(stringKey);
-
-    const char *key = stringKey->m_value;
 
     U_ASSERT(objectSlot < numSlots);
     Object *object = slots[objectSlot];
 
-    bool objectFound;
-    Object *value = object->lookup(key, &objectFound);
+    Slot keySlot = instruction->m_keySlot;
+    U_ASSERT(keySlot < numSlots && slots[keySlot]);
+    Object *stringBase = root->lookup("string", nullptr);
+    Object *keyObject = slots[keySlot];
+    U_ASSERT(keyObject);
+    StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
+    bool objectFound = false;
+    Object *value = nullptr;
+    if (stringKey) {
+        const char *key = stringKey->m_value;
+        value = object->lookup(key, &objectFound);
+    }
     if (!objectFound) {
-        U_ASSERT(0 && "identifier not found");
+        Object *index = object->lookup("[]", nullptr);
+        if (index) {
+            Object *functionBase = root->lookup("function", nullptr);
+            Object *closureBase = root->lookup("closure", nullptr);
+            FunctionObject *function = (FunctionObject *)Object::instanceOf(index, functionBase);
+            ClosureObject *closure = (ClosureObject *)Object::instanceOf(index, closureBase);
+            U_ASSERT(function || closure);
+            if (function)
+                value = function->m_function(context, object, index, &keyObject, 1);
+            else
+                value = closure->m_function(context, object, index, &keyObject, 1);
+            if (value)
+                objectFound = true;
+        }
+    }
+    if (!objectFound) {
+        U_ASSERT(0 && "property not found");
     }
 
     U_ASSERT(targetSlot < numSlots);
@@ -65,11 +81,29 @@ static void vmAssign(Object *root, Object *context, AssignInstr *instruction, Ob
     U_ASSERT(keySlot < numSlots && slots[keySlot]);
 
     Object *stringBase = root->lookup("string", nullptr);
-    StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
-    U_ASSERT(stringKey);
+    Object *keyObject = slots[keySlot];
+    Object *object = slots[objectSlot];
+    StringObject *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
+
+    if (!stringKey) {
+        Object *index = object->lookup("[]=", nullptr);
+        if (index) {
+            Object *functionBase = root->lookup("function", nullptr);
+            Object *closureBase = root->lookup("closure", nullptr);
+            FunctionObject *function = (FunctionObject *)Object::instanceOf(index, functionBase);
+            ClosureObject *closure = (ClosureObject *)Object::instanceOf(index, closureBase);
+            U_ASSERT(function || closure);
+            Object *arguments[] = { keyObject, slots[valueSlot] };
+            if (function)
+                function->m_function(context, object, index, arguments, 2);
+            else
+                closure->m_function(context, object, index, arguments, 2);
+            return;
+        }
+        U_ASSERT(0 && "internal error");
+    }
 
     const char *key = stringKey->m_value;
-    Object *object = slots[objectSlot];
 
     switch (instruction->m_assignType) {
     case AssignType::kPlain:
@@ -122,6 +156,16 @@ static void vmAllocateFloatObject(Object *root, Object *context, AllocFloatObjec
     U_ASSERT(target < numSlots);
 
     slots[target] = Object::newFloat(context, value);
+}
+
+static void vmAllocateArrayObject(Object *root, Object *context, AllocArrayObjectInstr *instruction, Object **slots, size_t numSlots) {
+    (void)root;
+
+    Slot target = instruction->m_targetSlot;
+
+    U_ASSERT(target < numSlots);
+
+    slots[target] = Object::newArray(context, nullptr, 0);
 }
 
 static void vmAllocateStringObject(Object *root, Object *context, AllocStringObjectInstr *instruction, Object **slots, size_t numSlots) {
@@ -248,6 +292,9 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             break;
         case Instr::kAllocFloatObject:
             vmAllocateFloatObject(root, context, (AllocFloatObjectInstr *)instr, slots, numSlots);
+            break;
+        case Instr::kAllocArrayObject:
+            vmAllocateArrayObject(root, context, (AllocArrayObjectInstr *)instr, slots, numSlots);
             break;
         case Instr::kAllocStringObject:
             vmAllocateStringObject(root, context, (AllocStringObjectInstr *)instr, slots, numSlots);
@@ -616,10 +663,12 @@ static Object *float_ge(Object *context, Object *self, Object *function, Object 
     return float_compare(context, self, function, arguments, length, kGe);
 }
 
-static Object *mark(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
+// [Closure]
+static Object *closure_mark(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
     (void)function;
     (void)arguments;
-    (void)length;
+
+    U_ASSERT(length == 0);
 
     Object *root = context;
     while (root->m_parent)
@@ -628,6 +677,114 @@ static Object *mark(Object *context, Object *self, Object *function, Object **ar
     ClosureObject *closureObject = (ClosureObject *)Object::instanceOf(self, closureBase);
     if (closureObject)
         Object::mark(context, closureObject->m_context);
+    return nullptr;
+}
+
+// [Array]
+static Object *array_mark(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
+    (void)function;
+    (void)arguments;
+
+    U_ASSERT(length == 0);
+
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *arrayBase = root->lookup("array", nullptr);
+    ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
+    if (arrayObject) {
+        for (int i = 0; i < arrayObject->m_length; i++)
+            Object::mark(context, arrayObject->m_contents[i]);
+    }
+    return nullptr;
+}
+
+static Object *array_resize(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
+    (void)function;
+    U_ASSERT(length == 1);
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *intBase = root->lookup("int", nullptr);
+    Object *arrayBase = root->lookup("array", nullptr);
+    ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
+    IntObject *resizeArgument = (IntObject *)Object::instanceOf(arguments[0], intBase);
+    U_ASSERT(arrayObject);
+    U_ASSERT(resizeArgument);
+    int newSize = resizeArgument->m_value;
+    U_ASSERT(newSize >= 0);
+    arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * newSize);
+    arrayObject->m_length = newSize;
+    self->setNormal("length", Object::newInt(context, newSize));
+    return self;
+}
+
+static Object *array_push(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
+    (void)function;
+    U_ASSERT(length == 1);
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *arrayBase = root->lookup("array", nullptr);
+    ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
+    U_ASSERT(arrayObject);
+    Object *value = arguments[0];
+    arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * ++arrayObject->m_length);
+    arrayObject->m_contents[arrayObject->m_length - 1] = value;
+    self->setNormal("length", Object::newInt(context, arrayObject->m_length));
+    return self;
+}
+
+static Object *array_pop(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
+    (void)function;
+    (void)arguments;
+    U_ASSERT(length == 0);
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *arrayBase = root->lookup("array", nullptr);
+    ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
+    U_ASSERT(arrayObject);
+    Object *result = arrayObject->m_contents[arrayObject->m_length - 1];
+    arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * --arrayObject->m_length);
+    self->setNormal("length", Object::newInt(context, arrayObject->m_length));
+    return result;
+}
+
+static Object *array_index(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
+    (void)function;
+    U_ASSERT(length == 1);
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *intBase = root->lookup("int", nullptr);
+    Object *arrayBase = root->lookup("array", nullptr);
+    ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
+    IntObject *indexArgument = (IntObject *)Object::instanceOf(arguments[0], intBase);
+    if (!indexArgument)
+        return nullptr;
+    U_ASSERT(arrayObject);
+    int index = indexArgument->m_value;
+    U_ASSERT(index >= 0 && index < arrayObject->m_length);
+    return arrayObject->m_contents[index];
+}
+
+static Object *array_index_assign(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
+    (void)function;
+    U_ASSERT(length == 2);
+    Object *root = context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *intBase = root->lookup("int", nullptr);
+    Object *arrayBase = root->lookup("array", nullptr);
+    ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
+    IntObject *indexArgument = (IntObject *)Object::instanceOf(arguments[0], intBase);
+    U_ASSERT(arrayObject);
+    U_ASSERT(indexArgument);
+    int index = indexArgument->m_value;
+    U_ASSERT(index >= 0 && index < arrayObject->m_length);
+    Object *value = arguments[1];
+    arrayObject->m_contents[index] = value;
     return nullptr;
 }
 
@@ -685,7 +842,7 @@ Object *createRoot() {
 
     Object *closureObject = Object::newObject(root, nullptr);
     root->setNormal("closure", closureObject);
-    closureObject->setNormal("mark", Object::newFunction(root, mark));
+    closureObject->setNormal("mark", Object::newFunction(root, closure_mark));
 
     Object *boolObject = Object::newObject(root, nullptr);
     root->setNormal("bool", boolObject);
@@ -720,6 +877,15 @@ Object *createRoot() {
     Object *stringObject = Object::newObject(root, nullptr);
     root->setNormal("string", stringObject);
     stringObject->setNormal("+", Object::newFunction(root, string_add));
+
+    Object *arrayObject = Object::newObject(root, nullptr);
+    root->setNormal("array", arrayObject);
+    arrayObject->setNormal("mark", Object::newFunction(root, array_mark));
+    arrayObject->setNormal("resize", Object::newFunction(root, array_resize));
+    arrayObject->setNormal("push", Object::newFunction(root, array_push));
+    arrayObject->setNormal("pop", Object::newFunction(root, array_pop));
+    arrayObject->setNormal("[]", Object::newFunction(root, array_index));
+    arrayObject->setNormal("[]=", Object::newFunction(root, array_index_assign));
 
     root->setNormal("print", Object::newFunction(root, print));
 

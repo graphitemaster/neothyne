@@ -49,6 +49,8 @@ struct Parser {
     static bool parseCall(char **contents, FunctionCodegen *generator, Reference *expression);
     static bool parseObjectLiteral(char **contents, FunctionCodegen *generator, Reference *reference);
     static void parseObjectLiteral(char **contents, FunctionCodegen *generator, Slot objectSlot);
+    static void parseArrayLiteral(char **contents, FunctionCodegen *generator, Slot objectSlot);
+    static bool parseArrayLiteral(char **contents, FunctionCodegen *generator, Reference *reference);
     static bool parsePropertyAccess(char **contents, FunctionCodegen *generator, Reference *expression);
     static bool parseArrayAccess(char **contents, FunctionCodegen *generator, Reference *expression);
 
