@@ -3,20 +3,32 @@
 ## Types and Values
 Neo is a *dynamically typed* language that borrows heavily from Javascript and Lua.
 
-All values in Neo are *first-class value*. This means that all values can be stored in variables,
+All values in Neo are *first-class values*. This means that all values can be stored in variables,
 passed as arguments to other functions and returned as results.
 
-There are nine types in Neo: `null`, `bool`, `int`, `float`, `array`, `object`, `string`, `function`, `method`.
-The type `null` has a single value, `null`, who's only propery is to be different from any other value. It's useful to represent the absense of a value.
-The type `bool` has two values, `true` and `false`. Both `null` and `false` make a condition false; any other value makes it true.
-The type `int` represents signed integer numbers.
-The type `float` represents real (floating-point) numbers.
-The type `array` represents a *hetrogeneous* array.
+There are nine types in Neo: `null`, `bool`, `int`, `float`, `array`, `object`, `string`,
+`function`, `method`.
+
+The type `null` has a single value, `null`, who's only propery is to be different from any other value. It's useful when representing the absense of a value and works exactly like Lua's `nil` type.
+
+The type `bool` has two values, `true` and `false`. Both `null` and `false` make a condition false; any other value makes it true. This means values like `0` and empty string `""` also evaluate true.
+
+The type `int` represents a *signed* integer numbers in the range of `[-2,147,483,648, 2,147,483,647]`.
+Numbers outside that range *cannot* be represented.
+
+The type `float` represents real (floating-point) number the range of `[1.175494e-38, 3.402823e+38]`.
+
+The type `array` represents a *hetrogeneous* array. Hetrogeneous means it can store anything, even other
+arrays.
+
 The type `object` represents a *hetrogeneous* associative array. Objects are the sole data-structure
 mechanism in Neo; they can be used to represent symbol tables, sets, records, graphs, trees, etc. Neo
 uses the field name as an index. This is provided by `a.name` being syntatic sugar for `a["name"]`.
-The type `string` represents immutable sequence of bytes.
+
+The type `string` represents immutable sequence of bytes. Strings in Neo are 8-bit clean.
+
 The type `function` represents a function.
+
 The type `method` represents a special function with an encapsulating `this` local parameter for
 objects similar to C++ classes.
 
@@ -47,12 +59,12 @@ The following keywords are reserved and cannot be used as identifiers
 let new if else while fn method
 ```
 
-Neo is *case-sensitive* all of the following are unique identifiers:
+Neo is *case-sensitive*, all of the following are unique identifiers:
 ```
 foo FOO Foo
 ```
 
-The following is a list of recognized tokens
+The following is a list of recognized tokens:
 ```
 + - * / // /* */ ! == != = < !< > !> <= !<= >= !>= ( ) { } [ ] , ; "
 ```
@@ -67,8 +79,7 @@ Variables are places that store values. There are two kinds of variables in Neo;
 object fields. A single name denotes a local variable or a function's formal parameter, which is a
 particular kind of local variable.
 
-Local variables are *lexically scoped*: can be freely accesses by functions or methods defined inside
-their scope.
+Local variables are *lexically scoped*, which means they can be freely accessed by functions or methods defined inside their scope.
 
 Before the first assignment to a variable, its value is `null`. Unlike Lua, variables cannot be assigned to unless they've been created. Creating variables is done with the `let` keyword.
 ```
@@ -81,7 +92,10 @@ Square brackes can be used to index an array or an object.
 array[index]; // array indexing
 object["field"]; // object indexing
 ```
-
+The dot `.` can be used to index an object
+```
+object.field
+```
 The syntax `variable.name` is just syntatic sugar for `variable["name"]`
 
 ## Statements
@@ -114,14 +128,26 @@ reset the "active scope" at the end. This, unlike Lua or Javascript allows us to
 scope immediately after the variable declaration, allowing later optimization.
 
 ### Assignment
-The assignment statement first evaluates all its expressions and only then the assignments
-are performed.
+The assignment statement first evaluates all its expressions and only then the assignment
+is performed. All expressions are evaluated left to right. This is in contrast to Javascript
+and many other languages that leave this up to *sequence points* and in some cases undefined.
+
+### Classes
+Neo supports classes through the Javascript method of prototype-chains. The `new` keyword can be
+used to construct a new instance of an Object and also subclass an existing object.
+```
+let a = { a = 1 };
+let b = new a { b = 2 }; // subclassing: b.a = 1 and b.b = 2
+let c = new b;           // constructs a new instance of b
+b.b = 10;                // does not change c.b since c is a new instance of b
+```
+Neo **does not** support multiple inheritance.
 
 ### Control Structures
 The control structures `if` and `while` and `return` have the usual meaning and familiar syntax.
 The condition expression of a control structure can return any value. Both `false` and `null` are
-considered false. All values different from `false` and `null` are considered `true`. This means
-the number 0 and empty string are also `true`.
+considered false. All values different from `false` and `null` are considered true. This means
+the number `0` and empty string `""` are also `true`.
 
 The `return` statement can be written anywhere in a block. In contrast to Lua which only allows
 it as the last statement of a block.
@@ -134,7 +160,7 @@ Neo supports the following arithmetic operators:
 *  `/` division
 
 ### Coercions and Conversions
-Neo provides some automatic conversions between some types and representations ar runtime.
+Neo provides some automatic conversions between some types and representations at runtime.
 
 Arithmetic operations applied to mixed types (integers and floats) convert the integer to a float; this is
 the usual conversion rule.
@@ -161,10 +187,29 @@ print(a); // will search the prototype chain and find 5 for a and print 5
 * `>=` greater than or equal to
 * `!>=` not greater than or equal to
 
+Note: The *not* variants are treated as a negation on the typical relational operator.
+```
+a != b   // sugar for !(a == b)
+a !< b   // sugar for !(a < b)
+a !> b   // sugar for !(a > b)
+a !<= b  // sugar for !(a <= b)
+a !>= b  // sugar for !(a >= b)
+```
 These operators always result in `true` or `false`.
 
 ### Concatenation
 The arithmetic `+` operator is used for string concatenation.
+
+## Integer and Floating literals
+When working with numeric values, literals that do not have a decimal point somewhere are treated
+as `int`, otherwise it's treated as a `float`. Numeric literals may also begin with `0x` and contain
+`[0-9a-Z]` to represent a *hexadecimal* (base 16) value.
+```
+1; // int
+1.; // float
+.1; // float
+0x12; // int
+```
 
 ### Object literals
 Object literals are expressions that create objects. Evertime an object literal is evaluated, a new
@@ -204,11 +249,20 @@ obj.foo = fn(this, /*arguments*/) { /* body */ }
 ```
 
 ### Function and Method calls
-Function calls are farily straight forward and work similarly to Javascript. There is no
-omitting or silently filling of a function's formal prameters like in Lua.
+Function calls are farily straight forward and work similarly to Javascript. Unlike Lua, Neo **does not**
+attempt to make function calls with incorrect *arity*; eg. if the function is declared to take
+five parameters then the function **must** be called with five arguments.
+```
+fn foo(a, b, c) { /*...*/ }
+foo(1, 2., "hi"); // allowed
+foo(); // not allowed
+foo(1, 2, 3, 4); // not allowed
+```
 
 Calls to methods implicitly pass the object as the first argument in the function.
 
 ### Visibility
 Neo is a lexically scoped language. The scope of a local variable begins at the first statement
-after it's declaration and lasts until lexically we're no longer in that scope.
+after it's declaration and lasts until lexically we're no longer in that scope. Because of lexical
+scoping rules, local variables can be freely accessed by functions defined inside their scope.
+A local variable used by an inner function is an *external local variable*, inside the inner function.
