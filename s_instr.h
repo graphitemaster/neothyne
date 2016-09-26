@@ -27,9 +27,7 @@ struct Instr {
         kAllocClosureObject,
         kCloseObject,
         kAccess,
-        kAssignNormal,
-        kAssignExisting,
-        kAssignShadowing,
+        kAssign,
         kCall,
         kReturn,
         kBranch,
@@ -83,22 +81,18 @@ struct AccessInstr : Instr {
     Slot m_keySlot;
 };
 
-struct AssignNormalInstr : Instr {
-    Slot m_objectSlot;
-    Slot m_valueSlot;
-    Slot m_keySlot;
+enum class AssignType {
+    kPlain,
+    kExisting,
+    kShadowing
 };
 
-struct AssignExistingInstr : Instr {
+struct AssignInstr : Instr {
     Slot m_objectSlot;
     Slot m_valueSlot;
     Slot m_keySlot;
-};
-
-struct AssignShadowingInstr : Instr {
-    Slot m_objectSlot;
-    Slot m_valueSlot;
-    Slot m_keySlot;
+    AssignType m_assignType;
+    static const char *asString(AssignInstr *instr);
 };
 
 struct CallInstr : Instr {

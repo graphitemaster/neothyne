@@ -42,30 +42,13 @@ Slot FunctionCodegen::addAccess(Slot objectSlot, Slot keySlot) {
     return instruction->m_targetSlot;
 }
 
-void FunctionCodegen::addAssignNormal(Slot object, Slot keySlot, Slot slot) {
-    auto *instruction = allocate<AssignNormalInstr>();
-    instruction->m_type = Instr::kAssignNormal;
+void FunctionCodegen::addAssign(Slot object, Slot keySlot, Slot slot, AssignType type) {
+    auto *instruction = allocate<AssignInstr>();
+    instruction->m_type = Instr::kAssign;
     instruction->m_objectSlot = object;
     instruction->m_valueSlot = slot;
     instruction->m_keySlot = keySlot;
-    addInstr((Instr *)instruction);
-}
-
-void FunctionCodegen::addAssignExisting(Slot object, Slot keySlot, Slot slot) {
-    auto *instruction = allocate<AssignExistingInstr>();
-    instruction->m_type = Instr::kAssignExisting;
-    instruction->m_objectSlot = object;
-    instruction->m_valueSlot = slot;
-    instruction->m_keySlot = keySlot;
-    addInstr((Instr *)instruction);
-}
-
-void FunctionCodegen::addAssignShadowing(Slot object, Slot keySlot, Slot slot) {
-    auto *instruction = allocate<AssignShadowingInstr>();
-    instruction->m_type = Instr::kAssignShadowing;
-    instruction->m_objectSlot = object;
-    instruction->m_valueSlot = slot;
-    instruction->m_keySlot = keySlot;
+    instruction->m_assignType = type;
     addInstr((Instr *)instruction);
 }
 

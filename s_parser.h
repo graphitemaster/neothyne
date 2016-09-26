@@ -26,7 +26,7 @@ struct Parser {
 
         static Reference getScope(FunctionCodegen *generator, const char *name);
         static Slot access(FunctionCodegen *generator, Reference reference);
-        static void assignNormal(FunctionCodegen *generator, Reference reference, Slot value);
+        static void assignPlain(FunctionCodegen *generator, Reference reference, Slot value);
         static void assignExisting(FunctionCodegen *generator, Reference reference, Slot value);
         static void assignShadowing(FunctionCodegen *generator, Reference reference, Slot value);
 

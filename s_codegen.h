@@ -14,10 +14,7 @@ struct FunctionCodegen {
     void addInstr(Instr *instr);
 
     Slot addAccess(Slot objectSlot, Slot keySlot);
-
-    void addAssignNormal(Slot objectSlot, Slot keySlot, Slot slot);
-    void addAssignExisting(Slot object, Slot keySlot, Slot slot);
-    void addAssignShadowing(Slot object, Slot keySlot, Slot slot);
+    void addAssign(Slot objectSlot, Slot keySlot, Slot slot, AssignType type);
 
     void addCloseObject(Slot object);
 

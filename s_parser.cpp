@@ -189,19 +189,19 @@ Slot Parser::Reference::access(FunctionCodegen *generator, Reference reference) 
     return 0;
 }
 
-void Parser::Reference::assignNormal(FunctionCodegen *generator, Reference reference, Slot value) {
+void Parser::Reference::assignPlain(FunctionCodegen *generator, Reference reference, Slot value) {
     U_ASSERT(reference.m_key != NoSlot);
-    generator->addAssignNormal(reference.m_base, reference.m_key, value);
+    generator->addAssign(reference.m_base, reference.m_key, value, AssignType::kPlain);
 }
 
 void Parser::Reference::assignExisting(FunctionCodegen *generator, Reference reference, Slot value) {
     U_ASSERT(reference.m_key != NoSlot);
-    generator->addAssignExisting(reference.m_base, reference.m_key, value);
+    generator->addAssign(reference.m_base, reference.m_key, value, AssignType::kExisting);
 }
 
 void Parser::Reference::assignShadowing(FunctionCodegen *generator, Reference reference, Slot value) {
     U_ASSERT(reference.m_key != NoSlot);
-    generator->addAssignShadowing(reference.m_base, reference.m_key, value);
+    generator->addAssign(reference.m_base, reference.m_key, value, AssignType::kShadowing);
 }
 
 Parser::Reference Parser::Reference::getScope(FunctionCodegen *generator, const char *name) {
@@ -225,7 +225,7 @@ void Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Slo
         if (generator) {
             Slot keySlot = generator->addAllocStringObject(generator->m_scope, keyName);
             Slot valueSlot = Reference::access(generator, value);
-            generator->addAssignNormal(objectSlot, keySlot, valueSlot);
+            generator->addAssign(objectSlot, keySlot, valueSlot, AssignType::kPlain);
         }
 
         if (consumeString(contents, ","))
@@ -646,7 +646,7 @@ void Parser::parseLetDeclaration(char **contents, FunctionCodegen *generator) {
         value = Reference::access(generator, parseExpression(contents, generator, 0));
     }
 
-    generator->addAssignNormal(generator->m_scope, variableNameSlot, value);
+    generator->addAssign(generator->m_scope, variableNameSlot, value, AssignType::kPlain);
     generator->addCloseObject(generator->m_scope);
 
     // let a, b
@@ -666,7 +666,7 @@ void Parser::parseFunctionDeclaration(char **contents, FunctionCodegen *generato
     UserFunction *function = parseFunctionExpression(contents);
     Slot nameSlot = generator->addAllocStringObject(generator->m_scope, function->m_name);
     Slot slot = generator->addAllocClosureObject(generator->m_scope, function);
-    generator->addAssignNormal(generator->m_scope, nameSlot, slot);
+    generator->addAssign(generator->m_scope, nameSlot, slot, AssignType::kPlain);
     generator->addCloseObject(generator->m_scope);
 }
 
@@ -718,7 +718,7 @@ void Parser::parseStatement(char **contents, FunctionCodegen *generator) {
             Reference::assignShadowing(generator, target, value);
             break;
         case Reference::kIndex:
-            Reference::assignNormal(generator, target, value);
+            Reference::assignPlain(generator, target, value);
             break;
         default:
             U_ASSERT(0 && "internal compiler error");
@@ -794,7 +794,7 @@ UserFunction *Parser::parseFunctionExpression(char **contents) {
     generator->m_scope = generator->addAllocObject(contextSlot);
     for (size_t i = 0; i < length; i++) {
         Slot argumentSlot = generator->addAllocStringObject(generator->m_scope, arguments[i]);
-        generator->addAssignNormal(generator->m_scope, argumentSlot, i);
+        generator->addAssign(generator->m_scope, argumentSlot, i, AssignType::kPlain);
     }
     generator->addCloseObject(generator->m_scope);
 

@@ -54,7 +54,7 @@ static void vmAccess(Object *root, Object *context, AccessInstr *instruction, Ob
     slots[targetSlot] = value;
 }
 
-static void vmAssignNormal(Object *root, Object *context, AssignNormalInstr *instruction, Object **slots, size_t numSlots) {
+static void vmAssign(Object *root, Object *context, AssignInstr *instruction, Object **slots, size_t numSlots) {
     (void)context;
 
     Slot objectSlot = instruction->m_objectSlot;
@@ -70,47 +70,19 @@ static void vmAssignNormal(Object *root, Object *context, AssignNormalInstr *ins
 
     const char *key = stringKey->m_value;
     Object *object = slots[objectSlot];
-    if (!object) {
-        U_ASSERT(0 && "assignment to null object");
+
+    switch (instruction->m_assignType) {
+    case AssignType::kPlain:
+        if (object)
+            object->setNormal(key, slots[valueSlot]);
+        else U_ASSERT(0 && "assignment to null object");
+        break;
+    case AssignType::kExisting:
+        object->setExisting(key, slots[valueSlot]);
+        break;
+    case AssignType::kShadowing:
+        object->setShadowing(key, slots[valueSlot]);
     }
-
-    object->setNormal(key, slots[valueSlot]);
-}
-
-static void vmAssignExisting(Object *root, Object *context, AssignExistingInstr *instruction, Object **slots, size_t numSlots) {
-    (void)context;
-
-    Slot objectSlot = instruction->m_objectSlot;
-    Slot valueSlot = instruction->m_valueSlot;
-    Slot keySlot = instruction->m_keySlot;
-    U_ASSERT(objectSlot < numSlots);
-    U_ASSERT(valueSlot < numSlots);
-    U_ASSERT(keySlot < numSlots && slots[keySlot]);
-
-    Object *stringBase = root->lookup("string", nullptr);
-    StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
-    U_ASSERT(stringKey);
-
-    const char *key = stringKey->m_value;
-    Object *object = slots[objectSlot];
-    object->setExisting(key, slots[valueSlot]);
-}
-
-static void vmAssignShadowing(Object *root, Object *context, AssignShadowingInstr *instruction, Object **slots, size_t numSlots) {
-    Slot objectSlot = instruction->m_objectSlot;
-    Slot valueSlot = instruction->m_valueSlot;
-    Slot keySlot = instruction->m_keySlot;
-    U_ASSERT(objectSlot < numSlots);
-    U_ASSERT(valueSlot < numSlots);
-    U_ASSERT(keySlot < numSlots && slots[keySlot]);
-
-    Object *stringBase = root->lookup("string", nullptr);
-    StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
-    U_ASSERT(stringKey);
-
-    const char *key = stringKey->m_value;
-    Object *object = slots[objectSlot];
-    object->setShadowing(key, slots[valueSlot]);
 }
 
 static void vmAllocateObject(Object *root, Object *context, AllocObjectInstr *instruction, Object **slots, size_t numSlots) {
@@ -262,14 +234,8 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
         case Instr::kAccess:
             vmAccess(root, context, (AccessInstr *)instr, slots, numSlots);
             break;
-        case Instr::kAssignNormal:
-            vmAssignNormal(root, context, (AssignNormalInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kAssignExisting:
-            vmAssignExisting(root, context, (AssignExistingInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kAssignShadowing:
-            vmAssignShadowing(root, context, (AssignShadowingInstr *)instr, slots, numSlots);
+        case Instr::kAssign:
+            vmAssign(root, context, (AssignInstr *)instr, slots, numSlots);
             break;
         case Instr::kAllocObject:
             vmAllocateObject(root, context, (AllocObjectInstr *)instr, slots, numSlots);

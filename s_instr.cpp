@@ -10,6 +10,15 @@ Instr::Instr(int type)
 {
 }
 
+const char *AssignInstr::asString(AssignInstr *instr) {
+    switch (instr->m_assignType) {
+    case AssignType::kPlain:     return "plain";
+    case AssignType::kExisting:  return "existing";
+    case AssignType::kShadowing: return "shadowing";
+    }
+    U_UNREACHABLE();
+}
+
 static inline void output(int level, const char *format, ...) {
     va_list va;
     va_start(va, format);
@@ -80,23 +89,12 @@ void Instr::dump(int level) {
             ((AccessInstr *)this)->m_objectSlot,
             ((AccessInstr *)this)->m_keySlot);
         break;
-    case kAssignNormal:
-        output(level, "setn %zu . %zu (%zu)\n",
-            ((AssignNormalInstr *)this)->m_objectSlot,
-            ((AssignNormalInstr *)this)->m_keySlot,
-            ((AssignNormalInstr *)this)->m_valueSlot);
-        break;
-    case kAssignExisting:
-        output(level, "sete %zu . %zu (%zu)\n",
-            ((AssignExistingInstr *)this)->m_objectSlot,
-            ((AssignExistingInstr *)this)->m_keySlot,
-            ((AssignExistingInstr *)this)->m_valueSlot);
-        break;
-    case kAssignShadowing:
-        output(level, "sets %zu . %zu (%zu)\n",
-            ((AssignShadowingInstr *)this)->m_objectSlot,
-            ((AssignShadowingInstr *)this)->m_keySlot,
-            ((AssignShadowingInstr *)this)->m_valueSlot);
+    case kAssign:
+        output(level, "set (%s) %zu . %zu (%zu)\n",
+            AssignInstr::asString((AssignInstr *)this),
+            ((AssignInstr *)this)->m_objectSlot,
+            ((AssignInstr *)this)->m_keySlot,
+            ((AssignInstr *)this)->m_valueSlot);
         break;
     case kCall:
         // this one is a tad annoying but still doable
