@@ -1,13 +1,13 @@
 #include <string.h>
 
 #include "s_object.h"
-#include "s_codegen.h"
+#include "s_generator.h"
 
 #include "u_assert.h"
 
 namespace s {
 
-Block FunctionCodegen::newBlock() {
+Block Generator::newBlock() {
     U_ASSERT(m_terminated);
     FunctionBody *body = &m_body;
     body->m_length++;
@@ -18,12 +18,12 @@ Block FunctionCodegen::newBlock() {
     return body->m_length - 1;
 }
 
-void FunctionCodegen::terminate() {
+void Generator::terminate() {
     // return null
     addReturn(m_slotBase++);
 }
 
-void FunctionCodegen::addInstr(Instr *instruction) {
+void Generator::addInstr(Instr *instruction) {
     U_ASSERT(!m_terminated);
     FunctionBody *body = &m_body;
     InstrBlock *block = &body->m_blocks[body->m_length - 1];
@@ -32,7 +32,7 @@ void FunctionCodegen::addInstr(Instr *instruction) {
     block->m_instrs[block->m_length - 1] = instruction;
 }
 
-Slot FunctionCodegen::addAccess(Slot objectSlot, Slot keySlot) {
+Slot Generator::addAccess(Slot objectSlot, Slot keySlot) {
     auto *instruction = allocate<AccessInstr>();
     instruction->m_type = Instr::kAccess;
     instruction->m_targetSlot = m_slotBase++;
@@ -42,7 +42,7 @@ Slot FunctionCodegen::addAccess(Slot objectSlot, Slot keySlot) {
     return instruction->m_targetSlot;
 }
 
-void FunctionCodegen::addAssign(Slot object, Slot keySlot, Slot slot, AssignType type) {
+void Generator::addAssign(Slot object, Slot keySlot, Slot slot, AssignType type) {
     auto *instruction = allocate<AssignInstr>();
     instruction->m_type = Instr::kAssign;
     instruction->m_objectSlot = object;
@@ -52,14 +52,14 @@ void FunctionCodegen::addAssign(Slot object, Slot keySlot, Slot slot, AssignType
     addInstr((Instr *)instruction);
 }
 
-void FunctionCodegen::addCloseObject(Slot object) {
+void Generator::addCloseObject(Slot object) {
     auto *instruction = allocate<CloseObjectInstr>();
     instruction->m_type = Instr::kCloseObject;
     instruction->m_slot = object;
     addInstr((Instr *)instruction);
 }
 
-Slot FunctionCodegen::addGetContext() {
+Slot Generator::addGetContext() {
     auto *instruction = allocate<GetContextInstr>();
     instruction->m_type = Instr::kGetContext;
     instruction->m_slot = m_slotBase++;
@@ -67,7 +67,7 @@ Slot FunctionCodegen::addGetContext() {
     return instruction->m_slot;
 }
 
-Slot FunctionCodegen::addAllocObject(Slot parent) {
+Slot Generator::addAllocObject(Slot parent) {
     auto *instruction = allocate<AllocObjectInstr>();
     instruction->m_type = Instr::kAllocObject;
     instruction->m_targetSlot = m_slotBase++;
@@ -76,7 +76,7 @@ Slot FunctionCodegen::addAllocObject(Slot parent) {
     return instruction->m_targetSlot;
 }
 
-Slot FunctionCodegen::addAllocClosureObject(Slot contextSlot, UserFunction *function) {
+Slot Generator::addAllocClosureObject(Slot contextSlot, UserFunction *function) {
     auto *instruction = allocate<AllocClosureObjectInstr>();
     instruction->m_type = Instr::kAllocClosureObject;
     instruction->m_targetSlot = m_slotBase++;
@@ -86,7 +86,7 @@ Slot FunctionCodegen::addAllocClosureObject(Slot contextSlot, UserFunction *func
     return instruction->m_targetSlot;
 }
 
-Slot FunctionCodegen::addAllocIntObject(Slot contextSlot, int value) {
+Slot Generator::addAllocIntObject(Slot contextSlot, int value) {
     (void)contextSlot;
     auto *instruction = allocate<AllocIntObjectInstr>();
     instruction->m_type = Instr::kAllocIntObject;
@@ -96,7 +96,7 @@ Slot FunctionCodegen::addAllocIntObject(Slot contextSlot, int value) {
     return instruction->m_targetSlot;
 }
 
-Slot FunctionCodegen::addAllocFloatObject(Slot contextSlot, float value) {
+Slot Generator::addAllocFloatObject(Slot contextSlot, float value) {
     (void)contextSlot;
     auto *instruction = allocate<AllocFloatObjectInstr>();
     instruction->m_type = Instr::kAllocFloatObject;
@@ -106,7 +106,7 @@ Slot FunctionCodegen::addAllocFloatObject(Slot contextSlot, float value) {
     return instruction->m_targetSlot;
 }
 
-Slot FunctionCodegen::addAllocArrayObject(Slot contextSlot) {
+Slot Generator::addAllocArrayObject(Slot contextSlot) {
     (void)contextSlot;
     auto *instruction = allocate<AllocArrayObjectInstr>();
     instruction->m_type = Instr::kAllocArrayObject;
@@ -115,7 +115,7 @@ Slot FunctionCodegen::addAllocArrayObject(Slot contextSlot) {
     return instruction->m_targetSlot;
 }
 
-Slot FunctionCodegen::addAllocStringObject(Slot contextSlot, const char *value) {
+Slot Generator::addAllocStringObject(Slot contextSlot, const char *value) {
     (void)contextSlot;
     auto *instruction = allocate<AllocStringObjectInstr>();
     instruction->m_type = Instr::kAllocStringObject;
@@ -125,7 +125,7 @@ Slot FunctionCodegen::addAllocStringObject(Slot contextSlot, const char *value) 
     return instruction->m_targetSlot;
 }
 
-Slot FunctionCodegen::addCall(Slot function, Slot thisSlot, Slot *arguments, size_t length) {
+Slot Generator::addCall(Slot function, Slot thisSlot, Slot *arguments, size_t length) {
     auto *instruction = allocate<CallInstr>();
     instruction->m_type = Instr::kCall;
     instruction->m_targetSlot = m_slotBase++;
@@ -137,24 +137,24 @@ Slot FunctionCodegen::addCall(Slot function, Slot thisSlot, Slot *arguments, siz
     return instruction->m_targetSlot;
 }
 
-Slot FunctionCodegen::addCall(Slot function, Slot thisSlot) {
+Slot Generator::addCall(Slot function, Slot thisSlot) {
     return addCall(function, thisSlot, nullptr, 0);
 }
 
-Slot FunctionCodegen::addCall(Slot function, Slot thisSlot, Slot arg0) {
+Slot Generator::addCall(Slot function, Slot thisSlot, Slot arg0) {
     Slot *arguments = (Slot *)neoMalloc(sizeof *arguments * 1);
     arguments[0] = arg0;
     return addCall(function, thisSlot, arguments, 1);
 }
 
-Slot FunctionCodegen::addCall(Slot function, Slot thisSlot, Slot arg0, Slot arg1) {
+Slot Generator::addCall(Slot function, Slot thisSlot, Slot arg0, Slot arg1) {
     Slot *arguments = (Slot *)neoMalloc(sizeof *arguments * 2);
     arguments[0] = arg0;
     arguments[1] = arg1;
     return addCall(function, thisSlot, arguments, 2);
 }
 
-void FunctionCodegen::addTestBranch(Slot test, Block **trueBranch, Block **falseBranch) {
+void Generator::addTestBranch(Slot test, Block **trueBranch, Block **falseBranch) {
     auto *instruction = allocate<TestBranchInstr>();
     instruction->m_type = Instr::kTestBranch;
     instruction->m_testSlot = test;
@@ -164,7 +164,7 @@ void FunctionCodegen::addTestBranch(Slot test, Block **trueBranch, Block **false
     m_terminated = true;
 }
 
-void FunctionCodegen::addBranch(Block **branch) {
+void Generator::addBranch(Block **branch) {
     auto *instruction = allocate<BranchInstr>();
     instruction->m_type = Instr::kBranch;
     *branch = &instruction->m_block;
@@ -172,7 +172,7 @@ void FunctionCodegen::addBranch(Block **branch) {
     m_terminated = true;
 }
 
-void FunctionCodegen::addReturn(Slot slot) {
+void Generator::addReturn(Slot slot) {
     auto *instruction = allocate<ReturnInstr>();
     instruction->m_type = Instr::kReturn;
     instruction->m_returnSlot = slot;
@@ -180,7 +180,7 @@ void FunctionCodegen::addReturn(Slot slot) {
     m_terminated = true;
 }
 
-UserFunction *FunctionCodegen::build() {
+UserFunction *Generator::build() {
     U_ASSERT(m_terminated);
     auto *function = allocate<UserFunction>();
     function->m_arity = m_length;

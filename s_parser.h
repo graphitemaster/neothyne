@@ -5,7 +5,7 @@
 
 namespace s {
 
-struct FunctionCodegen;
+struct Generator;
 struct UserFunction;
 
 struct Parser {
@@ -24,11 +24,11 @@ struct Parser {
             kIndex      // write the key
         };
 
-        static Reference getScope(FunctionCodegen *generator, const char *name);
-        static Slot access(FunctionCodegen *generator, Reference reference);
-        static void assignPlain(FunctionCodegen *generator, Reference reference, Slot value);
-        static void assignExisting(FunctionCodegen *generator, Reference reference, Slot value);
-        static void assignShadowing(FunctionCodegen *generator, Reference reference, Slot value);
+        static Reference getScope(Generator *generator, const char *name);
+        static Slot access(Generator *generator, Reference reference);
+        static void assignPlain(Generator *generator, Reference reference, Slot value);
+        static void assignExisting(Generator *generator, Reference reference, Slot value);
+        static void assignShadowing(Generator *generator, Reference reference, Slot value);
 
         Slot m_base;
         Slot m_key;
@@ -42,25 +42,25 @@ struct Parser {
     static bool parseFloat(char **contents, float *out);
     static bool parseString(char **contents, char **out);
 
-    static Reference parseExpression(char **contents, FunctionCodegen *generator, int level);
-    static Reference parseExpression(char **contents, FunctionCodegen *generator);
-    static Reference parseExpressionStem(char **contents, FunctionCodegen *generator);
+    static Reference parseExpression(char **contents, Generator *generator, int level);
+    static Reference parseExpression(char **contents, Generator *generator);
+    static Reference parseExpressionStem(char **contents, Generator *generator);
 
-    static bool parseCall(char **contents, FunctionCodegen *generator, Reference *expression);
-    static bool parseObjectLiteral(char **contents, FunctionCodegen *generator, Reference *reference);
-    static void parseObjectLiteral(char **contents, FunctionCodegen *generator, Slot objectSlot);
-    static void parseArrayLiteral(char **contents, FunctionCodegen *generator, Slot objectSlot);
-    static bool parseArrayLiteral(char **contents, FunctionCodegen *generator, Reference *reference);
-    static bool parsePropertyAccess(char **contents, FunctionCodegen *generator, Reference *expression);
-    static bool parseArrayAccess(char **contents, FunctionCodegen *generator, Reference *expression);
+    static bool parseCall(char **contents, Generator *generator, Reference *expression);
+    static bool parseObjectLiteral(char **contents, Generator *generator, Reference *reference);
+    static void parseObjectLiteral(char **contents, Generator *generator, Slot objectSlot);
+    static void parseArrayLiteral(char **contents, Generator *generator, Slot objectSlot);
+    static bool parseArrayLiteral(char **contents, Generator *generator, Reference *reference);
+    static bool parsePropertyAccess(char **contents, Generator *generator, Reference *expression);
+    static bool parseArrayAccess(char **contents, Generator *generator, Reference *expression);
 
-    static void parseBlock(char **contents, FunctionCodegen *generator);
-    static void parseIfStatement(char **contents, FunctionCodegen *generator);
-    static void parseWhile(char **contents, FunctionCodegen *generator);
-    static void parseReturnStatement(char **contents, FunctionCodegen *generator);
-    static void parseLetDeclaration(char **contents, FunctionCodegen *generator);
-    static void parseFunctionDeclaration(char **contents, FunctionCodegen *generator);
-    static void parseStatement(char **contents, FunctionCodegen *generator);
+    static void parseBlock(char **contents, Generator *generator);
+    static void parseIfStatement(char **contents, Generator *generator);
+    static void parseWhile(char **contents, Generator *generator);
+    static void parseReturnStatement(char **contents, Generator *generator);
+    static void parseLetDeclaration(char **contents, Generator *generator);
+    static void parseFunctionDeclaration(char **contents, Generator *generator);
+    static void parseStatement(char **contents, Generator *generator);
 
     static UserFunction *parseFunctionExpression(char **contents);
     static UserFunction *parseModule(char **contents);

@@ -5,7 +5,7 @@
 
 namespace s {
 
-struct FunctionCodegen {
+struct Generator {
     Block newBlock();
 
     // terminates with "return null"

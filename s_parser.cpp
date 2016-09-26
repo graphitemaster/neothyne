@@ -2,7 +2,7 @@
 #include <stdlib.h> // atoi
 
 #include "s_parser.h"
-#include "s_codegen.h"
+#include "s_generator.h"
 #include "s_object.h"
 
 #include "u_new.h"
@@ -180,7 +180,7 @@ bool Parser::consumeKeyword(char **contents, const char *keyword) {
 }
 
 ///! Parser::Reference
-Slot Parser::Reference::access(FunctionCodegen *generator, Reference reference) {
+Slot Parser::Reference::access(Generator *generator, Reference reference) {
     // during speculative parsing there is no generator
     if (generator) {
         if (reference.m_key != NoSlot)
@@ -190,22 +190,22 @@ Slot Parser::Reference::access(FunctionCodegen *generator, Reference reference) 
     return 0;
 }
 
-void Parser::Reference::assignPlain(FunctionCodegen *generator, Reference reference, Slot value) {
+void Parser::Reference::assignPlain(Generator *generator, Reference reference, Slot value) {
     U_ASSERT(reference.m_key != NoSlot);
     generator->addAssign(reference.m_base, reference.m_key, value, AssignType::kPlain);
 }
 
-void Parser::Reference::assignExisting(FunctionCodegen *generator, Reference reference, Slot value) {
+void Parser::Reference::assignExisting(Generator *generator, Reference reference, Slot value) {
     U_ASSERT(reference.m_key != NoSlot);
     generator->addAssign(reference.m_base, reference.m_key, value, AssignType::kExisting);
 }
 
-void Parser::Reference::assignShadowing(FunctionCodegen *generator, Reference reference, Slot value) {
+void Parser::Reference::assignShadowing(Generator *generator, Reference reference, Slot value) {
     U_ASSERT(reference.m_key != NoSlot);
     generator->addAssign(reference.m_base, reference.m_key, value, AssignType::kShadowing);
 }
 
-Parser::Reference Parser::Reference::getScope(FunctionCodegen *generator, const char *name) {
+Parser::Reference Parser::Reference::getScope(Generator *generator, const char *name) {
     // during speculative parsing there is no generator
     if (generator) {
         Slot nameSlot = generator->addAllocStringObject(generator->m_scope, name);
@@ -215,7 +215,7 @@ Parser::Reference Parser::Reference::getScope(FunctionCodegen *generator, const 
 }
 
 ///! Parser
-void Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Slot objectSlot) {
+void Parser::parseObjectLiteral(char **contents, Generator *generator, Slot objectSlot) {
     while (!consumeString(contents, "}")) {
         const char *keyName = parseIdentifier(contents);
         if (!consumeString(contents, "=")) {
@@ -238,7 +238,7 @@ void Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Slo
     }
 }
 
-bool Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Reference *reference) {
+bool Parser::parseObjectLiteral(char **contents, Generator *generator, Reference *reference) {
     char *text = *contents;
     consumeFiller(&text);
 
@@ -257,7 +257,7 @@ bool Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Ref
     return true;
 }
 
-void Parser::parseArrayLiteral(char **contents, FunctionCodegen *generator, Slot objectSlot) {
+void Parser::parseArrayLiteral(char **contents, Generator *generator, Slot objectSlot) {
     u::vector<Reference> values;
     while (!consumeString(contents, "]")) {
         Reference value = parseExpression(contents, generator, 0);
@@ -283,7 +283,7 @@ void Parser::parseArrayLiteral(char **contents, FunctionCodegen *generator, Slot
     }
 }
 
-bool Parser::parseArrayLiteral(char **contents, FunctionCodegen *generator, Reference *reference) {
+bool Parser::parseArrayLiteral(char **contents, Generator *generator, Reference *reference) {
     char *text = *contents;
     consumeFiller(&text);
 
@@ -301,7 +301,7 @@ bool Parser::parseArrayLiteral(char **contents, FunctionCodegen *generator, Refe
     return true;
 }
 
-Parser::Reference Parser::parseExpressionStem(char **contents, FunctionCodegen *generator) {
+Parser::Reference Parser::parseExpressionStem(char **contents, Generator *generator) {
     char *text = *contents;
     const char *identifier = parseIdentifier(&text);
     if (identifier) {
@@ -398,7 +398,7 @@ Parser::Reference Parser::parseExpressionStem(char **contents, FunctionCodegen *
     U_UNREACHABLE();
 }
 
-bool Parser::parseCall(char **contents, FunctionCodegen *generator, Reference *expression) {
+bool Parser::parseCall(char **contents, Generator *generator, Reference *expression) {
     char *text = *contents;
     if (!consumeString(&text, "("))
         return false;
@@ -437,7 +437,7 @@ bool Parser::parseCall(char **contents, FunctionCodegen *generator, Reference *e
     return true;
 }
 
-bool Parser::parseArrayAccess(char **contents, FunctionCodegen *generator, Reference *expression) {
+bool Parser::parseArrayAccess(char **contents, Generator *generator, Reference *expression) {
     char *text = *contents;
     if (!consumeString(&text, "["))
         return false;
@@ -460,7 +460,7 @@ bool Parser::parseArrayAccess(char **contents, FunctionCodegen *generator, Refer
     return true;
 }
 
-bool Parser::parsePropertyAccess(char **contents, FunctionCodegen *generator, Reference *expression) {
+bool Parser::parsePropertyAccess(char **contents, Generator *generator, Reference *expression) {
     char *text = *contents;
     if (!consumeString(&text, "."))
         return false;
@@ -481,7 +481,7 @@ bool Parser::parsePropertyAccess(char **contents, FunctionCodegen *generator, Re
     return true;
 }
 
-Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *generator) {
+Parser::Reference Parser::parseExpression(char **contents, Generator *generator) {
     Reference expression = parseExpressionStem(contents, generator);
     for (;;) {
         if (parseCall(contents, generator, &expression))
@@ -506,7 +506,7 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
 #define GUARD_SPECULATIVE() \
     if (!generator) continue;
 
-Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *generator, int level) {
+Parser::Reference Parser::parseExpression(char **contents, Generator *generator, int level) {
     char *text = *contents;
     Reference expression = parseExpression(&text, generator);
 
@@ -616,7 +616,7 @@ Parser::Reference Parser::parseExpression(char **contents, FunctionCodegen *gene
     return expression;
 }
 
-void Parser::parseIfStatement(char **contents, FunctionCodegen *generator) {
+void Parser::parseIfStatement(char **contents, Generator *generator) {
     char *text = *contents;
     if (!consumeString(&text, "(")) {
         U_ASSERT(0 && "expected open paren after if");
@@ -647,7 +647,7 @@ void Parser::parseIfStatement(char **contents, FunctionCodegen *generator) {
     *contents = text;
 }
 
-void Parser::parseWhile(char **contents, FunctionCodegen *generator) {
+void Parser::parseWhile(char **contents, Generator *generator) {
     char *text = *contents;
     if (!consumeString(&text, "(")) {
         U_ASSERT(0 && "expected openening parenthesis after 'while'");
@@ -677,7 +677,7 @@ void Parser::parseWhile(char **contents, FunctionCodegen *generator) {
     *contents = text;
 }
 
-void Parser::parseReturnStatement(char **contents, FunctionCodegen *generator) {
+void Parser::parseReturnStatement(char **contents, Generator *generator) {
     Slot value = Reference::access(generator, parseExpression(contents, generator, 0));
     if (!consumeString(contents, ";")) {
         U_ASSERT(0 && "expected semicolon");
@@ -686,7 +686,7 @@ void Parser::parseReturnStatement(char **contents, FunctionCodegen *generator) {
     generator->newBlock();
 }
 
-void Parser::parseLetDeclaration(char **contents, FunctionCodegen *generator) {
+void Parser::parseLetDeclaration(char **contents, Generator *generator) {
     // allocate a new scope immediately to allow recursion for closures
     // i.e allow: let foo = fn() { foo(); };
     generator->m_scope = generator->addAllocObject(generator->m_scope);
@@ -714,7 +714,7 @@ void Parser::parseLetDeclaration(char **contents, FunctionCodegen *generator) {
     }
 }
 
-void Parser::parseFunctionDeclaration(char **contents, FunctionCodegen *generator) {
+void Parser::parseFunctionDeclaration(char **contents, Generator *generator) {
     generator->m_scope = generator->addAllocObject(generator->m_scope);
 
     UserFunction *function = parseFunctionExpression(contents);
@@ -724,7 +724,7 @@ void Parser::parseFunctionDeclaration(char **contents, FunctionCodegen *generato
     generator->addCloseObject(generator->m_scope);
 }
 
-void Parser::parseStatement(char **contents, FunctionCodegen *generator) {
+void Parser::parseStatement(char **contents, Generator *generator) {
     char *text = *contents;
     if (consumeKeyword(&text, "if")) {
         *contents = text;
@@ -794,7 +794,7 @@ void Parser::parseStatement(char **contents, FunctionCodegen *generator) {
     *contents = text;
 }
 
-void Parser::parseBlock(char **contents, FunctionCodegen *generator) {
+void Parser::parseBlock(char **contents, Generator *generator) {
     char *text = *contents;
 
     // Note: blocks don't actually open new scopes
@@ -835,7 +835,7 @@ UserFunction *Parser::parseFunctionExpression(char **contents) {
 
     *contents = text;
 
-    FunctionCodegen *generator = (FunctionCodegen *)memset(neoMalloc(sizeof *generator), 0, sizeof *generator);
+    Generator *generator = (Generator *)memset(neoMalloc(sizeof *generator), 0, sizeof *generator);
     generator->m_arguments = arguments;
     generator->m_length = length;
     generator->m_slotBase = length;
@@ -859,7 +859,7 @@ UserFunction *Parser::parseFunctionExpression(char **contents) {
 }
 
 UserFunction *Parser::parseModule(char **contents) {
-    FunctionCodegen *generator = (FunctionCodegen *)memset(neoMalloc(sizeof *generator), 0, sizeof *generator);
+    Generator *generator = (Generator *)memset(neoMalloc(sizeof *generator), 0, sizeof *generator);
     generator->m_slotBase = 0;
     generator->m_name = nullptr;
     generator->m_terminated = true;
