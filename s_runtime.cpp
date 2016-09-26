@@ -302,18 +302,20 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             Object *root = context;
             while (root->m_parent)
                 root = root->m_parent;
-            Object *boolBase = root->lookup("bool", nullptr);
-            Object *intBase = root->lookup("int", nullptr);
 
             bool test = false;
-            if (testValue && testValue->m_parent == boolBase) {
-                if (((BooleanObject *)testValue)->m_value == true)
-                    test = true;
-            } else if (testValue && testValue->m_parent == intBase) {
-                if (((IntObject *)testValue)->m_value != 0)
-                    test = true;
+
+            // try boolean first
+            Object *boolBase = root->lookup("bool", nullptr);
+            Object *boolValue = Object::instanceOf(testValue, boolBase);
+            if (boolValue) {
+                test = ((BooleanObject *)boolValue)->m_value;
             } else {
-                test = !!testValue;
+                // then integer
+                Object *intBase = root->lookup("int", nullptr);
+                Object *intValue = Object::instanceOf(testValue, intBase);
+                if (intValue)
+                    test = !!((IntObject *)intValue)->m_value;
             }
 
             size_t targetBlock = test ? trueBlock : falseBlock;
@@ -367,10 +369,11 @@ static Object *int_math(Object *context, Object *self, Object *function, Object 
         root = root->m_parent;
 
     Object *obj1 = self;
-    Object *obj2 = *arguments;
+    Object *obj2 = nullptr;
 
     Object *intBase = root->lookup("int", nullptr);
-    if (obj2->m_parent == intBase) {
+    obj2 = Object::instanceOf(*arguments, intBase);
+    if (obj2) {
         int value1 = ((IntObject *)obj1)->m_value;
         int value2 = ((IntObject *)obj2)->m_value;
         switch (op) {
@@ -382,7 +385,8 @@ static Object *int_math(Object *context, Object *self, Object *function, Object 
     }
 
     Object *floatBase = root->lookup("float", nullptr);
-    if (obj2->m_parent == floatBase) {
+    obj2 = Object::instanceOf(*arguments, floatBase);
+    if (obj2) {
         float value1 = ((IntObject *)obj1)->m_value;
         float value2 = ((FloatObject *)obj2)->m_value;
         switch (op) {
@@ -423,18 +427,27 @@ static Object *float_math(Object *context, Object *self, Object *function, Objec
         root = root->m_parent;
 
     Object *obj1 = self;
-    Object *obj2 = *arguments;
+    Object *obj2 = nullptr;
+
+    Object *floatBase = root->lookup("float", nullptr);
+    obj2 = Object::instanceOf(*arguments, floatBase);
+
+    if (obj2) {
+        float value1 = ((FloatObject *)obj1)->m_value;
+        float value2 = ((FloatObject *)obj2)->m_value;
+        switch (op) {
+        case kAdd: return Object::newFloat(context, value1 + value2);
+        case kSub: return Object::newFloat(context, value1 - value2);
+        case kMul: return Object::newFloat(context, value1 * value2);
+        case kDiv: return Object::newFloat(context, value1 / value2);
+        }
+    }
 
     Object *intBase = root->lookup("int", nullptr);
-    Object *floatBase = root->lookup("float", nullptr);
-
-    if (obj2->m_parent == floatBase || obj2->m_parent == intBase) {
+    obj2 = Object::instanceOf(*arguments, intBase);
+    if (obj2) {
         float value1 = ((FloatObject *)obj1)->m_value;
-        float value2 = 0.0f;
-        if (obj2->m_parent == floatBase)
-            value2 = ((FloatObject*)obj2)->m_value;
-        else
-            value2 = ((IntObject*)obj2)->m_value;
+        float value2 = ((IntObject *)obj2)->m_value;
         switch (op) {
         case kAdd: return Object::newFloat(context, value1 + value2);
         case kSub: return Object::newFloat(context, value1 - value2);
@@ -475,9 +488,9 @@ static Object *string_add(Object *context, Object *self, Object *function, Objec
     Object *stringBase = root->lookup("string", nullptr);
 
     Object *obj1 = self;
-    Object *obj2 = *arguments;
+    Object *obj2 = Object::instanceOf(*arguments, stringBase);
 
-    if (obj1->m_parent == stringBase && obj2->m_parent == stringBase) {
+    if (obj2) {
         const char *string1 = ((StringObject *)obj1)->m_value;
         const char *string2 = ((StringObject *)obj2)->m_value;
         return Object::newString(context, u::format("%s%s", string1, string2).c_str());
@@ -500,11 +513,11 @@ static Object *int_compare(Object *context, Object *self, Object *function, Obje
         root = root->m_parent;
 
     Object *obj1 = self;
-    Object *obj2 = *arguments;
+    Object *obj2 = nullptr;
 
     Object *intBase = root->lookup("int", nullptr);
-
-    if (obj2->m_parent == intBase) {
+    obj2 = Object::instanceOf(*arguments, intBase);
+    if (obj2) {
         int value1 = ((IntObject *)obj1)->m_value;
         int value2 = ((IntObject *)obj2)->m_value;
         switch (cmp) {
@@ -517,7 +530,8 @@ static Object *int_compare(Object *context, Object *self, Object *function, Obje
     }
 
     Object *floatBase = root->lookup("float", nullptr);
-    if (obj2->m_parent == floatBase) {
+    obj2 = Object::instanceOf(*arguments, floatBase);
+    if (obj2) {
         float value1 = ((IntObject *)obj1)->m_value;
         float value2 = ((FloatObject *)obj2)->m_value;
         switch (cmp) {
@@ -563,18 +577,29 @@ static Object *float_compare(Object *context, Object *self, Object *function, Ob
         root = root->m_parent;
 
     Object *obj1 = self;
-    Object *obj2 = *arguments;
+    Object *obj2 = nullptr;
 
-    Object *intBase = root->lookup("int", nullptr);
     Object *floatBase = root->lookup("float", nullptr);
+    obj2 = Object::instanceOf(*arguments, floatBase);
 
-    if (obj2->m_parent == intBase || obj2->m_parent == floatBase) {
+    if (obj2) {
         float value1 = ((FloatObject *)obj1)->m_value;
-        float value2 = 0.0f;
-        if (obj2->m_parent == floatBase)
-            value2 = ((FloatObject*)obj2)->m_value;
-        else
-            value2 = ((IntObject*)obj2)->m_value;
+        float value2 = ((FloatObject *)obj2)->m_value;
+        switch (cmp) {
+        case kEq: return Object::newBoolean(context, value1 == value2);
+        case kLt: return Object::newBoolean(context, value1 < value2);
+        case kGt: return Object::newBoolean(context, value1 > value2);
+        case kLe: return Object::newBoolean(context, value1 <= value2);
+        case kGe: return Object::newBoolean(context, value1 >= value2);
+        }
+    }
+
+    Object *intBase = root->lookup("float", nullptr);
+    obj2 = Object::instanceOf(*arguments, intBase);
+
+    if (obj2) {
+        float value1 = ((FloatObject *)obj1)->m_value;
+        float value2 = ((IntObject *)obj2)->m_value;
         switch (cmp) {
         case kEq: return Object::newBoolean(context, value1 == value2);
         case kLt: return Object::newBoolean(context, value1 < value2);
@@ -633,20 +658,29 @@ static Object *print(Object *context, Object *self, Object *function, Object **a
 
     for (size_t i = 0; i < length; i++) {
         Object *argument = arguments[i];
-        if (argument->m_parent == intBase) {
-            u::Log::out("%d", ((IntObject *)argument)->m_value);
+        Object *instance = nullptr;
+
+        instance = Object::instanceOf(argument, intBase);
+        if (instance) {
+            u::Log::out("%d", ((IntObject *)instance)->m_value);
             continue;
         }
-        if (argument->m_parent == floatBase) {
-            u::Log::out("%f", ((FloatObject *)argument)->m_value);
+
+        instance = Object::instanceOf(argument, floatBase);
+        if (instance) {
+            u::Log::out("%f", ((FloatObject *)instance)->m_value);
             continue;
         }
-        if (argument->m_parent == stringBase) {
-            u::Log::out("%s", ((StringObject *)argument)->m_value);
+
+        instance = Object::instanceOf(argument, stringBase);
+        if (instance) {
+            u::Log::out("%s", ((StringObject *)instance)->m_value);
             continue;
         }
-        if (argument->m_parent == boolBase) {
-            u::Log::out("%s", ((BooleanObject *)argument)->m_value ? "true" : "false");
+
+        instance = Object::instanceOf(argument, boolBase);
+        if (instance) {
+            u::Log::out("%s", ((BooleanObject *)instance)->m_value ? "true" : "false");
             continue;
         }
     }

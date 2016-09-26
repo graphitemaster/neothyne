@@ -46,6 +46,8 @@ struct Object {
     static Object *newFunction(Object *context, FunctionPointer function);
     static Object *newClosure(Object *context, UserFunction *function);
 
+    static Object *instanceOf(Object *object, Object *prototype);
+
     Object *lookup(const char *key, bool *found);
 
     void setNormal(const char *key, Object *value);

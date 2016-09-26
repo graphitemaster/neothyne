@@ -82,6 +82,11 @@ test.a = 5;
 test.b = 8;
 test.test();
 
+// allow subclassing primitive types, they become an instance of the primitive
+// builtins so they can be coreced back to their primitive types whenever
+let foo = new 5 { a = 7 };
+print(foo); // prints 5
+
 )";
 
 void test() {

@@ -206,6 +206,16 @@ Object *Object::lookup(const char *key, bool *found) {
     return nullptr;
 }
 
+Object *Object::instanceOf(Object *object, Object *prototype) {
+    // search the prototype chain to see if 'object' is an instance of 'prototype'
+    while (object) {
+        if (object->m_parent == prototype)
+            return object;
+        object = object->m_parent;
+    }
+    return nullptr;
+}
+
 // set property
 void Object::setNormal(const char *key, Object *value) {
     Table::Entry *free = nullptr;
