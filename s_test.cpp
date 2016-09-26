@@ -13,13 +13,13 @@ fn level0() {
     let obj = {
         a = 5,
         b = null,
-        bar = mfn() {
+        bar = method() {
             print(this.a - this.b);
         }
     };
 
     obj.b = 7;
-    obj["foo"] = mfn() {
+    obj["foo"] = method() {
         print(this.a + this.b);
     };
 
@@ -67,6 +67,20 @@ print(D["value"]["value"]["value"]["value"]);
 let tree = { next = null, prev = null };
 tree.next = tree;
 tree.prev = tree;
+
+// subclassing and object construction
+let Class = { a = 0 };
+let SubClass = new Class {
+    b = 0,
+    test = method() {
+        print("a + b = ", this.a + this.b);
+    }
+};
+
+let test = new SubClass;
+test.a = 5;
+test.b = 8;
+test.test();
 
 )";
 

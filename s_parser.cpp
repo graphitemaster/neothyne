@@ -89,7 +89,7 @@ const char *Parser::parseIdentifier(char **contents) {
     const char *result = parseIdentifierAll(&text);
     if (!result)
         return nullptr;
-    if (!strncmp(result, "fn", 2) || !strncmp(result, "mfn", 3)) {
+    if (!strncmp(result, "fn", 2) || !strncmp(result, "method", 6) || !strcmp(result, "new")) {
         // reserved identifier
         neoFree((char *)result);
         return nullptr;
@@ -214,6 +214,29 @@ Parser::Reference Parser::Reference::getScope(FunctionCodegen *generator, const 
 }
 
 ///! Parser
+void Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Slot objectSlot) {
+    while (!consumeString(contents, "}")) {
+        const char *keyName = parseIdentifier(contents);
+        if (!consumeString(contents, "=")) {
+            U_ASSERT(0 && "expected 'name = value' in object literal");
+        }
+
+        Reference value = parseExpression(contents, generator, 0);
+        if (generator) {
+            Slot keySlot = generator->addAllocStringObject(generator->m_scope, keyName);
+            Slot valueSlot = Reference::access(generator, value);
+            generator->addAssignNormal(objectSlot, keySlot, valueSlot);
+        }
+
+        if (consumeString(contents, ","))
+            continue;
+        if (consumeString(contents, "}"))
+            break;
+
+        U_ASSERT(0 && "expected comma or closing brace in object literal");
+    }
+}
+
 bool Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Reference *reference) {
     char *text = *contents;
     consumeFiller(&text);
@@ -225,29 +248,11 @@ bool Parser::parseObjectLiteral(char **contents, FunctionCodegen *generator, Ref
     if (generator)
         objectSlot = generator->addAllocObject(generator->m_slotBase++);
 
-    while (!consumeString(&text, "}")) {
-        const char *key = parseIdentifier(&text);
-        if (!consumeString(&text, "=")) {
-            U_ASSERT(0 && "object literal expects 'name = value'");
-        }
-
-        Reference value = parseExpression(&text, generator, 0);
-        if (generator) {
-            Slot keySlot = generator->addAllocStringObject(generator->m_scope, key);
-            Slot valueSlot = Reference::access(generator, value);
-            generator->addAssignNormal(objectSlot, keySlot, valueSlot);
-        }
-
-        if (consumeString(&text, ","))
-            continue;
-        if (consumeString(&text, "}"))
-            break;
-
-        U_ASSERT(0 && "expected initializer or closing brace");
-    }
-
     *contents = text;
     *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
+
+    parseObjectLiteral(contents, generator, objectSlot);
+
     return true;
 }
 
@@ -312,13 +317,27 @@ Parser::Reference Parser::parseExpressionStem(char **contents, FunctionCodegen *
     }
 
     bool isMethod = false;
-    if (consumeKeyword(&text, "fn") || (consumeKeyword(&text, "mfn") && (isMethod = true))) {
+    if (consumeKeyword(&text, "fn") || (consumeKeyword(&text, "method") && (isMethod = true))) {
         UserFunction *function = parseFunctionExpression(&text);
         if (!generator) return { 0, Reference::NoSlot, Reference::kNone };
         function->m_isMethod = isMethod;
         Slot slot = generator->addAllocClosureObject(generator->m_scope, function);
         *contents = text;
         return { slot, Reference::NoSlot, Reference::kNone };
+    }
+
+    if (consumeKeyword(&text, "new")) {
+        Reference parentVariable = parseExpression(&text, generator, 0);
+        Slot parentSlot = Reference::access(generator, parentVariable);
+        Slot objectSlot = 0;
+        if (generator)
+            objectSlot = generator->addAllocObject(parentSlot);
+
+        *contents = text;
+        if (consumeString(contents, "{"))
+            parseObjectLiteral(contents, generator, objectSlot);
+
+        return { objectSlot, Reference::NoSlot, Reference::kNone };
     }
 
     U_ASSERT(0 && "expected expression");
@@ -564,7 +583,7 @@ void Parser::parseIfStatement(char **contents, FunctionCodegen *generator) {
     generator->addBranch(&eBlock);
 
     *fBlock = generator->newBlock();
-    if (consumeString(&text, "else")) {
+    if (consumeKeyword(&text, "else")) {
         parseBlock(&text, generator);
         generator->addBranch(&eBlock);
         *eBlock = generator->newBlock();
