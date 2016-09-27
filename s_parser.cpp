@@ -856,7 +856,7 @@ UserFunction *Parser::parseFunctionExpression(char **contents) {
     parseBlock(contents, generator);
     generator->terminate();
 
-    return generator->build();
+    return Generator::optimize(generator->build());
 }
 
 UserFunction *Parser::parseModule(char **contents) {
