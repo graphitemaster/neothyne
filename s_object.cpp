@@ -33,7 +33,7 @@ Object **Table::lookupReference(const char *key, Table::Entry **first) {
     }
 
     if (first) {
-        Entry *next = allocate<Entry>();
+        Entry *next = (Entry *)neoCalloc(sizeof *next, 1);
         prev->m_next = next;
         *first = next;
     }
@@ -169,7 +169,7 @@ void *Object::alloc(Object *context, size_t size) {
         m_nextGCRun = m_numAllocated * 1.2f;
     }
 
-    Object *result = (Object *)memset(neoMalloc(size), 0, size);
+    Object *result = (Object *)neoCalloc(size, 1);
     result->m_prev = m_lastAllocated;
     m_lastAllocated = result;
     m_numAllocated++;

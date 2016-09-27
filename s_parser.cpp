@@ -835,7 +835,7 @@ UserFunction *Parser::parseFunctionExpression(char **contents) {
 
     *contents = text;
 
-    Generator *generator = (Generator *)memset(neoMalloc(sizeof *generator), 0, sizeof *generator);
+    Generator *generator = (Generator *)neoCalloc(sizeof *generator, 1);
     generator->m_arguments = arguments;
     generator->m_length = length;
     generator->m_slotBase = length;
@@ -859,7 +859,7 @@ UserFunction *Parser::parseFunctionExpression(char **contents) {
 }
 
 UserFunction *Parser::parseModule(char **contents) {
-    Generator *generator = (Generator *)memset(neoMalloc(sizeof *generator), 0, sizeof *generator);
+    Generator *generator = (Generator *)neoCalloc(sizeof *generator, 1);
     generator->m_slotBase = 0;
     generator->m_name = nullptr;
     generator->m_terminated = true;

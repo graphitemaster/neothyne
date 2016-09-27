@@ -248,7 +248,7 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
     while (root->m_parent)
         root = root->m_parent;
 
-    Object **slots = allocate<Object *>(numSlots);
+    Object **slots = (Object **)neoCalloc(sizeof *slots, numSlots);
     void *frameRoots = GarbageCollector::addRoots(slots, numSlots);
 
     // ensure this call is valid

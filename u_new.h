@@ -4,6 +4,7 @@
 
 // Raw memory allocation mechanism.
 U_MALLOC_LIKE void *neoMalloc(size_t size);
+U_MALLOC_LIKE void *neoCalloc(size_t size, size_t count);
 U_MALLOC_LIKE void *neoRealloc(void *ptr, size_t size);
 void neoFree(void *ptr);
 

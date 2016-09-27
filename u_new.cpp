@@ -117,6 +117,21 @@ U_MALLOC_LIKE void *neoRealloc(void *ptr, size_t size) {
     return allocator::neoRealloc(ptr, size);
 }
 
+U_MALLOC_LIKE void *neoCalloc(size_t size, size_t count) {
+    const size_t bytes = size * count;
+    void *p = allocator::neoMalloc(bytes);
+    // branch is compiled away since this is a constant expression
+    if (u::is_same<allocator, alignedAllocator<false>>::value) {
+        // more than likely references the zero page anyways, avoid causing page faults
+        for (size_t *z = (size_t *)p, n = (bytes + sizeof *z - 1) / sizeof *z; n; n--, z++)
+            if (*z) *z = 0;
+        return p;
+    } else {
+        return memset(p, 0, bytes);
+    }
+    U_UNREACHABLE();
+}
+
 void neoFree(void *ptr) {
     allocator::neoFree(ptr);
 }

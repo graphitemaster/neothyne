@@ -9,11 +9,6 @@
 
 namespace s {
 
-template <typename T>
-static inline T *allocate(size_t count = 1) {
-    return (T *)memset((void *)neoMalloc(sizeof(T) * count), 0, sizeof(T) * count);
-}
-
 struct Object;
 
 struct Table {
