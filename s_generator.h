@@ -38,6 +38,7 @@ struct Generator {
     Slot addAllocClosureObject(Slot contextSlot, UserFunction *function);
 
     UserFunction *build();
+    static UserFunction *optimize(UserFunction *function);
 
 private:
     friend struct Parser;

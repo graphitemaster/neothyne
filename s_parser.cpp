@@ -875,7 +875,7 @@ UserFunction *Parser::parseModule(char **contents) {
     }
 
     generator->addReturn(generator->m_scope);
-    return generator->build();
+    return Generator::optimize(generator->build());
 }
 
 }

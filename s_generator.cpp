@@ -4,6 +4,8 @@
 #include "s_generator.h"
 
 #include "u_assert.h"
+#include "u_vector.h"
+#include "u_log.h"
 
 namespace s {
 
@@ -30,6 +32,15 @@ void Generator::addInstr(Instr *instruction) {
     block->m_length++;
     block->m_instrs = (Instr **)neoRealloc(block->m_instrs, block->m_length * sizeof(Instr *));
     block->m_instrs[block->m_length - 1] = instruction;
+    switch (instruction->m_type) {
+    case Instr::kBranch:
+    case Instr::kTestBranch:
+    case Instr::kReturn:
+        m_terminated = true;
+        break;
+    default:
+        break;
+    }
 }
 
 #define newInstruction(TYPE) \
@@ -159,21 +170,18 @@ void Generator::addTestBranch(Slot test, Block **trueBranch, Block **falseBranch
     *trueBranch = &instruction->m_trueBlock;
     *falseBranch = &instruction->m_falseBlock;
     addInstr((Instr *)instruction);
-    m_terminated = true;
 }
 
 void Generator::addBranch(Block **branch) {
     auto *instruction = newInstruction(Branch);
     *branch = &instruction->m_block;
     addInstr((Instr *)instruction);
-    m_terminated = true;
 }
 
 void Generator::addReturn(Slot slot) {
     auto *instruction = newInstruction(Return);
     instruction->m_returnSlot = slot;
     addInstr((Instr *)instruction);
-    m_terminated = true;
 }
 
 UserFunction *Generator::build() {
@@ -185,6 +193,131 @@ UserFunction *Generator::build() {
     function->m_body = m_body;
     function->m_isMethod = false;
     return function;
+}
+
+// Searches through the function to find slots whose only value is used as a
+// parameter to other instructions which does not escape
+static size_t findPrimitiveSlots(UserFunction *function, bool **slots) {
+    size_t primitiveSlots = 0;
+
+    *slots = (bool *)neoMalloc(sizeof **slots * function->m_slots);
+    // default assumption is that the slot is primitive
+    for (size_t i = 0; i < function->m_slots; i++)
+        (*slots)[i] = true;
+
+    #define MARK(SLOT) do { (*slots)[(SLOT)] = false; primitiveSlots++; } while (0)
+
+    // for all blocks in the function
+    for (size_t i = 0; i < function->m_body.m_length; i++) {
+        InstrBlock *block = &function->m_body.m_blocks[i];
+        // for all instructions in the block
+        for (size_t j = 0; j < block->m_length; j++) {
+            Instr *instruction = block->m_instrs[j];
+            switch (instruction->m_type) {
+            case Instr::kAllocObject:
+                MARK(((AllocObjectInstr*)instruction)->m_parentSlot);
+                break;
+            case Instr::kAllocClosureObject:
+                MARK(((AllocClosureObjectInstr*)instruction)->m_contextSlot);
+                break;
+            case Instr::kAccess:
+                MARK(((AccessInstr*)instruction)->m_objectSlot);
+                break;
+            case Instr::kAssign:
+                MARK(((AssignInstr*)instruction)->m_objectSlot);
+                MARK(((AssignInstr*)instruction)->m_valueSlot);
+                break;
+            case Instr::kCall:
+                MARK(((CallInstr*)instruction)->m_functionSlot);
+                MARK(((CallInstr*)instruction)->m_thisSlot);
+                for (size_t k = 0; k < ((CallInstr*)instruction)->m_length; k++)
+                    MARK(((CallInstr*)instruction)->m_arguments[k]);
+                break;
+            case Instr::kReturn:
+                MARK(((ReturnInstr*)instruction)->m_returnSlot);
+                break;
+            case Instr::kTestBranch:
+                MARK(((TestBranchInstr*)instruction)->m_testSlot);
+                break;
+            default: break;
+            }
+        }
+    }
+
+    return primitiveSlots;
+}
+
+UserFunction *Generator::optimize(UserFunction *function) {
+    // find all primitive slots first
+    bool *primitiveSlots = nullptr;
+    size_t primitiveCount = findPrimitiveSlots(function, &primitiveSlots);
+    size_t inlinedCount = 0;
+
+    if (primitiveCount == 0) {
+        neoFree(primitiveSlots);
+        return function;
+    }
+
+    Generator *generator = (Generator *)neoCalloc(sizeof *generator, 1);
+    generator->m_slotBase = 0;
+    generator->m_terminated = true;
+
+    u::vector<const char *> slotTable;
+    for (size_t i = 0; i < function->m_body.m_length; i++) {
+        InstrBlock *block = &function->m_body.m_blocks[i];
+        generator->newBlock();
+        for (size_t j = 0; j < block->m_length; j++) {
+            Instr *instruction = block->m_instrs[j];
+            auto *alloc = (AllocStringObjectInstr *)instruction;
+            auto *access = (AccessInstr *)instruction;
+            auto *assign = (AssignInstr *)instruction;
+            if (instruction->m_type == Instr::kAllocStringObject
+                && primitiveSlots[alloc->m_targetSlot])
+            {
+                if (slotTable.size() < alloc->m_targetSlot + 1)
+                    slotTable.resize(alloc->m_targetSlot + 1);
+                slotTable[alloc->m_targetSlot] = alloc->m_value;
+                continue;
+            }
+            if (instruction->m_type == Instr::kAccess
+                && access->m_keySlot < slotTable.size() && slotTable[access->m_keySlot])
+            {
+                auto *insert = (AccessKeyInstr *)neoMalloc(sizeof(AccessKeyInstr));
+                insert->m_type = Instr::kAccessKey;
+                insert->m_targetSlot = access->m_targetSlot;
+                insert->m_objectSlot = access->m_objectSlot;
+                insert->m_key = slotTable[access->m_keySlot];
+                generator->addInstr((Instr *)insert);
+                inlinedCount++;
+                continue;
+            }
+            if (instruction->m_type == Instr::kAssign
+                && assign->m_keySlot < slotTable.size() && slotTable[assign->m_keySlot])
+            {
+                auto *insert = (AssignKeyInstr *)neoMalloc(sizeof(AssignKeyInstr));
+                insert->m_type = Instr::kAssignKey;
+                insert->m_objectSlot = assign->m_objectSlot;
+                insert->m_valueSlot = assign->m_valueSlot;
+                insert->m_key = slotTable[assign->m_keySlot];
+                insert->m_assignType = assign->m_assignType;
+                generator->addInstr((Instr *)insert);
+                inlinedCount++;
+                continue;
+            }
+            generator->addInstr(instruction);
+        }
+    }
+
+    UserFunction *newFunction = generator->build();
+    newFunction->m_slots = function->m_slots;
+    newFunction->m_arity = function->m_arity;
+    newFunction->m_name = function->m_name;
+    newFunction->m_isMethod = function->m_isMethod;
+
+    u::Log::out("[script] => inlined %zu of %zu primitive accesses/asignments\n",
+        inlinedCount, primitiveCount);
+
+    return newFunction;
 }
 
 }

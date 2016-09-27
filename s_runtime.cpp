@@ -26,24 +26,44 @@ static void vmGetContext(Object *root, Object *context, GetContextInstr *instruc
     slots[slot] = context;
 }
 
-static void vmAccess(Object *root, Object *context, AccessInstr *instruction, Object **slots, size_t numSlots) {
+static void vmAccess(Object *root, Object *context, Instr *instruction, Object **slots, size_t numSlots) {
     (void)context;
-    Slot targetSlot = instruction->m_targetSlot;
-    Slot objectSlot = instruction->m_objectSlot;
+    auto *access = (AccessInstr *)instruction;
+    auto *accessKey = (AccessKeyInstr *)instruction;
+
+    Slot targetSlot;
+    Slot objectSlot;
+    if (instruction->m_type == Instr::kAccess) {
+        targetSlot = access->m_targetSlot;
+        objectSlot = access->m_objectSlot;
+    } else {
+        targetSlot = accessKey->m_targetSlot;
+        objectSlot = accessKey->m_objectSlot;
+    }
 
     U_ASSERT(objectSlot < numSlots);
     Object *object = slots[objectSlot];
 
-    Slot keySlot = instruction->m_keySlot;
-    U_ASSERT(keySlot < numSlots && slots[keySlot]);
-    Object *stringBase = root->lookup("string", nullptr);
-    Object *keyObject = slots[keySlot];
-    U_ASSERT(keyObject);
-    StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
-    bool objectFound = false;
     Object *value = nullptr;
-    if (stringKey) {
-        const char *key = stringKey->m_value;
+    bool objectFound = false;
+    const char *key;
+    bool hasKey = false;
+    if (instruction->m_type == Instr::kAccess) {
+        Slot keySlot = access->m_keySlot;
+        U_ASSERT(keySlot < numSlots && slots[keySlot]);
+        Object *stringBase = root->lookup("string", nullptr);
+        Object *keyObject = slots[keySlot];
+        U_ASSERT(keyObject);
+        StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
+        if (stringKey) {
+            key = stringKey->m_value;
+            hasKey = true;
+        }
+    } else {
+        key = accessKey->m_key;
+        hasKey = true;
+    }
+    if (hasKey) {
         value = object->lookup(key, &objectFound);
     }
     if (!objectFound) {
@@ -54,6 +74,12 @@ static void vmAccess(Object *root, Object *context, AccessInstr *instruction, Ob
             FunctionObject *function = (FunctionObject *)Object::instanceOf(index, functionBase);
             ClosureObject *closure = (ClosureObject *)Object::instanceOf(index, closureBase);
             U_ASSERT(function || closure);
+            Object *keyObject;
+            if (instruction->m_type == Instr::kAccess) {
+                keyObject = slots[access->m_keySlot];
+            } else {
+                keyObject = Object::newString(context, accessKey->m_key);
+            }
             if (function)
                 value = function->m_function(context, object, index, &keyObject, 1);
             else
@@ -65,27 +91,49 @@ static void vmAccess(Object *root, Object *context, AccessInstr *instruction, Ob
     if (!objectFound) {
         U_ASSERT(0 && "property not found");
     }
-
     U_ASSERT(targetSlot < numSlots);
     slots[targetSlot] = value;
 }
 
-static void vmAssign(Object *root, Object *context, AssignInstr *instruction, Object **slots, size_t numSlots) {
+static void vmAssign(Object *root, Object *context, Instr *instruction, Object **slots, size_t numSlots) {
     (void)context;
+    auto *assign = (AssignInstr *)instruction;
+    auto *assignKey = (AssignKeyInstr *)instruction;
+    AssignType assignType;
+    Object *object = nullptr;
+    Object *valueObject = nullptr;
+    const char *key;
+    bool hasKey = false;
 
-    Slot objectSlot = instruction->m_objectSlot;
-    Slot valueSlot = instruction->m_valueSlot;
-    Slot keySlot = instruction->m_keySlot;
-    U_ASSERT(objectSlot < numSlots);
-    U_ASSERT(valueSlot < numSlots);
-    U_ASSERT(keySlot < numSlots && slots[keySlot]);
-
-    Object *stringBase = root->lookup("string", nullptr);
-    Object *keyObject = slots[keySlot];
-    Object *object = slots[objectSlot];
-    StringObject *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
-
-    if (!stringKey) {
+    if (instruction->m_type == Instr::kAssign) {
+        Slot objectSlot = assign->m_objectSlot;
+        Slot valueSlot = assign->m_valueSlot;
+        Slot keySlot = assign->m_keySlot;
+        U_ASSERT(objectSlot < numSlots);
+        U_ASSERT(valueSlot < numSlots);
+        U_ASSERT(keySlot < numSlots && slots[keySlot]);
+        object = slots[objectSlot];
+        valueObject = slots[valueSlot];
+        Object *stringBase = root->lookup("string", nullptr);
+        Object *keyObject = slots[keySlot];
+        StringObject *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
+        if (stringKey) {
+            key = stringKey->m_value;
+            assignType = assign->m_assignType;
+            hasKey = true;
+        }
+    } else {
+        Slot objectSlot = assignKey->m_objectSlot;
+        Slot valueSlot = assignKey->m_valueSlot;
+        U_ASSERT(objectSlot < numSlots);
+        U_ASSERT(valueSlot < numSlots);
+        object = slots[objectSlot];
+        valueObject = slots[valueSlot];
+        key = assignKey->m_key;
+        assignType = assignKey->m_assignType;
+        hasKey = true;
+    }
+    if (!hasKey) {
         Object *index = object->lookup("[]=", nullptr);
         if (index) {
             Object *functionBase = root->lookup("function", nullptr);
@@ -93,7 +141,8 @@ static void vmAssign(Object *root, Object *context, AssignInstr *instruction, Ob
             FunctionObject *function = (FunctionObject *)Object::instanceOf(index, functionBase);
             ClosureObject *closure = (ClosureObject *)Object::instanceOf(index, closureBase);
             U_ASSERT(function || closure);
-            Object *arguments[] = { keyObject, slots[valueSlot] };
+            // assumes Instr::kAssign
+            Object *arguments[] = { slots[assign->m_keySlot], valueObject };
             if (function)
                 function->m_function(context, object, index, arguments, 2);
             else
@@ -102,20 +151,18 @@ static void vmAssign(Object *root, Object *context, AssignInstr *instruction, Ob
         }
         U_ASSERT(0 && "internal error");
     }
-
-    const char *key = stringKey->m_value;
-
-    switch (instruction->m_assignType) {
+    switch (assignType) {
     case AssignType::kPlain:
         if (object)
-            object->setNormal(key, slots[valueSlot]);
+            object->setNormal(key, valueObject);
         else U_ASSERT(0 && "assignment to null object");
         break;
     case AssignType::kExisting:
-        object->setExisting(key, slots[valueSlot]);
+        object->setExisting(key, valueObject);
         break;
     case AssignType::kShadowing:
-        object->setShadowing(key, slots[valueSlot]);
+        object->setShadowing(key, valueObject);
+        break;
     }
 }
 
@@ -276,10 +323,12 @@ Object *callFunction(Object *context, UserFunction *function, Object **args, siz
             vmGetContext(root, context, (GetContextInstr *)instr, slots, numSlots);
             break;
         case Instr::kAccess:
-            vmAccess(root, context, (AccessInstr *)instr, slots, numSlots);
+        case Instr::kAccessKey:
+            vmAccess(root, context, instr, slots, numSlots);
             break;
         case Instr::kAssign:
-            vmAssign(root, context, (AssignInstr *)instr, slots, numSlots);
+        case Instr::kAssignKey:
+            vmAssign(root, context, instr, slots, numSlots);
             break;
         case Instr::kAllocObject:
             vmAllocateObject(root, context, (AllocObjectInstr *)instr, slots, numSlots);

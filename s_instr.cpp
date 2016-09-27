@@ -123,6 +123,21 @@ void Instr::dump(int level) {
             ((TestBranchInstr *)this)->m_testSlot,
             ((TestBranchInstr *)this)->m_trueBlock,
             ((TestBranchInstr *)this)->m_falseBlock);
+        break;
+    // produced by optimizations only
+    case kAccessKey:
+        output(level, "igetk %zu = %zu . '%s'\n",
+            ((AccessKeyInstr *)this)->m_targetSlot,
+            ((AccessKeyInstr *)this)->m_objectSlot,
+            ((AccessKeyInstr *)this)->m_key);
+        break;
+    // produced by optimizations only
+    case kAssignKey:
+        output(level, "isetk %zu . '%s' = %zu\n",
+            ((AssignKeyInstr *)this)->m_objectSlot,
+            ((AssignKeyInstr *)this)->m_key,
+            ((AssignKeyInstr *)this)->m_valueSlot);
+        break;
     }
 
     for (auto *function : otherFunctions)
