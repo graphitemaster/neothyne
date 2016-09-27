@@ -241,7 +241,10 @@ Object *Object::newArray(Object *context, Object **contents, size_t length) {
     object->m_parent = arrayBase;
     object->m_contents = contents;
     object->m_length = length;
+    // pin this since newInt may trigger the garbage collector
+    void *pinned = GarbageCollector::addRoots(u::unsafe_cast<Object **>(&object), 1);
     ((Object *)object)->setNormal("length", newInt(context, length));
+    GarbageCollector::delRoots(pinned);
     return (Object *)object;
 }
 
