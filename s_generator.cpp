@@ -317,6 +317,7 @@ UserFunction *Generator::optimize(UserFunction *function) {
     u::Log::out("[script] => inlined %zu of %zu primitive accesses/asignments\n",
         inlinedCount, primitiveCount);
 
+    neoFree(primitiveSlots);
     return newFunction;
 }
 

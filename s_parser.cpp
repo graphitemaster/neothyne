@@ -336,8 +336,9 @@ Parser::Reference Parser::parseExpressionStem(char **contents, Generator *genera
         char *value = nullptr;
         if (parseString(&text, &value)) {
             *contents = text;
-            if (!generator)
+            if (!generator) {
                 return { 0, Reference::NoSlot, Reference::kNone };
+            }
             Slot slot = generator->addAllocStringObject(generator->m_scope, value);
             return { slot, Reference::NoSlot, Reference::kNone };
         }
