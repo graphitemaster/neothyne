@@ -15,6 +15,9 @@ enum ParseResult {
 };
 
 struct Parser {
+    static ParseResult parseModule(char **contents, UserFunction **function);
+
+private:
     struct Reference {
         static constexpr Slot NoSlot = (Slot)-1;
 
@@ -65,7 +68,8 @@ struct Parser {
     static ParseResult parseStatement(char **contents, Gen *gen);
     static ParseResult parseBlock(char **contents, Gen *gen);
     static ParseResult parseFunctionExpression(char **contents, UserFunction **function);
-    static ParseResult parseModule(char **contents, UserFunction **function);
+
+    static void buildOperation(Gen *gen, const char *op, Reference *lhs, Reference rhs);
 };
 
 }
