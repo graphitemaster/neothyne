@@ -291,10 +291,12 @@ static void arrayResize(State *state, Object *self, Object *, Object **arguments
 
     U_ASSERT(arrayObject && intObject);
 
+    int oldSize = arrayObject->m_length;
     int newSize = intObject->m_value;
     U_ASSERT(newSize >= 0);
 
     arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * newSize);
+    memset(arrayObject->m_contents + oldSize, 0, sizeof(Object *) * (newSize - oldSize));
     arrayObject->m_length = newSize;
 
     Object::setNormal(self, "length", Object::newInt(state, newSize));
