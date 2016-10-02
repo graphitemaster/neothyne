@@ -742,7 +742,10 @@ ParseResult Parser::parseIfStatement(char **contents, Gen *gen) {
 
     *fBlock = Gen::newBlock(gen);
     if (consumeKeyword(&text, "else")) {
-        parseBlock(&text, gen);
+        result = parseBlock(&text, gen);
+        if (result == kParseError)
+            return kParseError;
+        U_ASSERT(result == kParseOk);
         Gen::addBranch(gen, &eBlock);
         *eBlock = Gen::newBlock(gen);
     } else {
@@ -783,7 +786,10 @@ ParseResult Parser::parseWhile(char **contents, Gen *gen) {
     Gen::addTestBranch(gen, testSlot, &lBlock, &eBlock);
 
     *lBlock = Gen::newBlock(gen);
-    parseBlock(&text, gen);
+    result = parseBlock(&text, gen);
+    if (result == kParseError)
+        return result;
+    U_ASSERT(result == kParseOk);
     Gen::addBranch(gen, &oBlock);
 
     *oBlock = *tBlock;
