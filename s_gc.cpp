@@ -1,6 +1,8 @@
 #include "s_gc.h"
 #include "s_object.h"
 
+#include "u_assert.h"
+
 namespace s {
 
 void GC::addRoots(State *state, Object **objects, size_t count, RootSet *set) {
@@ -47,7 +49,18 @@ void GC::sweep(State *state) {
     }
 }
 
+void GC::disable(State *state) {
+    state->m_gc.m_disabledCount++;
+}
+
+void GC::enable(State *state) {
+    U_ASSERT(state->m_gc.m_disabledCount);
+    state->m_gc.m_disabledCount--;
+}
+
 void GC::run(State *state) {
+    if (state->m_gc.m_disabledCount != 0)
+        return;
     mark(state);
     sweep(state);
 }

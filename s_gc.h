@@ -13,6 +13,10 @@ struct GC {
     static void addRoots(State *state, Object **objects, size_t count, RootSet *set);
     static void delRoots(State *state, RootSet *set);
     static void run(State *state);
+
+    static void enable(State *state);
+    static void disable(State *state);
+
 private:
     static void mark(State *state);
     static void sweep(State *state);

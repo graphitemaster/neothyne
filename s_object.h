@@ -106,6 +106,7 @@ struct State {
     u::string m_error;
     struct {
         RootSet *m_tail;
+        size_t m_disabledCount;
     } m_gc;
     Object *m_last;
     size_t m_count;

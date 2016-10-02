@@ -221,7 +221,9 @@ Object *Object::newArray(State *state, Object **contents, size_t length) {
     object->m_parent = arrayBase;
     object->m_contents = contents;
     object->m_length = length;
+    GC::disable(state);
     setNormal((Object *)object, "length", newInt(state, length));
+    GC::enable(state);
     return (Object *)object;
 }
 
