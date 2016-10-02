@@ -10,7 +10,7 @@ struct Object;
 struct VM {
     static CallFrame *addFrame(State *state, size_t slots);
     static void delFrame(State *state);
-    static void run(State *state, Object *root);
+    static void run(State *state);
 
     static void callFunction(State *state, Object *context, UserFunction *function, Object **arguments, size_t count);
 
@@ -18,7 +18,7 @@ struct VM {
     static void methodHandler(State *state, Object *self, Object *function, Object **arguments, size_t count);
 
 private:
-    static void step(State *state, Object *root, void **arguments);
+    static void step(State *state, void **arguments);
     static void error(State *state, const char *fmt, ...);
 };
 

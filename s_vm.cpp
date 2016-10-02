@@ -79,7 +79,8 @@ void VM::error(State *state, const char *fmt, ...) {
 #define BEGIN {
 #define BREAK } break
 
-void VM::step(State *state, Object *root, void **preallocatedArguments) {
+void VM::step(State *state, void **preallocatedArguments) {
+    Object *root = state->m_root;
     CallFrame *frame = &state->m_stack[state->m_length - 1];
     Instruction *instruction = frame->m_block->m_instructions[frame->m_offset];
     switch (instruction->m_type) {
@@ -100,12 +101,17 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         I(access, Access);
         I(accessStringKey, AccessStringKey);
         Slot objectSlot;
-        if (instruction->m_type == kAccess)
+        Slot targetSlot;
+        if (instruction->m_type == kAccess) {
             objectSlot = access->m_objectSlot;
-        else
+            targetSlot = access->m_targetSlot;
+        } else {
             objectSlot = accessStringKey->m_objectSlot;
+            targetSlot = accessStringKey->m_targetSlot;
+        }
 
         VM_ASSERT(objectSlot < frame->m_count, "slot addressing error");
+        VM_ASSERT(targetSlot < frame->m_count, "slot addressing error");
 
         Object *object = frame->m_slots[objectSlot];
 
@@ -134,7 +140,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
 
         bool objectFound = false;
         if (hasKey)
-            state->m_result = Object::lookup(object, key, &objectFound);
+            frame->m_slots[targetSlot] = Object::lookup(object, key, &objectFound);
         if (!objectFound) {
             Object *indexOperation = Object::lookup(object, "[]", nullptr);
             if (indexOperation) {
@@ -153,10 +159,22 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
                 else
                     keyObject = Object::newString(state, accessStringKey->m_key);
 
+                // setup another virtual machine to place this call
+                State substate;
+                memset(&substate, 0, sizeof substate);
+
+                substate.m_root = state->m_root;
+                substate.m_gc = state->m_gc;
+
                 if (functionIndexOperation)
-                    functionIndexOperation->m_function(state, object, indexOperation, &keyObject, 1);
+                    functionIndexOperation->m_function(&substate, object, indexOperation, &keyObject, 1);
                 else if (closureIndexOperation)
-                    closureIndexOperation->m_function(state, object, indexOperation, &keyObject, 1);
+                    closureIndexOperation->m_function(&substate, object, indexOperation, &keyObject, 1);
+
+                run(&substate);
+                VM_ASSERT(substate.m_runState != kErrored, "overload failed '[]' %s", &substate.m_error[0]);
+
+                frame->m_slots[targetSlot] = substate.m_result;
 
                 objectFound = true;
             }
@@ -428,11 +446,16 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         U_ASSERT(0 && "invalid instruction");
         break;
     }
+    if (state->m_runState == kErrored)
+        return;
     frame->m_offset++;
 }
 
-void VM::run(State *state, Object *root) {
+void VM::run(State *state) {
     U_ASSERT(state->m_runState == kTerminated || state->m_runState == kErrored);
+    if (state->m_length == 0)
+        return;
+    U_ASSERT(state->m_length);
     state->m_runState = kRunning;
     state->m_error.clear();
     // preallocate space for 10 arguments to place function calls
@@ -440,7 +463,7 @@ void VM::run(State *state, Object *root) {
     for (size_t i = 0; i < 10; i++)
         arguments[i] = neoMalloc(sizeof(Object *) * i);
     while (state->m_runState == kRunning) {
-        step(state, root, arguments);
+        step(state, arguments);
         if (state->m_length == 0)
             state->m_runState = kTerminated;
     }

@@ -125,6 +125,7 @@ struct Instruction::CloseObject : Instruction {
 struct Instruction::Access : Instruction {
     Slot m_objectSlot;
     Slot m_keySlot;
+    Slot m_targetSlot;
 };
 
 struct Instruction::Assign : Instruction {
@@ -162,6 +163,7 @@ struct Instruction::TestBranch : Instruction {
 struct Instruction::AccessStringKey : Instruction {
     Slot m_objectSlot;
     const char *m_key;
+    Slot m_targetSlot;
 };
 
 struct Instruction::AssignStringKey : Instruction {

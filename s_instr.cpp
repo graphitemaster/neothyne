@@ -53,7 +53,8 @@ void Instruction::dump(Instruction *instruction, int level) {
             ((CloseObject *)instruction)->m_slot);
         break;
     case kAccess:
-        u::Log::out("Access:            %%%zu . %%%zu\n",
+        u::Log::out("Access:            %%%zu = %%%zu . %%%zu\n",
+            ((Access *)instruction)->m_targetSlot,
             ((Access *)instruction)->m_objectSlot,
             ((Access *)instruction)->m_keySlot);
         break;
@@ -97,7 +98,8 @@ void Instruction::dump(Instruction *instruction, int level) {
             ((TestBranch *)instruction)->m_falseBlock);
         break;
     case kAccesStringKey:
-        u::Log::out("Access:            %%%zu . \"%s\" [inlined]\n",
+        u::Log::out("Access:            %%%zu = %%%zu . \"%s\" [inlined]\n",
+            ((AccessStringKey *)instruction)->m_targetSlot,
             ((AccessStringKey *)instruction)->m_objectSlot,
             ((AccessStringKey *)instruction)->m_key);
         break;

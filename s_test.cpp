@@ -53,10 +53,13 @@ a.b = 1;
 void test() {
     State state;
     memset(&state, 0, sizeof state);
+    state.m_gc = (GCState *)neoCalloc(sizeof *state.m_gc, 1);
 
     VM::addFrame(&state, 0);
     Object *root = createRoot(&state);
     VM::delFrame(&state);
+
+    state.m_root = root;
 
     char *contents = text;
 
@@ -69,7 +72,7 @@ void test() {
     UserFunction::dump(module, 0);
 
     VM::callFunction(&state, root, module, nullptr, 0);
-    VM::run(&state, root);
+    VM::run(&state);
 
     // print any errors from running
     if (state.m_runState == kErrored)

@@ -97,6 +97,11 @@ enum RunState {
     kErrored
 };
 
+struct GCState {
+    RootSet *m_tail;
+    size_t m_disabledCount;
+};
+
 struct State {
     CallFrame *m_stack;
     size_t m_length;
@@ -104,10 +109,7 @@ struct State {
     Object *m_result;
     RunState m_runState;
     u::string m_error;
-    struct {
-        RootSet *m_tail;
-        size_t m_disabledCount;
-    } m_gc;
+    GCState *m_gc;
     Object *m_last;
     size_t m_count;
     size_t m_capacity;

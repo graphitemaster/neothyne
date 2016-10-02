@@ -15,18 +15,14 @@ static void boolNot(State *state, Object *self, Object *function, Object **argum
     (void)function;
     (void)arguments;
     U_ASSERT(count == 0);
-    Object *root = state->m_stack[state->m_length - 1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
     state->m_result = Object::newBool(state, !((BoolObject *)self)->m_value);
 }
 
 /// [Int]
 static void intMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
     U_ASSERT(count == 1);
-    Object *root = state->m_stack[state->m_length -1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
 
@@ -81,9 +77,7 @@ static void intDiv(State *state, Object *self, Object *function, Object **argume
 
 static void intCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
     U_ASSERT(count == 1);
-    Object *root = state->m_stack[state->m_length -1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
 
@@ -145,9 +139,7 @@ static void intCompareGe(State *state, Object *self, Object *function, Object **
 /// [Float]
 static void floatMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
     U_ASSERT(count == 1);
-    Object *root = state->m_stack[state->m_length -1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
     Object *floatBase = Object::lookup(root, "float", nullptr);
@@ -188,9 +180,7 @@ static void floatDiv(State *state, Object *self, Object *function, Object **argu
 
 static void floatCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
     U_ASSERT(count == 1);
-    Object *root = state->m_stack[state->m_length -1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
     Object *floatBase = Object::lookup(root, "float", nullptr);
@@ -237,9 +227,7 @@ static void floatCompareGe(State *state, Object *self, Object *function, Object 
 /// [String]
 static void stringAdd(State *state, Object *self, Object *, Object **arguments, size_t count) {
     U_ASSERT(count == 1);
-    Object *root = state->m_stack[state->m_length -1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *stringBase = Object::lookup(root, "string", nullptr);
 
@@ -255,9 +243,7 @@ static void stringAdd(State *state, Object *self, Object *, Object **arguments, 
 
 /// [Closure]
 static void closureMark(State *state, Object *object) {
-    Object *root = state->m_stack[state->m_length - 1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
     Object *closureBase = Object::lookup(root, "closure", nullptr);
     ClosureObject *closureObject = (ClosureObject*)Object::instanceOf(object, closureBase);
     if (closureObject)
@@ -266,9 +252,7 @@ static void closureMark(State *state, Object *object) {
 
 /// [Array]
 static void arrayMark(State *state, Object *object) {
-    Object *root = state->m_stack[state->m_length - 1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
     Object *arrayBase = Object::lookup(root, "array", nullptr);
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(object, arrayBase);
     if (arrayObject) {
@@ -279,9 +263,7 @@ static void arrayMark(State *state, Object *object) {
 
 static void arrayResize(State *state, Object *self, Object *, Object **arguments, size_t count) {
     U_ASSERT(count == 1);
-    Object *root = state->m_stack[state->m_length - 1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
     Object *arrayBase = Object::lookup(root, "array", nullptr);
@@ -306,9 +288,7 @@ static void arrayResize(State *state, Object *self, Object *, Object **arguments
 
 static void arrayPush(State *state, Object *self, Object *, Object **arguments, size_t count) {
     U_ASSERT(count == 1);
-    Object *root = state->m_stack[state->m_length - 1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *arrayBase = Object::lookup(root, "array", nullptr);
 
@@ -327,9 +307,7 @@ static void arrayPush(State *state, Object *self, Object *, Object **arguments, 
 
 static void arrayPop(State *state, Object *self, Object *, Object **, size_t count) {
     U_ASSERT(count == 0);
-    Object *root = state->m_stack[state->m_length - 1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *arrayBase = Object::lookup(root, "array", nullptr);
 
@@ -347,9 +325,7 @@ static void arrayPop(State *state, Object *self, Object *, Object **, size_t cou
 
 static void arrayIndex(State *state, Object *self, Object *, Object **arguments, size_t count) {
     U_ASSERT(count == 1);
-    Object *root = state->m_stack[state->m_length - 1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
     Object *arrayBase = Object::lookup(root, "array", nullptr);
@@ -369,9 +345,7 @@ static void arrayIndex(State *state, Object *self, Object *, Object **arguments,
 
 static void arrayIndexAssign(State *state, Object *self, Object *, Object **arguments, size_t count) {
     U_ASSERT(count == 2);
-    Object *root = state->m_stack[state->m_length - 1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
     Object *arrayBase = Object::lookup(root, "array", nullptr);
@@ -388,9 +362,7 @@ static void arrayIndexAssign(State *state, Object *self, Object *, Object **argu
 }
 
 static void print(State *state, Object *, Object *, Object **arguments, size_t count) {
-    Object *root = state->m_stack[state->m_length - 1].m_context;
-    while (root->m_parent)
-        root = root->m_parent;
+    Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
     Object *boolBase = Object::lookup(root, "bool", nullptr);

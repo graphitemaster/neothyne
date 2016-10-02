@@ -33,14 +33,9 @@ Slot Gen::addAccess(Gen *gen, Slot objectSlot, Slot keySlot) {
     access->m_type = kAccess;
     access->m_objectSlot = objectSlot;
     access->m_keySlot = keySlot;
+    access->m_targetSlot = gen->m_slot++;
     addInstruction(gen, (Instruction *)access);
-
-    Instruction::SaveResult *saveResult = (Instruction::SaveResult *)neoMalloc(sizeof *saveResult);
-    saveResult->m_type = kSaveResult;
-    saveResult->m_targetSlot = gen->m_slot++;
-    addInstruction(gen, (Instruction *)saveResult);
-
-    return gen->m_slot - 1;
+    return access->m_targetSlot;
 }
 
 void Gen::addAssign(Gen *gen, Slot objectSlot, Slot keySlot, Slot valueSlot, AssignType assignType) {
@@ -272,6 +267,7 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
                     (Instruction::AccessStringKey *)neoMalloc(sizeof *accessStringKey);
                 accessStringKey->m_type = kAccesStringKey;
                 accessStringKey->m_objectSlot = access->m_objectSlot;
+                accessStringKey->m_targetSlot = access->m_targetSlot;
                 accessStringKey->m_key = slotTable[access->m_keySlot];
                 addInstruction(gen, (Instruction *)accessStringKey);
                 continue;
