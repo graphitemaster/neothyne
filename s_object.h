@@ -72,6 +72,7 @@ struct Object {
     size_t m_size;
     ObjectFlags m_flags;
     Object *m_prev;
+    void (*m_mark)(State *state, Object *object);
 };
 
 struct RootSet {
@@ -144,12 +145,6 @@ struct ArrayObject : Object {
     Object **m_contents;
     int m_length;
 };
-
-struct MarkObject : Object {
-    void (*m_mark)(State *state, Object *object);
-};
-
-
 
 }
 

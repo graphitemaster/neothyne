@@ -416,9 +416,7 @@ Object *createRoot(State *state) {
     Object *closureObject = Object::newObject(state, nullptr);
     closureObject->m_flags |= kNoInherit;
     Object::setNormal(root, "closure", closureObject);
-    Object *closureMarkObject = Object::newMark(state);
-    ((MarkObject *)closureMarkObject)->m_mark = closureMark;
-    Object::setNormal(closureObject, "mark", closureMarkObject);
+    closureObject->m_mark = closureMark;
 
     // bool
     Object *boolObject = Object::newObject(state, nullptr);
@@ -464,9 +462,7 @@ Object *createRoot(State *state) {
     Object *arrayObject = Object::newObject(state, nullptr);
     arrayObject->m_flags |= kNoInherit;
     Object::setNormal(root, "array", arrayObject);
-    Object *arrayMarkObject = Object::newMark(state);
-    ((MarkObject *)arrayMarkObject)->m_mark = arrayMark;
-    Object::setNormal(arrayObject, "mark", arrayMarkObject);
+    arrayObject->m_mark = arrayMark;
     Object::setNormal(arrayObject, "resize", Object::newFunction(state, arrayResize));
     Object::setNormal(arrayObject, "push", Object::newFunction(state, arrayPush));
     Object::setNormal(arrayObject, "pop", Object::newFunction(state, arrayPop));

@@ -82,10 +82,8 @@ void Object::mark(State *state, Object *object) {
         }
 
         // run any custom mark functions if they exist
-        bool markFound = false;
-        Object *markObject = lookup(object, "mark", &markFound);
-        if (markFound)
-            ((MarkObject *)markObject)->m_mark(state, object);
+        if (object->m_mark)
+            object->m_mark(state, object);
     }
 }
 
@@ -232,13 +230,6 @@ Object *Object::newFunction(State *state, FunctionPointer function) {
     FunctionObject *object = (FunctionObject*)allocate(state, sizeof *object);
     object->m_parent = functionBase;
     object->m_function = function;
-    return (Object *)object;
-}
-
-Object *Object::newMark(State *state) {
-    MarkObject *object = (MarkObject *)allocate(state, sizeof *object);
-    object->m_parent = nullptr;
-    object->m_mark = nullptr;
     return (Object *)object;
 }
 
