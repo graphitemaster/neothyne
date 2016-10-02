@@ -59,8 +59,6 @@ void test() {
     Object *root = createRoot(&state);
     VM::delFrame(&state);
 
-    state.m_root = root;
-
     char *contents = text;
 
     RootSet set;

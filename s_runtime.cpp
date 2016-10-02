@@ -15,7 +15,6 @@ static void boolNot(State *state, Object *self, Object *function, Object **argum
     (void)function;
     (void)arguments;
     U_ASSERT(count == 0);
-    Object *root = state->m_root;
     state->m_result = Object::newBool(state, !((BoolObject *)self)->m_value);
 }
 

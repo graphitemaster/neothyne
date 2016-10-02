@@ -229,7 +229,14 @@ Parser::Reference Parser::Reference::getScope(Gen *gen, const char *name) {
 ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlot) {
     char *text = *contents;
     while (!consumeString(&text, "}")) {
-        const char *keyName = parseIdentifier(&text);
+        char *keyName = (char *)parseIdentifier(&text);
+        if (!keyName) {
+            ParseResult result = parseString(&text, &keyName);
+            if (result != kParseOk) {
+                logParseError(text, "expected identifier");
+                return kParseError;
+            }
+        }
         if (!consumeString(&text, "=")) {
             logParseError(text, "object literal expects 'name = value'");
             return kParseError;
@@ -746,8 +753,10 @@ ParseResult Parser::parseIfStatement(char **contents, Gen *gen) {
         if (result == kParseError)
             return kParseError;
         U_ASSERT(result == kParseOk);
-        Gen::addBranch(gen, &eBlock);
-        *eBlock = Gen::newBlock(gen);
+        size_t *mBlock = nullptr;
+        Gen::addBranch(gen, &mBlock);
+        *mBlock = Gen::newBlock(gen);
+        *eBlock = *mBlock;
     } else {
         *eBlock = *fBlock;
     }
