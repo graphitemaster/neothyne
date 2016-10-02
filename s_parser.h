@@ -8,12 +8,13 @@ namespace s {
 struct Gen;
 struct UserFunction;
 
-struct Parser {
-    // Lexer
-    static void consumeFiller(char **contents);
-    static bool consumeString(char **contents, const char *identifier);
-    static bool consumeKeyword(char **contents, const char *keyword);
+enum ParseResult {
+    kParseNone,
+    kParseError,
+    kParseOk
+};
 
+struct Parser {
     struct Reference {
         static constexpr Slot NoSlot = (Slot)-1;
 
@@ -35,35 +36,36 @@ struct Parser {
         Mode m_mode;
     };
 
-    static const char *parseIdentifier(char **contents);
+    static void consumeFiller(char **contents);
+    static bool consumeString(char **contents, const char *identifier);
+    static bool consumeKeyword(char **contents, const char *keyword);
+
     static const char *parseIdentifierAll(char **contents);
+    static const char *parseIdentifier(char **contents);
 
     static bool parseInteger(char **contents, int *out);
     static bool parseFloat(char **contents, float *out);
     static bool parseString(char **contents, char **out);
 
-    static Reference parseExpression(char **contents, Gen *gen, int level);
-    static Reference parseExpression(char **contents, Gen *gen);
-    static Reference parseExpressionStem(char **contents, Gen *gen);
-
-    static bool parseCall(char **contents, Gen *gen, Reference *expression);
-    static bool parseObjectLiteral(char **contents, Gen *gen, Reference *reference);
-    static void parseObjectLiteral(char **contents, Gen *gen, Slot objectSlot);
-    static void parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot);
-    static bool parseArrayLiteral(char **contents, Gen *gen, Reference *reference);
-    static bool parsePropertyAccess(char **contents, Gen *gen, Reference *expression);
-    static bool parseArrayAccess(char **contents, Gen *gen, Reference *expression);
-
-    static void parseBlock(char **contents, Gen *gen);
-    static void parseIfStatement(char **contents, Gen *gen);
-    static void parseWhile(char **contents, Gen *gen);
-    static void parseReturnStatement(char **contents, Gen *gen);
-    static void parseLetDeclaration(char **contents, Gen *gen);
-    static void parseFunctionDeclaration(char **contents, Gen *gen);
-    static void parseStatement(char **contents, Gen *gen);
-
-    static UserFunction *parseFunctionExpression(char **contents);
-    static UserFunction *parseModule(char **contents);
+    static ParseResult parseObjectLiteral(char **contents, Gen *gen, Slot objectSlot);
+    static ParseResult parseObjectLiteral(char **contents, Gen *gen, Reference *reference);
+    static ParseResult parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot);
+    static ParseResult parseArrayLiteral(char **contents, Gen *gen, Reference *reference);
+    static ParseResult parseExpressionStem(char **contents, Gen *gen, Reference *reference);
+    static ParseResult parseCall(char **contents, Gen *gen, Reference *expression);
+    static ParseResult parseArrayAccess(char **contents, Gen *gen, Reference *expression);
+    static ParseResult parsePropertyAccess(char **contents, Gen *gen, Reference *expression);
+    static ParseResult parseExpression(char **contents, Gen *gen, Reference *reference);
+    static ParseResult parseExpression(char **contents, Gen *gen, int level, Reference *reference);
+    static ParseResult parseIfStatement(char **contents, Gen *gen);
+    static ParseResult parseWhile(char **contents, Gen *gen);
+    static ParseResult parseReturnStatement(char **contents, Gen *gen);
+    static ParseResult parseLetDeclaration(char **contents, Gen *gen);
+    static ParseResult parseFunctionDeclaration(char **contents, Gen *gen);
+    static ParseResult parseStatement(char **contents, Gen *gen);
+    static ParseResult parseBlock(char **contents, Gen *gen);
+    static ParseResult parseFunctionExpression(char **contents, UserFunction **function);
+    static ParseResult parseModule(char **contents, UserFunction **function);
 };
 
 }

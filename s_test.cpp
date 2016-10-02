@@ -59,7 +59,9 @@ void test() {
     RootSet set;
     GC::addRoots(&state, &root, 1, &set);
 
-    UserFunction *module = Parser::parseModule(&contents);
+    UserFunction *module;
+    ParseResult result = Parser::parseModule(&contents, &module);
+    U_ASSERT(result == kParseOk);
     UserFunction::dump(module, 0);
 
     state.m_length = 0;
