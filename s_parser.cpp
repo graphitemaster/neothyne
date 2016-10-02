@@ -158,15 +158,19 @@ bool Parser::parseFloat(char **contents, float *out) {
     return true;
 }
 
-bool Parser::parseString(char **contents, char **out) {
+ParseResult Parser::parseString(char **contents, char **out) {
     char *text = *contents;
     consumeFiller(&text);
     char *start = text;
     if (*text != '"')
-        return false;
+        return kParseNone;
     text++;
-    while (*text != '"') // TODO(daleweiler): string escaping
+    while (*text && *text != '"') // TODO(daleweiler): string escaping
         text++;
+    if (!*text) {
+        logParseError(text, "expected closing quote mark");
+        return kParseError;
+    }
     text++;
     *contents = text;
     size_t length = text - start;
@@ -174,7 +178,7 @@ bool Parser::parseString(char **contents, char **out) {
     memcpy(result, start + 1, length - 2);
     result[length - 2] = '\0';
     *out = result;
-    return true;
+    return kParseOk;
 }
 
 bool Parser::consumeKeyword(char **contents, const char *keyword) {
@@ -183,7 +187,7 @@ bool Parser::consumeKeyword(char **contents, const char *keyword) {
     if (!compare || strcmp(compare, keyword) != 0)
         return false;
     *contents = text;
-    return true;
+    return kParseOk;
 }
 
 ///! Parser::Reference
@@ -359,14 +363,17 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
     }
     // string?
     {
+        ParseResult result;
         char *value = nullptr;
-        if (parseString(&text, &value)) {
-            *contents = text;
-            if (gen) {
-                Slot slot = Gen::addNewStringObject(gen, gen->m_scope, value);
-                *reference = { slot, Reference::NoSlot, Reference::kNone };
+        if ((result = parseString(&text, &value)) != kParseNone) {
+            if (result == kParseOk) {
+                *contents = text;
+                if (gen) {
+                    Slot slot = Gen::addNewStringObject(gen, gen->m_scope, value);
+                    *reference = { slot, Reference::NoSlot, Reference::kNone };
+                }
             }
-            return kParseOk;
+            return result;
         }
     }
 
@@ -944,6 +951,9 @@ ParseResult Parser::parseStatement(char **contents, Gen *gen) {
             Slot value = Reference::access(gen, valueExpression);
 
             switch (reference.m_mode) {
+            case Reference::kNone:
+                logParseError(text, "cannot assign to non-reference expression");
+                return kParseError;
             case Reference::kVariable:
                 Reference::assignExisting(gen, reference, value);
                 break;

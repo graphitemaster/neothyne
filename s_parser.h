@@ -45,7 +45,7 @@ struct Parser {
 
     static bool parseInteger(char **contents, int *out);
     static bool parseFloat(char **contents, float *out);
-    static bool parseString(char **contents, char **out);
+    static ParseResult parseString(char **contents, char **out);
 
     static ParseResult parseObjectLiteral(char **contents, Gen *gen, Slot objectSlot);
     static ParseResult parseObjectLiteral(char **contents, Gen *gen, Reference *reference);
