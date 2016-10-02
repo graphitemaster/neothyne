@@ -59,9 +59,8 @@ void VM::delFrame(State *state) {
 
 void VM::step(State *state, Object *root, void **preallocatedArguments) {
     CallFrame *frame = &state->m_stack[state->m_length - 1];
-    Instruction *instruction = frame->m_block->m_instructions[frame->m_offset++];
+    Instruction *instruction = frame->m_block->m_instructions[frame->m_offset];
     switch (instruction->m_type) {
-
     case kGetRoot: BEGIN
         I(i, GetRoot);
         U_ASSERT(i->m_slot < frame->m_count);
@@ -356,7 +355,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         size_t block = branch->m_block;
         U_ASSERT(block < frame->m_function->m_body.m_count);
         frame->m_block = &frame->m_function->m_body.m_blocks[block];
-        frame->m_offset = 0;
+        frame->m_offset = -1;
         BREAK;
 
     case kTestBranch: BEGIN
@@ -385,13 +384,14 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
 
         size_t targetBlock = test ? trueBlock : falseBlock;
         frame->m_block = &frame->m_function->m_body.m_blocks[targetBlock];
-        frame->m_offset = 0;
+        frame->m_offset = -1;
         BREAK;
 
     default:
         U_ASSERT(0 && "invalid instruction");
         break;
     }
+    frame->m_offset++;
 }
 
 void VM::run(State *state, Object *root) {
