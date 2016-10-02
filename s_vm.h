@@ -19,6 +19,7 @@ struct VM {
 
 private:
     static void step(State *state, Object *root, void **arguments);
+    static void error(State *state, const char *fmt, ...);
 };
 
 }

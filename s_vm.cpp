@@ -1,8 +1,11 @@
+#include <stdarg.h>
+
 #include "s_object.h"
 #include "s_gc.h"
 #include "s_vm.h"
 
 #include "u_assert.h"
+#include "u_misc.h"
 
 namespace s {
 
@@ -53,6 +56,23 @@ void VM::delFrame(State *state) {
     state->m_length = state->m_length - 1;
 }
 
+void VM::error(State *state, const char *fmt, ...) {
+    U_ASSERT(state->m_runState == kRunning);
+    va_list va;
+    va_start(va, fmt);
+    state->m_error = u::format(fmt, va);
+    va_end(va);
+    state->m_runState = kErrored;
+}
+
+#define VM_ASSERT(CONDITION, ...) \
+    do { \
+        if (!(CONDITION)) { \
+            error(state, __VA_ARGS__); \
+            return; \
+        } \
+    } while(0)
+
 #define I(NAME, TYPE) \
     Instruction::TYPE *NAME = (Instruction::TYPE *)instruction
 
@@ -65,13 +85,13 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
     switch (instruction->m_type) {
     case kGetRoot: BEGIN
         I(i, GetRoot);
-        U_ASSERT(i->m_slot < frame->m_count);
+        VM_ASSERT(i->m_slot < frame->m_count, "slot addressing error");
         frame->m_slots[i->m_slot] = root;
         BREAK;
 
     case kGetContext: BEGIN
         I(i, GetContext);
-        U_ASSERT(i->m_slot < frame->m_count);
+        VM_ASSERT(i->m_slot < frame->m_count, "slot addressing error");
         frame->m_slots[i->m_slot] = frame->m_context;
         BREAK;
 
@@ -85,7 +105,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         else
             objectSlot = accessStringKey->m_objectSlot;
 
-        U_ASSERT(objectSlot < frame->m_count);
+        VM_ASSERT(objectSlot < frame->m_count, "slot addressing error");
 
         Object *object = frame->m_slots[objectSlot];
 
@@ -94,10 +114,13 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         if (instruction->m_type == kAccess) {
             Slot keySlot = access->m_keySlot;
 
-            U_ASSERT(keySlot < frame->m_count && frame->m_slots[keySlot]);
+            VM_ASSERT(keySlot < frame->m_count, "slot addressing error");
+            VM_ASSERT(frame->m_slots[keySlot], "null key slot");
 
             Object *stringBase = Object::lookup(root, "string", nullptr);
             Object *keyObject = frame->m_slots[keySlot];
+
+            VM_ASSERT(keyObject, "key is null");
 
             StringObject *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
             if (stringKey) {
@@ -121,7 +144,8 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
                 FunctionObject *functionIndexOperation = (FunctionObject *)Object::instanceOf(indexOperation, functionBase);
                 ClosureObject *closureIndexOperation = (ClosureObject *)Object::instanceOf(indexOperation, closureBase);
 
-                U_ASSERT(functionIndexOperation || closureIndexOperation);
+                VM_ASSERT(functionIndexOperation || closureIndexOperation,
+                    "index operation isn't callable");
 
                 Object *keyObject;
                 if (instruction->m_type == kAccess)
@@ -138,12 +162,11 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
             }
         }
         if (!objectFound) {
-            if (hasKey) {
-                // could not find property by key
-            } else {
-                // could not find property by value
-            }
-            U_ASSERT(0 && "could not find property");
+            if (hasKey)
+                VM_ASSERT(false, "property not found: '%s'", key);
+            else
+                VM_ASSERT(false, "property not found");
+            U_UNREACHABLE();
         }
         BREAK;
 
@@ -163,9 +186,10 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
             Slot valueSlot = assign->m_valueSlot;
             Slot keySlot = assign->m_keySlot;
 
-            U_ASSERT(objectSlot < frame->m_count);
-            U_ASSERT(valueSlot < frame->m_count);
-            U_ASSERT(keySlot < frame->m_count && frame->m_slots[keySlot]);
+            VM_ASSERT(objectSlot < frame->m_count, "slot addressing error");
+            VM_ASSERT(valueSlot < frame->m_count, "slot addressing error");
+            VM_ASSERT(keySlot < frame->m_count, "slot addressing error");
+            VM_ASSERT(frame->m_slots[keySlot], "null key slot");
 
             object = frame->m_slots[objectSlot];
             valueObject = frame->m_slots[valueSlot];
@@ -181,8 +205,8 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         } else {
             Slot objectSlot = assignStringKey->m_objectSlot;
             Slot valueSlot = assignStringKey->m_valueSlot;
-            U_ASSERT(objectSlot < frame->m_count);
-            U_ASSERT(valueSlot < frame->m_count);
+            VM_ASSERT(objectSlot < frame->m_count, "slot addressing error");
+            VM_ASSERT(valueSlot < frame->m_count, "slot addressing error");
             object = frame->m_slots[objectSlot];
             valueObject = frame->m_slots[valueSlot];
             key = assignStringKey->m_key;
@@ -200,7 +224,8 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
                 ClosureObject *closureIndexAssignOperation =
                     (ClosureObject *)Object::instanceOf(indexAssignOperation, closureBase);
 
-                U_ASSERT(functionIndexAssignOperation || closureIndexAssignOperation);
+                VM_ASSERT(functionIndexAssignOperation || closureIndexAssignOperation,
+                    "index assign operation isn't callable");
 
                 Object *keyValuePair[] = { frame->m_slots[assign->m_keySlot], valueObject };
                 if (functionIndexAssignOperation)
@@ -209,20 +234,21 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
                     closureIndexAssignOperation->m_function(state, object, indexAssignOperation, keyValuePair, 2);
                 break;
             }
-            U_UNREACHABLE();
+            VM_ASSERT(false, "key is not string");
         }
         switch (assignType) {
         case kAssignPlain:
-            if (!object) {
-                U_ASSERT(0 && "attempt to index a null");
-            }
+            if (!object)
+                VM_ASSERT(false, "assignment to null object");
             Object::setNormal(object, key, valueObject);
             break;
         case kAssignExisting:
-            Object::setExisting(object, key, valueObject);
+            if (!Object::setExisting(object, key, valueObject))
+                VM_ASSERT(false, "key '%s' not found in object", key);
             break;
         case kAssignShadowing:
-            Object::setShadowing(object, key, valueObject);
+            if (!Object::setShadowing(object, key, valueObject))
+                VM_ASSERT(false, "key '%s' not found in object", key);
             break;
         }
         BREAK;
@@ -233,12 +259,13 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         Slot targetSlot = newObject->m_targetSlot;
         Slot parentSlot = newObject->m_parentSlot;
 
-        U_ASSERT(targetSlot < frame->m_count);
-        U_ASSERT(parentSlot < frame->m_count);
+        VM_ASSERT(targetSlot < frame->m_count, "slot addressing error");
+        VM_ASSERT(parentSlot < frame->m_count, "slot addressing error");
 
         Object *parentObject = frame->m_slots[parentSlot];
         if (parentObject) {
-            U_ASSERT(!(parentObject->m_flags & kNoInherit));
+            VM_ASSERT(!(parentObject->m_flags & kNoInherit),
+                "cannot inherit from this object");
         }
         frame->m_slots[targetSlot] = Object::newObject(state, parentObject);
     BREAK;
@@ -247,7 +274,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         I(newIntObject, Instruction::NewIntObject);
         Slot targetSlot = newIntObject->m_targetSlot;
         int value = newIntObject->m_value;
-        U_ASSERT(targetSlot < frame->m_count);
+        VM_ASSERT(targetSlot < frame->m_count, "slot addressing error");
         frame->m_slots[targetSlot] = Object::newInt(state, value);
     BREAK;
 
@@ -256,14 +283,14 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         I(newFloatObject, Instruction::NewFloatObject);
         Slot targetSlot = newFloatObject->m_targetSlot;
         float value = newFloatObject->m_value;
-        U_ASSERT(targetSlot < frame->m_count);
+        VM_ASSERT(targetSlot < frame->m_count, "slot addressing error");
         frame->m_slots[targetSlot] = Object::newFloat(state, value);
     BREAK;
 
     case kNewArrayObject: BEGIN
         I(newArrayObject, Instruction::NewArrayObject);
         Slot targetSlot = newArrayObject->m_targetSlot;
-        U_ASSERT(targetSlot < frame->m_count);
+        VM_ASSERT(targetSlot < frame->m_count, "slot addressing error");
         frame->m_slots[targetSlot] = Object::newArray(state, nullptr, 0);
     BREAK;
 
@@ -271,7 +298,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         I(newStringObject, Instruction::NewStringObject);
         Slot targetSlot = newStringObject->m_targetSlot;
         const char *value = newStringObject->m_value;
-        U_ASSERT(targetSlot < frame->m_count);
+        VM_ASSERT(targetSlot < frame->m_count, "slot addressing error");
         frame->m_slots[targetSlot] = Object::newString(state, value);
     BREAK;
 
@@ -279,17 +306,17 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         I(newClosureObject, Instruction::NewClosureObject);
         Slot targetSlot = newClosureObject->m_targetSlot;
         Slot contextSlot = newClosureObject->m_contextSlot;
-        U_ASSERT(targetSlot < frame->m_count);
-        U_ASSERT(contextSlot < frame->m_count);
+        VM_ASSERT(targetSlot < frame->m_count, "slot addressing error");
+        VM_ASSERT(contextSlot < frame->m_count, "slot addressing error");
         frame->m_slots[targetSlot] = Object::newClosure(frame->m_slots[contextSlot], newClosureObject->m_function);
     BREAK;
 
     case kCloseObject: BEGIN
         I(closeObject, Instruction::CloseObject);
         Slot slot = closeObject->m_slot;
-        U_ASSERT(slot < frame->m_count);
+        VM_ASSERT(slot < frame->m_count, "slot addressing error");
         Object *object = frame->m_slots[slot];
-        U_ASSERT(!(object->m_flags & kClosed));
+        VM_ASSERT(!(object->m_flags & kClosed), "object is already closed");
         object->m_flags |= kClosed;
         BREAK;
 
@@ -301,8 +328,8 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
 
         size_t count = call->m_count;
 
-        U_ASSERT(functionSlot < frame->m_count);
-        U_ASSERT(thisSlot < frame->m_count);
+        VM_ASSERT(functionSlot < frame->m_count, "slot addressing error");
+        VM_ASSERT(thisSlot < frame->m_count, "slot addressing error");
 
         Object *thisObject = frame->m_slots[thisSlot];
         Object *funObject = frame->m_slots[functionSlot];
@@ -313,7 +340,8 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         FunctionObject *functionObject = (FunctionObject *)Object::instanceOf(funObject, functionBase);
         ClosureObject *closureObject = (ClosureObject *)Object::instanceOf(funObject, closureBase);
 
-        U_ASSERT(functionObject || closureObject);
+        VM_ASSERT(functionObject || closureObject,
+            "object isn't callable");
 
         Object **arguments = count < 10
             ? (Object **)preallocatedArguments[count]
@@ -321,7 +349,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
 
         for (size_t i = 0; i < count; i++) {
             Slot argumentSlot = call->m_arguments[i];
-            U_ASSERT(argumentSlot < frame->m_count);
+            VM_ASSERT(argumentSlot < frame->m_count, "slot addressing error");
             arguments[i] = frame->m_slots[argumentSlot];
         }
 
@@ -344,7 +372,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
     case kReturn: BEGIN
         I(ret, Instruction::Return);
         Slot returnSlot = ret->m_returnSlot;
-        U_ASSERT(returnSlot < frame->m_count);
+        VM_ASSERT(returnSlot < frame->m_count, "slot addressing error");
         Object *result = frame->m_slots[returnSlot];
         GC::delRoots(state, &frame->m_root);
         delFrame(state);
@@ -354,7 +382,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
     case kSaveResult: BEGIN
         I(saveResult, Instruction::SaveResult);
         Slot saveSlot = saveResult->m_targetSlot;
-        U_ASSERT(saveSlot < frame->m_count);
+        VM_ASSERT(saveSlot < frame->m_count, "slot addressing error");
         frame->m_slots[saveSlot] = state->m_result;
         state->m_result = nullptr;
         BREAK;
@@ -362,7 +390,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
     case kBranch: BEGIN
         I(branch, Instruction::Branch);
         size_t block = branch->m_block;
-        U_ASSERT(block < frame->m_function->m_body.m_count);
+        VM_ASSERT(block < frame->m_function->m_body.m_count, "block addressing error");
         frame->m_block = &frame->m_function->m_body.m_blocks[block];
         frame->m_offset = -1;
         BREAK;
@@ -372,7 +400,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         Slot testSlot = testBranch->m_testSlot;
         size_t trueBlock = testBranch->m_trueBlock;
         size_t falseBlock = testBranch->m_falseBlock;
-        U_ASSERT(testSlot < frame->m_count);
+        VM_ASSERT(testSlot < frame->m_count, "slot addressing error");
         Object *testObject = frame->m_slots[testSlot];
 
         Object *boolBase = Object::lookup(root, "bool", nullptr);
@@ -404,13 +432,18 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
 }
 
 void VM::run(State *state, Object *root) {
+    U_ASSERT(state->m_runState == kTerminated || state->m_runState == kErrored);
+    state->m_runState = kRunning;
+    state->m_error.clear();
     // preallocate space for 10 arguments to place function calls
     void **arguments = (void **)neoMalloc(sizeof(void *) * 10);
     for (size_t i = 0; i < 10; i++)
         arguments[i] = neoMalloc(sizeof(Object *) * i);
-    // run a bunch of steps until there is nothing left on the stack
-    while (state->m_length)
+    while (state->m_runState == kRunning) {
         step(state, root, arguments);
+        if (state->m_length == 0)
+            state->m_runState = kTerminated;
+    }
 }
 
 void VM::callFunction(State *state, Object *context, UserFunction *function, Object **arguments, size_t count) {
@@ -419,11 +452,11 @@ void VM::callFunction(State *state, Object *context, UserFunction *function, Obj
     frame->m_context = context;
     GC::addRoots(state, frame->m_slots, frame->m_count, &frame->m_root);
 
-    U_ASSERT(count == frame->m_function->m_arity);
+    VM_ASSERT(count == frame->m_function->m_arity, "arity violation in call");
     for (size_t i = 0; i < count; i++)
         frame->m_slots[i] = arguments[i];
 
-    U_ASSERT(frame->m_function->m_body.m_count);
+    VM_ASSERT(frame->m_function->m_body.m_count, "invalid function");
     frame->m_block = frame->m_function->m_body.m_blocks;
     frame->m_offset = 0;
 }

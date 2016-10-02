@@ -110,7 +110,7 @@ Object *Object::instanceOf(Object *object, Object *prototype) {
 }
 
 // changes a propery in place
-void Object::setExisting(Object *object, const char *key, Object *value) {
+bool Object::setExisting(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Object *current = object;
     while (current) {
@@ -118,26 +118,26 @@ void Object::setExisting(Object *object, const char *key, Object *value) {
         if (search) {
             U_ASSERT(!(current->m_flags & kImmutable));
             *search = value;
-            return;
+            return true;
         }
         current = current->m_parent;
     }
-    U_UNREACHABLE();
+    return false;
 }
 
 // change a propery only if it exists somewhere in the prototype chain
-void Object::setShadowing(Object *object, const char *key, Object *value) {
+bool Object::setShadowing(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Object *current = object;
     while (current) {
         Object **search = Table::lookupReference(&current->m_table, key, nullptr);
         if (search) {
             setNormal(object, key, value);
-            return;
+            return true;
         }
         current = current->m_parent;
     }
-    U_UNREACHABLE();
+    return false;
 }
 
 // set property

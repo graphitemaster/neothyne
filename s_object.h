@@ -6,6 +6,7 @@
 #include "s_instr.h"
 
 #include "u_new.h"
+#include "u_string.h"
 
 namespace s {
 
@@ -45,8 +46,8 @@ struct Object {
 
     static Object *lookup(Object *object, const char *key, bool *found);
 
-    static void setExisting(Object *object, const char *key, Object *value);
-    static void setShadowing(Object *object, const char *key, Object *value);
+    static bool setExisting(Object *object, const char *key, Object *value);
+    static bool setShadowing(Object *object, const char *key, Object *value);
     static void setNormal(Object *object, const char *key, Object *value);
 
     static void mark(State *state, Object *Object);
@@ -90,11 +91,19 @@ struct CallFrame {
     int m_offset;
 };
 
+enum RunState {
+    kTerminated,
+    kRunning,
+    kErrored
+};
+
 struct State {
     CallFrame *m_stack;
     size_t m_length;
     Object *m_root;
     Object *m_result;
+    RunState m_runState;
+    u::string m_error;
     struct {
         RootSet *m_tail;
     } m_gc;

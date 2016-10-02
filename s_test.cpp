@@ -45,6 +45,9 @@ print(ack(3, 7));
 
 print("string " + "concatenation");
 
+let a = { };
+a.b = 1;
+
 )";
 
 void test() {
@@ -67,6 +70,10 @@ void test() {
 
     VM::callFunction(&state, root, module, nullptr, 0);
     VM::run(&state, root);
+
+    // print any errors from running
+    if (state.m_runState == kErrored)
+        u::Log::err("%s", state.m_error);
 
     root = state.m_result;
 
