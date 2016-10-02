@@ -9,64 +9,98 @@
 
 namespace s {
 
+enum {
+    kNone      = 1 << 1,
+    kClosed    = 1 << 2,
+    kImmutable = 1 << 3,
+    kNoInherit = 1 << 4,
+    kMarked    = 1 << 5
+};
+using ObjectFlags = int;
+
 struct Object;
+struct Field;
+struct Table;
+struct RootSet;
+struct CallFrame;
+struct State;
 
-struct Table {
-    struct Entry {
-        const char *m_name;
-        Object *m_value;
-        Entry *m_next;
-    };
-
-    Object *lookup(const char *key, bool *found);
-
-private:
-    Object **lookupReference(const char *key, Entry **first);
-
-    friend struct GC;
-    friend struct Object;
-    Entry m_entry;
+struct Field {
+    const char *m_name;
+    Object *m_value;
+    Field *m_next;
 };
 
-typedef Object *(*FunctionPointer)(Object *, Object *, Object *, Object **, size_t);
+struct Table {
+
+    static Object **lookupReference(Table *table, const char *key, Field** first);
+    static Object *lookup(Table *table, const char *key, bool *found);
+
+    Field m_field;
+};
+
+typedef void (*FunctionPointer)(State *state, Object *self, Object *function, Object **arguments, size_t count);
 
 struct Object {
-    static void *alloc(Object *context, size_t size);
 
-    static Object *newObject(Object *context, Object *parent);
-    static Object *newInt(Object *context, int value);
-    static Object *newFloat(Object *context, float value);
-    static Object *newBoolean(Object *context, bool value);
-    static Object *newString(Object *content, const char *value);
-    static Object *newArray(Object *context, Object **contents, size_t length);
-    static Object *newFunction(Object *context, FunctionPointer function);
-    static Object *newClosure(Object *context, UserFunction *function);
+    static Object *lookup(Object *object, const char *key, bool *found);
+
+    static void setExisting(Object *object, const char *key, Object *value);
+    static void setShadowing(Object *object, const char *key, Object *value);
+    static void setNormal(Object *object, const char *key, Object *value);
+
+    static void mark(State *state, Object *Object);
+    static void free(Object *object);
 
     static Object *instanceOf(Object *object, Object *prototype);
 
-    static void free(Object *object);
-    static void mark(Object *context, Object *object);
+    static void *allocate(State *state, size_t size);
 
-    Object *lookup(const char *key, bool *found);
+    static Object *newObject(State *state, Object *parent);
+    static Object *newInt(State *state, int value);
+    static Object *newFloat(State *state, float value);
+    static Object *newString(State *state, const char *value);
+    static Object *newBool(State *state, bool value);
+    static Object *newArray(State *state, Object **data, size_t count);
+    static Object *newFunction(State *state, FunctionPointer function);
+    static Object *newMark(State *state);
+    static Object *newClosure(Object *context, UserFunction *function);
 
-    void setNormal(const char *key, Object *value);
-    void setExisting(const char *key, Object *value);
-    void setShadowing(const char *key, Object *value);
-
-    enum {
-        kClosed    = 1 << 0, // when set no additional properties can be added
-        kImmutable = 1 << 1, // cannot be modified
-        kMarked    = 1 << 2  // reachable in the GC mark phase
-    };
-
-    int m_flags;
-    Object *m_parent;
-    Object *m_prev;
     Table m_table;
+    Object *m_parent;
+    size_t m_size;
+    ObjectFlags m_flags;
+    Object *m_prev;
+};
 
-    static Object *m_lastAllocated;
-    static size_t m_numAllocated;
-    static size_t m_nextGCRun;
+struct RootSet {
+    Object **m_objects;
+    size_t m_count;
+    RootSet *m_prev;
+    RootSet *m_next;
+};
+
+struct CallFrame {
+    UserFunction *m_function;
+    Object *m_context;
+    Object **m_slots;
+    size_t m_count;
+    RootSet m_root;
+    InstructionBlock *m_block;
+    int m_offset;
+};
+
+struct State {
+    CallFrame *m_stack;
+    size_t m_length;
+    Object *m_root;
+    Object *m_result;
+    struct {
+        RootSet *m_tail;
+    } m_gc;
+    Object *m_last;
+    size_t m_count;
+    size_t m_capacity;
 };
 
 struct FunctionObject : Object {
@@ -75,14 +109,14 @@ struct FunctionObject : Object {
 
 struct ClosureObject : FunctionObject {
     Object *m_context;
-    UserFunction m_userFunction;
+    UserFunction m_closure;
 };
 
 struct IntObject : Object {
     int m_value;
 };
 
-struct BooleanObject : Object {
+struct BoolObject : Object {
     bool m_value;
 };
 
@@ -96,10 +130,14 @@ struct StringObject : Object {
 
 struct ArrayObject : Object {
     Object **m_contents;
-    // Note: this would normally be size_t if this were not representing the
-    //       size for the scripting language which only has signed integers
     int m_length;
 };
+
+struct MarkObject : Object {
+    void (*m_mark)(State *state, Object *object);
+};
+
+
 
 }
 

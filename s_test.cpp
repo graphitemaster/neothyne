@@ -1,142 +1,77 @@
-#include "s_runtime.h"
-#include "s_object.h"
-#include "s_gc.h"
-
 #include "s_parser.h"
+#include "s_object.h"
+#include "s_runtime.h"
+#include "s_vm.h"
+#include "s_gc.h"
 
 #include "u_log.h"
 
 namespace s {
 
-static char script[] = R"(
-fn level0() {
-    let obj = {
-        a = 5,
-        b = null,
-        bar = method() {
-            print(this.a - this.b);
-        }
-    };
+char text[] = R"(
 
-    obj.b = 7;
-    obj["foo"] = method() {
-        print(this.a + this.b);
-    };
-
-    let a = 10;
-    while (a > 0) {
-        obj.foo();
-        obj.bar();
-        a = a - 1;
+let obj1 = {
+    a = 5,
+    b = null,
+    bar = method() {
+        print("obj1 = ", this.a - this.b);
     }
-}
-
-fn level1() { level0(); }
-fn level2() { level1(); }
-fn level3() { level2(); }
-
-let obj = {
-    a = level3
 };
+obj1.b = 7;
+obj1.bar();
 
-obj["a"]();
+// shadows the b inside obj1
+let obj2 = new obj1 { b = 9 };
+print("obj2.b = ", obj2.b);
 
-print("2 != 2 => ", 2 != 2);
-print("2 !< 2 => ", 2 !< 2);
-print("2 !> 2 => ", 2 !> 2);
-print("2 !<= 2 => ", 2 !<= 2);
-print("2 !>= 2 => ", 2 !>= 2);
+// prototype chain lookup for 5
+let obj3 = new 5 { bar = 7 };
+print("obj3 = ", obj3 + obj3.bar);
+
+let a = [2, 3, 4];
+a[1] = 7; // replace 3 with 7
+print(a[0], a[1], a[2]);
+let t = a.push(10).push(20).pop();
+print(t);
+print(a[0], a[1], a[2], a[3]);
+
+fn ack(m, n) {
+    let np = n + 1, nm = n - 1, mm = m - 1;
+    if (m < .5) return np;
+    if (n == 0) return ack(mm, 1);
+    return ack(mm, ack(m, nm));
+}
+print(ack(3, 7));
 
 print("string " + "concatenation");
-
-let A = { value = 1337 };
-let B = { value = A };
-let C = { value = B };
-let D = { value = C };
-
-print(D.value.value.value.value);
-print(D["value"]["value"]["value"]["value"]);
-
-// comment
-
-/* a multi
-   line comment
-   to test this */
-
-// make cycles to test GC
-let tree = { next = null, prev = null };
-tree.next = tree;
-tree.prev = tree;
-
-// subclassing and object construction
-let Class = { a = 0 };
-let SubClass = new Class {
-    b = 0,
-    test = method() {
-        print("a + b = ", this.a + this.b);
-    }
-};
-
-let test = new SubClass;
-test.a = 5;
-test.b = 8;
-test.test();
-
-// allow subclassing primitive types, they become an instance of the primitive
-// builtins so they can be coreced back to their primitive types whenever
-let foo = new 5 { a = 7 };
-print(foo); // prints 5
-
-// operator overloads
-let Overload = {
-    a = 10,
-    b = 40
-};
-
-Overload["+"] = method(other) {
-    let value = {
-        a = this.a + other.a,
-        b = this.b + other.b
-    };
-    value["+"] = Overload["+"];
-    return value;
-};
-
-let A = new Overload;
-let B = new Overload;
-let C = A + B; // 10+10, 40+40 => (20, 80)
-let D = C + A; // 20+10, 80+40 => (30, 120)
-
-print("a = ", D.a, ", B = ", D.b);
-
-// arrays
-let e = [ 2, 3, 4 ];
-e[1] = 7;
-let v = e.push(5).pop();
-print(v); // prints 5
-
-let nested = [
-  { a = [ 1, 2, 3 ] },
-  "hi",
-  [ 1, 2, 3 ]
-];
-
-print(nested[0].a[0]); // 1
-print(nested[1]);      // hi
-print(nested[2][1]);   // 2
 
 )";
 
 void test() {
-    Object *root = createRoot();
-    char *text = script;
+    State state;
+    memset(&state, 0, sizeof state);
+    VM::addFrame(&state);
 
-    UserFunction *module = Parser::parseModule(&text);
-    module->dump();
+    Object *root = createRoot(&state);
 
-    root = callFunction(root, module, nullptr, 0);
+    char *contents = text;
 
-    GarbageCollector::run(root);
+    RootSet set;
+    GC::addRoots(&state, &root, 1, &set);
+
+    UserFunction *module = Parser::parseModule(&contents);
+    UserFunction::dump(module, 0);
+
+    state.m_length = 0;
+    VM::callFunction(&state, root, module, nullptr, 0);
+    VM::run(&state, root);
+
+    root = state.m_result;
+
+    GC::delRoots(&state, &set);
+    GC::run(&state);
+
+    neoFree(module);
 }
 
 }

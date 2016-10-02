@@ -10,55 +10,47 @@
 
 namespace s {
 
-// TODO(daleweiler): make this part of the virtual machine state
-Object *Object::m_lastAllocated;
-size_t Object::m_numAllocated;
-size_t Object::m_nextGCRun = 10000;
-
 ///! Table
-Object **Table::lookupReference(const char *key, Table::Entry **first) {
-    if (!m_entry.m_name) {
+Object **Table::lookupReference(Table *table, const char *key, Field** first) {
+    if (!table->m_field.m_name) {
         if (first)
-            *first = &m_entry;
+            *first = &table->m_field;
         return nullptr;
     }
-
-    Entry *entry = &m_entry;
-    Entry *prev;
-    while (entry) {
-        if (strcmp(key, entry->m_name) == 0)
-            return &entry->m_value;
-        prev = entry;
-        entry = entry->m_next;
+    Field *field = &table->m_field;
+    Field *prev;
+    while (field) {
+        if (key[0] == field->m_name[0] && strcmp(key, field->m_name) == 0)
+            return &field->m_value;
+        prev = field;
+        field = field->m_next;
     }
-
     if (first) {
-        Entry *next = (Entry *)neoCalloc(sizeof *next, 1);
-        prev->m_next = next;
-        *first = next;
+        field = (Field *)neoCalloc(sizeof *field, 1);
+        prev->m_next = field;
+        *first = field;
     }
-
     return nullptr;
-};
-
-Object *Table::lookup(const char *key, bool *found) {
-    Object **find = lookupReference(key, nullptr);
-    if (!find) {
-        if (found)
-            *found = false;
-        return nullptr;
-    }
-    if (found)
-        *found = true;
-    return *find;
 }
 
-Object *Object::lookup(const char *key, bool *found) {
-    Object *object = this;
+Object *Table::lookup(Table *table, const char *key, bool *found) {
+    Object **object = lookupReference(table, key, nullptr);
+    if (object) {
+        if (found)
+            *found = true;
+        return *object;
+    }
+    if (found)
+        *found = false;
+    return nullptr;
+}
+
+///! Object
+Object *Object::lookup(Object *object, const char *key, bool *found) {
     while (object) {
-        bool keyFound;
-        Object *value = object->m_table.lookup(key, &keyFound);
-        if (keyFound) {
+        bool contains = false;
+        Object *value = Table::lookup(&object->m_table, key, &contains);
+        if (contains) {
             if (found)
                 *found = true;
             return value;
@@ -70,38 +62,39 @@ Object *Object::lookup(const char *key, bool *found) {
     return nullptr;
 }
 
-///! Object
-void Object::mark(Object *context, Object *object) {
-    // break cycles
-    if (!object || object->m_flags & kMarked)
-        return;
-    object->m_flags |= kMarked;
+void Object::mark(State *state, Object *object) {
+    if (object) {
+        // break cycles in the marking stage
+        if (object->m_flags & kMarked)
+            return;
 
-    // mark parent object
-    mark(context, object->m_parent);
+        // set this object's marked flag
+        object->m_flags |= kMarked;
 
-    // mark all entries in the table
-    Table::Entry *entry = &object->m_table.m_entry;
-    while (entry) {
-        mark(context, entry->m_value);
-        entry = entry->m_next;
-    }
+        // if we're reachable then the parent is reachable
+        mark(state, object->m_parent);
 
-    // check for mark function and call it if exists
-    bool markFunctionFound;
-    Object *markFunction = object->lookup("mark", &markFunctionFound);
-    if (markFunctionFound) {
-        FunctionObject *markFunctionObject = (FunctionObject *)markFunction;
-        markFunctionObject->m_function(context, object, markFunction, nullptr, 0);
+        // all fields of the object are reachable too
+        Field *field = &object->m_table.m_field;
+        while (field) {
+            mark(state, field->m_value);
+            field = field->m_next;
+        }
+
+        // run any custom mark functions if they exist
+        bool markFound = false;
+        Object *markObject = lookup(object, "mark", &markFound);
+        if (markFound)
+            ((MarkObject *)markObject)->m_mark(state, object);
     }
 }
 
 void Object::free(Object *object) {
-    Table::Entry *entry = object->m_table.m_entry.m_next;
-    while (entry) {
-        Table::Entry *next = entry->m_next;
-        neoFree(entry);
-        entry = next;
+    Field *field = object->m_table.m_field.m_next;
+    while (field) {
+        Field *next = field->m_next;
+        neoFree(field);
+        field = next;
     }
     neoFree(object);
 }
@@ -116,15 +109,15 @@ Object *Object::instanceOf(Object *object, Object *prototype) {
     return nullptr;
 }
 
-
 // changes a propery in place
-void Object::setExisting(const char *key, Object *value) {
-    Object *current = this;
+void Object::setExisting(Object *object, const char *key, Object *value) {
+    U_ASSERT(object);
+    Object *current = object;
     while (current) {
-        Object **find = current->m_table.lookupReference(key, nullptr);
-        if (find) {
-            U_ASSERT(!(m_flags & kImmutable));
-            *find = value;
+        Object **search = Table::lookupReference(&current->m_table, key, nullptr);
+        if (search) {
+            U_ASSERT(!(current->m_flags & kImmutable));
+            *search = value;
             return;
         }
         current = current->m_parent;
@@ -133,145 +126,117 @@ void Object::setExisting(const char *key, Object *value) {
 }
 
 // change a propery only if it exists somewhere in the prototype chain
-void Object::setShadowing(const char *key, Object *value) {
-    Object *current = this;
+void Object::setShadowing(Object *object, const char *key, Object *value) {
+    U_ASSERT(object);
+    Object *current = object;
     while (current) {
-        Object **find = current->m_table.lookupReference(key, nullptr);
-        if (find) {
-            // Create it in the object
-            setNormal(key, value);
+        Object **search = Table::lookupReference(&current->m_table, key, nullptr);
+        if (search) {
+            setNormal(object, key, value);
             return;
         }
         current = current->m_parent;
     }
-
     U_UNREACHABLE();
 }
 
 // set property
-void Object::setNormal(const char *key, Object *value) {
-    Table::Entry *free = nullptr;
-    Object **find = m_table.lookupReference(key, &free);
-    if (find) {
-        U_ASSERT(!(m_flags & kImmutable));
+void Object::setNormal(Object *object, const char *key, Object *value) {
+    U_ASSERT(object);
+    Field *free = nullptr;
+    Object **search = Table::lookupReference(&object->m_table, key, &free);
+    if (search) {
+        U_ASSERT(!(object->m_flags & kImmutable));
     } else {
-        U_ASSERT(!(m_flags & kClosed));
+        U_ASSERT(!(object->m_flags & kClosed));
         free->m_name = key;
-        find = &free->m_value;
+        search = &free->m_value;
     }
-    *find = value;
+    *search = value;
 }
 
-void *Object::alloc(Object *context, size_t size) {
-    if (m_numAllocated > m_nextGCRun) {
-        GarbageCollector::run(context);
-        // TODO(daleweiler): cleanup in vm state ?
-        m_nextGCRun = m_numAllocated * 1.2f;
+void *Object::allocate(State *state, size_t size) {
+    if (state->m_count > state->m_capacity) {
+        GC::run(state);
+        // run gc after 20% growth or 10k elements
+        state->m_capacity = size_t(state->m_count * 1.2) + 10000;
     }
 
     Object *result = (Object *)neoCalloc(size, 1);
-    result->m_prev = m_lastAllocated;
-    m_lastAllocated = result;
-    m_numAllocated++;
+    result->m_prev = state->m_last;
+    result->m_size = size;
+    state->m_last = result;
+    state->m_count++;
+
     return result;
 }
 
-Object *Object::newObject(Object *context, Object *parent) {
-    Object *object = (Object *)alloc(context, sizeof(Object));
+Object *Object::newObject(State *state, Object *parent) {
+    Object *object = (Object *)allocate(state, sizeof *object);
     object->m_parent = parent;
     return object;
 }
 
-Object *Object::newInt(Object *context, int value) {
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-    Object *intBase = root->lookup("int", nullptr);
-    auto *object = (IntObject *)alloc(context, sizeof(IntObject));
+Object *Object::newInt(State *state, int value) {
+    Object *intBase = lookup(state->m_root, "int", nullptr);
+    IntObject *object = (IntObject *)allocate(state, sizeof *object);
     object->m_parent = intBase;
     object->m_value = value;
     return (Object *)object;
 }
 
-Object *Object::newFloat(Object *context, float value) {
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-    Object *floatBase = root->lookup("float", nullptr);
-    auto *object = (FloatObject *)alloc(context, sizeof(FloatObject));
+Object *Object::newFloat(State *state, float value) {
+    Object *floatBase = lookup(state->m_root, "float", nullptr);
+    FloatObject *object = (FloatObject *)allocate(state, sizeof *object);
     object->m_parent = floatBase;
     object->m_flags = kImmutable | kClosed;
     object->m_value = value;
     return (Object *)object;
 }
 
-Object *Object::newBoolean(Object *context, bool value) {
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-    Object *boolBase = root->lookup("bool", nullptr);
-    auto *object = (BooleanObject *)alloc(context, sizeof(BooleanObject));
+Object *Object::newBool(State *state, bool value) {
+    Object *boolBase = lookup(state->m_root, "bool", nullptr);
+    BoolObject *object = (BoolObject *)allocate(state, sizeof *object);
     object->m_parent = boolBase;
     object->m_flags = kImmutable | kClosed;
     object->m_value = value;
     return (Object *)object;
 }
 
-Object *Object::newString(Object *context, const char *value) {
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-    Object *stringBase = root->lookup("string", nullptr);
-    size_t length = strlen(value);
+Object *Object::newString(State *state, const char *value) {
+    Object *stringBase = lookup(state->m_root, "string", nullptr);
+    const size_t length = strlen(value);
     // string gets allocated as part of the object
-    auto *object = (StringObject *)alloc(context, sizeof(StringObject) + length + 1);
+    StringObject *object = (StringObject *)allocate(state, sizeof *object + length + 1);
     object->m_parent = stringBase;
     object->m_flags = kImmutable | kClosed;
-    object->m_value = ((char *)object) + sizeof(StringObject);
+    object->m_value = ((char *)object) + sizeof *object;
     strncpy(object->m_value, value, length + 1);
     return (Object *)object;
 }
 
-Object *Object::newArray(Object *context, Object **contents, size_t length) {
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-    Object *arrayBase = root->lookup("array", nullptr);
-    auto *object = (ArrayObject *)alloc(context, sizeof(ArrayObject));
+Object *Object::newArray(State *state, Object **contents, size_t length) {
+    Object *arrayBase = lookup(state->m_root, "array", nullptr);
+    ArrayObject *object = (ArrayObject *)allocate(state, sizeof *object);
     object->m_parent = arrayBase;
     object->m_contents = contents;
     object->m_length = length;
-    // pin this since newInt may trigger the garbage collector
-    void *pinned = GarbageCollector::addRoots(u::unsafe_cast<Object **>(&object), 1);
-    ((Object *)object)->setNormal("length", newInt(context, length));
-    GarbageCollector::delRoots(pinned);
+    setNormal((Object *)object, "length", newInt(state, length));
     return (Object *)object;
 }
 
-Object *Object::newFunction(Object *context, FunctionPointer function) {
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-    Object *functionBase = root->lookup("function", nullptr);
-    auto *object = (FunctionObject*)alloc(context, sizeof(FunctionObject));
+Object *Object::newFunction(State *state, FunctionPointer function) {
+    Object *functionBase = lookup(state->m_root, "function", nullptr);
+    FunctionObject *object = (FunctionObject*)allocate(state, sizeof *object);
     object->m_parent = functionBase;
     object->m_function = function;
     return (Object *)object;
 }
 
-Object *Object::newClosure(Object *context, UserFunction *function) {
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-    Object *closureBase = root->lookup("closure", nullptr);
-    auto *object = (ClosureObject*)alloc(context, sizeof(ClosureObject));
-    object->m_parent = closureBase;
-    if (function->m_isMethod)
-        object->m_function = methodHandler;
-    else
-        object->m_function = functionHandler;
-    object->m_context = context;
-    object->m_userFunction = *function;
+Object *Object::newMark(State *state) {
+    MarkObject *object = (MarkObject *)allocate(state, sizeof *object);
+    object->m_parent = nullptr;
+    object->m_mark = nullptr;
     return (Object *)object;
 }
 

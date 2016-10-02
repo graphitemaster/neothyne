@@ -5,143 +5,145 @@
 
 namespace s {
 
-Instr::Instr(int type)
-    : m_type(type)
-{
-}
-
-const char *AssignInstr::asString(AssignInstr *instr) {
-    switch (instr->m_assignType) {
-    case AssignType::kPlain:     return "plain";
-    case AssignType::kExisting:  return "existing";
-    case AssignType::kShadowing: return "shadowing";
-    }
-    U_UNREACHABLE();
-}
-
-static inline void output(int level, const char *format, ...) {
-    va_list va;
-    va_start(va, format);
-    u::Log::out("[script] => ");
+static void indent(int level) {
     for (int i = 0; i < level; i++)
         u::Log::out("  ");
-    u::Log::out("%s", u::format(format, va));
-    va_end(va);
 }
 
-void UserFunction::dump(int level) {
-    FunctionBody *body = &m_body;
-    output(level, "fn %s (%zu), %zu slots [\n", m_name, m_arity, m_slots);
-    for (size_t i = 0; i < body->m_length; i++) {
-        output(level + 1, "block <%zu> [\n", i);
-        InstrBlock *block = &body->m_blocks[i];
-        for (size_t j = 0; j < block->m_length; j++) {
-            Instr *instruction = block->m_instrs[j];
-            instruction->dump(level + 2);
-        }
-        output(level + 1, "]\n");
-    }
-    output(level, "]\n");
-}
-
-void Instr::dump(int level) {
-    // these get dumped later
-    u::vector<UserFunction *> otherFunctions;
-    switch (m_type) {
+void Instruction::dump(Instruction *instruction, int level) {
+    indent(level);
+    switch (instruction->m_type) {
     case kGetRoot:
-        output(level, "top %zu\n", ((GetRootInstr *)this)->m_slot);
+        u::Log::out("GetRoot:           %%%zu\n", ((GetRoot *)instruction)->m_slot);
         break;
-    break; case kGetContext:
-        output(level, "ctx %zu\n", ((GetContextInstr *)this)->m_slot);
+    case kGetContext:
+        u::Log::out("GetContext:        %%%zu\n", ((GetContext *)instruction)->m_slot);
         break;
-    break; case kAllocObject:
-        output(level, "no %zu (%zu)\n",
-            ((AllocObjectInstr *)this)->m_targetSlot,
-            ((AllocObjectInstr *)this)->m_parentSlot);
+    case kNewObject:
+        u::Log::out("NewObject:         %%%zu => %%%zu\n",
+            ((NewObject *)instruction)->m_targetSlot,
+            ((NewObject *)instruction)->m_parentSlot);
         break;
-    case kAllocIntObject:
-        output(level, "ni %zu (%d)\n",
-            ((AllocIntObjectInstr *)this)->m_targetSlot,
-            ((AllocIntObjectInstr *)this)->m_value);
+    case kNewIntObject:
+        u::Log::out("NewIntObject:      %%%zu = $%d\n",
+            ((NewIntObject *)instruction)->m_targetSlot,
+            ((NewIntObject *)instruction)->m_value);
         break;
-    case kAllocFloatObject:
-        output(level, "nf %zu (%f)\n",
-            ((AllocFloatObjectInstr *)this)->m_targetSlot,
-            ((AllocFloatObjectInstr *)this)->m_value);
+    case kNewFloatObject:
+        u::Log::out("NewFloatObject:    %%%zu = $%f\n",
+            ((NewFloatObject *)instruction)->m_targetSlot,
+            ((NewFloatObject *)instruction)->m_value);
         break;
-    case kAllocArrayObject:
-        output(level, "na %zu\n",
-            ((AllocArrayObjectInstr *)this)->m_targetSlot);
+    case kNewArrayObject:
+        u::Log::out("NewArrayObject:    %%%zu\n",
+            ((NewArrayObject *)instruction)->m_targetSlot);
         break;
-    case kAllocStringObject:
-        output(level, "ns %zu (\"%s\")\n",
-            ((AllocStringObjectInstr *)this)->m_targetSlot,
-            ((AllocStringObjectInstr *)this)->m_value);
+    case kNewStringObject:
+        u::Log::out("NewStringObject:   %%%zu = \"%s\"\n",
+            ((NewStringObject *)instruction)->m_targetSlot,
+            ((NewStringObject *)instruction)->m_value);
         break;
-    case kAllocClosureObject:
-        output(level, "nc %zu (%zu)\n",
-            ((AllocClosureObjectInstr *)this)->m_targetSlot,
-            ((AllocClosureObjectInstr *)this)->m_contextSlot);
-        otherFunctions.push_back(((AllocClosureObjectInstr *)this)->m_function);
+    case kNewClosureObject:
+        u::Log::out("NewClosureObject:  %%%zu @ %%%zu\n",
+            ((NewClosureObject *)instruction)->m_targetSlot,
+            ((NewClosureObject *)instruction)->m_contextSlot);
         break;
     case kCloseObject:
-        output(level, "close %zu\n", ((CloseObjectInstr *)this)->m_slot);
+        u::Log::out("CloseObject:       %%%zu\n",
+            ((CloseObject *)instruction)->m_slot);
         break;
     case kAccess:
-        output(level, "get %zu (%zu . %zu)\n",
-            ((AccessInstr *)this)->m_targetSlot,
-            ((AccessInstr *)this)->m_objectSlot,
-            ((AccessInstr *)this)->m_keySlot);
+        u::Log::out("Access:            %%%zu . %%%zu\n",
+            ((Access *)instruction)->m_objectSlot,
+            ((Access *)instruction)->m_keySlot);
         break;
     case kAssign:
-        output(level, "set (%s) %zu . %zu (%zu)\n",
-            AssignInstr::asString((AssignInstr *)this),
-            ((AssignInstr *)this)->m_objectSlot,
-            ((AssignInstr *)this)->m_keySlot,
-            ((AssignInstr *)this)->m_valueSlot);
+        u::Log::out("Assign%s %%%zu . %%%zu = %%%zu\n",
+            ((Assign *)instruction)->m_assignType == kAssignPlain
+                ? "(plain):    "
+                : ((Assign *)instruction)->m_assignType == kAssignExisting
+                    ? "(existing): "
+                    : "(shadowing):",
+            ((Assign *)instruction)->m_objectSlot,
+            ((Assign *)instruction)->m_keySlot,
+            ((Assign *)instruction)->m_valueSlot);
         break;
     case kCall:
-        // this one is a tad annoying but still doable
-        output(level, "call %zu (%zu . %zu [ ",
-            ((CallInstr *)this)->m_targetSlot,
-            ((CallInstr *)this)->m_functionSlot,
-            ((CallInstr *)this)->m_thisSlot);
-        for (size_t i = 0; i < ((CallInstr *)this)->m_length; ++i) {
+        u::Log::out("Call:              %%%zu . %%%zu ( ",
+            ((Call *)instruction)->m_thisSlot,
+            ((Call *)instruction)->m_functionSlot);
+        for (size_t i = 0; i < ((Call *)instruction)->m_count; i++) {
             if (i) u::Log::out(", ");
-            u::Log::out("%zu", ((CallInstr *)this)->m_arguments[i]);
+            u::Log::out("%%%zu", ((Call *)instruction)->m_arguments[i]);
         }
-        u::Log::out(" ])\n");
+        u::Log::out(" )\n");
         break;
     case kReturn:
-        output(level, "ret %zu\n", ((ReturnInstr *)this)->m_returnSlot);
+        u::Log::out("Return:            %%%zu\n",
+            ((Return *)instruction)->m_returnSlot);
+        break;
+    case kSaveResult:
+        u::Log::out("SaveResult:        %%%zu\n",
+            ((SaveResult *)instruction)->m_targetSlot);
         break;
     case kBranch:
-        output(level, "br <%zu>\n", ((BranchInstr *)this)->m_block);
+        u::Log::out("Branch:            <%zu>\n",
+            ((Branch *)instruction)->m_block);
         break;
     case kTestBranch:
-        output(level, "tbr %zu ? <%zu> : <%zu>\n",
-            ((TestBranchInstr *)this)->m_testSlot,
-            ((TestBranchInstr *)this)->m_trueBlock,
-            ((TestBranchInstr *)this)->m_falseBlock);
+        u::Log::out("TestBranch:        %%%zu ? <%zu> : <%zu>\n",
+            ((TestBranch *)instruction)->m_testSlot,
+            ((TestBranch *)instruction)->m_trueBlock,
+            ((TestBranch *)instruction)->m_falseBlock);
         break;
-    // produced by optimizations only
-    case kAccessKey:
-        output(level, "igetk %zu = %zu . '%s'\n",
-            ((AccessKeyInstr *)this)->m_targetSlot,
-            ((AccessKeyInstr *)this)->m_objectSlot,
-            ((AccessKeyInstr *)this)->m_key);
+    case kAccesStringKey:
+        u::Log::out("Access:            %%%zu . \"%s\" [inlined]\n",
+            ((AccessStringKey *)instruction)->m_objectSlot,
+            ((AccessStringKey *)instruction)->m_key);
         break;
-    // produced by optimizations only
-    case kAssignKey:
-        output(level, "isetk %zu . '%s' = %zu\n",
-            ((AssignKeyInstr *)this)->m_objectSlot,
-            ((AssignKeyInstr *)this)->m_key,
-            ((AssignKeyInstr *)this)->m_valueSlot);
+    case kAssignStringKey:
+        u::Log::out("Assign%s %%%zu . \"%s\" = %%%zu [inlined]\n",
+            ((AssignStringKey *)instruction)->m_assignType == kAssignPlain
+                ? "(plain):    "
+                : ((AssignStringKey *)instruction)->m_assignType == kAssignExisting
+                    ? "(existing): "
+                    : "(shadowing):",
+            ((AssignStringKey *)instruction)->m_objectSlot,
+            ((AssignStringKey *)instruction)->m_key,
+            ((AssignStringKey *)instruction)->m_valueSlot);
+        break;
+    default:
         break;
     }
+}
 
-    for (auto *function : otherFunctions)
-        function->dump(level);
+void UserFunction::dump(UserFunction *function, int level) {
+    u::vector<UserFunction *> otherFunctions;
+    indent(level);
+    FunctionBody *body = &function->m_body;
+    u::Log::out("function %s (%zu), %zu slots {\n",
+        function->m_name, function->m_arity, function->m_slots);
+    level++;
+    for (size_t i = 0; i < body->m_count; i++) {
+        indent(level);
+        u::Log::out("block <%zu> {\n", i);
+        InstructionBlock *block = &body->m_blocks[i];
+        level++;
+        for (size_t k = 0; k < block->m_count; k++) {
+            Instruction *instruction = block->m_instructions[k];
+            Instruction::dump(instruction, level);
+            if (instruction->m_type == kNewClosureObject)
+                otherFunctions.push_back(((Instruction::NewClosureObject *)instruction)->m_function);
+        }
+        level--;
+        indent(level);
+        u::Log::out("}\n");
+    }
+    level--;
+    indent(level);
+    u::Log::out("}\n");
+    for (UserFunction *function : otherFunctions)
+        UserFunction::dump(function, level);
 }
 
 }

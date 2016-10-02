@@ -5,26 +5,17 @@
 
 namespace s {
 
+struct State;
 struct Object;
+struct RootSet;
 
-struct GarbageCollector {
-    struct RootSet {
-        Object **m_objects;
-        size_t m_length;
-        RootSet *m_prev;
-        RootSet *m_next;
-    };
-
-    struct State {
-        RootSet *m_tail;
-    };
-
-    static void *addRoots(Object **objects, size_t length);
-    static void delRoots(void *base);
-
-    static void mark(Object *context);
-    static void sweep();
-    static void run(Object *context);
+struct GC {
+    static void addRoots(State *state, Object **objects, size_t count, RootSet *set);
+    static void delRoots(State *state, RootSet *set);
+    static void run(State *state);
+private:
+    static void mark(State *state);
+    static void sweep(State *state);
 };
 
 }

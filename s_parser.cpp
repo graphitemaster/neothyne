@@ -2,7 +2,7 @@
 #include <stdlib.h> // atoi
 
 #include "s_parser.h"
-#include "s_generator.h"
+#include "s_gen.h"
 #include "s_object.h"
 
 #include "u_new.h"
@@ -180,53 +180,53 @@ bool Parser::consumeKeyword(char **contents, const char *keyword) {
 }
 
 ///! Parser::Reference
-Slot Parser::Reference::access(Generator *generator, Reference reference) {
-    // during speculative parsing there is no generator
-    if (generator) {
+Slot Parser::Reference::access(Gen *gen, Reference reference) {
+    // during speculative parsing there is no gen
+    if (gen) {
         if (reference.m_key != NoSlot)
-            return generator->addAccess(reference.m_base, reference.m_key);
+            return Gen::addAccess(gen, reference.m_base, reference.m_key);
         return reference.m_base;
     }
     return 0;
 }
 
-void Parser::Reference::assignPlain(Generator *generator, Reference reference, Slot value) {
+void Parser::Reference::assignPlain(Gen *gen, Reference reference, Slot value) {
     U_ASSERT(reference.m_key != NoSlot);
-    generator->addAssign(reference.m_base, reference.m_key, value, AssignType::kPlain);
+    Gen::addAssign(gen, reference.m_base, reference.m_key, value, kAssignPlain);
 }
 
-void Parser::Reference::assignExisting(Generator *generator, Reference reference, Slot value) {
+void Parser::Reference::assignExisting(Gen *gen, Reference reference, Slot value) {
     U_ASSERT(reference.m_key != NoSlot);
-    generator->addAssign(reference.m_base, reference.m_key, value, AssignType::kExisting);
+    Gen::addAssign(gen, reference.m_base, reference.m_key, value, kAssignExisting);
 }
 
-void Parser::Reference::assignShadowing(Generator *generator, Reference reference, Slot value) {
+void Parser::Reference::assignShadowing(Gen *gen, Reference reference, Slot value) {
     U_ASSERT(reference.m_key != NoSlot);
-    generator->addAssign(reference.m_base, reference.m_key, value, AssignType::kShadowing);
+    Gen::addAssign(gen, reference.m_base, reference.m_key, value, kAssignShadowing);
 }
 
-Parser::Reference Parser::Reference::getScope(Generator *generator, const char *name) {
-    // during speculative parsing there is no generator
-    if (generator) {
-        Slot nameSlot = generator->addAllocStringObject(generator->m_scope, name);
-        return { generator->m_scope, nameSlot, kVariable };
+Parser::Reference Parser::Reference::getScope(Gen *gen, const char *name) {
+    // during speculative parsing there is no gen
+    if (gen) {
+        Slot nameSlot = Gen::addNewStringObject(gen, gen->m_scope, name);
+        return { gen->m_scope, nameSlot, kVariable };
     }
     return { 0, NoSlot, kVariable };
 }
 
 ///! Parser
-void Parser::parseObjectLiteral(char **contents, Generator *generator, Slot objectSlot) {
+void Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlot) {
     while (!consumeString(contents, "}")) {
         const char *keyName = parseIdentifier(contents);
         if (!consumeString(contents, "=")) {
             U_ASSERT(0 && "expected 'name = value' in object literal");
         }
 
-        Reference value = parseExpression(contents, generator, 0);
-        if (generator) {
-            Slot keySlot = generator->addAllocStringObject(generator->m_scope, keyName);
-            Slot valueSlot = Reference::access(generator, value);
-            generator->addAssign(objectSlot, keySlot, valueSlot, AssignType::kPlain);
+        Reference value = parseExpression(contents, gen, 0);
+        if (gen) {
+            Slot keySlot = Gen::addNewStringObject(gen, gen->m_scope, keyName);
+            Slot valueSlot = Reference::access(gen, value);
+            Gen::addAssign(gen, objectSlot, keySlot, valueSlot, kAssignPlain);
         }
 
         if (consumeString(contents, ","))
@@ -238,7 +238,7 @@ void Parser::parseObjectLiteral(char **contents, Generator *generator, Slot obje
     }
 }
 
-bool Parser::parseObjectLiteral(char **contents, Generator *generator, Reference *reference) {
+bool Parser::parseObjectLiteral(char **contents, Gen *gen, Reference *reference) {
     char *text = *contents;
     consumeFiller(&text);
 
@@ -246,22 +246,22 @@ bool Parser::parseObjectLiteral(char **contents, Generator *generator, Reference
         return false;
 
     Slot objectSlot = 0;
-    if (generator)
-        objectSlot = generator->addAllocObject(generator->m_slotBase++);
+    if (gen)
+        objectSlot = Gen::addNewObject(gen, gen->m_slot++);
 
     *contents = text;
     *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
 
-    parseObjectLiteral(contents, generator, objectSlot);
+    parseObjectLiteral(contents, gen, objectSlot);
 
     return true;
 }
 
-void Parser::parseArrayLiteral(char **contents, Generator *generator, Slot objectSlot) {
+void Parser::parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot) {
     u::vector<Reference> values;
     while (!consumeString(contents, "]")) {
-        Reference value = parseExpression(contents, generator, 0);
-        if (generator)
+        Reference value = parseExpression(contents, gen, 0);
+        if (gen)
             values.push_back(value);
         if (consumeString(contents, ","))
             continue;
@@ -269,21 +269,21 @@ void Parser::parseArrayLiteral(char **contents, Generator *generator, Slot objec
             break;
         U_ASSERT(0 && "expected comma or closing square bracket");
     }
-    if (generator) {
-        Slot keySlot1 = generator->addAllocStringObject(generator->m_scope, "resize");
-        Slot keySlot2 = generator->addAllocStringObject(generator->m_scope, "[]=");
-        Slot resizeFunction = Reference::access(generator, { objectSlot, keySlot1, Reference::kObject });
-        Slot assignFunction = Reference::access(generator, { objectSlot, keySlot2, Reference::kObject });
-        Slot resizeSlot = generator->addAllocIntObject(generator->m_scope, values.size());
-        objectSlot = generator->addCall(resizeFunction, objectSlot, resizeSlot);
+    if (gen) {
+        Slot keySlot1 = Gen::addNewStringObject(gen, gen->m_scope, "resize");
+        Slot keySlot2 = Gen::addNewStringObject(gen, gen->m_scope, "[]=");
+        Slot resizeFunction = Reference::access(gen, { objectSlot, keySlot1, Reference::kObject });
+        Slot assignFunction = Reference::access(gen, { objectSlot, keySlot2, Reference::kObject });
+        Slot resizeSlot = Gen::addNewIntObject(gen, gen->m_scope, values.size());
+        objectSlot = Gen::addCall(gen, resizeFunction, objectSlot, resizeSlot);
         for (size_t i = 0; i < values.size(); i++) {
-            Slot indexSlot = generator->addAllocIntObject(generator->m_scope, i);
-            generator->addCall(assignFunction, objectSlot, indexSlot, Reference::access(generator, values[i]));
+            Slot indexSlot = Gen::addNewIntObject(gen, gen->m_scope, i);
+            Gen::addCall(gen, assignFunction, objectSlot, indexSlot, Reference::access(gen, values[i]));
         }
     }
 }
 
-bool Parser::parseArrayLiteral(char **contents, Generator *generator, Reference *reference) {
+bool Parser::parseArrayLiteral(char **contents, Gen *gen, Reference *reference) {
     char *text = *contents;
     consumeFiller(&text);
 
@@ -291,22 +291,22 @@ bool Parser::parseArrayLiteral(char **contents, Generator *generator, Reference 
         return false;
 
     Slot objectSlot = 0;
-    if (generator)
-        objectSlot = generator->addAllocArrayObject(generator->m_scope);
+    if (gen)
+        objectSlot = Gen::addNewArrayObject(gen, gen->m_scope);
 
     *contents = text;
     *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
 
-    parseArrayLiteral(contents, generator, objectSlot);
+    parseArrayLiteral(contents, gen, objectSlot);
     return true;
 }
 
-Parser::Reference Parser::parseExpressionStem(char **contents, Generator *generator) {
+Parser::Reference Parser::parseExpressionStem(char **contents, Gen *gen) {
     char *text = *contents;
     const char *identifier = parseIdentifier(&text);
     if (identifier) {
         *contents = text;
-        return Reference::getScope(generator, identifier);
+        return Reference::getScope(gen, identifier);
     }
 
     // float?
@@ -314,9 +314,9 @@ Parser::Reference Parser::parseExpressionStem(char **contents, Generator *genera
         float value = 0.0f;
         if (parseFloat(&text, &value)) {
             *contents = text;
-            if (!generator)
+            if (!gen)
                 return { 0, Reference::NoSlot, Reference::kNone };
-            Slot slot = generator->addAllocFloatObject(generator->m_scope, value);
+            Slot slot = Gen::addNewFloatObject(gen, gen->m_scope, value);
             return { slot, Reference::NoSlot, Reference::kNone };
         }
     }
@@ -325,9 +325,9 @@ Parser::Reference Parser::parseExpressionStem(char **contents, Generator *genera
         int value = 0;
         if (parseInteger(&text, &value)) {
             *contents = text;
-            if (!generator)
+            if (!gen)
                 return { 0, Reference::NoSlot, Reference::kNone };
-            Slot slot = generator->addAllocIntObject(generator->m_scope, value);
+            Slot slot = Gen::addNewIntObject(gen, gen->m_scope, value);
             return { slot, Reference::NoSlot, Reference::kNone };
         }
     }
@@ -336,10 +336,10 @@ Parser::Reference Parser::parseExpressionStem(char **contents, Generator *genera
         char *value = nullptr;
         if (parseString(&text, &value)) {
             *contents = text;
-            if (!generator) {
+            if (!gen) {
                 return { 0, Reference::NoSlot, Reference::kNone };
             }
-            Slot slot = generator->addAllocStringObject(generator->m_scope, value);
+            Slot slot = Gen::addNewStringObject(gen, gen->m_scope, value);
             return { slot, Reference::NoSlot, Reference::kNone };
         }
     }
@@ -347,7 +347,7 @@ Parser::Reference Parser::parseExpressionStem(char **contents, Generator *genera
     // object literal
     {
         Reference value;
-        if (parseObjectLiteral(&text, generator, &value)) {
+        if (parseObjectLiteral(&text, gen, &value)) {
             *contents = text;
             return value;
         }
@@ -356,14 +356,14 @@ Parser::Reference Parser::parseExpressionStem(char **contents, Generator *genera
     // array literal
     {
         Reference value;
-        if (parseArrayLiteral(&text, generator, &value)) {
+        if (parseArrayLiteral(&text, gen, &value)) {
             *contents = text;
             return value;
         }
     }
 
     if (consumeString(&text, "(")) {
-        Reference result = parseExpression(&text, generator, 0);
+        Reference result = parseExpression(&text, gen, 0);
         if (!consumeString(&text, ")")) {
             U_ASSERT(0 && "expected closing paren");
         }
@@ -374,23 +374,23 @@ Parser::Reference Parser::parseExpressionStem(char **contents, Generator *genera
     bool isMethod = false;
     if (consumeKeyword(&text, "fn") || (consumeKeyword(&text, "method") && (isMethod = true))) {
         UserFunction *function = parseFunctionExpression(&text);
-        if (!generator) return { 0, Reference::NoSlot, Reference::kNone };
+        if (!gen) return { 0, Reference::NoSlot, Reference::kNone };
         function->m_isMethod = isMethod;
-        Slot slot = generator->addAllocClosureObject(generator->m_scope, function);
+        Slot slot = Gen::addNewClosureObject(gen, gen->m_scope, function);
         *contents = text;
         return { slot, Reference::NoSlot, Reference::kNone };
     }
 
     if (consumeKeyword(&text, "new")) {
-        Reference parentVariable = parseExpression(&text, generator, 0);
-        Slot parentSlot = Reference::access(generator, parentVariable);
+        Reference parentVariable = parseExpression(&text, gen, 0);
+        Slot parentSlot = Reference::access(gen, parentVariable);
         Slot objectSlot = 0;
-        if (generator)
-            objectSlot = generator->addAllocObject(parentSlot);
+        if (gen)
+            objectSlot = Gen::addNewObject(gen, parentSlot);
 
         *contents = text;
         if (consumeString(contents, "{"))
-            parseObjectLiteral(contents, generator, objectSlot);
+            parseObjectLiteral(contents, gen, objectSlot);
 
         return { objectSlot, Reference::NoSlot, Reference::kNone };
     }
@@ -399,7 +399,7 @@ Parser::Reference Parser::parseExpressionStem(char **contents, Generator *genera
     U_UNREACHABLE();
 }
 
-bool Parser::parseCall(char **contents, Generator *generator, Reference *expression) {
+bool Parser::parseCall(char **contents, Gen *gen, Reference *expression) {
     char *text = *contents;
     if (!consumeString(&text, "("))
         return false;
@@ -413,13 +413,13 @@ bool Parser::parseCall(char **contents, Generator *generator, Reference *express
             U_ASSERT(0 && "expected comma");
         }
 
-        Reference argument = parseExpression(contents, generator, 0);
-        Slot slot = Reference::access(generator, argument);
+        Reference argument = parseExpression(contents, gen, 0);
+        Slot slot = Reference::access(gen, argument);
         arguments = (Slot *)neoRealloc(arguments, sizeof(Slot) * ++length);
         arguments[length - 1] = slot;
     }
 
-    if (!generator)
+    if (!gen)
         return true;
 
     // generate an empty slot if there isn't a key
@@ -427,10 +427,10 @@ bool Parser::parseCall(char **contents, Generator *generator, Reference *express
     if (expression->m_key)
         thisSlot = expression->m_base;
     else
-        thisSlot = generator->m_slotBase++;
+        thisSlot = gen->m_slot++;
 
     *expression = {
-        generator->addCall(Reference::access(generator, *expression), thisSlot, arguments, length),
+        Gen::addCall(gen, Reference::access(gen, *expression), thisSlot, arguments, length),
         Reference::NoSlot,
         Reference::kNone
     };
@@ -438,22 +438,22 @@ bool Parser::parseCall(char **contents, Generator *generator, Reference *express
     return true;
 }
 
-bool Parser::parseArrayAccess(char **contents, Generator *generator, Reference *expression) {
+bool Parser::parseArrayAccess(char **contents, Gen *gen, Reference *expression) {
     char *text = *contents;
     if (!consumeString(&text, "["))
         return false;
 
     *contents = text;
-    Reference key = parseExpression(contents, generator, 0);
+    Reference key = parseExpression(contents, gen, 0);
 
     if (!consumeString(contents, "]")) {
         U_ASSERT(0 && "expected closing ']'");
     }
 
-    Slot keySlot = Reference::access(generator, key);
+    Slot keySlot = Reference::access(gen, key);
 
     *expression = {
-        Reference::access(generator, *expression),
+        Reference::access(gen, *expression),
         keySlot,
         Reference::kIndex
     };
@@ -461,7 +461,7 @@ bool Parser::parseArrayAccess(char **contents, Generator *generator, Reference *
     return true;
 }
 
-bool Parser::parsePropertyAccess(char **contents, Generator *generator, Reference *expression) {
+bool Parser::parsePropertyAccess(char **contents, Gen *gen, Reference *expression) {
     char *text = *contents;
     if (!consumeString(&text, "."))
         return false;
@@ -470,11 +470,11 @@ bool Parser::parsePropertyAccess(char **contents, Generator *generator, Referenc
     *contents = text;
 
     Slot keySlot = 0;
-    if (generator)
-        keySlot = generator->addAllocStringObject(generator->m_scope, keyName);
+    if (gen)
+        keySlot = Gen::addNewStringObject(gen, gen->m_scope, keyName);
 
     *expression = {
-        Reference::access(generator, *expression),
+        Reference::access(gen, *expression),
         keySlot,
         Reference::kObject
     };
@@ -482,14 +482,14 @@ bool Parser::parsePropertyAccess(char **contents, Generator *generator, Referenc
     return true;
 }
 
-Parser::Reference Parser::parseExpression(char **contents, Generator *generator) {
-    Reference expression = parseExpressionStem(contents, generator);
+Parser::Reference Parser::parseExpression(char **contents, Gen *gen) {
+    Reference expression = parseExpressionStem(contents, gen);
     for (;;) {
-        if (parseCall(contents, generator, &expression))
+        if (parseCall(contents, gen, &expression))
             continue;
-        if (parsePropertyAccess(contents, generator, &expression))
+        if (parsePropertyAccess(contents, gen, &expression))
             continue;
-        if (parseArrayAccess(contents, generator, &expression))
+        if (parseArrayAccess(contents, gen, &expression))
             continue;
         break;
     }
@@ -505,28 +505,28 @@ Parser::Reference Parser::parseExpression(char **contents, Generator *generator)
     } while (0)
 
 #define GUARD_SPECULATIVE() \
-    if (!generator) continue;
+    if (!gen) continue;
 
-Parser::Reference Parser::parseExpression(char **contents, Generator *generator, int level) {
+Parser::Reference Parser::parseExpression(char **contents, Gen *gen, int level) {
     char *text = *contents;
-    Reference expression = parseExpression(&text, generator);
+    Reference expression = parseExpression(&text, gen);
 
     GUARD_LEVEL(2);
     for (;;) {
         if (consumeString(&text, "*")) {
-            Slot rhs = Reference::access(generator, parseExpression(&text, generator, 3));
+            Slot rhs = Reference::access(gen, parseExpression(&text, gen, 3));
             GUARD_SPECULATIVE();
-            Slot lhs = Reference::access(generator, expression);
-            Slot mul = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, "*"));
-            expression = { generator->addCall(mul, lhs, rhs), Reference::NoSlot, Reference::kNone };
+            Slot lhs = Reference::access(gen, expression);
+            Slot mul = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "*"));
+            expression = { Gen::addCall(gen, mul, lhs, rhs), Reference::NoSlot, Reference::kNone };
             continue;
         }
         if (consumeString(&text, "/")) {
-            Slot rhs = Reference::access(generator, parseExpression(&text, generator, 3));
+            Slot rhs = Reference::access(gen, parseExpression(&text, gen, 3));
             GUARD_SPECULATIVE();
-            Slot lhs = Reference::access(generator, expression);
-            Slot div = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, "/"));
-            expression = { generator->addCall(div, lhs, rhs), Reference::NoSlot, Reference::kNone };
+            Slot lhs = Reference::access(gen, expression);
+            Slot div = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "/"));
+            expression = { Gen::addCall(gen, div, lhs, rhs), Reference::NoSlot, Reference::kNone };
             continue;
         }
         break;
@@ -535,19 +535,19 @@ Parser::Reference Parser::parseExpression(char **contents, Generator *generator,
     GUARD_LEVEL(1);
     for (;;) {
         if (consumeString(&text, "+")) {
-            Slot rhs = Reference::access(generator, parseExpression(&text, generator, 3));
+            Slot rhs = Reference::access(gen, parseExpression(&text, gen, 3));
             GUARD_SPECULATIVE();
-            Slot lhs = Reference::access(generator, expression);
-            Slot add = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, "+"));
-            expression = { generator->addCall(add, lhs, rhs), Reference::NoSlot, Reference::kNone };
+            Slot lhs = Reference::access(gen, expression);
+            Slot add = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "+"));
+            expression = { Gen::addCall(gen, add, lhs, rhs), Reference::NoSlot, Reference::kNone };
             continue;
         }
         if (consumeString(&text, "-")) {
-            Slot rhs = Reference::access(generator, parseExpression(&text, generator, 3));
+            Slot rhs = Reference::access(gen, parseExpression(&text, gen, 3));
             GUARD_SPECULATIVE();
-            Slot lhs = Reference::access(generator, expression);
-            Slot sub = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, "-"));
-            expression = { generator->addCall(sub, lhs, rhs), Reference::NoSlot, Reference::kNone };
+            Slot lhs = Reference::access(gen, expression);
+            Slot sub = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "-"));
+            expression = { Gen::addCall(gen, sub, lhs, rhs), Reference::NoSlot, Reference::kNone };
             continue;
         }
         break;
@@ -556,157 +556,157 @@ Parser::Reference Parser::parseExpression(char **contents, Generator *generator,
     GUARD_LEVEL(0);
     bool negate = false;
     if (consumeString(&text, "==")) {
-        Slot rhs = Reference::access(generator, parseExpression(&text, generator, 1));
-        if (generator) {
-            Slot lhs = Reference::access(generator, expression);
-            Slot equ = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, "=="));
-            expression = { generator->addCall(equ, lhs, rhs), Reference::NoSlot, Reference::kNone };
+        Slot rhs = Reference::access(gen, parseExpression(&text, gen, 1));
+        if (gen) {
+            Slot lhs = Reference::access(gen, expression);
+            Slot equ = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "=="));
+            expression = { Gen::addCall(gen, equ, lhs, rhs), Reference::NoSlot, Reference::kNone };
         }
     } else if (consumeString(&text, "!=")) {
         // lhs != rhs is implemented as !(lhs == rhs)
-        Slot rhs = Reference::access(generator, parseExpression(&text, generator, 1));
-        if (generator) {
-            Slot lhs = Reference::access(generator, expression);
-            Slot equ = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, "=="));
-            expression = { generator->addCall(equ, lhs, rhs), Reference::NoSlot, Reference::kNone };
+        Slot rhs = Reference::access(gen, parseExpression(&text, gen, 1));
+        if (gen) {
+            Slot lhs = Reference::access(gen, expression);
+            Slot equ = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "=="));
+            expression = { Gen::addCall(gen, equ, lhs, rhs), Reference::NoSlot, Reference::kNone };
             negate = true;
         }
     } else {
         if (consumeString(&text, "!"))
             negate = true;
         if (consumeString(&text, "<=")) {
-            Slot rhs = Reference::access(generator, parseExpression(&text, generator, 1));
-            if (generator) {
-                Slot lhs = Reference::access(generator, expression);
-                Slot lte = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, "<="));
-                expression = { generator->addCall(lte, lhs, rhs), Reference::NoSlot, Reference::kNone };
+            Slot rhs = Reference::access(gen, parseExpression(&text, gen, 1));
+            if (gen) {
+                Slot lhs = Reference::access(gen, expression);
+                Slot lte = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "<="));
+                expression = { Gen::addCall(gen, lte, lhs, rhs), Reference::NoSlot, Reference::kNone };
             }
         } else if (consumeString(&text, ">=")) {
-            Slot rhs = Reference::access(generator, parseExpression(&text, generator, 1));
-            if (generator) {
-                Slot lhs = Reference::access(generator, expression);
-                Slot gte = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, ">="));
-                expression = { generator->addCall(gte, lhs, rhs), Reference::NoSlot, Reference::kNone };
+            Slot rhs = Reference::access(gen, parseExpression(&text, gen, 1));
+            if (gen) {
+                Slot lhs = Reference::access(gen, expression);
+                Slot gte = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, ">="));
+                expression = { Gen::addCall(gen, gte, lhs, rhs), Reference::NoSlot, Reference::kNone };
             }
         } else if (consumeString(&text, "<")) {
-            Slot rhs = Reference::access(generator, parseExpression(&text, generator, 1));
-            if (generator) {
-                Slot lhs = Reference::access(generator, expression);
-                Slot lt = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, "<"));
-                expression = { generator->addCall(lt, lhs, rhs), Reference::NoSlot, Reference::kNone };
+            Slot rhs = Reference::access(gen, parseExpression(&text, gen, 1));
+            if (gen) {
+                Slot lhs = Reference::access(gen, expression);
+                Slot lt = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "<"));
+                expression = { Gen::addCall(gen, lt, lhs, rhs), Reference::NoSlot, Reference::kNone };
             }
         } else if (consumeString(&text, ">")) {
-            Slot rhs = Reference::access(generator, parseExpression(&text, generator, 1));
-            if (generator) {
-                Slot lhs = Reference::access(generator, expression);
-                Slot gt = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, ">"));
-                expression = { generator->addCall(gt, lhs, rhs), Reference::NoSlot, Reference::kNone };
+            Slot rhs = Reference::access(gen, parseExpression(&text, gen, 1));
+            if (gen) {
+                Slot lhs = Reference::access(gen, expression);
+                Slot gt = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, ">"));
+                expression = { Gen::addCall(gen, gt, lhs, rhs), Reference::NoSlot, Reference::kNone };
             }
         } else if (negate) {
             U_ASSERT(0 && "expected relational operator");
         }
     }
 
-    if (negate && generator) {
-        Slot lhs = Reference::access(generator, expression);
-        Slot bnot = generator->addAccess(lhs, generator->addAllocStringObject(generator->m_scope, "!"));
-        expression = { generator->addCall(bnot, lhs), Reference::NoSlot, Reference::kNone };
+    if (negate && gen) {
+        Slot lhs = Reference::access(gen, expression);
+        Slot bnot = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "!"));
+        expression = { Gen::addCall(gen, bnot, lhs), Reference::NoSlot, Reference::kNone };
     }
 
     *contents = text;
     return expression;
 }
 
-void Parser::parseIfStatement(char **contents, Generator *generator) {
+void Parser::parseIfStatement(char **contents, Gen *gen) {
     char *text = *contents;
     if (!consumeString(&text, "(")) {
         U_ASSERT(0 && "expected open paren after if");
     }
 
-    Slot testSlot = Reference::access(generator, parseExpression(&text, generator, 0));
+    Slot testSlot = Reference::access(gen, parseExpression(&text, gen, 0));
     if (!consumeString(&text, ")")) {
         U_ASSERT(0 && "expected close parent after if");
     }
 
-    Block *tBlock = nullptr;
-    Block *fBlock = nullptr;
-    Block *eBlock = nullptr;
-    generator->addTestBranch(testSlot, &tBlock, &fBlock);
+    size_t *tBlock = nullptr;
+    size_t *fBlock = nullptr;
+    size_t *eBlock = nullptr;
+    Gen::addTestBranch(gen, testSlot, &tBlock, &fBlock);
 
-    *tBlock = generator->newBlock();
-    parseBlock(&text, generator);
-    generator->addBranch(&eBlock);
+    *tBlock = Gen::newBlock(gen);
+    parseBlock(&text, gen);
+    Gen::addBranch(gen, &eBlock);
 
-    *fBlock = generator->newBlock();
+    *fBlock = Gen::newBlock(gen);
     if (consumeKeyword(&text, "else")) {
-        parseBlock(&text, generator);
-        generator->addBranch(&eBlock);
-        *eBlock = generator->newBlock();
+        parseBlock(&text, gen);
+        Gen::addBranch(gen, &eBlock);
+        *eBlock = Gen::newBlock(gen);
     } else {
         *eBlock = *fBlock;
     }
     *contents = text;
 }
 
-void Parser::parseWhile(char **contents, Generator *generator) {
+void Parser::parseWhile(char **contents, Gen *gen) {
     char *text = *contents;
     if (!consumeString(&text, "(")) {
         U_ASSERT(0 && "expected openening parenthesis after 'while'");
     }
 
-    Block *tBlock = nullptr;
-    Block *lBlock = nullptr;
-    Block *eBlock = nullptr;
-    Block *oBlock = nullptr;
+    size_t *tBlock = nullptr;
+    size_t *lBlock = nullptr;
+    size_t *eBlock = nullptr;
+    size_t *oBlock = nullptr;
 
-    generator->addBranch(&tBlock);
-    *tBlock = generator->newBlock();
-    Slot testSlot = Reference::access(generator, parseExpression(&text, generator, 0));
+    Gen::addBranch(gen, &tBlock);
+    *tBlock = Gen::newBlock(gen);
+    Slot testSlot = Reference::access(gen, parseExpression(&text, gen, 0));
     if (!consumeString(&text, ")")) {
         U_ASSERT(0 && "expected closing parenthesis after 'while'");
     }
 
-    generator->addTestBranch(testSlot, &lBlock, &eBlock);
+    Gen::addTestBranch(gen, testSlot, &lBlock, &eBlock);
 
-    *lBlock = generator->newBlock();
-    parseBlock(&text, generator);
-    generator->addBranch(&oBlock);
+    *lBlock = Gen::newBlock(gen);
+    parseBlock(&text, gen);
+    Gen::addBranch(gen, &oBlock);
 
     *oBlock = *tBlock;
-    *eBlock = generator->newBlock();
+    *eBlock = Gen::newBlock(gen);
 
     *contents = text;
 }
 
-void Parser::parseReturnStatement(char **contents, Generator *generator) {
-    Slot value = Reference::access(generator, parseExpression(contents, generator, 0));
+void Parser::parseReturnStatement(char **contents, Gen *gen) {
+    Slot value = Reference::access(gen, parseExpression(contents, gen, 0));
     if (!consumeString(contents, ";")) {
         U_ASSERT(0 && "expected semicolon");
     }
-    generator->addReturn(value);
-    generator->newBlock();
+    Gen::addReturn(gen, value);
+    Gen::newBlock(gen);
 }
 
-void Parser::parseLetDeclaration(char **contents, Generator *generator) {
+void Parser::parseLetDeclaration(char **contents, Gen *gen) {
     // allocate a new scope immediately to allow recursion for closures
     // i.e allow: let foo = fn() { foo(); };
-    generator->m_scope = generator->addAllocObject(generator->m_scope);
+    gen->m_scope = Gen::addNewObject(gen, gen->m_scope);
 
     const char *variableName = parseIdentifier(contents);
     Slot value;
-    Slot variableNameSlot = generator->addAllocStringObject(generator->m_scope, variableName);
+    Slot variableNameSlot = Gen::addNewStringObject(gen, gen->m_scope, variableName);
     if (!consumeString(contents, "=")) {
-        value = generator->m_slotBase++;
+        value = gen->m_slot++;
     } else {
-        value = Reference::access(generator, parseExpression(contents, generator, 0));
+        value = Reference::access(gen, parseExpression(contents, gen, 0));
     }
 
-    generator->addAssign(generator->m_scope, variableNameSlot, value, AssignType::kPlain);
-    generator->addCloseObject(generator->m_scope);
+    Gen::addAssign(gen, gen->m_scope, variableNameSlot, value, kAssignPlain);
+    Gen::addCloseObject(gen, gen->m_scope);
 
     // let a, b
     if (consumeString(contents, ",")) {
-        parseLetDeclaration(contents, generator);
+        parseLetDeclaration(contents, gen);
         return;
     }
 
@@ -715,41 +715,41 @@ void Parser::parseLetDeclaration(char **contents, Generator *generator) {
     }
 }
 
-void Parser::parseFunctionDeclaration(char **contents, Generator *generator) {
-    generator->m_scope = generator->addAllocObject(generator->m_scope);
+void Parser::parseFunctionDeclaration(char **contents, Gen *gen) {
+    gen->m_scope = Gen::addNewObject(gen, gen->m_scope);
 
     UserFunction *function = parseFunctionExpression(contents);
-    Slot nameSlot = generator->addAllocStringObject(generator->m_scope, function->m_name);
-    Slot slot = generator->addAllocClosureObject(generator->m_scope, function);
-    generator->addAssign(generator->m_scope, nameSlot, slot, AssignType::kPlain);
-    generator->addCloseObject(generator->m_scope);
+    Slot nameSlot = Gen::addNewStringObject(gen, gen->m_scope, function->m_name);
+    Slot slot = Gen::addNewClosureObject(gen, gen->m_scope, function);
+    Gen::addAssign(gen, gen->m_scope, nameSlot, slot, kAssignPlain);
+    Gen::addCloseObject(gen, gen->m_scope);
 }
 
-void Parser::parseStatement(char **contents, Generator *generator) {
+void Parser::parseStatement(char **contents, Gen *gen) {
     char *text = *contents;
     if (consumeKeyword(&text, "if")) {
         *contents = text;
-        parseIfStatement(contents, generator);
+        parseIfStatement(contents, gen);
         return;
     }
     if (consumeKeyword(&text, "return")) {
         *contents = text;
-        parseReturnStatement(contents, generator);
+        parseReturnStatement(contents, gen);
         return;
     }
     if (consumeKeyword(&text, "let")) {
         *contents = text;
-        parseLetDeclaration(contents, generator);
+        parseLetDeclaration(contents, gen);
         return;
     }
     if (consumeKeyword(&text, "fn")) {
         *contents = text;
-        parseFunctionDeclaration(contents, generator);
+        parseFunctionDeclaration(contents, gen);
         return;
     }
     if (consumeKeyword(&text, "while")) {
         *contents = text;
-        parseWhile(contents, generator);
+        parseWhile(contents, gen);
         return;
     }
 
@@ -757,23 +757,23 @@ void Parser::parseStatement(char **contents, Generator *generator) {
     char *next = text;
     parseExpression(&next, nullptr);
     if (consumeString(&next, "=")) {
-        Reference target = parseExpression(&text, generator);
+        Reference target = parseExpression(&text, gen);
 
         if (!consumeString(&text, "=")) {
             U_ASSERT(0 && "internal compiler error");
         }
 
-        Slot value = Reference::access(generator, parseExpression(&text, generator, 0));
+        Slot value = Reference::access(gen, parseExpression(&text, gen, 0));
 
         switch (target.m_mode) {
         case Reference::kVariable:
-            Reference::assignExisting(generator, target, value);
+            Reference::assignExisting(gen, target, value);
             break;
         case Reference::kObject:
-            Reference::assignShadowing(generator, target, value);
+            Reference::assignShadowing(gen, target, value);
             break;
         case Reference::kIndex:
-            Reference::assignPlain(generator, target, value);
+            Reference::assignPlain(gen, target, value);
             break;
         default:
             U_ASSERT(0 && "internal compiler error");
@@ -788,28 +788,28 @@ void Parser::parseStatement(char **contents, Generator *generator) {
     }
 
     // expression as statement
-    parseExpression(&text, generator);
+    parseExpression(&text, gen);
     if (!consumeString(&text, ";")) {
         U_ASSERT(0 && "expected `;' to close expression");
     }
     *contents = text;
 }
 
-void Parser::parseBlock(char **contents, Generator *generator) {
+void Parser::parseBlock(char **contents, Gen *gen) {
     char *text = *contents;
 
     // Note: blocks don't actually open new scopes
-    Slot currentScope = generator->m_scope;
+    Slot currentScope = gen->m_scope;
 
     if (consumeString(&text, "{")) {
         while (!consumeString(&text, "}"))
-            parseStatement(&text, generator);
+            parseStatement(&text, gen);
     } else {
-        parseStatement(&text, generator);
+        parseStatement(&text, gen);
     }
 
     *contents = text;
-    generator->m_scope = currentScope;
+    gen->m_scope = currentScope;
 }
 
 UserFunction *Parser::parseFunctionExpression(char **contents) {
@@ -836,47 +836,51 @@ UserFunction *Parser::parseFunctionExpression(char **contents) {
 
     *contents = text;
 
-    Generator *generator = (Generator *)neoCalloc(sizeof *generator, 1);
-    generator->m_arguments = arguments;
-    generator->m_length = length;
-    generator->m_slotBase = length;
-    generator->m_name = functionName;
-    generator->m_terminated = true;
+    Gen *gen = (Gen *)neoCalloc(sizeof *gen, 1);
+    gen->m_arguments = arguments;
+    gen->m_count = length;
+    gen->m_slot = length;
+    gen->m_name = functionName;
+    gen->m_blockTerminated = true;
 
     // generate lexical scope
-    generator->newBlock();
-    Slot contextSlot = generator->addGetContext();
-    generator->m_scope = generator->addAllocObject(contextSlot);
+    Gen::newBlock(gen);
+    Slot contextSlot = Gen::addGetContext(gen);
+    gen->m_scope = Gen::addNewObject(gen, contextSlot);
     for (size_t i = 0; i < length; i++) {
-        Slot argumentSlot = generator->addAllocStringObject(generator->m_scope, arguments[i]);
-        generator->addAssign(generator->m_scope, argumentSlot, i, AssignType::kPlain);
+        Slot argumentSlot = Gen::addNewStringObject(gen, gen->m_scope, arguments[i]);
+        Gen::addAssign(gen, gen->m_scope, argumentSlot, i, kAssignPlain);
     }
-    generator->addCloseObject(generator->m_scope);
+    Gen::addCloseObject(gen, gen->m_scope);
 
-    parseBlock(contents, generator);
-    generator->terminate();
+    parseBlock(contents, gen);
+    Gen::terminate(gen);
 
-    return Generator::optimize(generator->build());
+    UserFunction *function = Gen::optimize(Gen::buildFunction(gen));
+    neoFree(gen);
+    return function;
 }
 
 UserFunction *Parser::parseModule(char **contents) {
-    Generator *generator = (Generator *)neoCalloc(sizeof *generator, 1);
-    generator->m_slotBase = 0;
-    generator->m_name = nullptr;
-    generator->m_terminated = true;
+    Gen *gen = (Gen *)neoCalloc(sizeof *gen, 1);
+    gen->m_slot = 0;
+    gen->m_name = nullptr;
+    gen->m_blockTerminated = true;
 
-    generator->newBlock();
-    generator->m_scope = generator->addGetContext();
+    Gen::newBlock(gen);
+    gen->m_scope = Gen::addGetContext(gen);
 
     for (;;) {
         consumeFiller(contents);
         if ((*contents)[0] == '\0')
             break;
-        parseStatement(contents, generator);
+        parseStatement(contents, gen);
     }
 
-    generator->addReturn(generator->m_scope);
-    return Generator::optimize(generator->build());
+    Gen::addReturn(gen, gen->m_scope);
+    UserFunction *function = Gen::optimize(Gen::buildFunction(gen));
+    neoFree(gen);
+    return function;
 }
 
 }

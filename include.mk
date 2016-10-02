@@ -61,12 +61,13 @@ CONSOLE_SOURCES = \
 
 SCRIPTING_SOURCES = \
 	s_gc.cpp \
-	s_generator.cpp \
+	s_gen.cpp \
 	s_instr.cpp \
 	s_object.cpp \
 	s_parser.cpp \
 	s_runtime.cpp \
-	s_test.cpp
+	s_test.cpp \
+	s_vm.cpp
 
 ENGINE_SOURCES = \
 	engine.cpp \

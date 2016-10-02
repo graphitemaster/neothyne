@@ -1,944 +1,509 @@
-#include <string.h>
-
+#include "s_runtime.h"
 #include "s_object.h"
-#include "s_instr.h"
 #include "s_gc.h"
 
-#include "u_assert.h"
-#include "u_new.h"
 #include "u_log.h"
-
-#include "engine.h" // neoFatal
+#include "u_misc.h"
 
 namespace s {
 
-static void vmGetRoot(Object *root, Object *context, GetRootInstr *instruction, Object **slots, size_t numSlots) {
-    (void)context;
-    Slot slot = instruction->m_slot;
-    U_ASSERT(slot < numSlots);
-    slots[slot] = root;
-}
-
-static void vmGetContext(Object *root, Object *context, GetContextInstr *instruction, Object **slots, size_t numSlots) {
-    (void)root;
-    Slot slot = instruction->m_slot;
-    U_ASSERT(slot < numSlots);
-    slots[slot] = context;
-}
-
-static void vmAccess(Object *root, Object *context, Instr *instruction, Object **slots, size_t numSlots) {
-    (void)context;
-    auto *access = (AccessInstr *)instruction;
-    auto *accessKey = (AccessKeyInstr *)instruction;
-
-    Slot targetSlot;
-    Slot objectSlot;
-    if (instruction->m_type == Instr::kAccess) {
-        targetSlot = access->m_targetSlot;
-        objectSlot = access->m_objectSlot;
-    } else {
-        targetSlot = accessKey->m_targetSlot;
-        objectSlot = accessKey->m_objectSlot;
-    }
-
-    U_ASSERT(objectSlot < numSlots);
-    Object *object = slots[objectSlot];
-
-    Object *value = nullptr;
-    bool objectFound = false;
-    const char *key;
-    bool hasKey = false;
-    if (instruction->m_type == Instr::kAccess) {
-        Slot keySlot = access->m_keySlot;
-        U_ASSERT(keySlot < numSlots && slots[keySlot]);
-        Object *stringBase = root->lookup("string", nullptr);
-        Object *keyObject = slots[keySlot];
-        U_ASSERT(keyObject);
-        StringObject *stringKey = (StringObject *)Object::instanceOf(slots[keySlot], stringBase);
-        if (stringKey) {
-            key = stringKey->m_value;
-            hasKey = true;
-        }
-    } else {
-        key = accessKey->m_key;
-        hasKey = true;
-    }
-    if (hasKey) {
-        value = object->lookup(key, &objectFound);
-    }
-    if (!objectFound) {
-        Object *index = object->lookup("[]", nullptr);
-        if (index) {
-            Object *functionBase = root->lookup("function", nullptr);
-            Object *closureBase = root->lookup("closure", nullptr);
-            FunctionObject *function = (FunctionObject *)Object::instanceOf(index, functionBase);
-            ClosureObject *closure = (ClosureObject *)Object::instanceOf(index, closureBase);
-            U_ASSERT(function || closure);
-            Object *keyObject;
-            if (instruction->m_type == Instr::kAccess) {
-                keyObject = slots[access->m_keySlot];
-            } else {
-                keyObject = Object::newString(context, accessKey->m_key);
-            }
-            if (function)
-                value = function->m_function(context, object, index, &keyObject, 1);
-            else
-                value = closure->m_function(context, object, index, &keyObject, 1);
-            if (value)
-                objectFound = true;
-        }
-    }
-    if (!objectFound) {
-        U_ASSERT(0 && "property not found");
-    }
-    U_ASSERT(targetSlot < numSlots);
-    slots[targetSlot] = value;
-}
-
-static void vmAssign(Object *root, Object *context, Instr *instruction, Object **slots, size_t numSlots) {
-    (void)context;
-    auto *assign = (AssignInstr *)instruction;
-    auto *assignKey = (AssignKeyInstr *)instruction;
-    AssignType assignType;
-    Object *object = nullptr;
-    Object *valueObject = nullptr;
-    const char *key;
-    bool hasKey = false;
-
-    if (instruction->m_type == Instr::kAssign) {
-        Slot objectSlot = assign->m_objectSlot;
-        Slot valueSlot = assign->m_valueSlot;
-        Slot keySlot = assign->m_keySlot;
-        U_ASSERT(objectSlot < numSlots);
-        U_ASSERT(valueSlot < numSlots);
-        U_ASSERT(keySlot < numSlots && slots[keySlot]);
-        object = slots[objectSlot];
-        valueObject = slots[valueSlot];
-        Object *stringBase = root->lookup("string", nullptr);
-        Object *keyObject = slots[keySlot];
-        StringObject *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
-        if (stringKey) {
-            key = stringKey->m_value;
-            assignType = assign->m_assignType;
-            hasKey = true;
-        }
-    } else {
-        Slot objectSlot = assignKey->m_objectSlot;
-        Slot valueSlot = assignKey->m_valueSlot;
-        U_ASSERT(objectSlot < numSlots);
-        U_ASSERT(valueSlot < numSlots);
-        object = slots[objectSlot];
-        valueObject = slots[valueSlot];
-        key = assignKey->m_key;
-        assignType = assignKey->m_assignType;
-        hasKey = true;
-    }
-    if (!hasKey) {
-        Object *index = object->lookup("[]=", nullptr);
-        if (index) {
-            Object *functionBase = root->lookup("function", nullptr);
-            Object *closureBase = root->lookup("closure", nullptr);
-            FunctionObject *function = (FunctionObject *)Object::instanceOf(index, functionBase);
-            ClosureObject *closure = (ClosureObject *)Object::instanceOf(index, closureBase);
-            U_ASSERT(function || closure);
-            // assumes Instr::kAssign
-            Object *arguments[] = { slots[assign->m_keySlot], valueObject };
-            if (function)
-                function->m_function(context, object, index, arguments, 2);
-            else
-                closure->m_function(context, object, index, arguments, 2);
-            return;
-        }
-        U_ASSERT(0 && "internal error");
-    }
-    switch (assignType) {
-    case AssignType::kPlain:
-        if (object)
-            object->setNormal(key, valueObject);
-        else U_ASSERT(0 && "assignment to null object");
-        break;
-    case AssignType::kExisting:
-        object->setExisting(key, valueObject);
-        break;
-    case AssignType::kShadowing:
-        object->setShadowing(key, valueObject);
-        break;
-    }
-}
-
-static void vmAllocateObject(Object *root, Object *context, AllocObjectInstr *instruction, Object **slots, size_t numSlots) {
-    (void)context;
-
-    Slot targetSlot = instruction->m_targetSlot;
-    Slot parentSlot = instruction->m_parentSlot;
-
-    U_ASSERT(targetSlot < numSlots);
-    U_ASSERT(parentSlot < numSlots);
-
-    Object *parentObject = slots[parentSlot];
-    if (parentObject) {
-        // TODO(daleweiler): diasslow inheriting
-    }
-    Object *object = Object::newObject(root, slots[parentSlot]);
-    slots[targetSlot] = object;
-}
-
-static void vmAllocateIntObject(Object *root, Object *context, AllocIntObjectInstr *instruction, Object **slots, size_t numSlots) {
-    (void)root;
-
-    Slot target = instruction->m_targetSlot;
-    int value = instruction->m_value;
-
-    U_ASSERT(target < numSlots);
-
-    slots[target] = Object::newInt(context, value);
-}
-
-static void vmAllocateFloatObject(Object *root, Object *context, AllocFloatObjectInstr *instruction, Object **slots, size_t numSlots) {
-    (void)root;
-
-    Slot target = instruction->m_targetSlot;
-    float value = instruction->m_value;
-
-    U_ASSERT(target < numSlots);
-
-    slots[target] = Object::newFloat(context, value);
-}
-
-static void vmAllocateArrayObject(Object *root, Object *context, AllocArrayObjectInstr *instruction, Object **slots, size_t numSlots) {
-    (void)root;
-
-    Slot target = instruction->m_targetSlot;
-
-    U_ASSERT(target < numSlots);
-
-    slots[target] = Object::newArray(context, nullptr, 0);
-}
-
-static void vmAllocateStringObject(Object *root, Object *context, AllocStringObjectInstr *instruction, Object **slots, size_t numSlots) {
-    (void)root;
-
-    Slot target = instruction->m_targetSlot;
-    const char *value = instruction->m_value;
-
-    U_ASSERT(target < numSlots);
-
-    slots[target] = Object::newString(context, value);
-}
-
-static void vmAllocateClosureObject(Object *root, Object *context, AllocClosureObjectInstr *instruction, Object **slots, size_t numSlots) {
-    (void)root;
-    (void)context;
-
-    Slot targetSlot = instruction->m_targetSlot;
-    Slot contextSlot = instruction->m_contextSlot;
-
-    U_ASSERT(targetSlot < numSlots);
-    U_ASSERT(contextSlot < numSlots);
-
-    slots[targetSlot] = Object::newClosure(slots[contextSlot], instruction->m_function);
-}
-
-static void vmCloseObject(Object *root, Object *context, CloseObjectInstr *instruction, Object **slots, size_t numSlots) {
-    (void)root;
-    (void)context;
-
-    Slot slot = instruction->m_slot;
-    U_ASSERT(slot < numSlots);
-    Object *object = slots[slot];
-    U_ASSERT(!(object->m_flags & Object::kClosed));
-    object->m_flags |= Object::kClosed;
-}
-
-// Marshalls all argument data into slots of the functions locals
-static void vmCall(Object *root, Object *context, CallInstr *instruction, Object **slots, size_t numSlots) {
-    Slot targetSlot = instruction->m_targetSlot;
-    Slot functionSlot = instruction->m_functionSlot;
-    Slot thisSlot = instruction->m_thisSlot;
-    size_t length = instruction->m_length;
-
-    U_ASSERT(targetSlot < numSlots);
-    U_ASSERT(functionSlot < numSlots);
-    U_ASSERT(thisSlot < numSlots);
-
-    Object *thisObject = slots[thisSlot];
-    Object *functionObject = slots[functionSlot];
-
-    // validate function type
-    Object *closureBase = root->lookup("closure", nullptr);
-    Object *functionBase = root->lookup("function", nullptr);
-    FunctionObject *function = (FunctionObject *)Object::instanceOf(functionObject, functionBase);
-    ClosureObject *closure = (ClosureObject *)Object::instanceOf(functionObject, closureBase);
-    U_ASSERT(function || closure);
-
-    // form argument array from slots
-    u::vector<Object *> arguments(length);
-    for (size_t i = 0; i < length; i++) {
-        Slot argumentSlot = instruction->m_arguments[i];
-        U_ASSERT(argumentSlot < numSlots);
-        arguments[i] = slots[argumentSlot];
-    }
-
-    Object *object;
-    if (closure)
-        object = closure->m_function(context, thisObject, functionObject, &arguments[0], arguments.size());
-    else
-        object = function->m_function(context, thisObject, functionObject, &arguments[0], arguments.size());
-    slots[targetSlot] = object;
-}
-
-Object *callFunction(Object *context, UserFunction *function, Object **args, size_t length) {
-    // allocate slots for arguments and locals
-    size_t numSlots = function->m_arity + function->m_slots;
-
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-
-    Object **slots = (Object **)neoCalloc(sizeof *slots, numSlots);
-    void *frameRoots = GarbageCollector::addRoots(slots, numSlots);
-
-    // ensure this call is valid
-    U_ASSERT(length == function->m_arity);
-
-    // copy the arguments into the slots
-    for (size_t i = 0; i < length; ++i)
-        slots[i] = args[i];
-
-    // ensure this function has code
-    U_ASSERT(function->m_body.m_length);
-    InstrBlock *block = &function->m_body.m_blocks[0];
-    size_t offset = 0;
-    for (;;) {
-        if (!(offset < block->m_length))
-            neoFatal("reached end of block without a branch");
-
-        Instr *instr = block->m_instrs[offset++];
-
-        switch (instr->m_type) {
-        case Instr::kGetRoot:
-            vmGetRoot(root, context, (GetRootInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kGetContext:
-            vmGetContext(root, context, (GetContextInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kAccess:
-        case Instr::kAccessKey:
-            vmAccess(root, context, instr, slots, numSlots);
-            break;
-        case Instr::kAssign:
-        case Instr::kAssignKey:
-            vmAssign(root, context, instr, slots, numSlots);
-            break;
-        case Instr::kAllocObject:
-            vmAllocateObject(root, context, (AllocObjectInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kAllocClosureObject:
-            vmAllocateClosureObject(root, context, (AllocClosureObjectInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kAllocIntObject:
-            vmAllocateIntObject(root, context, (AllocIntObjectInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kAllocFloatObject:
-            vmAllocateFloatObject(root, context, (AllocFloatObjectInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kAllocArrayObject:
-            vmAllocateArrayObject(root, context, (AllocArrayObjectInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kAllocStringObject:
-            vmAllocateStringObject(root, context, (AllocStringObjectInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kCloseObject:
-            vmCloseObject(root, context, (CloseObjectInstr *)instr, slots, numSlots);
-            break;
-        case Instr::kCall:
-            vmCall(root, context, (CallInstr *)instr, slots, numSlots);
-            break;
-
-        // The following instructions change the program counter
-        case Instr::kReturn: {
-            auto *ret = (ReturnInstr *)instr;
-            Slot returnSlot = ret->m_returnSlot;
-            U_ASSERT(returnSlot < numSlots);
-            Object *result = slots[returnSlot];
-            GarbageCollector::delRoots(frameRoots);
-            return result;
-        } break;
-
-        // TODO(daleweiler): cleanup
-        case Instr::kBranch: {
-            auto *branch = (BranchInstr *)instr;
-            size_t blockIndex = branch->m_block;
-            U_ASSERT(blockIndex < function->m_body.m_length);
-            block = &function->m_body.m_blocks[blockIndex];
-            offset = 0;
-        } break;
-
-        // TODO(daleweiler): cleanup & optimize
-        case Instr::kTestBranch: {
-            auto *testBranch = (TestBranchInstr *)instr;
-            Slot testSlot = testBranch->m_testSlot;
-            size_t trueBlock = testBranch->m_trueBlock;
-            size_t falseBlock = testBranch->m_falseBlock;
-            U_ASSERT(testSlot < numSlots);
-            Object *testValue = slots[testSlot];
-
-            bool test = false;
-
-            // try boolean first
-            Object *boolBase = root->lookup("bool", nullptr);
-            Object *boolValue = Object::instanceOf(testValue, boolBase);
-            if (boolValue) {
-                test = ((BooleanObject *)boolValue)->m_value;
-            } else {
-                // then integer
-                Object *intBase = root->lookup("int", nullptr);
-                Object *intValue = Object::instanceOf(testValue, intBase);
-                if (intValue)
-                    test = !!((IntObject *)intValue)->m_value;
-            }
-
-            size_t targetBlock = test ? trueBlock : falseBlock;
-            U_ASSERT(targetBlock < function->m_body.m_length);
-            block = &function->m_body.m_blocks[targetBlock];
-            offset = 0;
-        } break;
-
-        }
-    }
-}
-
-Object *functionHandler(Object *callingContext, Object *self, Object *function, Object **args, size_t length) {
-    // disacard calling context and self (lexical scoping)
-    (void)callingContext;
-    (void)self;
-    ClosureObject *closureObject = (ClosureObject *)function;
-    return callFunction(closureObject->m_context, &closureObject->m_userFunction, args, length);
-}
-
-Object *methodHandler(Object *callingContext, Object *self, Object *function, Object **args, size_t length) {
-    (void)callingContext;
-    ClosureObject *closureObject = (ClosureObject *)function;
-    Object *context = Object::newObject(closureObject->m_context, closureObject->m_context);
-    context->setNormal("this", self);
-    return callFunction(context, &closureObject->m_userFunction, args, length);
-}
-
-// builtin functions
-static Object *bool_not(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    (void)function;
-    (void)arguments;
-    U_ASSERT(length == 0);
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-    return Object::newBoolean(context, !((BooleanObject*)self)->m_value);
-}
-
-// arithmetic
 enum { kAdd, kSub, kMul, kDiv };
-
-// [Int]
-static Object *int_math(Object *context, Object *self, Object *function, Object **arguments, size_t length, int op) {
-    (void)function;
-
-    U_ASSERT(length == 1);
-
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-
-    Object *obj1 = self;
-    Object *obj2 = nullptr;
-
-    Object *intBase = root->lookup("int", nullptr);
-    obj2 = Object::instanceOf(*arguments, intBase);
-    if (obj2) {
-        int value1 = ((IntObject *)obj1)->m_value;
-        int value2 = ((IntObject *)obj2)->m_value;
-        switch (op) {
-        case kAdd: return Object::newInt(context, value1 + value2);
-        case kSub: return Object::newInt(context, value1 - value2);
-        case kMul: return Object::newInt(context, value1 * value2);
-        case kDiv: return Object::newInt(context, value1 / value2);
-        }
-    }
-
-    Object *floatBase = root->lookup("float", nullptr);
-    obj2 = Object::instanceOf(*arguments, floatBase);
-    if (obj2) {
-        float value1 = ((IntObject *)obj1)->m_value;
-        float value2 = ((FloatObject *)obj2)->m_value;
-        switch (op) {
-        case kAdd: return Object::newFloat(context, value1 + value2);
-        case kSub: return Object::newFloat(context, value1 - value2);
-        case kMul: return Object::newFloat(context, value1 * value2);
-        case kDiv: return Object::newFloat(context, value1 / value2);
-        }
-    }
-
-    U_UNREACHABLE();
-}
-
-static Object *int_add(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return int_math(context, self, function, arguments, length, kAdd);
-}
-
-static Object *int_sub(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return int_math(context, self, function, arguments, length, kSub);
-}
-
-static Object *int_mul(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return int_math(context, self, function, arguments, length, kMul);
-}
-
-static Object *int_div(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return int_math(context, self, function, arguments, length, kDiv);
-}
-
-// [Float]
-static Object *float_math(Object *context, Object *self, Object *function, Object **arguments, size_t length, int op) {
-    (void)function;
-
-    U_ASSERT(length == 1);
-
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-
-    Object *obj1 = self;
-    Object *obj2 = nullptr;
-
-    Object *floatBase = root->lookup("float", nullptr);
-    obj2 = Object::instanceOf(*arguments, floatBase);
-
-    if (obj2) {
-        float value1 = ((FloatObject *)obj1)->m_value;
-        float value2 = ((FloatObject *)obj2)->m_value;
-        switch (op) {
-        case kAdd: return Object::newFloat(context, value1 + value2);
-        case kSub: return Object::newFloat(context, value1 - value2);
-        case kMul: return Object::newFloat(context, value1 * value2);
-        case kDiv: return Object::newFloat(context, value1 / value2);
-        }
-    }
-
-    Object *intBase = root->lookup("int", nullptr);
-    obj2 = Object::instanceOf(*arguments, intBase);
-    if (obj2) {
-        float value1 = ((FloatObject *)obj1)->m_value;
-        float value2 = ((IntObject *)obj2)->m_value;
-        switch (op) {
-        case kAdd: return Object::newFloat(context, value1 + value2);
-        case kSub: return Object::newFloat(context, value1 - value2);
-        case kMul: return Object::newFloat(context, value1 * value2);
-        case kDiv: return Object::newFloat(context, value1 / value2);
-        }
-    }
-
-    U_UNREACHABLE();
-}
-
-static Object *float_add(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return float_math(context, self, function, arguments, length, kAdd);
-}
-
-static Object *float_sub(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return float_math(context, self, function, arguments, length, kSub);
-}
-
-static Object *float_mul(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return float_math(context, self, function, arguments, length, kMul);
-}
-
-static Object *float_div(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return float_math(context, self, function, arguments, length, kDiv);
-}
-
-// [String]
-static Object *string_add(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    (void)function;
-
-    U_ASSERT(length == 1);
-
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-
-    Object *stringBase = root->lookup("string", nullptr);
-
-    Object *obj1 = self;
-    Object *obj2 = Object::instanceOf(*arguments, stringBase);
-
-    if (obj2) {
-        const char *string1 = ((StringObject *)obj1)->m_value;
-        const char *string2 = ((StringObject *)obj2)->m_value;
-        return Object::newString(context, u::format("%s%s", string1, string2).c_str());
-    }
-
-    U_UNREACHABLE();
-}
-
-// comparisons
 enum { kEq, kLt, kGt, kLe, kGe };
 
-// [Int]
-static Object *int_compare(Object *context, Object *self, Object *function, Object **arguments, size_t length, int cmp) {
-    (void)function;
-
-    U_ASSERT(length == 1);
-
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-
-    Object *obj1 = self;
-    Object *obj2 = nullptr;
-
-    Object *intBase = root->lookup("int", nullptr);
-    obj2 = Object::instanceOf(*arguments, intBase);
-    if (obj2) {
-        int value1 = ((IntObject *)obj1)->m_value;
-        int value2 = ((IntObject *)obj2)->m_value;
-        switch (cmp) {
-        case kEq: return Object::newBoolean(context, value1 == value2);
-        case kLt: return Object::newBoolean(context, value1 < value2);
-        case kGt: return Object::newBoolean(context, value1 > value2);
-        case kLe: return Object::newBoolean(context, value1 <= value2);
-        case kGe: return Object::newBoolean(context, value1 >= value2);
-        }
-    }
-
-    Object *floatBase = root->lookup("float", nullptr);
-    obj2 = Object::instanceOf(*arguments, floatBase);
-    if (obj2) {
-        float value1 = ((IntObject *)obj1)->m_value;
-        float value2 = ((FloatObject *)obj2)->m_value;
-        switch (cmp) {
-        case kEq: return Object::newBoolean(context, value1 == value2);
-        case kLt: return Object::newBoolean(context, value1 < value2);
-        case kGt: return Object::newBoolean(context, value1 > value2);
-        case kLe: return Object::newBoolean(context, value1 <= value2);
-        case kGe: return Object::newBoolean(context, value1 >= value2);
-        }
-    }
-
-    U_UNREACHABLE();
-}
-
-static Object *int_eq(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return int_compare(context, self, function, arguments, length, kEq);
-}
-
-static Object *int_lt(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return int_compare(context, self, function, arguments, length, kLt);
-}
-
-static Object *int_gt(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return int_compare(context, self, function, arguments, length, kGt);
-}
-
-static Object *int_le(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return int_compare(context, self, function, arguments, length, kLe);
-}
-
-static Object *int_ge(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return int_compare(context, self, function, arguments, length, kGe);
-}
-
-// [Float]
-static Object *float_compare(Object *context, Object *self, Object *function, Object **arguments, size_t length, int cmp) {
-    (void)function;
-
-    U_ASSERT(length == 1);
-
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-
-    Object *obj1 = self;
-    Object *obj2 = nullptr;
-
-    Object *floatBase = root->lookup("float", nullptr);
-    obj2 = Object::instanceOf(*arguments, floatBase);
-
-    if (obj2) {
-        float value1 = ((FloatObject *)obj1)->m_value;
-        float value2 = ((FloatObject *)obj2)->m_value;
-        switch (cmp) {
-        case kEq: return Object::newBoolean(context, value1 == value2);
-        case kLt: return Object::newBoolean(context, value1 < value2);
-        case kGt: return Object::newBoolean(context, value1 > value2);
-        case kLe: return Object::newBoolean(context, value1 <= value2);
-        case kGe: return Object::newBoolean(context, value1 >= value2);
-        }
-    }
-
-    Object *intBase = root->lookup("float", nullptr);
-    obj2 = Object::instanceOf(*arguments, intBase);
-
-    if (obj2) {
-        float value1 = ((FloatObject *)obj1)->m_value;
-        float value2 = ((IntObject *)obj2)->m_value;
-        switch (cmp) {
-        case kEq: return Object::newBoolean(context, value1 == value2);
-        case kLt: return Object::newBoolean(context, value1 < value2);
-        case kGt: return Object::newBoolean(context, value1 > value2);
-        case kLe: return Object::newBoolean(context, value1 <= value2);
-        case kGe: return Object::newBoolean(context, value1 >= value2);
-        }
-    }
-
-    U_UNREACHABLE();
-}
-
-static Object *float_eq(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return float_compare(context, self, function, arguments, length, kEq);
-}
-
-static Object *float_lt(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return float_compare(context, self, function, arguments, length, kLt);
-}
-
-static Object *float_gt(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return float_compare(context, self, function, arguments, length, kGt);
-}
-
-static Object *float_le(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return float_compare(context, self, function, arguments, length, kLe);
-}
-
-static Object *float_ge(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    return float_compare(context, self, function, arguments, length, kGe);
-}
-
-// [Closure]
-static Object *closure_mark(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
+/// [Bool]
+static void boolNot(State *state, Object *self, Object *function, Object **arguments, size_t count) {
     (void)function;
     (void)arguments;
-
-    U_ASSERT(length == 0);
-
-    Object *root = context;
+    U_ASSERT(count == 0);
+    Object *root = state->m_stack[state->m_length - 1].m_context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *closureBase = root->lookup("closure", nullptr);
-    ClosureObject *closureObject = (ClosureObject *)Object::instanceOf(self, closureBase);
+    state->m_result = Object::newBool(state, !((BoolObject *)self)->m_value);
+}
+
+/// [Int]
+static void intMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
+    U_ASSERT(count == 1);
+    Object *root = state->m_stack[state->m_length -1].m_context;
+    while (root->m_parent)
+        root = root->m_parent;
+
+    Object *intBase = Object::lookup(root, "int", nullptr);
+
+    Object *intObj1 = Object::instanceOf(self, intBase);
+    Object *intObj2 = Object::instanceOf(*arguments, intBase);
+
+    U_ASSERT(intObj1);
+
+    if (intObj2) {
+        int value1 = ((IntObject *)intObj1)->m_value;
+        int value2 = ((IntObject *)intObj2)->m_value;
+        switch (op) {
+        case kAdd: state->m_result = Object::newInt(state, value1 + value2); return;
+        case kSub: state->m_result = Object::newInt(state, value1 - value2); return;
+        case kMul: state->m_result = Object::newInt(state, value1 * value2); return;
+        case kDiv: state->m_result = Object::newInt(state, value1 / value2); return;
+        }
+    }
+
+    Object *floatBase = Object::lookup(root, "float", nullptr);
+    Object *floatObj2 = Object::instanceOf(*arguments, floatBase);
+
+    if (floatObj2) {
+        float value1 = ((IntObject *)intObj1)->m_value;
+        float value2 = ((FloatObject *)floatObj2)->m_value;
+        switch (op) {
+        case kAdd: state->m_result = Object::newFloat(state, value1 + value2); return;
+        case kSub: state->m_result = Object::newFloat(state, value1 - value2); return;
+        case kMul: state->m_result = Object::newFloat(state, value1 * value2); return;
+        case kDiv: state->m_result = Object::newFloat(state, value1 / value2); return;
+        }
+    }
+
+    U_UNREACHABLE();
+}
+
+static void intAdd(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intMath(state, self, function, arguments, count, kAdd);
+}
+
+static void intSub(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intMath(state, self, function, arguments, count, kSub);
+}
+
+static void intMul(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intMath(state, self, function, arguments, count, kMul);
+}
+
+static void intDiv(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intMath(state, self, function, arguments, count, kDiv);
+}
+
+static void intCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
+    U_ASSERT(count == 1);
+    Object *root = state->m_stack[state->m_length -1].m_context;
+    while (root->m_parent)
+        root = root->m_parent;
+
+    Object *intBase = Object::lookup(root, "int", nullptr);
+
+    Object *intObj1 = Object::instanceOf(self, intBase);
+    Object *intObj2 = Object::instanceOf(*arguments, intBase);
+
+    U_ASSERT(intObj1);
+
+    if (intObj2) {
+        int value1 = ((IntObject *)intObj1)->m_value;
+        int value2 = ((IntObject *)intObj2)->m_value;
+        switch (compare) {
+        case kEq: state->m_result = Object::newBool(state, value1 == value2); return;
+        case kLt: state->m_result = Object::newBool(state, value1 < value2); return;
+        case kGt: state->m_result = Object::newBool(state, value1 > value2); return;
+        case kLe: state->m_result = Object::newBool(state, value1 <= value2); return;
+        case kGe: state->m_result = Object::newBool(state, value1 >= value2); return;
+        }
+    }
+
+    Object *floatBase = Object::lookup(root, "float", nullptr);
+    Object *floatObj2 = Object::instanceOf(*arguments, floatBase);
+
+    if (floatObj2) {
+        float value1 = ((IntObject *)intObj1)->m_value;
+        float value2 = ((FloatObject *)floatObj2)->m_value;
+        switch (compare) {
+        case kEq: state->m_result = Object::newBool(state, value1 == value2); return;
+        case kLt: state->m_result = Object::newBool(state, value1 < value2); return;
+        case kGt: state->m_result = Object::newBool(state, value1 > value2); return;
+        case kLe: state->m_result = Object::newBool(state, value1 <= value2); return;
+        case kGe: state->m_result = Object::newBool(state, value1 >= value2); return;
+        }
+    }
+
+    U_UNREACHABLE();
+}
+
+static void intCompareEq(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intCompare(state, self, function, arguments, count, kEq);
+}
+
+static void intCompareLt(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intCompare(state, self, function, arguments, count, kLt);
+}
+
+static void intCompareGt(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intCompare(state, self, function, arguments, count, kGt);
+}
+
+static void intCompareLe(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intCompare(state, self, function, arguments, count, kLe);
+}
+
+static void intCompareGe(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intCompare(state, self, function, arguments, count, kGe);
+}
+
+/// [Float]
+static void floatMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
+    U_ASSERT(count == 1);
+    Object *root = state->m_stack[state->m_length -1].m_context;
+    while (root->m_parent)
+        root = root->m_parent;
+
+    Object *intBase = Object::lookup(root, "int", nullptr);
+    Object *floatBase = Object::lookup(root, "float", nullptr);
+
+    Object *floatObj1 = Object::instanceOf(self, floatBase);
+    Object *intObj2 = Object::instanceOf(*arguments, intBase);
+    Object *floatObj2 = Object::instanceOf(*arguments, floatBase);
+
+    U_ASSERT(floatObj1);
+
+    float value1 = ((FloatObject *)floatObj1)->m_value;
+    float value2 = floatObj2 ? ((FloatObject *)floatObj2)->m_value : ((IntObject *)intObj2)->m_value;
+    switch (op) {
+    case kAdd: state->m_result = Object::newFloat(state, value1 + value2); return;
+    case kSub: state->m_result = Object::newFloat(state, value1 - value2); return;
+    case kMul: state->m_result = Object::newFloat(state, value1 * value2); return;
+    case kDiv: state->m_result = Object::newFloat(state, value1 / value2); return;
+    }
+
+    U_UNREACHABLE();
+}
+
+static void floatAdd(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    floatMath(state, self, function, arguments, count, kAdd);
+}
+
+static void floatSub(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    floatMath(state, self, function, arguments, count, kSub);
+}
+
+static void floatMul(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    floatMath(state, self, function, arguments, count, kMul);
+}
+
+static void floatDiv(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    floatMath(state, self, function, arguments, count, kDiv);
+}
+
+static void floatCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
+    U_ASSERT(count == 1);
+    Object *root = state->m_stack[state->m_length -1].m_context;
+    while (root->m_parent)
+        root = root->m_parent;
+
+    Object *intBase = Object::lookup(root, "int", nullptr);
+    Object *floatBase = Object::lookup(root, "float", nullptr);
+
+    Object *floatObj1 = Object::instanceOf(self, floatBase);
+    Object *intObj2 = Object::instanceOf(*arguments, intBase);
+    Object *floatObj2 = Object::instanceOf(*arguments, floatBase);
+
+    U_ASSERT(floatObj1);
+
+    float value1 = ((FloatObject *)floatObj1)->m_value;
+    float value2 = floatObj2 ? ((FloatObject *)floatObj2)->m_value : ((IntObject *)intObj2)->m_value;
+    switch (compare) {
+    case kEq: state->m_result = Object::newBool(state, value1 == value2); return;
+    case kLt: state->m_result = Object::newBool(state, value1 < value2); return;
+    case kGt: state->m_result = Object::newBool(state, value1 > value2); return;
+    case kLe: state->m_result = Object::newBool(state, value1 <= value2); return;
+    case kGe: state->m_result = Object::newBool(state, value1 >= value2); return;
+    }
+
+    U_UNREACHABLE();
+}
+
+static void floatCompareEq(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    floatCompare(state, self, function, arguments, count, kEq);
+}
+
+static void floatCompareLt(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    floatCompare(state, self, function, arguments, count, kLt);
+}
+
+static void floatCompareGt(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    floatCompare(state, self, function, arguments, count, kGt);
+}
+
+static void floatCompareLe(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    floatCompare(state, self, function, arguments, count, kLe);
+}
+
+static void floatCompareGe(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    floatCompare(state, self, function, arguments, count, kGe);
+}
+
+/// [String]
+static void stringAdd(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    U_ASSERT(count == 1);
+    Object *root = state->m_stack[state->m_length -1].m_context;
+    while (root->m_parent)
+        root = root->m_parent;
+
+    Object *stringBase = Object::lookup(root, "string", nullptr);
+
+    Object *strObj1 = Object::instanceOf(self, stringBase);
+    Object *strObj2 = Object::instanceOf(*arguments, stringBase);
+
+    U_ASSERT(strObj1 && strObj2);
+
+    state->m_result = Object::newString(state,
+        u::format("%s%s", ((StringObject *)strObj1)->m_value,
+            ((StringObject *)strObj2)->m_value).c_str());
+}
+
+/// [Closure]
+static void closureMark(State *state, Object *object) {
+    Object *root = state->m_stack[state->m_length - 1].m_context;
+    while (root->m_parent)
+        root = root->m_parent;
+    Object *closureBase = Object::lookup(root, "closure", nullptr);
+    ClosureObject *closureObject = (ClosureObject*)Object::instanceOf(object, closureBase);
     if (closureObject)
-        Object::mark(context, closureObject->m_context);
-    return nullptr;
+        Object::mark(state, closureObject->m_context);
 }
 
-// [Array]
-static Object *array_mark(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    (void)function;
-    (void)arguments;
-
-    U_ASSERT(length == 0);
-
-    Object *root = context;
+/// [Array]
+static void arrayMark(State *state, Object *object) {
+    Object *root = state->m_stack[state->m_length - 1].m_context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *arrayBase = root->lookup("array", nullptr);
-    ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
+    Object *arrayBase = Object::lookup(root, "array", nullptr);
+    ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(object, arrayBase);
     if (arrayObject) {
         for (int i = 0; i < arrayObject->m_length; i++)
-            Object::mark(context, arrayObject->m_contents[i]);
+            Object::mark(state, arrayObject->m_contents[i]);
     }
-    return nullptr;
 }
 
-static Object *array_resize(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    (void)function;
-    U_ASSERT(length == 1);
-    Object *root = context;
+static void arrayResize(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    U_ASSERT(count == 1);
+    Object *root = state->m_stack[state->m_length - 1].m_context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *intBase = root->lookup("int", nullptr);
-    Object *arrayBase = root->lookup("array", nullptr);
+
+    Object *intBase = Object::lookup(root, "int", nullptr);
+    Object *arrayBase = Object::lookup(root, "array", nullptr);
+
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
-    IntObject *resizeArgument = (IntObject *)Object::instanceOf(arguments[0], intBase);
-    U_ASSERT(arrayObject);
-    U_ASSERT(resizeArgument);
-    int newSize = resizeArgument->m_value;
+    IntObject *intObject = (IntObject *)Object::instanceOf(*arguments, intBase);
+
+    U_ASSERT(arrayObject && intObject);
+
+    int newSize = intObject->m_value;
     U_ASSERT(newSize >= 0);
+
     arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * newSize);
     arrayObject->m_length = newSize;
-    self->setNormal("length", Object::newInt(context, newSize));
-    return self;
+
+    Object::setNormal(self, "length", Object::newInt(state, newSize));
+
+    state->m_result = self;
 }
 
-static Object *array_push(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    (void)function;
-    U_ASSERT(length == 1);
-    Object *root = context;
+static void arrayPush(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    U_ASSERT(count == 1);
+    Object *root = state->m_stack[state->m_length - 1].m_context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *arrayBase = root->lookup("array", nullptr);
+
+    Object *arrayBase = Object::lookup(root, "array", nullptr);
+
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
+
     U_ASSERT(arrayObject);
-    Object *value = arguments[0];
+
+    Object *value = *arguments;
     arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * ++arrayObject->m_length);
     arrayObject->m_contents[arrayObject->m_length - 1] = value;
-    self->setNormal("length", Object::newInt(context, arrayObject->m_length));
-    return self;
+
+    Object::setNormal(self, "length", Object::newInt(state, arrayObject->m_length));
+
+    state->m_result = self;
 }
 
-static Object *array_pop(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    (void)function;
-    (void)arguments;
-    U_ASSERT(length == 0);
-    Object *root = context;
+static void arrayPop(State *state, Object *self, Object *, Object **, size_t count) {
+    U_ASSERT(count == 0);
+    Object *root = state->m_stack[state->m_length - 1].m_context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *arrayBase = root->lookup("array", nullptr);
+
+    Object *arrayBase = Object::lookup(root, "array", nullptr);
+
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
+
     U_ASSERT(arrayObject);
+
     Object *result = arrayObject->m_contents[arrayObject->m_length - 1];
     arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * --arrayObject->m_length);
-    self->setNormal("length", Object::newInt(context, arrayObject->m_length));
-    return result;
+
+    Object::setNormal(self, "length", Object::newInt(state, arrayObject->m_length));
+
+    state->m_result = result;
 }
 
-static Object *array_index(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    (void)function;
-    U_ASSERT(length == 1);
-    Object *root = context;
+static void arrayIndex(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    U_ASSERT(count == 1);
+    Object *root = state->m_stack[state->m_length - 1].m_context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *intBase = root->lookup("int", nullptr);
-    Object *arrayBase = root->lookup("array", nullptr);
+
+    Object *intBase = Object::lookup(root, "int", nullptr);
+    Object *arrayBase = Object::lookup(root, "array", nullptr);
+
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
-    IntObject *indexArgument = (IntObject *)Object::instanceOf(arguments[0], intBase);
-    if (!indexArgument)
-        return nullptr;
-    U_ASSERT(arrayObject);
-    int index = indexArgument->m_value;
-    U_ASSERT(index >= 0 && index < arrayObject->m_length);
-    return arrayObject->m_contents[index];
+    IntObject *intObject = (IntObject *)Object::instanceOf(*arguments, intBase);
+
+    if (intObject) {
+        U_ASSERT(arrayObject);
+        int index = intObject->m_value;
+        U_ASSERT(index >= 0 && index < arrayObject->m_length);
+        state->m_result = arrayObject->m_contents[index];
+    } else {
+        state->m_result = nullptr;
+    }
 }
 
-static Object *array_index_assign(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    (void)function;
-    U_ASSERT(length == 2);
-    Object *root = context;
+static void arrayIndexAssign(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    U_ASSERT(count == 2);
+    Object *root = state->m_stack[state->m_length - 1].m_context;
     while (root->m_parent)
         root = root->m_parent;
-    Object *intBase = root->lookup("int", nullptr);
-    Object *arrayBase = root->lookup("array", nullptr);
+
+    Object *intBase = Object::lookup(root, "int", nullptr);
+    Object *arrayBase = Object::lookup(root, "array", nullptr);
+
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
-    IntObject *indexArgument = (IntObject *)Object::instanceOf(arguments[0], intBase);
-    U_ASSERT(arrayObject);
-    U_ASSERT(indexArgument);
-    int index = indexArgument->m_value;
+    IntObject *intObject = (IntObject *)Object::instanceOf(*arguments, intBase);
+
+    U_ASSERT(arrayObject && intObject);
+
+    int index = intObject->m_value;
     U_ASSERT(index >= 0 && index < arrayObject->m_length);
-    Object *value = arguments[1];
-    arrayObject->m_contents[index] = value;
-    return nullptr;
+    arrayObject->m_contents[index] = arguments[1];
+    state->m_result = nullptr;
 }
 
-static Object *print(Object *context, Object *self, Object *function, Object **arguments, size_t length) {
-    (void)self;
-    (void)function;
-
-    Object *root = context;
+static void print(State *state, Object *, Object *, Object **arguments, size_t count) {
+    Object *root = state->m_stack[state->m_length - 1].m_context;
     while (root->m_parent)
         root = root->m_parent;
 
-    Object *intBase = root->lookup("int", nullptr);
-    Object *floatBase = root->lookup("float", nullptr);
-    Object *stringBase = root->lookup("string", nullptr);
-    Object *boolBase = root->lookup("bool", nullptr);
+    Object *intBase = Object::lookup(root, "int", nullptr);
+    Object *boolBase = Object::lookup(root, "bool", nullptr);
+    Object *floatBase = Object::lookup(root, "float", nullptr);
+    Object *stringBase = Object::lookup(root, "string", nullptr);
 
-    for (size_t i = 0; i < length; i++) {
+    for (size_t i = 0; i < count; i++) {
         Object *argument = arguments[i];
-        Object *instance = nullptr;
-        instance = Object::instanceOf(argument, intBase);
-        if (instance) {
-            u::Log::out("%d", ((IntObject *)instance)->m_value);
+        Object *intObj = Object::instanceOf(argument, intBase);
+        Object *boolObj = Object::instanceOf(argument, boolBase);
+        Object *floatObj = Object::instanceOf(argument, floatBase);
+        Object *stringObj = Object::instanceOf(argument, stringBase);
+        if (intObj) {
+            u::Log::out("%d", ((IntObject *)intObj)->m_value);
             continue;
         }
-        instance = Object::instanceOf(argument, floatBase);
-        if (instance) {
-            u::Log::out("%f", ((FloatObject *)instance)->m_value);
+        if (boolObj) {
+            u::Log::out(((BoolObject *)boolObj)->m_value ? "true" : "false");
             continue;
         }
-        instance = Object::instanceOf(argument, stringBase);
-        if (instance) {
-            u::Log::out("%s", ((StringObject *)instance)->m_value);
+        if (floatObj) {
+            u::Log::out("%f", ((FloatObject *)floatObj)->m_value);
             continue;
         }
-        instance = Object::instanceOf(argument, boolBase);
-        if (instance) {
-            u::Log::out("%s", ((BooleanObject *)instance)->m_value ? "true" : "false");
+        if (stringObj) {
+            u::Log::out("%s", ((StringObject *)stringObj)->m_value);
             continue;
         }
     }
     u::Log::out("\n");
-    return nullptr;
+    state->m_result = nullptr;
 }
 
-Object *createRoot() {
-    Object *root = Object::newObject(nullptr, nullptr);
+Object *createRoot(State *state) {
+    Object *root = Object::newObject(state, nullptr);
 
-    void *pinned = GarbageCollector::addRoots(&root, 1);
+    state->m_root = root;
+    state->m_stack[state->m_length - 1].m_context = root;
 
-    // the null value
-    root->setNormal("null", nullptr);
+    RootSet pinned;
+    GC::addRoots(state, &root, 1, &pinned);
 
-    Object *functionObject = Object::newObject(root, nullptr);
-    root->setNormal("function", functionObject);
+    // null
+    Object::setNormal(root, "null", nullptr);
 
-    Object *closureObject = Object::newObject(root, nullptr);
-    root->setNormal("closure", closureObject);
-    closureObject->setNormal("mark", Object::newFunction(root, closure_mark));
+    // function
+    Object *functionObject = Object::newObject(state, nullptr);
+    functionObject->m_flags |= kNoInherit;
+    Object::setNormal(root, "function", functionObject);
 
-    Object *boolObject = Object::newObject(root, nullptr);
-    root->setNormal("bool", boolObject);
-    boolObject->setNormal("!", Object::newFunction(root, bool_not));
+    // closure
+    Object *closureObject = Object::newObject(state, nullptr);
+    closureObject->m_flags |= kNoInherit;
+    Object::setNormal(root, "closure", closureObject);
+    Object *closureMarkObject = Object::newMark(state);
+    ((MarkObject *)closureMarkObject)->m_mark = closureMark;
+    Object::setNormal(closureObject, "mark", closureMarkObject);
 
-    Object *intObject = Object::newObject(root, nullptr);
-    intObject->m_flags &= ~Object::kClosed;
-    root->setNormal("int", intObject);
-    intObject->setNormal("+", Object::newFunction(root, int_add));
-    intObject->setNormal("-", Object::newFunction(root, int_sub));
-    intObject->setNormal("*", Object::newFunction(root, int_mul));
-    intObject->setNormal("/", Object::newFunction(root, int_div));
-    intObject->setNormal("==", Object::newFunction(root, int_eq));
-    intObject->setNormal("<", Object::newFunction(root, int_lt));
-    intObject->setNormal(">", Object::newFunction(root, int_gt));
-    intObject->setNormal("<=", Object::newFunction(root, int_le));
-    intObject->setNormal(">=", Object::newFunction(root, int_ge));
+    // bool
+    Object *boolObject = Object::newObject(state, nullptr);
+    boolObject->m_flags |= kNoInherit;
+    Object::setNormal(root, "bool", boolObject);
+    Object::setNormal(boolObject, "!", Object::newFunction(state, boolNot));
 
-    Object *floatObject = Object::newObject(root, nullptr);
-    floatObject->m_flags &= ~Object::kClosed;
-    root->setNormal("float", floatObject);
-    floatObject->setNormal("+", Object::newFunction(root, float_add));
-    floatObject->setNormal("-", Object::newFunction(root, float_sub));
-    floatObject->setNormal("*", Object::newFunction(root, float_mul));
-    floatObject->setNormal("/", Object::newFunction(root, float_div));
-    floatObject->setNormal("==", Object::newFunction(root, float_eq));
-    floatObject->setNormal("<", Object::newFunction(root, float_lt));
-    floatObject->setNormal(">", Object::newFunction(root, float_gt));
-    floatObject->setNormal("<=", Object::newFunction(root, float_le));
-    floatObject->setNormal(">=", Object::newFunction(root, float_ge));
+    // int
+    Object *intObject = Object::newObject(state, nullptr);
+    intObject->m_flags |= kNoInherit;
+    Object::setNormal(root, "int", intObject);
+    Object::setNormal(intObject, "+", Object::newFunction(state, intAdd));
+    Object::setNormal(intObject, "-", Object::newFunction(state, intSub));
+    Object::setNormal(intObject, "*", Object::newFunction(state, intMul));
+    Object::setNormal(intObject, "/", Object::newFunction(state, intDiv));
+    Object::setNormal(intObject, "==", Object::newFunction(state, intCompareEq));
+    Object::setNormal(intObject, "<", Object::newFunction(state, intCompareLt));
+    Object::setNormal(intObject, ">", Object::newFunction(state, intCompareGt));
+    Object::setNormal(intObject, "<=", Object::newFunction(state, intCompareLe));
+    Object::setNormal(intObject, ">=", Object::newFunction(state, intCompareGe));
 
-    Object *stringObject = Object::newObject(root, nullptr);
-    root->setNormal("string", stringObject);
-    stringObject->setNormal("+", Object::newFunction(root, string_add));
+    // float
+    Object *floatObject = Object::newObject(state, nullptr);
+    floatObject->m_flags |= kNoInherit;
+    Object::setNormal(root, "float", floatObject);
+    Object::setNormal(floatObject, "+", Object::newFunction(state, floatAdd));
+    Object::setNormal(floatObject, "-", Object::newFunction(state, floatSub));
+    Object::setNormal(floatObject, "*", Object::newFunction(state, floatMul));
+    Object::setNormal(floatObject, "/", Object::newFunction(state, floatDiv));
+    Object::setNormal(floatObject, "==", Object::newFunction(state, floatCompareEq));
+    Object::setNormal(floatObject, "<", Object::newFunction(state, floatCompareLt));
+    Object::setNormal(floatObject, ">", Object::newFunction(state, floatCompareGt));
+    Object::setNormal(floatObject, "<=", Object::newFunction(state, floatCompareLe));
+    Object::setNormal(floatObject, ">=", Object::newFunction(state, floatCompareGe));
 
-    Object *arrayObject = Object::newObject(root, nullptr);
-    root->setNormal("array", arrayObject);
-    arrayObject->setNormal("mark", Object::newFunction(root, array_mark));
-    arrayObject->setNormal("resize", Object::newFunction(root, array_resize));
-    arrayObject->setNormal("push", Object::newFunction(root, array_push));
-    arrayObject->setNormal("pop", Object::newFunction(root, array_pop));
-    arrayObject->setNormal("[]", Object::newFunction(root, array_index));
-    arrayObject->setNormal("[]=", Object::newFunction(root, array_index_assign));
+    // string
+    Object *stringObject = Object::newObject(state, nullptr);
+    stringObject->m_flags |= kNoInherit;
+    Object::setNormal(root, "string", stringObject);
+    Object::setNormal(stringObject, "+", Object::newFunction(state, stringAdd));
 
-    root->setNormal("print", Object::newFunction(root, print));
+    // array
+    Object *arrayObject = Object::newObject(state, nullptr);
+    arrayObject->m_flags |= kNoInherit;
+    Object::setNormal(root, "array", arrayObject);
+    Object *arrayMarkObject = Object::newMark(state);
+    ((MarkObject *)arrayMarkObject)->m_mark = arrayMark;
+    Object::setNormal(arrayObject, "mark", arrayMarkObject);
+    Object::setNormal(arrayObject, "resize", Object::newFunction(state, arrayResize));
+    Object::setNormal(arrayObject, "push", Object::newFunction(state, arrayPush));
+    Object::setNormal(arrayObject, "pop", Object::newFunction(state, arrayPop));
+    Object::setNormal(arrayObject, "[]", Object::newFunction(state, arrayIndex));
+    Object::setNormal(arrayObject, "[]=", Object::newFunction(state, arrayIndexAssign));
 
-    GarbageCollector::delRoots(pinned);
+    // others
+    Object::setNormal(root, "print", Object::newFunction(state, print));
+
+    GC::delRoots(state, &pinned);
 
     return root;
 }
