@@ -8,7 +8,7 @@ struct State;
 struct Object;
 
 struct VM {
-    static CallFrame *addFrame(State *state);
+    static CallFrame *addFrame(State *state, size_t slots);
     static void delFrame(State *state);
     static void run(State *state, Object *root);
 

@@ -6,7 +6,7 @@
 
 namespace s {
 
-CallFrame *VM::addFrame(State *state) {
+CallFrame *VM::addFrame(State *state, size_t slots) {
     void *stack = (void *)state->m_stack;
     if (stack) {
         size_t capacity = *((size_t *)stack - 1);
@@ -41,12 +41,14 @@ CallFrame *VM::addFrame(State *state) {
         state->m_stack = (CallFrame *)stack;
     }
     state->m_length = state->m_length + 1;
-    return &state->m_stack[state->m_length - 1];
+    CallFrame *frame = &state->m_stack[state->m_length - 1];
+    frame->m_count = slots;
+    frame->m_slots = (Object **)neoCalloc(sizeof(Object *), slots);
+    return frame;
 }
 
 void VM::delFrame(State *state) {
     CallFrame *frame = &state->m_stack[state->m_length - 1];
-    GC::delRoots(state, &frame->m_root);
     neoFree(frame->m_slots);
     state->m_length = state->m_length - 1;
 }
@@ -323,10 +325,16 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
             arguments[i] = frame->m_slots[argumentSlot];
         }
 
+        size_t previousStackLength = state->m_length;
+
         if (functionObject)
             functionObject->m_function(state, thisObject, funObject, arguments, count);
         else
             closureObject->m_function(state, thisObject, funObject, arguments, count);
+
+        // m_function may have triggered a stack reallocation which means a different
+        // frame location
+        frame = (CallFrame *)&state->m_stack[previousStackLength - 1];
 
         if (count >= 10)
             neoFree(arguments);
@@ -338,6 +346,7 @@ void VM::step(State *state, Object *root, void **preallocatedArguments) {
         Slot returnSlot = ret->m_returnSlot;
         U_ASSERT(returnSlot < frame->m_count);
         Object *result = frame->m_slots[returnSlot];
+        GC::delRoots(state, &frame->m_root);
         delFrame(state);
         state->m_result = result;
         BREAK;
@@ -405,11 +414,9 @@ void VM::run(State *state, Object *root) {
 }
 
 void VM::callFunction(State *state, Object *context, UserFunction *function, Object **arguments, size_t count) {
-    CallFrame *frame = addFrame(state);
+    CallFrame *frame = addFrame(state, function->m_slots);
     frame->m_function = function;
     frame->m_context = context;
-    frame->m_count = function->m_slots;
-    frame->m_slots = (Object **)neoCalloc(sizeof(Object *), frame->m_count);
     GC::addRoots(state, frame->m_slots, frame->m_count, &frame->m_root);
 
     U_ASSERT(count == frame->m_function->m_arity);

@@ -50,9 +50,10 @@ print("string " + "concatenation");
 void test() {
     State state;
     memset(&state, 0, sizeof state);
-    VM::addFrame(&state);
 
+    VM::addFrame(&state, 0);
     Object *root = createRoot(&state);
+    VM::delFrame(&state);
 
     char *contents = text;
 
@@ -64,7 +65,6 @@ void test() {
     U_ASSERT(result == kParseOk);
     UserFunction::dump(module, 0);
 
-    state.m_length = 0;
     VM::callFunction(&state, root, module, nullptr, 0);
     VM::run(&state, root);
 
