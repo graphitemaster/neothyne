@@ -65,14 +65,6 @@ void VM::error(State *state, const char *fmt, ...) {
     state->m_runState = kErrored;
 }
 
-#define VM_ASSERT(CONDITION, ...) \
-    do { \
-        if (!(CONDITION)) { \
-            error(state, __VA_ARGS__); \
-            return; \
-        } \
-    } while(0)
-
 #define I(NAME, TYPE) \
     Instruction::TYPE *NAME = (Instruction::TYPE *)instruction
 

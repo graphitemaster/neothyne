@@ -46,7 +46,6 @@ print(ack(3, 7));
 print("string " + "concatenation");
 
 let a = { };
-a.b = 1;
 
 )";
 
@@ -74,7 +73,7 @@ void test() {
 
     // print any errors from running
     if (state.m_runState == kErrored)
-        u::Log::err("%s", state.m_error);
+        u::Log::err("%s\n", state.m_error);
 
     root = state.m_result;
 

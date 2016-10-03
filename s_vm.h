@@ -17,10 +17,19 @@ struct VM {
     static void functionHandler(State *state, Object *self, Object *function, Object **arguments, size_t count);
     static void methodHandler(State *state, Object *self, Object *function, Object **arguments, size_t count);
 
+    static void error(State *state, const char *fmt, ...);
+
 private:
     static void step(State *state, void **arguments);
-    static void error(State *state, const char *fmt, ...);
 };
+
+#define VM_ASSERT(CONDITION, ...) \
+    do { \
+        if (!(CONDITION)) { \
+            VM::error(state, __VA_ARGS__); \
+            return; \
+        } \
+    } while(0)
 
 }
 

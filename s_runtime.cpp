@@ -1,5 +1,6 @@
 #include "s_runtime.h"
 #include "s_object.h"
+#include "s_vm.h"
 #include "s_gc.h"
 
 #include "u_log.h"
@@ -14,13 +15,14 @@ enum { kEq, kLt, kGt, kLe, kGe };
 static void boolNot(State *state, Object *self, Object *function, Object **arguments, size_t count) {
     (void)function;
     (void)arguments;
-    U_ASSERT(count == 0);
+    VM_ASSERT(count == 0, "wrong number of parameters: expected 0, got %zu", count);
     state->m_result = Object::newBool(state, !((BoolObject *)self)->m_value);
 }
 
 /// [Int]
 static void intMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
-    U_ASSERT(count == 1);
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+
     Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
@@ -28,7 +30,7 @@ static void intMath(State *state, Object *self, Object *, Object **arguments, si
     Object *intObj1 = Object::instanceOf(self, intBase);
     Object *intObj2 = Object::instanceOf(*arguments, intBase);
 
-    U_ASSERT(intObj1);
+    VM_ASSERT(intObj1, "wrong type: expected int");
 
     if (intObj2) {
         int value1 = ((IntObject *)intObj1)->m_value;
@@ -75,7 +77,8 @@ static void intDiv(State *state, Object *self, Object *function, Object **argume
 }
 
 static void intCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
-    U_ASSERT(count == 1);
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+
     Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
@@ -83,7 +86,7 @@ static void intCompare(State *state, Object *self, Object *, Object **arguments,
     Object *intObj1 = Object::instanceOf(self, intBase);
     Object *intObj2 = Object::instanceOf(*arguments, intBase);
 
-    U_ASSERT(intObj1);
+    VM_ASSERT(intObj1, "wrong type: expected int");
 
     if (intObj2) {
         int value1 = ((IntObject *)intObj1)->m_value;
@@ -137,7 +140,8 @@ static void intCompareGe(State *state, Object *self, Object *function, Object **
 
 /// [Float]
 static void floatMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
-    U_ASSERT(count == 1);
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+
     Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
@@ -147,7 +151,7 @@ static void floatMath(State *state, Object *self, Object *, Object **arguments, 
     Object *intObj2 = Object::instanceOf(*arguments, intBase);
     Object *floatObj2 = Object::instanceOf(*arguments, floatBase);
 
-    U_ASSERT(floatObj1);
+    VM_ASSERT(floatObj1, "wrong type: expected float");
 
     float value1 = ((FloatObject *)floatObj1)->m_value;
     float value2 = floatObj2 ? ((FloatObject *)floatObj2)->m_value : ((IntObject *)intObj2)->m_value;
@@ -178,7 +182,8 @@ static void floatDiv(State *state, Object *self, Object *function, Object **argu
 }
 
 static void floatCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
-    U_ASSERT(count == 1);
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+
     Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
@@ -188,7 +193,7 @@ static void floatCompare(State *state, Object *self, Object *, Object **argument
     Object *intObj2 = Object::instanceOf(*arguments, intBase);
     Object *floatObj2 = Object::instanceOf(*arguments, floatBase);
 
-    U_ASSERT(floatObj1);
+    VM_ASSERT(floatObj1, "wrong type: expected float");
 
     float value1 = ((FloatObject *)floatObj1)->m_value;
     float value2 = floatObj2 ? ((FloatObject *)floatObj2)->m_value : ((IntObject *)intObj2)->m_value;
@@ -225,7 +230,8 @@ static void floatCompareGe(State *state, Object *self, Object *function, Object 
 
 /// [String]
 static void stringAdd(State *state, Object *self, Object *, Object **arguments, size_t count) {
-    U_ASSERT(count == 1);
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+
     Object *root = state->m_root;
 
     Object *stringBase = Object::lookup(root, "string", nullptr);
@@ -233,7 +239,7 @@ static void stringAdd(State *state, Object *self, Object *, Object **arguments, 
     Object *strObj1 = Object::instanceOf(self, stringBase);
     Object *strObj2 = Object::instanceOf(*arguments, stringBase);
 
-    U_ASSERT(strObj1 && strObj2);
+    VM_ASSERT(strObj1 && strObj2, "wrong type: expected string");
 
     state->m_result = Object::newString(state,
         u::format("%s%s", ((StringObject *)strObj1)->m_value,
@@ -261,7 +267,8 @@ static void arrayMark(State *state, Object *object) {
 }
 
 static void arrayResize(State *state, Object *self, Object *, Object **arguments, size_t count) {
-    U_ASSERT(count == 1);
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+
     Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
@@ -270,11 +277,13 @@ static void arrayResize(State *state, Object *self, Object *, Object **arguments
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
     IntObject *intObject = (IntObject *)Object::instanceOf(*arguments, intBase);
 
-    U_ASSERT(arrayObject && intObject);
+    VM_ASSERT(arrayObject, "wrong type: expected array");
+    VM_ASSERT(intObject, "wrong type: expected int");
 
     int oldSize = arrayObject->m_length;
     int newSize = intObject->m_value;
-    U_ASSERT(newSize >= 0);
+
+    VM_ASSERT(newSize >= 0, "'array.resize(%d)' not allowed", newSize);
 
     arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * newSize);
     memset(arrayObject->m_contents + oldSize, 0, sizeof(Object *) * (newSize - oldSize));
@@ -286,14 +295,15 @@ static void arrayResize(State *state, Object *self, Object *, Object **arguments
 }
 
 static void arrayPush(State *state, Object *self, Object *, Object **arguments, size_t count) {
-    U_ASSERT(count == 1);
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+
     Object *root = state->m_root;
 
     Object *arrayBase = Object::lookup(root, "array", nullptr);
 
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
 
-    U_ASSERT(arrayObject);
+    VM_ASSERT(arrayObject, "wrong type: expected array");
 
     Object *value = *arguments;
     arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * ++arrayObject->m_length);
@@ -305,14 +315,15 @@ static void arrayPush(State *state, Object *self, Object *, Object **arguments, 
 }
 
 static void arrayPop(State *state, Object *self, Object *, Object **, size_t count) {
-    U_ASSERT(count == 0);
+    VM_ASSERT(count == 0, "wrong number of parameters: expected 0, got %zu", count);
+
     Object *root = state->m_root;
 
     Object *arrayBase = Object::lookup(root, "array", nullptr);
 
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
 
-    U_ASSERT(arrayObject);
+    VM_ASSERT(arrayObject, "wrong type: expected array");
 
     Object *result = arrayObject->m_contents[arrayObject->m_length - 1];
     arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * --arrayObject->m_length);
@@ -323,7 +334,8 @@ static void arrayPop(State *state, Object *self, Object *, Object **, size_t cou
 }
 
 static void arrayIndex(State *state, Object *self, Object *, Object **arguments, size_t count) {
-    U_ASSERT(count == 1);
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+
     Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
@@ -333,9 +345,9 @@ static void arrayIndex(State *state, Object *self, Object *, Object **arguments,
     IntObject *intObject = (IntObject *)Object::instanceOf(*arguments, intBase);
 
     if (intObject) {
-        U_ASSERT(arrayObject);
+        VM_ASSERT(arrayObject, "wrong type: expected array");
         int index = intObject->m_value;
-        U_ASSERT(index >= 0 && index < arrayObject->m_length);
+        VM_ASSERT(index >= 0 && index < arrayObject->m_length, "index out of range");
         state->m_result = arrayObject->m_contents[index];
     } else {
         state->m_result = nullptr;
@@ -343,7 +355,8 @@ static void arrayIndex(State *state, Object *self, Object *, Object **arguments,
 }
 
 static void arrayIndexAssign(State *state, Object *self, Object *, Object **arguments, size_t count) {
-    U_ASSERT(count == 2);
+    VM_ASSERT(count == 2, "wrong number of parameters: expected 2, got %zu", count);
+
     Object *root = state->m_root;
 
     Object *intBase = Object::lookup(root, "int", nullptr);
@@ -352,10 +365,11 @@ static void arrayIndexAssign(State *state, Object *self, Object *, Object **argu
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
     IntObject *intObject = (IntObject *)Object::instanceOf(*arguments, intBase);
 
-    U_ASSERT(arrayObject && intObject);
+    VM_ASSERT(arrayObject, "wrong type: expected array");
+    VM_ASSERT(intObject, "wrong type: expected int");
 
     int index = intObject->m_value;
-    U_ASSERT(index >= 0 && index < arrayObject->m_length);
+    VM_ASSERT(index >= 0 && index < arrayObject->m_length, "index out of range");
     arrayObject->m_contents[index] = arguments[1];
     state->m_result = nullptr;
 }
