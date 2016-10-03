@@ -9,23 +9,23 @@ passed as arguments to other functions and returned as results.
 There are nine types in Neo: `null`, `bool`, `int`, `float`, `array`, `object`, `string`,
 `function`, `method`.
 
-The type `null` has a single value, `null`, who's only propery is to be different from any other value. It's useful when representing the absense of a value and works exactly like Lua's `nil` type.
+The type `null` has a single value, `null`, who's only propery is to be different from any other value. It's useful when representing the absence of a value and works exactly like Lua's `nil` type.
 
 The type `bool` has two values, `true` and `false`. Both `null` and `false` make a condition false; any other value makes it true. This means values like `0` and empty string `""` also evaluate true.
 
 The type `int` represents a *signed* integer numbers in the range of `[-2,147,483,648, 2,147,483,647]`.
 Numbers outside that range *cannot* be represented.
 
-The type `float` represents real (floating-point) number the range of `[1.175494e-38, 3.402823e+38]`.
+The type `float` represents a real (floating-point) number in the range of `[1.175494e-38, 3.402823e+38]`.
 
-The type `array` represents a *hetrogeneous* array. Hetrogeneous means it can store anything, even other
+The type `array` represents an *heterogeneous* array. Heterogeneous means it can store anything, even other
 arrays.
 
-The type `object` represents a *hetrogeneous* associative array. Objects are the sole data-structure
+The type `object` represents an *heterogeneous* associative array. Objects are the sole data-structure
 mechanism in Neo; they can be used to represent symbol tables, sets, records, graphs, trees, etc. Neo
-uses the field name as an index. This is provided by `a.name` being syntatic sugar for `a["name"]`.
+uses the field name as an index. This is provided by `a.name` being syntactic sugar for `a["name"]`.
 
-The type `string` represents immutable sequence of bytes. Strings in Neo are 8-bit clean.
+The type `string` represents an immutable sequence of bytes. Strings in Neo are 8-bit clean.
 
 The type `function` represents a function.
 
@@ -34,7 +34,7 @@ objects similar to C++ classes.
 
 ## Garbage Collection
 Neo performs automatic memory management. This means that you don't have to worry about allocating
-memory for new objects or freeing it when the objects are no longer needed. Neo acomplishes this by
+memory for new objects or freeing it when the objects are no longer needed. Neo accomplishes this by
 running a *garbage collector* to collect all *dead objects* (objects that are no longer accessible from Neo). **All memory in Neo is subject to automatic memory management**
 
 # Language
@@ -69,7 +69,7 @@ The following is a list of recognized tokens:
 + - * / // /* */ ! == != = < !< > !> <= !<= >= !>= ( ) { } [ ] , ; "
 ```
 
-Literal strings are deliminted by matching double quotes
+Literal strings are delimited by matching double quotes
 ```
 "like this"
 ```
@@ -87,7 +87,7 @@ let a = 5;
 let b; // defaults to null
 let c = 5, d, e = "hi"; // also allowed
 ```
-Square brackes can be used to index an array or an object.
+Square brackets can be used to index an array or an object.
 ```
 array[index]; // array indexing
 object["field"]; // object indexing
@@ -96,7 +96,7 @@ The dot `.` can be used to index an object
 ```
 object.field
 ```
-The syntax `variable.name` is just syntatic sugar for `variable["name"]`
+The syntax `variable.name` is just syntactic sugar for `variable["name"]`
 
 ## Statements
 Neo supports a conventional set of statements, similar to those in C. This includes assignments,
@@ -113,7 +113,7 @@ The grammar in Lua sees this as
 a = b + c(print or io.write)('done')
 ```
 
-These sorts of problems do not happen in Neo which requires all statements be terminated
+These sorts of problems do not happen in Neo which requires all statements to be terminated
 with a semicolon.
 ```
 statement; // semicolon keeps grammatical ambiguities from occuring
@@ -202,7 +202,7 @@ The arithmetic `+` operator is used for string concatenation.
 
 ## Integer and Floating literals
 When working with numeric values, literals that do not have a decimal point somewhere are treated
-as `int`, otherwise it's treated as a `float`. Numeric literals may also begin with `0x` and contain
+as `int`, otherwise they are treated as `float`. Numeric literals may also begin with `0x` and contain
 `[0-9a-Z]` to represent a *hexadecimal* (base 16) value.
 ```
 1; // int
@@ -212,9 +212,9 @@ as `int`, otherwise it's treated as a `float`. Numeric literals may also begin w
 ```
 
 ### Object literals
-Object literals are expressions that create objects. Evertime an object literal is evaluated, a new
+Object literals are expressions that create objects. Everytime an object literal is evaluated, a new
 object is created. An object literal can be used to create an empty object or to create an object
-and fill some its fields.
+and fill some of its fields.
 ```
 // as an example
 let empty = {};
@@ -249,7 +249,7 @@ obj.foo = fn(this, /*arguments*/) { /* body */ }
 ```
 
 ### Function and Method calls
-Function calls are farily straight forward and work similarly to Javascript. Unlike Lua, Neo **does not**
+Function calls are fairly straightforward and work similarly to Javascript. Unlike Lua, Neo **does not**
 attempt to make function calls with incorrect *arity*; eg. if the function is declared to take
 five parameters then the function **must** be called with five arguments.
 ```
@@ -263,6 +263,6 @@ Calls to methods implicitly pass the object as the first argument in the functio
 
 ### Visibility
 Neo is a lexically scoped language. The scope of a local variable begins at the first statement
-after it's declaration and lasts until lexically we're no longer in that scope. Because of lexical
+after its declaration and lasts until we're no longer in that lexical scope. Because of lexical
 scoping rules, local variables can be freely accessed by functions defined inside their scope.
 A local variable used by an inner function is an *external local variable*, inside the inner function.
