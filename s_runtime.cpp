@@ -246,6 +246,24 @@ static void stringAdd(State *state, Object *self, Object *, Object **arguments, 
             ((StringObject *)strObj2)->m_value).c_str());
 }
 
+static void stringCompare(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+
+    Object *root = state->m_root;
+
+    Object *stringBase = Object::lookup(root, "string", nullptr);
+
+    Object *strObj1 = Object::instanceOf(self, stringBase);
+    Object *strObj2 = Object::instanceOf(*arguments, stringBase);
+
+    VM_ASSERT(strObj1 && strObj2, "wrong type: expected string");
+
+    const char *str1 = ((StringObject *)strObj1)->m_value;
+    const char *str2 = ((StringObject *)strObj2)->m_value;
+
+    state->m_result = Object::newBool(state, strcmp(str1, str2) == 0);
+}
+
 /// [Closure]
 static void closureMark(State *state, Object *object) {
     Object *root = state->m_root;
@@ -471,6 +489,7 @@ Object *createRoot(State *state) {
     stringObject->m_flags |= kNoInherit;
     Object::setNormal(root, "string", stringObject);
     Object::setNormal(stringObject, "+", Object::newFunction(state, stringAdd));
+    Object::setNormal(stringObject, "==", Object::newFunction(state, stringCompare));
 
     // array
     Object *arrayObject = Object::newObject(state, nullptr);
