@@ -158,7 +158,7 @@ void Object::mark(State *state, Object *object) {
         Object *current = object;
         while (current) {
             if (current->m_mark)
-                object->m_mark(state, object);
+                current->m_mark(state, object);
             current = current->m_parent;
         }
     }
