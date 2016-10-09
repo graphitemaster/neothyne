@@ -10,39 +10,111 @@
 
 namespace s {
 
+static inline size_t djb2(const char *str) {
+    size_t hash = 5381;
+    for (int c; (c = *str++) != 0; hash = ((hash << 5) + hash) + c)
+        ;
+    return hash;
+}
+
 ///! Table
-Object **Table::lookupReference(Table *table, const char *key, Field** first) {
-    if (!table->m_field.m_name) {
-        if (first)
-            *first = &table->m_field;
+Object **Table::lookupReference(Table *table, const char *key) {
+    U_ASSERT(key);
+    if (table->m_fieldsStored == 0)
         return nullptr;
-    }
-    Field *field = &table->m_field;
-    Field *prev;
-    while (field) {
-        if (key[0] == field->m_name[0] && strcmp(key, field->m_name) == 0)
-            return &field->m_value;
-        prev = field;
-        field = field->m_next;
-    }
-    if (first) {
-        field = (Field *)neoCalloc(sizeof *field, 1);
-        prev->m_next = field;
-        *first = field;
+    size_t fieldsNum = table->m_fieldsNum;
+    if (fieldsNum <= 4) {
+        for (size_t i = 0; i < fieldsNum; i++) {
+            Field *field = &table->m_fields[i];
+            if (field->m_name &&
+                *key == *field->m_name &&
+                (!*key || key[1] == field->m_name[1]) &&
+                strcmp(key, field->m_name) == 0)
+            {
+                return &field->m_value;
+            }
+        }
+    } else {
+        size_t fieldsMask = fieldsNum - 1;
+        size_t base = djb2(key);
+        for (size_t i = 0; i < fieldsNum; i++) {
+            size_t bin = (base + i) & fieldsMask;
+            Field *field = &table->m_fields[bin];
+            if (!field->m_name)
+                return nullptr;
+            if (*key == *field->m_name &&
+                (!*key || key[1] == field->m_name[1]) &&
+                strcmp(key, field->m_name) == 0)
+            {
+                return &field->m_value;
+            }
+        }
     }
     return nullptr;
 }
 
+Object **Table::lookupReference(Table *table, const char *key, Object ***first) {
+    U_ASSERT(key);
+    *first = nullptr;
+    size_t fieldsNum = table->m_fieldsNum;
+    size_t fieldsMask = fieldsNum - 1;
+    size_t base = fieldsNum ? djb2(key) : 0;
+    Field *free = nullptr;
+    for (size_t i = 0; i < fieldsNum; i++) {
+        size_t bin = (base + i) & fieldsMask;
+        Field *field = &table->m_fields[bin];
+        if (field->m_name &&
+            *key == *field->m_name &&
+            (!*key || key[1] == field->m_name[1]) &&
+            strcmp(key, field->m_name) == 0)
+        {
+            return &field->m_value;
+        }
+        if (!field->m_name) {
+            free = field;
+            break;
+        }
+    }
+    size_t newLength = 4;
+    if (fieldsNum != 0) {
+        size_t fillRate = (table->m_fieldsStored * 100) / fieldsNum;
+        if (fillRate < 70) {
+            U_ASSERT(free);
+            free->m_name = key;
+            table->m_fieldsStored++;
+            *first = &free->m_value;
+            return nullptr;
+        }
+        newLength = fieldsNum * 2;
+    }
+    Table newTable;
+    newTable.m_fields = (Field *)neoCalloc(sizeof(Field), newLength);
+    newTable.m_fieldsNum = newLength;
+    newTable.m_fieldsStored = 0;
+    for (size_t i = 0; i < fieldsNum; i++) {
+        Field *field = &table->m_fields[i];
+        if (field->m_name) {
+            Object **freeObject;
+            Object **lookupObject = lookupReference(&newTable, field->m_name, &freeObject);
+            U_ASSERT(!lookupObject);
+            *freeObject = field->m_value;
+        }
+    }
+    neoFree(table->m_fields);
+    *table = newTable;
+    return lookupReference(table, key, first);
+}
+
 Object *Table::lookup(Table *table, const char *key, bool *found) {
-    Object **object = lookupReference(table, key, nullptr);
-    if (object) {
+    Object **object = lookupReference(table, key);
+    if (!object) {
         if (found)
-            *found = true;
-        return *object;
+            *found = false;
+        return nullptr;
     }
     if (found)
-        *found = false;
-    return nullptr;
+        *found = true;
+    return *object;
 }
 
 ///! Object
@@ -75,25 +147,25 @@ void Object::mark(State *state, Object *object) {
         mark(state, object->m_parent);
 
         // all fields of the object are reachable too
-        Field *field = &object->m_table.m_field;
-        while (field) {
-            mark(state, field->m_value);
-            field = field->m_next;
+        Table *table = &object->m_table;
+        for (size_t i = 0; i < table->m_fieldsNum; i++) {
+            Field *field = &table->m_fields[i];
+            if (field->m_name)
+                mark(state, field->m_value);
         }
 
         // run any custom mark functions if they exist
-        if (object->m_mark)
-            object->m_mark(state, object);
+        Object *current = object;
+        while (current) {
+            if (current->m_mark)
+                object->m_mark(state, object);
+            current = current->m_parent;
+        }
     }
 }
 
 void Object::free(Object *object) {
-    Field *field = object->m_table.m_field.m_next;
-    while (field) {
-        Field *next = field->m_next;
-        neoFree(field);
-        field = next;
-    }
+    neoFree(object->m_table.m_fields);
     neoFree(object);
 }
 
@@ -112,7 +184,7 @@ bool Object::setExisting(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Object *current = object;
     while (current) {
-        Object **search = Table::lookupReference(&current->m_table, key, nullptr);
+        Object **search = Table::lookupReference(&current->m_table, key);
         if (search) {
             U_ASSERT(!(current->m_flags & kImmutable));
             *search = value;
@@ -128,7 +200,7 @@ bool Object::setShadowing(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Object *current = object;
     while (current) {
-        Object **search = Table::lookupReference(&current->m_table, key, nullptr);
+        Object **search = Table::lookupReference(&current->m_table, key);
         if (search) {
             setNormal(object, key, value);
             return true;
@@ -141,14 +213,13 @@ bool Object::setShadowing(Object *object, const char *key, Object *value) {
 // set property
 void Object::setNormal(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
-    Field *free = nullptr;
+    Object **free = nullptr;
     Object **search = Table::lookupReference(&object->m_table, key, &free);
     if (search) {
         U_ASSERT(!(object->m_flags & kImmutable));
     } else {
         U_ASSERT(!(object->m_flags & kClosed));
-        free->m_name = key;
-        search = &free->m_value;
+        search = free;
     }
     *search = value;
 }

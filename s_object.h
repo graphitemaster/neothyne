@@ -29,15 +29,17 @@ struct State;
 struct Field {
     const char *m_name;
     Object *m_value;
-    Field *m_next;
 };
 
 struct Table {
+    static Object **lookupReference(Table *table, const char *key);
+    static Object **lookupReference(Table *table, const char *key, Object ***first);
 
-    static Object **lookupReference(Table *table, const char *key, Field** first);
     static Object *lookup(Table *table, const char *key, bool *found);
 
-    Field m_field;
+    Field *m_fields;
+    size_t m_fieldsNum;
+    size_t m_fieldsStored;
 };
 
 typedef void (*FunctionPointer)(State *state, Object *self, Object *function, Object **arguments, size_t count);

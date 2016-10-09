@@ -41,7 +41,7 @@ fn ack(m, n) {
     if (n == 0) return ack(mm, 1);
     return ack(mm, ack(m, nm));
 }
-print(ack(3, 7));
+print(ack(1, 2));
 
 print("string " + "concatenation");
 
