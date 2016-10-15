@@ -267,7 +267,7 @@ void client::move(float dt, const u::vector<clientCommands> &commands) {
             newDirection.setLength(clientSpeed);
         newDirection.y += velocity.y;
         if (m_isOnGround)
-            newDirection += jump * powf(kClientJumpSpeed, kClientJumpExponent);
+            newDirection += jump * m::pow(kClientJumpSpeed, kClientJumpExponent);
         if (needSlowDown) {
             m::vec3 slowDown = m_velocity * kClientStopSpeed * ((1.0f - dt) * 0.01f);
             slowDown.y = 0.0f;

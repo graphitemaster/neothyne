@@ -200,11 +200,16 @@ def genSource(functionList, extensionList, sourceFile):
         // give us a context for the non-discrete Intel graphics. Opposed to the
         // discrete high-performance NV graphics. The Optimus driver searches the
         // application process space to find this flag as an export and uses it
-        // to determine if either the NV or Intel graphics should be used. This
-        // is absolutely insane. More information about this can be found here:
+        // to determine if either the NV or Intel graphics should be used.
+        // More information about this can be found here:
         // http://docs.nvidia.com/gameworks/content/technologies/desktop/optimus.htm
+        //
+        // The same is true for AMD Enduro
+        // More information about that can be found here:
+        // https://community.amd.com/thread/16996
         extern "C" {
             __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+            __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x00000001;
         }
         #endif
 
