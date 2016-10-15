@@ -39,6 +39,15 @@ As of late Neothyne is just an engine offering
     * Hue, lightness and saturation
     * Brightness and contrast
 
+* Scripting language (Neo language)
+  * Heavily inspired by Lua, Javascript, Ruby and C/C++
+  * Dynamically typed
+  * First class values
+  * Lexically scoped
+  * Type rich (function, method, bool, int, float, string, array, object)
+  * Object oriented (Single inheritence using technique similar to Javascript prototype chain)
+  * Garbage collected
+
 * Fire and forget audio mixer (which can do)
   * Multiple sound sources (global and local)
   * Faders (adjust volume, speed, panning over time)

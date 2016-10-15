@@ -141,7 +141,17 @@ let b = new a { b = 2 }; // subclassing: b.a = 1 and b.b = 2
 let c = new b;           // constructs a new instance of b
 b.b = 10;                // does not change c.b since c is a new instance of b
 ```
-Neo **does not** support multiple inheritance.
+
+#### Inheritence
+Any object of a subclass is also immediately an object of all superclasses.
+All classes inherit from an Object class that forms the root of the object
+hierarchy. Anything which is added to a superclass in the creation of a
+subclass appears beneath all the data which describes that superclass.
+What this means in practice is that any data which belongs to the superclass
+will not be messed with or shifted around, or to put another way: any object
+of a class starts with a *smaller* object of the superclass, which starts with
+etc all the way up to the root of the hierarchy.
+
 
 ### Control Structures
 The control structures `if` and `while` and `return` have the usual meaning and familiar syntax.
