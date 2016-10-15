@@ -63,25 +63,25 @@ Object **Table::lookupReference(Table *table, const char *key, size_t keyLength,
     size_t fieldsNum = table->m_fieldsNum;
     size_t fieldsMask = fieldsNum - 1;
     size_t base = fieldsNum ? djb2(key, keyLength) : 0;
-    Field *free = nullptr;
-    for (size_t i = 0; i < fieldsNum; i++) {
-        size_t bin = (base + i) & fieldsMask;
-        Field *field = &table->m_fields[bin];
-        if (field->m_name
-            && field->m_nameLength == keyLength
-            && (keyLength == 0 || key[0] == field->m_name[0])
-            && (keyLength == 1 || key[1] == field->m_name[1])
-            && strncmp(key, field->m_name, keyLength) == 0)
-        {
-            return &field->m_value;
-        }
-        if (!field->m_name) {
-            free = field;
-            break;
-        }
-    }
     size_t newLength = 4;
     if (fieldsNum != 0) {
+        Field *free = nullptr;
+        for (size_t i = 0; i < fieldsNum; i++) {
+            size_t bin = (base + i) & fieldsMask;
+            Field *field = &table->m_fields[bin];
+            if (field->m_name
+                && field->m_nameLength == keyLength
+                && (keyLength == 0 || key[0] == field->m_name[0])
+                && (keyLength == 1 || key[1] == field->m_name[1])
+                && strncmp(key, field->m_name, keyLength) == 0)
+            {
+                return &field->m_value;
+            }
+            if (!field->m_name) {
+                free = field;
+                break;
+            }
+        }
         size_t fillRate = (table->m_fieldsStored * 100) / fieldsNum;
         if (fillRate < 70) {
             U_ASSERT(free);
@@ -97,13 +97,15 @@ Object **Table::lookupReference(Table *table, const char *key, size_t keyLength,
     newTable.m_fields = (Field *)neoCalloc(sizeof(Field), newLength);
     newTable.m_fieldsNum = newLength;
     newTable.m_fieldsStored = 0;
-    for (size_t i = 0; i < fieldsNum; i++) {
-        Field *field = &table->m_fields[i];
-        if (field->m_name) {
-            Object **freeObject;
-            Object **lookupObject = lookupReference(&newTable, field->m_name, field->m_nameLength, &freeObject);
-            U_ASSERT(!lookupObject);
-            *freeObject = field->m_value;
+    if (table->m_fieldsStored) {
+        for (size_t i = 0; i < fieldsNum; i++) {
+            Field *field = &table->m_fields[i];
+            if (field->m_name) {
+                Object **freeObject;
+                Object **lookupObject = lookupReference(&newTable, field->m_name, field->m_nameLength, &freeObject);
+                U_ASSERT(!lookupObject);
+                *freeObject = field->m_value;
+            }
         }
     }
     neoFree(table->m_fields);
