@@ -1,11 +1,21 @@
 #ifndef S_GEN_HDR
 #define S_GEN_HDR
 
+#include <stdint.h>
+
 #include "s_object.h"
 
 namespace s {
 
+struct BlockRef {
+    size_t m_block;
+    uintptr_t m_distance;
+};
+
 struct Gen {
+    static BlockRef newBlockRef(Gen *gen, unsigned char *instruction, unsigned char *address);
+    static void setBlockRef(Gen *gen, BlockRef ref, size_t value);
+
     static size_t newBlock(Gen *gen);
 
     static void terminate(Gen *gen);
@@ -29,8 +39,8 @@ struct Gen {
     static Slot addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot argument0);
     static Slot addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot argument0, Slot argument1);
 
-    static void addTestBranch(Gen *gen, Slot testSlot, size_t **trueBranch, size_t **falseBranch);
-    static void addBranch(Gen *gen, size_t **branch);
+    static void addTestBranch(Gen *gen, Slot testSlot, BlockRef *trueBranch, BlockRef *falseBranch);
+    static void addBranch(Gen *gen, BlockRef *branch);
 
     static void addReturn(Gen *gen, Slot slot);
 
@@ -43,7 +53,7 @@ struct Gen {
 private:
     friend struct Parser;
 
-    static void addInstruction(Gen *gen, Instruction *instruction);
+    static void addInstruction(Gen *gen, size_t size, Instruction *instruction);
 
     const char *m_name;
     const char **m_arguments;

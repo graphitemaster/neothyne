@@ -25,7 +25,7 @@ enum InstructionType {
     kSaveResult,
     kBranch,
     kTestBranch,
-    kAccesStringKey,
+    kAccessStringKey,
     kAssignStringKey
 };
 
@@ -55,14 +55,15 @@ struct Instruction {
     struct AccessStringKey;
     struct AssignStringKey;
 
-    static void dump(Instruction *instruction, int level);
+    static void dump(Instruction **instructions, int level);
+    static size_t size(Instruction *instruction);
 
     InstructionType m_type;
 };
 
 struct InstructionBlock {
-    Instruction **m_instructions;
-    size_t m_count;
+    Instruction *m_instructions;
+    Instruction *m_instructionsEnd;
 };
 
 struct FunctionBody {

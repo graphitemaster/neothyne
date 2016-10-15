@@ -90,8 +90,7 @@ struct CallFrame {
     Object **m_slots;
     size_t m_count;
     RootSet m_root;
-    InstructionBlock *m_block;
-    int m_offset;
+    Instruction *m_instructions;
 };
 
 enum RunState {

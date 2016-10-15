@@ -733,32 +733,35 @@ ParseResult Parser::parseIfStatement(char **contents, Gen *gen) {
         return kParseError;
     }
 
-    size_t *tBlock = nullptr;
-    size_t *fBlock = nullptr;
-    size_t *eBlock = nullptr;
-    Gen::addTestBranch(gen, testSlot, &tBlock, &fBlock);
+    BlockRef trueBlock;
+    BlockRef falseBlock;
+    BlockRef endBlock;
+    Gen::addTestBranch(gen, testSlot, &trueBlock, &falseBlock);
 
-    *tBlock = Gen::newBlock(gen);
+    Gen::setBlockRef(gen, trueBlock, Gen::newBlock(gen));
 
     result = parseBlock(&text, gen);
     if (result == kParseError)
         return kParseError;
     U_ASSERT(result == kParseOk);
 
-    Gen::addBranch(gen, &eBlock);
+    Gen::addBranch(gen, &endBlock);
 
-    *fBlock = Gen::newBlock(gen);
+    size_t falseBlockIndex = Gen::newBlock(gen);
+    Gen::setBlockRef(gen, falseBlock, falseBlockIndex);
     if (consumeKeyword(&text, "else")) {
         result = parseBlock(&text, gen);
         if (result == kParseError)
             return kParseError;
         U_ASSERT(result == kParseOk);
-        size_t *mBlock = nullptr;
-        Gen::addBranch(gen, &mBlock);
-        *mBlock = Gen::newBlock(gen);
-        *eBlock = *mBlock;
+        BlockRef elseEndBlock;
+        Gen::addBranch(gen, &elseEndBlock);
+
+        size_t blockIndex = Gen::newBlock(gen);
+        Gen::setBlockRef(gen, elseEndBlock, blockIndex);
+        Gen::setBlockRef(gen, endBlock, blockIndex);
     } else {
-        *eBlock = *fBlock;
+        Gen::setBlockRef(gen, endBlock, falseBlockIndex);
     }
 
     *contents = text;
@@ -772,13 +775,14 @@ ParseResult Parser::parseWhile(char **contents, Gen *gen) {
         return kParseError;
     }
 
-    size_t *tBlock = nullptr;
-    size_t *lBlock = nullptr;
-    size_t *eBlock = nullptr;
-    size_t *oBlock = nullptr;
 
-    Gen::addBranch(gen, &tBlock);
-    *tBlock = Gen::newBlock(gen);
+    BlockRef testBlock;
+    Gen::addBranch(gen, &testBlock);
+    size_t testBlockIndex = Gen::newBlock(gen);
+    Gen::setBlockRef(gen, testBlock, testBlockIndex);
+
+    BlockRef loopBlock;
+    BlockRef endBlock;
 
     Reference testExpression;
     ParseResult result = parseExpression(&text, gen, 0, &testExpression);
@@ -792,17 +796,19 @@ ParseResult Parser::parseWhile(char **contents, Gen *gen) {
         return kParseError;
     }
 
-    Gen::addTestBranch(gen, testSlot, &lBlock, &eBlock);
+    Gen::addTestBranch(gen, testSlot, &loopBlock, &endBlock);
 
-    *lBlock = Gen::newBlock(gen);
+    Gen::setBlockRef(gen, loopBlock, Gen::newBlock(gen));
     result = parseBlock(&text, gen);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
-    Gen::addBranch(gen, &oBlock);
 
-    *oBlock = *tBlock;
-    *eBlock = Gen::newBlock(gen);
+    BlockRef testBlock2;
+    Gen::addBranch(gen, &testBlock2);
+
+    Gen::setBlockRef(gen, testBlock2, testBlockIndex);
+    Gen::setBlockRef(gen, endBlock, Gen::newBlock(gen));
 
     *contents = text;
     return kParseOk;

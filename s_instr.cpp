@@ -10,53 +10,91 @@ static void indent(int level) {
         u::Log::out("  ");
 }
 
-void Instruction::dump(Instruction *instruction, int level) {
+size_t Instruction::size(Instruction *instruction) {
+    switch (instruction->m_type) {
+    case kGetRoot:          return sizeof(GetRoot);
+    case kGetContext:       return sizeof(GetContext);
+    case kNewObject:        return sizeof(NewObject);
+    case kNewIntObject:     return sizeof(NewIntObject);
+    case kNewFloatObject:   return sizeof(NewFloatObject);
+    case kNewArrayObject:   return sizeof(NewArrayObject);
+    case kNewStringObject:  return sizeof(NewStringObject);
+    case kNewClosureObject: return sizeof(NewClosureObject);
+    case kCloseObject:      return sizeof(CloseObject);
+    case kAccess:           return sizeof(Access);
+    case kAssign:           return sizeof(Assign);
+    case kCall:             return sizeof(Call);
+    case kReturn:           return sizeof(Return);
+    case kSaveResult:       return sizeof(SaveResult);
+    case kBranch:           return sizeof(Branch);
+    case kTestBranch:       return sizeof(TestBranch);
+    case kAccessStringKey:  return sizeof(AccessStringKey);
+    case kAssignStringKey:  return sizeof(AssignStringKey);
+    case kInvalid:          break;
+    }
+    u::Log::err("invalid instruction: %d\n", (int)instruction->m_type);
+    U_ASSERT(0 && "internal error");
+}
+
+void Instruction::dump(Instruction **instructions, int level) {
+    Instruction *instruction = *instructions;
+
     indent(level);
     switch (instruction->m_type) {
     case kGetRoot:
         u::Log::out("GetRoot:           %%%zu\n", ((GetRoot *)instruction)->m_slot);
+        *instructions = (Instruction *)((Instruction::GetRoot *)instruction + 1);
         break;
     case kGetContext:
         u::Log::out("GetContext:        %%%zu\n", ((GetContext *)instruction)->m_slot);
+        *instructions = (Instruction *)((Instruction::GetContext *)instruction + 1);
         break;
     case kNewObject:
         u::Log::out("NewObject:         %%%zu => %%%zu\n",
             ((NewObject *)instruction)->m_targetSlot,
             ((NewObject *)instruction)->m_parentSlot);
+        *instructions = (Instruction *)((Instruction::NewObject *)instruction + 1);
         break;
     case kNewIntObject:
         u::Log::out("NewIntObject:      %%%zu = $%d\n",
             ((NewIntObject *)instruction)->m_targetSlot,
             ((NewIntObject *)instruction)->m_value);
+        *instructions = (Instruction *)((Instruction::NewIntObject *)instruction + 1);
         break;
     case kNewFloatObject:
         u::Log::out("NewFloatObject:    %%%zu = $%f\n",
             ((NewFloatObject *)instruction)->m_targetSlot,
             ((NewFloatObject *)instruction)->m_value);
+        *instructions = (Instruction *)((Instruction::NewFloatObject *)instruction + 1);
         break;
     case kNewArrayObject:
         u::Log::out("NewArrayObject:    %%%zu\n",
             ((NewArrayObject *)instruction)->m_targetSlot);
+        *instructions = (Instruction *)((Instruction::NewArrayObject *)instruction + 1);
         break;
     case kNewStringObject:
         u::Log::out("NewStringObject:   %%%zu = \"%s\"\n",
             ((NewStringObject *)instruction)->m_targetSlot,
             ((NewStringObject *)instruction)->m_value);
+        *instructions = (Instruction *)((Instruction::NewStringObject *)instruction + 1);
         break;
     case kNewClosureObject:
         u::Log::out("NewClosureObject:  %%%zu @ %%%zu\n",
             ((NewClosureObject *)instruction)->m_targetSlot,
             ((NewClosureObject *)instruction)->m_contextSlot);
+        *instructions = (Instruction *)((Instruction::NewClosureObject *)instruction + 1);
         break;
     case kCloseObject:
         u::Log::out("CloseObject:       %%%zu\n",
             ((CloseObject *)instruction)->m_slot);
+        *instructions = (Instruction *)((Instruction::CloseObject *)instruction + 1);
         break;
     case kAccess:
         u::Log::out("Access:            %%%zu = %%%zu . %%%zu\n",
             ((Access *)instruction)->m_targetSlot,
             ((Access *)instruction)->m_objectSlot,
             ((Access *)instruction)->m_keySlot);
+        *instructions = (Instruction *)((Instruction::Access *)instruction + 1);
         break;
     case kAssign:
         u::Log::out("Assign%s %%%zu . %%%zu = %%%zu\n",
@@ -68,6 +106,7 @@ void Instruction::dump(Instruction *instruction, int level) {
             ((Assign *)instruction)->m_objectSlot,
             ((Assign *)instruction)->m_keySlot,
             ((Assign *)instruction)->m_valueSlot);
+        *instructions = (Instruction *)((Instruction::Assign *)instruction + 1);
         break;
     case kCall:
         u::Log::out("Call:              %%%zu . %%%zu ( ",
@@ -78,30 +117,36 @@ void Instruction::dump(Instruction *instruction, int level) {
             u::Log::out("%%%zu", ((Call *)instruction)->m_arguments[i]);
         }
         u::Log::out(" )\n");
+        *instructions = (Instruction *)((Instruction::Call *)instruction + 1);
         break;
     case kReturn:
         u::Log::out("Return:            %%%zu\n",
             ((Return *)instruction)->m_returnSlot);
+        *instructions = (Instruction *)((Instruction::Return *)instruction + 1);
         break;
     case kSaveResult:
         u::Log::out("SaveResult:        %%%zu\n",
             ((SaveResult *)instruction)->m_targetSlot);
+        *instructions = (Instruction *)((Instruction::SaveResult *)instruction + 1);
         break;
     case kBranch:
         u::Log::out("Branch:            <%zu>\n",
             ((Branch *)instruction)->m_block);
+        *instructions = (Instruction *)((Instruction::Branch *)instruction + 1);
         break;
     case kTestBranch:
         u::Log::out("TestBranch:        %%%zu ? <%zu> : <%zu>\n",
             ((TestBranch *)instruction)->m_testSlot,
             ((TestBranch *)instruction)->m_trueBlock,
             ((TestBranch *)instruction)->m_falseBlock);
+        *instructions = (Instruction *)((Instruction::TestBranch *)instruction + 1);
         break;
-    case kAccesStringKey:
+    case kAccessStringKey:
         u::Log::out("Access:            %%%zu = %%%zu . \"%s\" [inlined]\n",
             ((AccessStringKey *)instruction)->m_targetSlot,
             ((AccessStringKey *)instruction)->m_objectSlot,
             ((AccessStringKey *)instruction)->m_key);
+        *instructions = (Instruction *)((Instruction::AccessStringKey *)instruction + 1);
         break;
     case kAssignStringKey:
         u::Log::out("Assign%s %%%zu . \"%s\" = %%%zu [inlined]\n",
@@ -113,6 +158,7 @@ void Instruction::dump(Instruction *instruction, int level) {
             ((AssignStringKey *)instruction)->m_objectSlot,
             ((AssignStringKey *)instruction)->m_key,
             ((AssignStringKey *)instruction)->m_valueSlot);
+        *instructions = (Instruction *)((Instruction::AssignStringKey *)instruction + 1);
         break;
     default:
         break;
@@ -131,9 +177,9 @@ void UserFunction::dump(UserFunction *function, int level) {
         u::Log::out("block <%zu> {\n", i);
         InstructionBlock *block = &body->m_blocks[i];
         level++;
-        for (size_t k = 0; k < block->m_count; k++) {
-            Instruction *instruction = block->m_instructions[k];
-            Instruction::dump(instruction, level);
+        Instruction *instruction = block->m_instructions;
+        while (instruction != block->m_instructionsEnd) {
+            Instruction::dump(&instruction, level);
             if (instruction->m_type == kNewClosureObject)
                 otherFunctions.push_back(((Instruction::NewClosureObject *)instruction)->m_function);
         }
