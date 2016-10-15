@@ -579,11 +579,9 @@ static bool writeCacheData(TextureFormat format,
     u::Log::out("[cache] => wrote (texture) %s %s (compressed %s to %s with %s compressor)",
                 hash,
                 cacheFormat(internal),
-                // TODO: calculate 33% more for mip levels
-                u::sizeMetric(texSize),
+                u::sizeMetric(texSize * 1.33f), // 33% for mip levels
                 u::sizeMetric(compressedSize),
-                from
-    );
+                from );
 
     if (dxt && dxtOptimCount) {
         const float blockCount = (compressedWidth / 4.0f) * (compressedHeight / 4.0f);

@@ -48,7 +48,7 @@ struct kdNode {
     ~kdNode();
 
     // Calculate bounding sphere for node
-    void calculateSphere(const kdTree *tree, const u::vector<int> &triangles);
+    bool calculateSphere(const kdTree *tree, const u::vector<int> &triangles);
 
     // Is the node a leaf?
     bool isLeaf() const;

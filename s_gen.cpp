@@ -120,7 +120,7 @@ Slot Gen::addNewStringObject(Gen *gen, Slot, const char *value) {
     Instruction::NewStringObject newStringObject;
     newStringObject.m_type = kNewStringObject;
     newStringObject.m_targetSlot = gen->m_slot++;
-    newStringObject.m_value = (char *)value; // TODO(daleweiler): fix
+    newStringObject.m_value = value;
     addInstruction(gen, sizeof newStringObject, (Instruction *)&newStringObject);
     return gen->m_slot - 1;
 }
@@ -268,7 +268,7 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
     Gen *gen = (Gen *)neoCalloc(sizeof *gen, 1);
     gen->m_slot = 0;
     gen->m_blockTerminated = true;
-    u::vector<char *> slotTable;
+    u::vector<const char *> slotTable;
     for (size_t i = 0; i < function->m_body.m_count; i++) {
         InstructionBlock *block = &function->m_body.m_blocks[i];
         newBlock(gen);

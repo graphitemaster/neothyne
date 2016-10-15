@@ -17,7 +17,8 @@ struct Console {
         kVarRangeError,
         kVarTypeError,
         kVarNotFoundError,
-        kVarReadOnlyError
+        kVarReadOnlyError,
+        kVarMalformedError
     };
 
     // get a reference to a console variable

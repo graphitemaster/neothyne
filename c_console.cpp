@@ -1,3 +1,6 @@
+#include <errno.h>
+#include <limits.h>
+
 #include "u_misc.h"
 
 #include "c_console.h"
@@ -72,14 +75,35 @@ int Console::change(const char *name, const char *value) {
     const auto &find = table.find(name);
     if (find == table.end())
         return kVarNotFoundError;
+
+    auto scanInt = [](const char *name, const char *input) -> int {
+        char *scan = (char *)input;
+        long value = strtol(input, &scan, 10);
+        if (errno != 0)
+            return kVarRangeError;
+        if (scan == input || !*scan != '\0')
+            return kVarMalformedError;
+        if (value < INT_MIN || value > INT_MAX)
+            return kVarRangeError;
+        return set<int>(name, (int)value);
+    };
+
+    auto scanFloat = [](const char *name, const char *input) -> int {
+        char *scan = (char *)input;
+        float value = strtof(input, &scan);
+        if (errno != 0)
+            return kVarRangeError;
+        if (scan == input || !*scan != '\0')
+            return kVarMalformedError;
+        return set<float>(name, value);
+    };
+
     const auto &ref = find->second;
     switch (ref.m_type) {
     case kVarInt:
-        // TODO(daleweiler): validate it's an integer
-        return set<int>(name, u::atoi(value));
+        return scanInt(name, value);
     case kVarFloat:
-        // TODO(daleweiler): validate it's a float
-        return set<float>(name, u::atof(value));
+        return scanFloat(name, value);
     case kVarString:
         if (value[0] == '"' && value[strlen(value)-1] == '"') {
             u::string copy(value + 1);

@@ -110,7 +110,7 @@ struct Instruction::NewArrayObject : Instruction {
 
 struct Instruction::NewStringObject : Instruction {
     Slot m_targetSlot;
-    char *m_value;
+    const char *m_value;
 };
 
 struct Instruction::NewClosureObject : Instruction {

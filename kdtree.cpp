@@ -6,6 +6,7 @@
 #include "u_algorithm.h"
 #include "u_misc.h"
 #include "u_zlib.h"
+#include "u_log.h"
 
 ///! triangle
 m::vec3 kdTriangle::getNormal(const kdTree *const tree) {
@@ -39,7 +40,11 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth)
         return;
 
     tree->nodeCount++;
-    calculateSphere(tree, tris);
+
+    if (!calculateSphere(tree, tris)) {
+        u::Log::err("[world] => level geometry is too large: collision detection and rendering may not work");
+        return;
+    }
 
     u::vector<int> fx, fy, fz; // front
     u::vector<int> bx, by, bz; // back
@@ -141,7 +146,7 @@ m::plane kdNode::findSplittingPlane(const kdTree *tree, const u::vector<int> &tr
     return m::plane(point, normal);
 }
 
-void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
+bool kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
     const size_t triangleCount = tris.size();
     m::vec3 min;
     m::vec3 max;
@@ -162,9 +167,7 @@ void kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
     sphereOrigin = min + mid;
     sphereRadius = mid.abs();
 
-    if (sphereRadius > kdTree::kMaxTraceDistance) {
-        // TODO: level geometry too large
-    }
+    return sphereRadius <= kdTree::kMaxTraceDistance;
 }
 
 void kdBinHeader::endianSwap() {
