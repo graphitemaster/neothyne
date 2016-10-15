@@ -17,7 +17,7 @@ CXXFLAGS = \
 	-std=c++11 \
 	-march=native \
 	-Wall \
-	-Wstrict-aliasing=2 \
+	-Wstrict-aliasing=3 \
 	-Wextra \
 	-fstrict-aliasing \
 	-fno-exceptions \
