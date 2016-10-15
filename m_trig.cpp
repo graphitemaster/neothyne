@@ -450,24 +450,14 @@ float log2(float x) {
 }
 
 float pow(float a, float b) {
-    // Approximation with fraction of exponent
-    int32_t e = int32_t(b);
-
     union {
         double asDouble;
-        int32_t asInts[2];
-    } shape = { b };
-    shape.asInts[0] = int32_t((b - e)  * (shape.asInts[1] - 1072632447) + 1072632447);
-    shape.asInts[1] = 0;
-
-    // exponentation by squaring for more accuracy
-    float r = 1.0f;
-    while (e) {
-        if (e & 1) r *= a;
-        a *= a;
-        e >>= 1;
-    }
-    return r * shape.asDouble;
+        int64_t asBits;
+    } shape = { a }, reshape;
+    const int32_t t1 = (int32_t)(shape.asBits >> 32);
+    const int32_t t2 = (int32_t)(b * (t1 - 1072632447) + 1072632447);
+    reshape.asBits = ((int64_t)t2) << 32;
+    return reshape.asDouble;
 }
 
 #ifdef __SSE2__
