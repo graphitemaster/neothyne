@@ -10,15 +10,17 @@
 
 namespace s {
 
-static inline size_t djb2(const char *str) {
+static inline size_t djb2(const char *str, size_t length) {
     size_t hash = 5381;
-    for (int c; (c = *str++) != 0; hash = ((hash << 5) + hash) + c)
-        ;
+    for (size_t i = 0; i < length; i++) {
+        int ch = str[i];
+        hash = ((hash << 5) + hash) + ch;
+    }
     return hash;
 }
 
 ///! Table
-Object **Table::lookupReference(Table *table, const char *key) {
+Object **Table::lookupReference(Table *table, const char *key, size_t keyLength) {
     U_ASSERT(key);
     if (table->m_fieldsStored == 0)
         return nullptr;
@@ -26,25 +28,27 @@ Object **Table::lookupReference(Table *table, const char *key) {
     if (fieldsNum <= 4) {
         for (size_t i = 0; i < fieldsNum; i++) {
             Field *field = &table->m_fields[i];
-            if (field->m_name &&
-                *key == *field->m_name &&
-                (!*key || key[1] == field->m_name[1]) &&
-                strcmp(key, field->m_name) == 0)
+            if (field->m_name
+                && field->m_nameLength == keyLength
+                && (keyLength == 0 || key[0] == field->m_name[0])
+                && (keyLength == 1 || key[1] == field->m_name[1])
+                && strncmp(key, field->m_name, keyLength) == 0)
             {
                 return &field->m_value;
             }
         }
     } else {
         size_t fieldsMask = fieldsNum - 1;
-        size_t base = djb2(key);
+        size_t base = djb2(key, keyLength);
         for (size_t i = 0; i < fieldsNum; i++) {
             size_t bin = (base + i) & fieldsMask;
             Field *field = &table->m_fields[bin];
             if (!field->m_name)
                 return nullptr;
-            if (*key == *field->m_name &&
-                (!*key || key[1] == field->m_name[1]) &&
-                strcmp(key, field->m_name) == 0)
+            if (field->m_nameLength == keyLength
+                && (keyLength == 0 || key[0] == field->m_name[0])
+                && (keyLength == 1 || key[1] == field->m_name[1])
+                && strncmp(key, field->m_name, keyLength) == 0)
             {
                 return &field->m_value;
             }
@@ -53,20 +57,21 @@ Object **Table::lookupReference(Table *table, const char *key) {
     return nullptr;
 }
 
-Object **Table::lookupReference(Table *table, const char *key, Object ***first) {
+Object **Table::lookupReference(Table *table, const char *key, size_t keyLength, Object ***first) {
     U_ASSERT(key);
     *first = nullptr;
     size_t fieldsNum = table->m_fieldsNum;
     size_t fieldsMask = fieldsNum - 1;
-    size_t base = fieldsNum ? djb2(key) : 0;
+    size_t base = fieldsNum ? djb2(key, keyLength) : 0;
     Field *free = nullptr;
     for (size_t i = 0; i < fieldsNum; i++) {
         size_t bin = (base + i) & fieldsMask;
         Field *field = &table->m_fields[bin];
-        if (field->m_name &&
-            *key == *field->m_name &&
-            (!*key || key[1] == field->m_name[1]) &&
-            strcmp(key, field->m_name) == 0)
+        if (field->m_name
+            && field->m_nameLength == keyLength
+            && (keyLength == 0 || key[0] == field->m_name[0])
+            && (keyLength == 1 || key[1] == field->m_name[1])
+            && strncmp(key, field->m_name, keyLength) == 0)
         {
             return &field->m_value;
         }
@@ -81,6 +86,7 @@ Object **Table::lookupReference(Table *table, const char *key, Object ***first) 
         if (fillRate < 70) {
             U_ASSERT(free);
             free->m_name = key;
+            free->m_nameLength = keyLength;
             table->m_fieldsStored++;
             *first = &free->m_value;
             return nullptr;
@@ -95,18 +101,18 @@ Object **Table::lookupReference(Table *table, const char *key, Object ***first) 
         Field *field = &table->m_fields[i];
         if (field->m_name) {
             Object **freeObject;
-            Object **lookupObject = lookupReference(&newTable, field->m_name, &freeObject);
+            Object **lookupObject = lookupReference(&newTable, field->m_name, field->m_nameLength, &freeObject);
             U_ASSERT(!lookupObject);
             *freeObject = field->m_value;
         }
     }
     neoFree(table->m_fields);
     *table = newTable;
-    return lookupReference(table, key, first);
+    return lookupReference(table, key, keyLength, first);
 }
 
-Object *Table::lookup(Table *table, const char *key, bool *found) {
-    Object **object = lookupReference(table, key);
+Object *Table::lookup(Table *table, const char *key, size_t keyLength, bool *found) {
+    Object **object = lookupReference(table, key, keyLength);
     if (!object) {
         if (found)
             *found = false;
@@ -119,9 +125,10 @@ Object *Table::lookup(Table *table, const char *key, bool *found) {
 
 ///! Object
 Object *Object::lookup(Object *object, const char *key, bool *found) {
+    const size_t keyLength = strlen(key);
     while (object) {
         bool contains = false;
-        Object *value = Table::lookup(&object->m_table, key, &contains);
+        Object *value = Table::lookup(&object->m_table, key, keyLength, &contains);
         if (contains) {
             if (found)
                 *found = true;
@@ -183,8 +190,9 @@ Object *Object::instanceOf(Object *object, Object *prototype) {
 bool Object::setExisting(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Object *current = object;
+    const size_t keyLength = strlen(key);
     while (current) {
-        Object **search = Table::lookupReference(&current->m_table, key);
+        Object **search = Table::lookupReference(&current->m_table, key, keyLength);
         if (search) {
             U_ASSERT(!(current->m_flags & kImmutable));
             *search = value;
@@ -199,8 +207,9 @@ bool Object::setExisting(Object *object, const char *key, Object *value) {
 bool Object::setShadowing(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Object *current = object;
+    const size_t keyLength = strlen(key);
     while (current) {
-        Object **search = Table::lookupReference(&current->m_table, key);
+        Object **search = Table::lookupReference(&current->m_table, key, keyLength);
         if (search) {
             setNormal(object, key, value);
             return true;
@@ -214,7 +223,7 @@ bool Object::setShadowing(Object *object, const char *key, Object *value) {
 void Object::setNormal(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Object **free = nullptr;
-    Object **search = Table::lookupReference(&object->m_table, key, &free);
+    Object **search = Table::lookupReference(&object->m_table, key, strlen(key), &free);
     if (search) {
         U_ASSERT(!(object->m_flags & kImmutable));
     } else {

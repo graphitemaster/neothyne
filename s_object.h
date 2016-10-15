@@ -28,14 +28,15 @@ struct State;
 
 struct Field {
     const char *m_name;
+    size_t m_nameLength;
     Object *m_value;
 };
 
 struct Table {
-    static Object **lookupReference(Table *table, const char *key);
-    static Object **lookupReference(Table *table, const char *key, Object ***first);
+    static Object **lookupReference(Table *table, const char *key, size_t keyLength);
+    static Object **lookupReference(Table *table, const char *key, size_t keyLength, Object ***first);
 
-    static Object *lookup(Table *table, const char *key, bool *found);
+    static Object *lookup(Table *table, const char *key, size_t keyLength, bool *found);
 
     Field *m_fields;
     size_t m_fieldsNum;
