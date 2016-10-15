@@ -6,10 +6,12 @@
 namespace c {
 
 alignas(Console::Map)
-unsigned char Console::m_map[sizeof(Map)];
+unsigned char Console::m_mapData[sizeof(Map)];
+Console::Map *Console::m_map;
 
 alignas(Complete)
-unsigned char Console::m_complete[sizeof(Complete)];
+unsigned char Console::m_completeData[sizeof(Complete)];
+Complete *Console::m_complete;
 
 // Console variables are arranged into a linked list of references with the use
 // of static constructors. The initialization function then initializes a
@@ -127,8 +129,8 @@ Reference *Console::sort(Reference *begin) {
 void Console::initialize() {
     // sort the references by key
     m_references = sort(m_references);
-    new (m_map) Map;
-    new (m_complete) Complete;
+    m_map = new (m_mapData) Map;
+    m_complete = new (m_completeData) Complete;
 
     auto &table = map();
     auto &completer = complete();
@@ -138,7 +140,7 @@ void Console::initialize() {
         // initialize the string values
         if (ref->m_type == kVarString) {
             auto &value = *((Variable<u::string> *)ref->m_handle);
-            new (value.m_current) u::string(value.m_default ? value.m_default : "");
+            value.m_current = new (value.m_currentData) u::string(value.m_default ? value.m_default : "");
         }
         // add it to the auto complete tree
         completer.insert(ref->m_name);
@@ -154,9 +156,9 @@ void Console::shutdown() {
         value.get().~string();
     }
     // and the hashtable
-    map().~Map();
+    m_map->~Map();
     // and the auto complete tree
-    complete().~Complete();
+    m_complete->~Complete();
 }
 
 u::vector<u::string> Console::suggestions(const u::string &prefix) {
@@ -166,11 +168,11 @@ u::vector<u::string> Console::suggestions(const u::string &prefix) {
 }
 
 Console::Map &Console::map() {
-    return *u::unsafe_cast<Map*>(m_map);
+    return *m_map;
 }
 
 Complete &Console::complete() {
-    return *u::unsafe_cast<Complete*>(m_complete);
+    return *m_complete;
 }
 
 }

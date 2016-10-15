@@ -106,6 +106,7 @@ Variable<u::string>::Variable(int flags,
                               const char *def)
     : m_reference({ name, description, (void *)this, kVarString })
     , m_default(def)
+    , m_current(nullptr)
     , m_flags(flags)
 {
 }
@@ -114,26 +115,27 @@ Variable<u::string>::Variable(int flags,
                               const char *name,
                               const char *description)
     : m_reference({ name, description, (void *)this, kVarString })
+    , m_current(nullptr)
     , m_flags(flags)
 {
 }
 
 Variable<u::string>::operator u::string&() {
-    return *u::unsafe_cast<u::string *>(m_current);
+    return *m_current;
 }
 
 u::string &Variable<u::string>::get() {
-    return *u::unsafe_cast<u::string *>(m_current);
+    return *m_current;
 }
 
 const u::string &Variable<u::string>::get() const {
-    return *u::unsafe_cast<u::string *>(m_current);
+    return *m_current;
 }
 
 int Variable<u::string>::set(const u::string &value) {
     if (m_flags & kReadOnly)
         return Console::kVarReadOnlyError;
-    *u::unsafe_cast<u::string *>(m_current) = value;
+    *m_current = value;
     return Console::kVarSuccess;
 }
 

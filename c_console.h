@@ -58,9 +58,12 @@ private:
     static Reference *sort(Reference *begin);
 
     static Map &map();
+    static unsigned char m_mapData[sizeof(Map)];
+    static Map *m_map;
+
     static Complete &complete();
-    static unsigned char m_map[sizeof(Map)];
-    static unsigned char m_complete[sizeof(Complete)];
+    static unsigned char m_completeData[sizeof(Complete)];
+    static Complete *m_complete;
 };
 
 }
