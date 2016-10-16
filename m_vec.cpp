@@ -80,7 +80,7 @@ bool vec3::raySphereIntersect(const vec3 &start, const vec3 &direction,
     const float e = m::sqrt(d);
     const float u1 = (-b + e)/(2.0f*a);
     const float u2 = -(b + e)/(2.0f*a);
-    *fraction = u1  < u2 ? u1 : u2;
+    *fraction = u1 < u2 ? u1 : u2;
     return true;
 }
 
