@@ -60,7 +60,7 @@ bool vec3::rayCylinderIntersect(const vec3 &start, const vec3 &direction,
 
     // test
     const float distance = b*b - a*c;
-    if (distance < 0.0f || a == 0.0f)
+    if (distance < 0.0f)
         return false;
     *fraction = (-b - m::sqrt(distance)) / a;
     const float collide = (start + *fraction * direction - edgeStart) * pa;
@@ -70,16 +70,17 @@ bool vec3::rayCylinderIntersect(const vec3 &start, const vec3 &direction,
 bool vec3::raySphereIntersect(const vec3 &start, const vec3 &direction,
     const vec3 &sphere, float radius, float *fraction)
 {
+    // calculate in world space
     const float a = direction*direction;
-    const vec3  s = start - sphere;
-    const float b = direction * s;
-    const float c1 = s * s;
-    const float c4 = radius * radius;
-    const float c = c1 - c4;
-    const float t = b * b - a * c;
-    if (t <= 0.0f)
+    const float b = 2.0f*direction*(start - sphere);
+    const float c = sphere*sphere+start*start-2.0f*(sphere*start)-radius*radius;
+    const float d = b*b - 4.0f*a*c;
+    if (d <= 0.0f)
         return false;
-    *fraction = -(b + m::abs(m::sqrt(t))) / a;
+    const float e = m::sqrt(d);
+    const float u1 = (-b + e)/(2.0f*a);
+    const float u2 = -(b + e)/(2.0f*a);
+    *fraction = u1  < u2 ? u1 : u2;
     return true;
 }
 

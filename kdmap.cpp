@@ -170,7 +170,12 @@ bool kdMap::sphereTriangleIntersectStatic(size_t triangleIndex, const m::vec3 &s
     const m::vec4 A = oa - m::vec4(spherePosition, 1.0f);
     const m::vec4 B = ob - m::vec4(spherePosition, 1.0f);
     const m::vec4 C = oc - m::vec4(spherePosition, 1.0f);
-    const m::vec4 V = (B - A) ^ (C - A);
+
+    const m::vec4 AB = B - A;
+    const m::vec4 BC = C - B;
+    const m::vec4 CA = A - C;
+
+    const m::vec4 V = AB ^ BC;
 
     const float rr = sphereRadius * sphereRadius;
 
@@ -189,10 +194,6 @@ bool kdMap::sphereTriangleIntersectStatic(size_t triangleIndex, const m::vec3 &s
     const bool sep2 = aa > rr && ab > aa && ac > aa;
     const bool sep3 = bb > rr && ab > bb && bc > bb;
     const bool sep4 = cc > rr && ac > cc && bc > cc;
-
-    const m::vec4 AB = B - A;
-    const m::vec4 BC = C - B;
-    const m::vec4 CA = A - C;
 
     const float e1 = m::vec4::dot(AB, AB);
     const float e2 = m::vec4::dot(BC, BC);
@@ -250,20 +251,6 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
         }
     }
 
-    // vertex detection
-    for (size_t i = 0; i < 3; i++) {
-        const m::vec3 &vertex = vertices[triangles[triangleIndex].v[i]].vertex;
-
-        if (!m::vec3::raySphereIntersect(spherePosition, direction, vertex, sphereRadius, &fractional))
-            continue;
-
-        if (fractional < *fraction && fractional >= 0.0f) {
-            *fraction = fractional;
-            *hitPoint = spherePosition + direction * fractional;
-            *hitNormal = (*hitPoint - vertex).normalized();
-        }
-    }
-
     // edge detection (for all edges of a triangle)
     for (size_t i = 0; i < 3; i++) {
         const m::vec3 &from = vertices[triangles[triangleIndex].v[i]].vertex;
@@ -279,6 +266,20 @@ bool kdMap::sphereTriangleIntersect(size_t triangleIndex, const m::vec3 &sphereP
             // calculate the normal
             const m::vec3 normal = (from - *hitPoint) ^ (to - *hitPoint);
             *hitNormal = (normal ^ (to - from)).normalized();
+        }
+    }
+
+    // vertex detection
+    for (size_t i = 0; i < 3; i++) {
+        const m::vec3 &vertex = vertices[triangles[triangleIndex].v[i]].vertex;
+
+        if (!m::vec3::raySphereIntersect(spherePosition, direction, vertex, sphereRadius, &fractional))
+            continue;
+
+        if (fractional < *fraction && fractional >= 0.0f) {
+            *fraction = fractional;
+            *hitPoint = spherePosition + direction * fractional;
+            *hitNormal = (*hitPoint - vertex).normalized();
         }
     }
 
