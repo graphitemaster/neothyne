@@ -79,8 +79,6 @@ int Console::change(const char *name, const char *value) {
     auto scanInt = [](const char *name, const char *input) -> int {
         char *scan = (char *)input;
         long value = strtol(input, &scan, 10);
-        if (errno != 0)
-            return kVarRangeError;
         if (scan == input || !*scan != '\0')
             return kVarMalformedError;
         if (value < INT_MIN || value > INT_MAX)
@@ -91,8 +89,6 @@ int Console::change(const char *name, const char *value) {
     auto scanFloat = [](const char *name, const char *input) -> int {
         char *scan = (char *)input;
         float value = strtof(input, &scan);
-        if (errno != 0)
-            return kVarRangeError;
         if (scan == input || !*scan != '\0')
             return kVarMalformedError;
         return set<float>(name, value);
