@@ -77,9 +77,11 @@ int Console::change(const char *name, const char *value) {
         return kVarNotFoundError;
 
     auto scanInt = [](const char *name, const char *input) -> int {
-        char *scan = (char *)input;
+        char *scan = nullptr;
         long value = strtol(input, &scan, 10);
-        if (scan == input || !*scan != '\0')
+        if (errno == ERANGE)
+            return kVarRangeError;
+        if (scan == input || *scan != '\0')
             return kVarMalformedError;
         if (value < INT_MIN || value > INT_MAX)
             return kVarRangeError;
@@ -87,9 +89,11 @@ int Console::change(const char *name, const char *value) {
     };
 
     auto scanFloat = [](const char *name, const char *input) -> int {
-        char *scan = (char *)input;
+        char *scan = nullptr;
         float value = strtof(input, &scan);
-        if (scan == input || !*scan != '\0')
+        if (errno == ERANGE)
+            return kVarRangeError;
+        if (scan == input || *scan != '\0')
             return kVarMalformedError;
         return set<float>(name, value);
     };
