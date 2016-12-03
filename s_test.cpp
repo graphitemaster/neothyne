@@ -41,7 +41,9 @@ fn ack(m, n) {
     if (n == 0) return ack(mm, 1);
     return ack(mm, ack(m, nm));
 }
-print(ack(3, 7));
+print(ack(1, 2));
+
+print("hello world");
 
 print("string " + "concatenation");
 
@@ -63,17 +65,25 @@ void test() {
     RootSet set;
     GC::addRoots(&state, &root, 1, &set);
 
+    SourceRange source;
+    source.m_begin = contents;
+    source.m_end = contents + sizeof text;
+    SourceRecord::registerSource(source, "test", 0, 0);
+
     UserFunction *module;
-    ParseResult result = Parser::parseModule(&contents, &module);
-    U_ASSERT(result == kParseOk);
-    UserFunction::dump(module, 0);
+    ParseResult result = Parser::parseModule(&source.m_begin, &module);
+    (void)result;
+    if (result == kParseOk) {
+        //U_ASSERT(result == kParseOk);
+        //UserFunction::dump(module, 0);
 
-    VM::callFunction(&state, root, module, nullptr, 0);
-    VM::run(&state);
+        VM::callFunction(&state, root, module, nullptr, 0);
+        VM::run(&state);
 
-    // print any errors from running
-    if (state.m_runState == kErrored)
-        u::Log::err("%s\n", state.m_error);
+        // print any errors from running
+        if (state.m_runState == kErrored)
+            u::Log::err("%s\n", state.m_error);
+    }
 
     root = state.m_result;
 

@@ -8,6 +8,33 @@ namespace s {
 struct Gen;
 struct UserFunction;
 
+struct SourceRange {
+    char *m_begin;
+    char *m_end;
+};
+
+struct SourceRecord {
+    static void registerSource(SourceRange source,
+                               const char *name,
+                               int rowBegin,
+                               int colBegin);
+
+    static bool findSourcePosition(char *source,
+                                   const char **name,
+                                   SourceRange *line,
+                                   int *rowBegin,
+                                   int *colBegin);
+
+private:
+    SourceRecord *m_prev;
+    SourceRange m_source;
+    const char *m_name;
+    int m_rowBegin;
+    int m_colBegin;
+
+    static SourceRecord *m_record;
+};
+
 enum ParseResult {
     kParseNone,
     kParseError,

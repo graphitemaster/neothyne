@@ -12,11 +12,78 @@
 
 namespace s {
 
-#define logParseError(A, ...) \
-    do { \
-        u::Log::err(__VA_ARGS__); \
-        u::Log::err("\n"); \
-    } while (0)
+SourceRecord *SourceRecord::m_record = nullptr;
+
+void SourceRecord::registerSource(SourceRange source,
+                                  const char *name,
+                                  int rowBegin,
+                                  int colBegin)
+{
+    SourceRecord *record = new SourceRecord;
+    record->m_prev = m_record;
+    record->m_source = source;
+    record->m_name = name;
+    record->m_rowBegin = rowBegin;
+    record->m_colBegin = colBegin;
+    m_record = record;
+}
+
+bool SourceRecord::findSourcePosition(char *source,
+                                      const char **name,
+                                      SourceRange *line,
+                                      int *rowBegin,
+                                      int *colBegin)
+{
+    SourceRecord *record = m_record;
+    while (record) {
+        if (source >= record->m_source.m_begin && source < record->m_source.m_end) {
+            *name = record->m_name;
+            int rowCount = 0;
+            SourceRange lineSearch = { record->m_source.m_begin, record->m_source.m_begin };
+            while (lineSearch.m_begin < record->m_source.m_end) {
+                while (lineSearch.m_end < record->m_source.m_end && *lineSearch.m_end != '\n')
+                    lineSearch.m_end++;
+                if (lineSearch.m_end < record->m_source.m_end)
+                    lineSearch.m_end++;
+                if (source >= lineSearch.m_begin && source < lineSearch.m_end) {
+                    int colCount = source - lineSearch.m_begin;
+                    *line = lineSearch;
+                    *rowBegin = rowCount + record->m_rowBegin;
+                    *colBegin = colCount + ((rowCount == 0) ? record->m_colBegin : 0);
+                    return true;
+                }
+                lineSearch.m_begin = lineSearch.m_end;
+                rowCount++;
+            }
+            U_ASSERT(0 && "text in range but not in any line");
+        }
+        record = record->m_prev;
+    }
+    return false;
+}
+
+static void logParseError(char *location, const char *format, ...) {
+    SourceRange line;
+    const char *file;
+    int row;
+    int col;
+    va_list va;
+    va_start(va, format);
+    if (SourceRecord::findSourcePosition(location, &file, &line, &row, &col)) {
+        u::Log::err("%s:%i:%i: error: %s\n", file, row + 1, col + 1, u::formatProcess(format, va));
+        u::Log::err("%.*s", (int)(line.m_end - line.m_begin), line.m_begin);
+        for (int i = 0; i < line.m_end - line.m_begin; i++) {
+            if (i < col)
+                u::Log::err(" ");
+            else if (i == col)
+                u::Log::err("^");
+        }
+        u::Log::err("\n");
+    } else {
+        u::Log::err("error: %.*s %s\n", 20, location, u::formatProcess(format, va));
+    }
+    va_end(va);
+}
 
 static bool startsWith(char **contents, const char *compare) {
     char *text = *contents;
@@ -259,7 +326,7 @@ ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlo
         if (consumeString(&text, "}"))
             break;
 
-        logParseError(text, "expected comma or closing bracket");
+        logParseError(text, "expected comma or closing brace");
         return kParseError;
     }
     *contents = text;
@@ -299,7 +366,7 @@ ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot
         if (consumeString(&text, "]"))
             break;
 
-        logParseError(text, "expected comma or closing square bracket");
+        logParseError(text, "expected comma or closing bracket");
         return kParseError;
     }
 
@@ -472,7 +539,7 @@ ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression) 
 
     while (!consumeString(&text, ")")) {
         if (length && !consumeString(&text, ",")) {
-            logParseError(text, "expected comma");
+            logParseError(text, "expected comma or closing parenthesis");
             return kParseError;
         }
 
