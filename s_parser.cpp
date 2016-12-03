@@ -242,18 +242,46 @@ ParseResult Parser::parseString(char **contents, char **out) {
     if (*text != '"')
         return kParseNone;
     text++;
-    while (*text && *text != '"') // TODO(daleweiler): string escaping
+    int escaped = 0;
+    while (*text && *text != '"') {
+        if (*text == '\\') {
+            text++;
+            if (!*text) {
+                logParseError(text, "unterminated escape");
+                return kParseError;
+            }
+        }
+        escaped++;
         text++;
+    }
     if (!*text) {
         logParseError(text, "expected closing quote mark");
         return kParseError;
     }
     text++;
+
+    char *scan = start + 1;
+    char *result = (char *)neoMalloc(escaped + 1);
+    for (int i = 0; i < escaped; scan++, i++) {
+        if (*scan == '\\') {
+            scan++;
+            switch (*scan) {
+            /****/ case '"':  result[i] = '"';
+            break; case '\\': result[i] = '\\';
+            break; case 'n':  result[i] = '\n';
+            break; case 'r':  result[i] = '\r';
+            break; case 't':  result[i] = '\t';
+            break;
+            default:
+                logParseError(scan, "unknown escape sequence");
+                return kParseError;
+            }
+            continue;
+        }
+        result[i] = *scan;
+    }
+    result[escaped] = '\0';
     *contents = text;
-    size_t length = text - start;
-    char *result = (char *)neoMalloc(length - 2 + 1);
-    memcpy(result, start + 1, length - 2);
-    result[length - 2] = '\0';
     *out = result;
     return kParseOk;
 }
