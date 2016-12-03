@@ -67,15 +67,25 @@ static void logParseError(char *location, const char *format, ...) {
     const char *file;
     int row;
     int col;
+
+    auto utf8len = [](const char *ptr, size_t length) {
+        size_t len = 0;
+        for (const char *end = ptr + length; ptr != end; ptr++)
+            if ((*ptr & 0xC0) != 0x80) len++;
+        return len;
+    };
+
     va_list va;
     va_start(va, format);
     if (SourceRecord::findSourcePosition(location, &file, &line, &row, &col)) {
         u::Log::err("%s:%i:%i: error: %s\n", file, row + 1, col + 1, u::formatProcess(format, va));
         u::Log::err("%.*s", (int)(line.m_end - line.m_begin), line.m_begin);
-        for (int i = 0; i < line.m_end - line.m_begin; i++) {
-            if (i < col)
+        int u8col = utf8len(line.m_begin, col);
+        int u8len = utf8len(line.m_begin, line.m_end - line.m_begin);
+        for (int i = 0; i < u8len; i++) {
+            if (i < u8col)
                 u::Log::err(" ");
-            else if (i == col)
+            else if (i == u8col)
                 u::Log::err("^");
         }
         u::Log::err("\n");
