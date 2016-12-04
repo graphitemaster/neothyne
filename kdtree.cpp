@@ -10,36 +10,36 @@
 
 ///! triangle
 m::vec3 kdTriangle::getNormal(const kdTree *const tree) {
-    if (plane.n.isNull())
+    if (m_plane.n.isNull())
         generatePlane(tree);
-    return plane.n;
+    return m_plane.n;
 }
 
 void kdTriangle::generatePlane(const kdTree *const tree) {
-    plane = { tree->vertices[vertices[0]],
-              tree->vertices[vertices[1]],
-              tree->vertices[vertices[2]] };
+    m_plane = { tree->m_vertices[m_vertices[0]],
+                tree->m_vertices[m_vertices[1]],
+                tree->m_vertices[m_vertices[2]] };
 }
 
 ///! node
 kdNode::~kdNode() {
-    delete front;
-    delete back;
+    delete m_front;
+    delete m_back;
 }
 
 kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth)
-    : front(nullptr)
-    , back(nullptr)
-    , sphereRadius(0.0f)
+    : m_front(nullptr)
+    , m_back(nullptr)
+    , m_sphereRadius(0.0f)
 {
     const size_t triangleCount = tris.size();
 
-    if (recursionDepth > tree->depth)
-        tree->depth = recursionDepth;
+    if (recursionDepth > tree->m_depth)
+        tree->m_depth = recursionDepth;
     if (recursionDepth > kdTree::kMaxRecursionDepth)
         return;
 
-    tree->nodeCount++;
+    tree->m_nodeCount++;
 
     if (!calculateSphere(tree, tris)) {
         u::Log::err("[world] => level geometry is too large: collision detection and rendering may not work");
@@ -76,14 +76,14 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth)
         }
     }
 
-    splitPlane = plane[best];
+    m_splitPlane = plane[best];
 
     // when there isn't many triangles left, create a leaf. In doing so we can
     // continue to create further subdivisions.
     if (frontList[best]->size() == 0 || backList[best]->size() == 0 || triangleCount <= kdTree::kMaxTrianglesPerLeaf) {
         // create subspace with `triangleCount` polygons
-        triangles.insert(triangles.begin(), tris.begin(), tris.end());
-        tree->leafCount++;
+        m_triangles.insert(m_triangles.begin(), tris.begin(), tris.end());
+        tree->m_leafCount++;
         return;
     }
 
@@ -92,12 +92,12 @@ kdNode::kdNode(kdTree *tree, const u::vector<int> &tris, size_t recursionDepth)
     backList[best]->insert(backList[best]->end(), splitList[best]->begin(), splitList[best]->end());
 
     // recurse
-    front = new kdNode(tree, *frontList[best], recursionDepth + 1);
-    back = new kdNode(tree, *backList[best], recursionDepth + 1);
+    m_front = new kdNode(tree, *frontList[best], recursionDepth + 1);
+    m_back = new kdNode(tree, *backList[best], recursionDepth + 1);
 }
 
 bool kdNode::isLeaf() const {
-    return !front && !back;
+    return !m_front && !m_back;
 }
 
 void kdNode::split(const kdTree *tree, const u::vector<int> &tris, m::axis axis,
@@ -131,8 +131,8 @@ m::plane kdNode::findSplittingPlane(const kdTree *tree, const u::vector<int> &tr
     size_t k = 0;
     for (size_t i = 0; i < triangleCount; i++) {
         for (size_t j = 0; j < 3; j++) {
-            const int index = tree->triangles[tris[i]].vertices[j];
-            const m::vec3 &vec = tree->vertices[index];
+            const int index = tree->m_triangles[tris[i]].m_vertices[j];
+            const m::vec3 &vec = tree->m_vertices[index];
             coords[k++] = vec[axis];
         }
     }
@@ -153,8 +153,8 @@ bool kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
     for (size_t i = 0; i < triangleCount; i++) {
         const int index = tris[i];
         for (size_t j = 0; j < 3; j++) {
-            const size_t vertexIndex = tree->triangles[index].vertices[j];
-            const m::vec3 *v = &tree->vertices[vertexIndex];
+            const size_t vertexIndex = tree->m_triangles[index].m_vertices[j];
+            const m::vec3 *v = &tree->m_vertices[vertexIndex];
             if (v->x < min.x) min.x = v->x;
             if (v->y < min.y) min.y = v->y;
             if (v->z < min.z) min.z = v->z;
@@ -164,10 +164,10 @@ bool kdNode::calculateSphere(const kdTree *tree, const u::vector<int> &tris) {
         }
     }
     const m::vec3 mid = (max - min) * 0.5f;
-    sphereOrigin = min + mid;
-    sphereRadius = mid.abs();
+    m_sphereOrigin = min + mid;
+    m_sphereRadius = mid.abs();
 
-    return sphereRadius <= kdTree::kMaxTraceDistance;
+    return m_sphereRadius <= kdTree::kMaxTraceDistance;
 }
 
 void kdBinHeader::endianSwap() {
@@ -216,11 +216,11 @@ void kdBinEnt::endianSwap() {
 
 ///! kdTree
 kdTree::kdTree()
-    : root(nullptr)
-    , nodeCount(0)
-    , leafCount(0)
-    , textureCount(0)
-    , depth(0)
+    : m_root(nullptr)
+    , m_nodeCount(0)
+    , m_leafCount(0)
+    , m_textureCount(0)
+    , m_depth(0)
 {
 }
 
@@ -229,28 +229,24 @@ kdTree::~kdTree() {
 }
 
 void kdTree::unload() {
-    delete root;
-    root = nullptr;
-    entities.destroy();
-    vertices.destroy();
-    texCoords.destroy();
-    triangles.destroy();
-    nodeCount = 0;
-    leafCount = 0;
-    textureCount = 0;
-    depth = 0;
+    delete m_root;
+    m_root = nullptr;
+    m_entities.destroy();
+    m_vertices.destroy();
+    m_texCoords.destroy();
+    m_triangles.destroy();
+    m_nodeCount = 0;
+    m_leafCount = 0;
+    m_textureCount = 0;
+    m_depth = 0;
 }
 
 polyPlane kdTree::testTriangle(size_t index, const m::plane &plane) const {
     int frontBits = kPolyPlaneFront;
     int backBits = kPolyPlaneBack;
-    const int indexTo[3] = { // index to vertices for triangle
-        triangles[index].vertices[0],
-        triangles[index].vertices[1],
-        triangles[index].vertices[2]
-    };
+    const int *indexTo = m_triangles[index].m_vertices; // indices to vertices for triangle
     for (size_t i = 0; i < 3; i++) {
-        switch (plane.classify(vertices[indexTo[i]], kEpsilon)) {
+        switch (plane.classify(m_vertices[indexTo[i]], kEpsilon)) {
         case m::plane::kFront:
             backBits = kPolyPlaneSplit;
             break;
@@ -282,10 +278,10 @@ bool kdTree::load(const u::string &file) {
         int s0, s1, s2;
         int slot;
         if (u::sscanf(line, "v %f %f %f", &x0, &y0, &z0) == 3) {
-            vertices.push_back({ x0, y0, z0 });
+            m_vertices.push_back({ x0, y0, z0 });
         } else if (u::sscanf(line, "vt %f %f", &x0, &y0) == 2
                 || u::sscanf(line, "vt %f %f %f", &x0, &y0, &z0) == 3) {
-            texCoords.push_back({ x0, y0 });
+            m_texCoords.push_back({ x0, y0 });
         } else if (u::sscanf(line, "ent %i %f %f %f %f %f %f %f",
                         &i, &x0, &y0, &z0, &x1, &y1, &z1, &w) == 8)
         {
@@ -293,48 +289,48 @@ bool kdTree::load(const u::string &file) {
             ent.id = i;
             ent.origin = { x0, y0, z0 };
             ent.rotation = { x1, y1, z1, w };
-            entities.push_back(ent);
+            m_entities.push_back(ent);
         } else if (u::sscanf(line, "f %i/%i %i/%i %i/%i",
                         &v0, &t0, &v1, &t1, &v2, &t2) == 6
                ||  u::sscanf(line, "f %i/%i/%i %i/%i/%i %i/%i/%i",
                         &v0, &t0, &s0, &v1, &t1, &s1, &v2, &t2, &s2) == 9)
         {
             kdTriangle triangle;
-            triangle.textureReference = textureReference;
-            triangle.vertices[0] = v0 - 1;
-            triangle.vertices[1] = v1 - 1;
-            triangle.vertices[2] = v2 - 1;
-            triangle.texCoords[0] = t0 - 1;
-            triangle.texCoords[1] = t1 - 1;
-            triangle.texCoords[2] = t2 - 1;
+            triangle.m_textureReference = textureReference;
+            triangle.m_vertices[0] = v0 - 1;
+            triangle.m_vertices[1] = v1 - 1;
+            triangle.m_vertices[2] = v2 - 1;
+            triangle.m_texCoords[0] = t0 - 1;
+            triangle.m_texCoords[1] = t1 - 1;
+            triangle.m_texCoords[2] = t2 - 1;
             triangle.generatePlane(this);
-            triangles.push_back(triangle);
+            m_triangles.push_back(triangle);
         } else if (u::sscanf(line, "f %i %i %i", &v0, &v1, &v2) == 3) {
             kdTriangle triangle;
-            triangle.textureReference = textureReference;
-            triangle.vertices[0] = v0 - 1;
-            triangle.vertices[1] = v1 - 1;
-            triangle.vertices[2] = v2 - 1;
+            triangle.m_textureReference = textureReference;
+            triangle.m_vertices[0] = v0 - 1;
+            triangle.m_vertices[1] = v1 - 1;
+            triangle.m_vertices[2] = v2 - 1;
             triangle.generatePlane(this);
-            triangles.push_back(triangle);
+            m_triangles.push_back(triangle);
         } else if (u::sscanf(line, "g slot%d", &slot) == 1) {
-            textureCount++;
+            m_textureCount++;
             auto format = u::format("textures/%d", slot);
-            auto find = textures.find(format);
-            if (find == textures.end())
-                find = textures.insert(format).first;
+            auto find = m_textures.find(format);
+            if (find == m_textures.end())
+                find = m_textures.insert(format).first;
             textureReference = &*find;
         }
     }
 
-    nodeCount = 0;
-    leafCount = 0;
+    m_nodeCount = 0;
+    m_leafCount = 0;
     u::vector<int> indices;
-    indices.reserve(triangles.size());
-    for (size_t i = 0; i < triangles.size(); i++)
+    indices.reserve(m_triangles.size());
+    for (size_t i = 0; i < m_triangles.size(); i++)
         indices.push_back(i);
 
-    root = new kdNode(this, indices, 0);
+    m_root = new kdNode(this, indices, 0);
     return true;
 }
 
@@ -446,7 +442,7 @@ static bool kdBinCompare(const kdBinVertex &lhs, const kdBinVertex &rhs, float e
 
 static int32_t kdBinInsertLeaf(const kdNode *leaf, u::vector<kdBinLeaf> &leafs) {
     kdBinLeaf binLeaf;
-    binLeaf.triangles.insert(binLeaf.triangles.begin(), leaf->triangles.begin(), leaf->triangles.end());
+    binLeaf.triangles.insert(binLeaf.triangles.begin(), leaf->m_triangles.begin(), leaf->m_triangles.end());
     leafs.push_back(binLeaf);
     return -(int32_t)leafs.size(); // leaf indices are stored with negative index
 }
@@ -459,9 +455,9 @@ static int32_t kdBinGetNodes(const kdTree &tree, const kdNode *node, u::vector<k
 
     // We only care about the distance and axis type for the plane.
     kdBinPlane binPlane;
-    binPlane.d = node->splitPlane.d;
+    binPlane.d = node->m_splitPlane.d;
     for (size_t i = 0; i < 3; i++) {
-        if (m::abs(node->splitPlane.n[i]) > m::kEpsilon) {
+        if (m::abs(node->m_splitPlane.n[i]) > m::kEpsilon) {
             binPlane.type = i;
             break;
         }
@@ -471,12 +467,12 @@ static int32_t kdBinGetNodes(const kdTree &tree, const kdNode *node, u::vector<k
     const size_t nodeIndex = nodes.size();
     kdBinNode binNode;
     binNode.plane = planeIndex;
-    binNode.sphereRadius = node->sphereRadius;
-    binNode.sphereOrigin = node->sphereOrigin;
+    binNode.sphereRadius = node->m_sphereRadius;
+    binNode.sphereOrigin = node->m_sphereOrigin;
     nodes.push_back(binNode);
 
-    nodes[nodeIndex].children[0] = kdBinGetNodes(tree, node->front, planes, nodes, leafs);
-    nodes[nodeIndex].children[1] = kdBinGetNodes(tree, node->back, planes, nodes, leafs);
+    nodes[nodeIndex].children[0] = kdBinGetNodes(tree, node->m_front, planes, nodes, leafs);
+    nodes[nodeIndex].children[1] = kdBinGetNodes(tree, node->m_back, planes, nodes, leafs);
 
     return nodeIndex;
 }
@@ -522,21 +518,21 @@ u::vector<unsigned char> kdTree::serialize() {
     u::vector<kdBinLeaf>     compiledLeafs;
 
     // reserve memory for this operation
-    compiledPlanes.reserve(nodeCount - leafCount);
-    compiledTextures.reserve(textureCount);
-    compiledNodes.reserve(nodeCount - leafCount);
-    compiledTriangles.reserve(triangles.size());
-    compiledVertices.reserve(triangles.size() * 3);
-    compiledLeafs.reserve(leafCount);
+    compiledPlanes.reserve(m_nodeCount - m_leafCount);
+    compiledTextures.reserve(m_textureCount);
+    compiledNodes.reserve(m_nodeCount - m_leafCount);
+    compiledTriangles.reserve(m_triangles.size());
+    compiledVertices.reserve(m_triangles.size() * 3);
+    compiledLeafs.reserve(m_leafCount);
 
-    for (size_t i = 0; i < triangles.size(); i++) {
+    for (size_t i = 0; i < m_triangles.size(); i++) {
         kdBinTriangle triangle;
-        triangle.texture = kdBinAddTexture(compiledTextures, *triangles[i].textureReference);
+        triangle.texture = kdBinAddTexture(compiledTextures, *m_triangles[i].m_textureReference);
         for (size_t j = 0; j < 3; j++) {
             kdBinVertex vertex;
-            vertex.vertex = vertices[triangles[i].vertices[j]];
-            if (!texCoords.empty())
-                vertex.coordinate = texCoords[triangles[i].texCoords[j]];
+            vertex.vertex = m_vertices[m_triangles[i].m_vertices[j]];
+            if (!m_texCoords.empty())
+                vertex.coordinate = m_texCoords[m_triangles[i].m_texCoords[j]];
             // If we can reuse vertices for several faces, then do so
             int k = 0;
             for (k = compiledVertices.size() - 1; k >= 0; k--) {
@@ -553,10 +549,10 @@ u::vector<unsigned char> kdTree::serialize() {
         compiledTriangles.push_back(triangle);
     }
 
-    kdBinGetNodes(*this, root, compiledPlanes, compiledNodes, compiledLeafs);
+    kdBinGetNodes(*this, m_root, compiledPlanes, compiledNodes, compiledLeafs);
 
     // Get entities
-    for (const auto &it : entities) {
+    for (const auto &it : m_entities) {
         kdBinEnt ent;
         ent.id = it.id;
         ent.origin = it.origin;

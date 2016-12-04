@@ -26,10 +26,10 @@ private:
     friend struct kdTree;
     friend struct kdNode;
 
-    int vertices[3];
-    int texCoords[3];
-    m::plane plane;
-    const u::string *textureReference;
+    int m_vertices[3];
+    int m_texCoords[3];
+    m::plane m_plane;
+    const u::string *m_textureReference;
 };
 
 inline kdTriangle::kdTriangle() {
@@ -63,12 +63,12 @@ struct kdNode {
     // Flatten tree representation into a disk-writable medium.
     u::vector<unsigned char> serialize();
 
-    kdNode        *front;
-    kdNode        *back;
-    m::plane       splitPlane;   // Not set for leafs
-    m::vec3        sphereOrigin;
-    float          sphereRadius;
-    u::vector<int> triangles;    // Only filled for leaf node
+    kdNode *m_front;
+    kdNode *m_back;
+    m::plane m_splitPlane;   // Not set for leafs
+    m::vec3 m_sphereOrigin;
+    float m_sphereRadius;
+    u::vector<int> m_triangles;    // Only filled for leaf node
 };
 
 struct kdTree {
@@ -85,22 +85,20 @@ struct kdTree {
     void unload();
     u::vector<unsigned char> serialize();
 
-    const u::set<u::string> &textures_() const { return textures; }
-
 private:
     friend struct kdNode;
     friend struct kdTriangle;
 
-    kdNode                 *root;
-    u::vector<m::vec3>      vertices;
-    u::vector<m::vec2>      texCoords;
-    u::vector<kdTriangle>   triangles;
-    u::vector<kdEnt>        entities;
-    u::set<u::string>       textures;
-    size_t                  nodeCount;
-    size_t                  leafCount;
-    size_t                  textureCount;
-    size_t                  depth;
+    kdNode *m_root;
+    u::vector<m::vec3> m_vertices;
+    u::vector<m::vec2> m_texCoords;
+    u::vector<kdTriangle> m_triangles;
+    u::vector<kdEnt> m_entities;
+    u::set<u::string> m_textures;
+    size_t m_nodeCount;
+    size_t m_leafCount;
+    size_t m_textureCount;
+    size_t m_depth;
 };
 
 // Serialized version for storing on disk
