@@ -307,6 +307,7 @@ gui::gui()
     , m_atlasData(new unsigned char[kAtlasSize*kAtlasSize*4])
     , m_atlasTexture(0)
     , m_miscTexture(0)
+    , m_coalesced(0)
 {
     memset(m_vbos, 0, sizeof m_vbos);
 
@@ -622,16 +623,6 @@ void gui::render(const pipeline &pl) {
     if (m_batches.empty())
         return;
 
-    // Coalesce adjacent batches to avoid excessive draw calls
-    for (size_t i = 0; i < m_batches.size(); i += 2) {
-        auto &a = m_batches[i + 0];
-        auto &b = m_batches[i + 1];
-        if (a.method != b.method || a.texture != b.texture)
-            continue;
-        a.count += b.count;
-        b.count = 0;
-    }
-
     GLuint &vbo = m_vbos[m_bufferIndex];
     m_bufferIndex = (m_bufferIndex + 1) % (sizeof m_vbos / sizeof *m_vbos);
 
@@ -655,15 +646,17 @@ void gui::render(const pipeline &pl) {
     gl::Disable(GL_SCISSOR_TEST);
 
     auto drawBatch = [&]() {
-        // avoid changing program states if we're already using the correct one
-        if (b->method != method) {
-            method = b->method;
-            m_methods[method].enable();
+        if (b->count) {
+            // avoid changing program states if we're already using the correct one
+            if (method != b->method) {
+                method = b->method;
+                m_methods[method].enable();
+            }
+            // draw the batch
+            gl::DrawArrays(GL_TRIANGLES, b->start, b->count);
         }
-        // draw the batch
-        gl::DrawArrays(GL_TRIANGLES, b->start, b->count);
-        // move to the next batch
-        for (b++; b < m_batches.end() && b->start == 0; b++);
+        // Still need to process the command
+        b++;
     };
 
     for (auto &it : ::gui::commands()()) {
@@ -733,12 +726,18 @@ void gui::render(const pipeline &pl) {
     m_vertices.destroy();
     m_batches.destroy();
 
+    m_coalesced = 0;
+
 #if defined(DEBUG_GUI)
     u::Log::out("[gui] => completed frame\n");
 #endif
 
     gl::Enable(GL_DEPTH_TEST);
     gl::Enable(GL_CULL_FACE);
+}
+
+void gui::addBatch(batch& b) {
+    m_batches.push_back(b);
 }
 
 template <size_t E>
@@ -803,8 +802,7 @@ void gui::drawPolygon(const float (&coords)[E], float r, uint32_t color) {
     }
     b.count = m_vertices.size() - b.start;
     b.method = kMethodNormal;
-    b.texture = nullptr;
-    m_batches.push_back(b);
+    addBatch(b);
 }
 
 void gui::drawRectangle(float x, float y, float w, float h, float fth, uint32_t color) {
@@ -949,7 +947,7 @@ void gui::drawText(float x, float y, const char *contents, int align, uint32_t c
     }
     b.count = m_vertices.size() - b.start;
     b.method = kMethodFont;
-    m_batches.push_back(b);
+    addBatch(b);
 }
 
 void gui::drawImage(float x, float y, float w, float h, const char *path) {
@@ -986,10 +984,8 @@ void gui::drawImage(float x, float y, float w, float h, const char *path) {
     m_vertices.push_back({{x+w, y+h}, {x2, y2}, {0,0,0,0}});
 
     b.count = m_vertices.size() - b.start;
-
-    b.texture = tex;
     b.method = kMethodImage;
-    m_batches.push_back(b);
+    addBatch(b);
 }
 
 void gui::drawTexture(float x, float y, float w, float h, const unsigned char *data) {
@@ -1016,7 +1012,7 @@ void gui::drawTexture(float x, float y, float w, float h, const unsigned char *d
 
     b.count = m_vertices.size() - b.start;
     b.method = kMethodImage;
-    m_batches.push_back(b);
+    addBatch(b);
 }
 
 

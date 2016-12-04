@@ -132,8 +132,9 @@ private:
         size_t start;
         size_t count;
         int method;
-        atlas::node *texture;
     };
+
+    void addBatch(batch &b);
 
     u::vector<vertex> m_vertices;
     u::vector<batch> m_batches;
@@ -166,6 +167,7 @@ private:
     GLuint m_miscTexture; // miscellaneous texture for drawTexture
 
     m::vec2 m_resolution;
+    size_t m_coalesced;
 };
 
 }
