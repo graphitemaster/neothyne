@@ -622,6 +622,16 @@ void gui::render(const pipeline &pl) {
     if (m_batches.empty())
         return;
 
+    // Coalesce adjacent batches to avoid excessive draw calls
+    for (size_t i = 0; i < m_batches.size(); i += 2) {
+        auto &a = m_batches[i + 0];
+        auto &b = m_batches[i + 1];
+        if (a.method != b.method || a.texture != b.texture)
+            continue;
+        a.count += b.count;
+        b.count = 0;
+    }
+
     GLuint &vbo = m_vbos[m_bufferIndex];
     m_bufferIndex = (m_bufferIndex + 1) % (sizeof m_vbos / sizeof *m_vbos);
 
@@ -652,7 +662,8 @@ void gui::render(const pipeline &pl) {
         }
         // draw the batch
         gl::DrawArrays(GL_TRIANGLES, b->start, b->count);
-        b++;
+        // move to the next batch
+        for (b++; b < m_batches.end() && b->start == 0; b++);
     };
 
     for (auto &it : ::gui::commands()()) {
