@@ -81,56 +81,6 @@ void VM::step(State *state, void **preallocatedArguments) {
     CallFrame *frame = &state->m_stack[state->m_length - 1];
 
     gCycleCount++;
-    if (U_UNLIKELY(state->m_profileState && gCycleCount > state->m_profileState->m_nextCheck)) {
-        state->m_profileState->m_nextCheck = gCycleCount + 1024;
-        struct timespec profileTime;
-        const int result = clock_gettime(CLOCK_MONOTONIC, &profileTime);
-        if (result != 0)
-            U_ASSERT(0 && "failed to profile");
-        const long nsDifference = profileTime.tv_nsec - state->m_profileState->m_lastTime.tv_nsec;
-        const int sDifference = profileTime.tv_sec - state->m_profileState->m_lastTime.tv_sec;
-        const long long nsTotalDifference = (long long)sDifference * 1000000000LL + (long long)nsDifference;
-        if (nsTotalDifference > 100000LL) {
-            // 0.1ms spent on this operation: mark it as a hot spot
-            state->m_profileState->m_lastTime = profileTime;
-            Table *directTable = &state->m_profileState->m_directTable;
-            Table *indirectTable = &state->m_profileState->m_indirectTable;
-            int k = 0;
-            for (State *currentState = state; currentState; ) {
-                for (int i = currentState->m_length - 1; i >= 0; --i) {
-                    CallFrame *currentFrame = &currentState->m_stack[i];
-                    Instruction *instruction = currentFrame->m_instructions;
-                    // Ranges are always unique and instructions live as long as the state lives
-                    // so the pointer inside the instruction can be safely used as a key
-                    const char *key = (char *)&instruction->m_belongsTo;
-                    if (k == 0) {
-                        void **freeEntry = nullptr;
-                        void **findEntry = Table::lookupReference(directTable,
-                                                                  key,
-                                                                  sizeof(instruction->m_belongsTo),
-                                                                  &freeEntry);
-                        if (findEntry)
-                            (*(int *)findEntry)++;
-                        else
-                            (*(int *)freeEntry) = 1;
-                    } else {
-                        void **freeEntry = nullptr;
-                        void **findEntry = Table::lookupReference(indirectTable,
-                                                                  key,
-                                                                  sizeof(instruction->m_belongsTo),
-                                                                  &freeEntry);
-                        if (findEntry)
-                            (*(int *)findEntry)++;
-                        else
-                            (*(int *)freeEntry) = 1;
-                    }
-                    k++;
-                }
-                currentState = currentState->m_parent;
-            }
-        }
-    }
-
     Instruction *instruction = frame->m_instructions;
     Instruction *nextInstruction = nullptr;
     switch (instruction->m_type) {
@@ -512,8 +462,60 @@ void VM::step(State *state, void **preallocatedArguments) {
         U_ASSERT(0 && "invalid instruction");
         break;
     }
+
+    if (U_UNLIKELY(state->m_profileState && gCycleCount > state->m_profileState->m_nextCheck)) {
+        state->m_profileState->m_nextCheck = gCycleCount + 1024;
+        struct timespec profileTime;
+        const int result = clock_gettime(CLOCK_MONOTONIC, &profileTime);
+        if (result != 0)
+            U_ASSERT(0 && "failed to profile");
+        const long nsDifference = profileTime.tv_nsec - state->m_profileState->m_lastTime.tv_nsec;
+        const int sDifference = profileTime.tv_sec - state->m_profileState->m_lastTime.tv_sec;
+        const long long nsTotalDifference = (long long)sDifference * 1000000000LL + (long long)nsDifference;
+        if (nsTotalDifference > 100000LL) {
+            // 0.1ms spent on this operation: mark it as a hot spot
+            state->m_profileState->m_lastTime = profileTime;
+            Table *directTable = &state->m_profileState->m_directTable;
+            Table *indirectTable = &state->m_profileState->m_indirectTable;
+            int k = 0;
+            for (State *currentState = state; currentState; ) {
+                for (int i = currentState->m_length - 1; i >= 0; --i) {
+                    CallFrame *currentFrame = &currentState->m_stack[i];
+                    Instruction *instruction = currentFrame->m_instructions;
+                    // Ranges are always unique and instructions live as long as the state lives
+                    // so the pointer inside the instruction can be safely used as a key
+                    const char *key = (char *)&instruction->m_belongsTo;
+                    if (k == 0) {
+                        void **freeEntry = nullptr;
+                        void **findEntry = Table::lookupReference(directTable,
+                                                                  key,
+                                                                  sizeof(instruction->m_belongsTo),
+                                                                  &freeEntry);
+                        if (findEntry)
+                            (*(int *)findEntry)++;
+                        else
+                            (*(int *)freeEntry) = 1;
+                    } else {
+                        void **freeEntry = nullptr;
+                        void **findEntry = Table::lookupReference(indirectTable,
+                                                                  key,
+                                                                  sizeof(instruction->m_belongsTo),
+                                                                  &freeEntry);
+                        if (findEntry)
+                            (*(int *)findEntry)++;
+                        else
+                            (*(int *)freeEntry) = 1;
+                    }
+                    k++;
+                }
+                currentState = currentState->m_parent;
+            }
+        }
+    }
+
     if (state->m_runState == kErrored)
         return;
+
     frame->m_instructions = nextInstruction;
 }
 
@@ -705,6 +707,9 @@ void ProfileState::dump(SourceRange source, ProfileState *profileState) {
             OpenRange::dropRecord(&openRangeHead);
             u::fprint(dump, "</span>");
         }
+        // Skip any preceding
+        while (currentEntryIndex < numRecords && recordEntries[currentEntryIndex].m_textFrom < currentCharacter)
+            currentEntryIndex++;
         // Open any new
         while (currentEntryIndex < numRecords && recordEntries[currentEntryIndex].m_textFrom == currentCharacter) {
             OpenRange::pushRecord(&openRangeHead, &recordEntries[currentEntryIndex]);
