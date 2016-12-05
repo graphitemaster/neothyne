@@ -49,6 +49,8 @@ struct FileRange {
     static void recordEnd(char *text, FileRange *range);
 };
 
+size_t djb2(const char *str, size_t length);
+
 }
 
 #endif

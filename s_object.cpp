@@ -10,15 +10,6 @@
 
 namespace s {
 
-static inline size_t djb2(const char *str, size_t length) {
-    size_t hash = 5381;
-    for (size_t i = 0; i < length; i++) {
-        int ch = str[i];
-        hash = ((hash << 5) + hash) + ch;
-    }
-    return hash;
-}
-
 ///! Table
 void **Table::lookupReference(Table *table, const char *key, size_t keyLength) {
     U_ASSERT(key);

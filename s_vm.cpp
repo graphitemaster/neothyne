@@ -76,16 +76,6 @@ void VM::error(State *state, const char *fmt, ...) {
 // TODO: move to State object
 static int gCycleCount = 0;
 
-// TODO: move to utils?
-static inline size_t djb2(const char *str, size_t length) {
-    size_t hash = 5381;
-    for (size_t i = 0; i < length; i++) {
-        int ch = str[i];
-        hash = ((hash << 5) + hash) + ch;
-    }
-    return hash;
-}
-
 // TODO: make a console variable?
 static constexpr long long kSampleStrideSize = 100000LL; // 0.1ms
 
