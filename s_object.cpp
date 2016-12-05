@@ -58,16 +58,20 @@ void **Table::lookupReference(Table *table, const char *key, size_t keyLength) {
 }
 
 void **Table::lookupReference(Table *table, const char *key, size_t keyLength, void ***first) {
+    const size_t keyHash = table->m_fieldsNum ? djb2(key, keyLength) : 0;
+    return lookupReference(table, keyHash, key, keyLength, first);
+}
+
+void **Table::lookupReference(Table *table, size_t keyHash, const char *key, size_t keyLength, void ***first) {
     U_ASSERT(key);
     *first = nullptr;
     size_t fieldsNum = table->m_fieldsNum;
     size_t fieldsMask = fieldsNum - 1;
-    size_t base = fieldsNum ? djb2(key, keyLength) : 0;
     size_t newLength = 4;
     if (fieldsNum != 0) {
         Field *free = nullptr;
         for (size_t i = 0; i < fieldsNum; i++) {
-            size_t bin = (base + i) & fieldsMask;
+            size_t bin = (keyHash + i) & fieldsMask;
             Field *field = &table->m_fields[bin];
             if (field->m_name
                 && field->m_nameLength == keyLength

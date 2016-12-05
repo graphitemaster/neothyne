@@ -20,6 +20,9 @@ struct VM {
     static void error(State *state, const char *fmt, ...);
 
 private:
+    static void recordProfile(State *state);
+    static long long getClockDifference(struct timespec *targetClock,
+                                        struct timespec *compareClock);
     static void step(State *state, void **arguments);
 };
 

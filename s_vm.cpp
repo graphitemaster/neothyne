@@ -76,6 +76,101 @@ void VM::error(State *state, const char *fmt, ...) {
 // TODO: move to State object
 static int gCycleCount = 0;
 
+// TODO: move to utils?
+static inline size_t djb2(const char *str, size_t length) {
+    size_t hash = 5381;
+    for (size_t i = 0; i < length; i++) {
+        int ch = str[i];
+        hash = ((hash << 5) + hash) + ch;
+    }
+    return hash;
+}
+
+// TODO: make a console variable?
+static constexpr long long kSampleStrideSize = 100000LL; // 0.1ms
+
+long long VM::getClockDifference(struct timespec *targetClock,
+                                 struct timespec *compareClock)
+{
+    struct timespec sentinel;
+    if (!targetClock) targetClock = &sentinel;
+    const int result = clock_gettime(CLOCK_MONOTONIC, targetClock);
+    if (result != 0) { *(volatile int *)0 = 0; }; // TODO: better handling is monotonic is not supported?
+    const long nsDifference = targetClock->tv_nsec - compareClock->tv_nsec;
+    const int sDifference = targetClock->tv_sec - compareClock->tv_sec;
+    return (long long)sDifference * 1000000000LL + (long long)nsDifference;
+}
+
+void VM::recordProfile(State *state) {
+    state->m_profileState->m_nextCheck = gCycleCount + 1024;
+    struct timespec profileTime;
+    long long nsDifference = getClockDifference(&profileTime, &state->m_profileState->m_lastTime);
+    if (nsDifference > kSampleStrideSize) {
+        state->m_profileState->m_lastTime = profileTime;
+        Table *directTable = &state->m_profileState->m_directTable;
+        Table *indirectTable = &state->m_profileState->m_indirectTable;
+        int innerRange = 0;
+        int outerRange = 0;
+        size_t bloomFilter = 0;
+        for (State *currentState = state; currentState; currentState = currentState->m_parent) {
+            for (int i = currentState->m_length - 1; i >= 0; --i, ++innerRange) {
+                CallFrame *currentFrame = &currentState->m_stack[i];
+                Instruction *currentInstruction = currentFrame->m_instructions;
+                const char *keyData = (char *)&currentInstruction->m_belongsTo;
+                const size_t keyLength = sizeof currentInstruction->m_belongsTo;
+                const size_t keyHash = djb2(keyData, keyLength);
+                if (innerRange == 0) {
+                    void **freeField = nullptr;
+                    void **findField = Table::lookupReference(directTable,
+                                                              keyHash,
+                                                              keyData,
+                                                              keyLength,
+                                                              &freeField);
+                    if (findField)
+                        (*(int *)findField)++;
+                    else
+                        (*(int *)freeField) = 1;
+                }
+                // Don't count ranges again if we've seen them before; this is
+                // possible because of recursion
+                bool alreadyCounted = false;
+                if ((bloomFilter & keyHash) == keyHash) {
+                    // We've potentially seen this range before
+                    outerRange = 0;
+                    for (State *search = state; search; search = search->m_parent) {
+                        for (int l = search->m_length - 1; l >= 0; --l, ++outerRange) {
+                            if (outerRange == innerRange)
+                                goto leaveOuterRange;
+                            if (currentInstruction->m_belongsTo ==
+                                search->m_stack[l].m_instructions->m_belongsTo)
+                            {
+                                alreadyCounted = true;
+                                goto leaveOuterRange;
+                            }
+                        }
+                    }
+                }
+leaveOuterRange:
+                if (!alreadyCounted) {
+                    bloomFilter |= keyHash;
+                    void **freeField = nullptr;
+                    void **findField = Table::lookupReference(indirectTable,
+                                                              keyHash,
+                                                              keyData,
+                                                              keyLength,
+                                                              &freeField);
+                    if (findField)
+                        (*(int *)findField)++;
+                    else
+                        (*(int *)freeField) = 1;
+                }
+            }
+            // TODO backoff profiling samples if it's slowing us down too much
+            // and adding noise
+        }
+    }
+}
+
 void VM::step(State *state, void **preallocatedArguments) {
     Object *root = state->m_root;
     CallFrame *frame = &state->m_stack[state->m_length - 1];
@@ -463,55 +558,8 @@ void VM::step(State *state, void **preallocatedArguments) {
         break;
     }
 
-    if (U_UNLIKELY(state->m_profileState && gCycleCount > state->m_profileState->m_nextCheck)) {
-        state->m_profileState->m_nextCheck = gCycleCount + 1024;
-        struct timespec profileTime;
-        const int result = clock_gettime(CLOCK_MONOTONIC, &profileTime);
-        if (result != 0)
-            U_ASSERT(0 && "failed to profile");
-        const long nsDifference = profileTime.tv_nsec - state->m_profileState->m_lastTime.tv_nsec;
-        const int sDifference = profileTime.tv_sec - state->m_profileState->m_lastTime.tv_sec;
-        const long long nsTotalDifference = (long long)sDifference * 1000000000LL + (long long)nsDifference;
-        if (nsTotalDifference > 100000LL) {
-            // 0.1ms spent on this operation: mark it as a hot spot
-            state->m_profileState->m_lastTime = profileTime;
-            Table *directTable = &state->m_profileState->m_directTable;
-            Table *indirectTable = &state->m_profileState->m_indirectTable;
-            int k = 0;
-            for (State *currentState = state; currentState; ) {
-                for (int i = currentState->m_length - 1; i >= 0; --i) {
-                    CallFrame *currentFrame = &currentState->m_stack[i];
-                    Instruction *instruction = currentFrame->m_instructions;
-                    // Ranges are always unique and instructions live as long as the state lives
-                    // so the pointer inside the instruction can be safely used as a key
-                    const char *key = (char *)&instruction->m_belongsTo;
-                    if (k == 0) {
-                        void **freeEntry = nullptr;
-                        void **findEntry = Table::lookupReference(directTable,
-                                                                  key,
-                                                                  sizeof(instruction->m_belongsTo),
-                                                                  &freeEntry);
-                        if (findEntry)
-                            (*(int *)findEntry)++;
-                        else
-                            (*(int *)freeEntry) = 1;
-                    } else {
-                        void **freeEntry = nullptr;
-                        void **findEntry = Table::lookupReference(indirectTable,
-                                                                  key,
-                                                                  sizeof(instruction->m_belongsTo),
-                                                                  &freeEntry);
-                        if (findEntry)
-                            (*(int *)findEntry)++;
-                        else
-                            (*(int *)freeEntry) = 1;
-                    }
-                    k++;
-                }
-                currentState = currentState->m_parent;
-            }
-        }
-    }
+    if (U_UNLIKELY(state->m_profileState && gCycleCount > state->m_profileState->m_nextCheck))
+        recordProfile(state);
 
     if (state->m_runState == kErrored)
         return;
@@ -694,7 +742,10 @@ void ProfileState::dump(SourceRange source, ProfileState *profileState) {
     u::fprint(dump, "<!DOCTYPE html>\n");
     u::fprint(dump, "<html>\n");
     u::fprint(dump, "<head>\n");
-    u::fprint(dump, "<style>span { border: 1px solid gray60; }</style>\n");
+    u::fprint(dump, "<style>\n");
+    u::fprint(dump, "span { border: 1px solid gray60; }\n");
+    u::fprint(dump, "body { background-color: white; }\n");
+    u::fprint(dump, "</style>\n");
     u::fprint(dump, "</head>\n");
     u::fprint(dump, "<body>\n");
     u::fprint(dump, "<pre>\n");

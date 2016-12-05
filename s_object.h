@@ -37,6 +37,7 @@ struct Field {
 struct Table {
     static void **lookupReference(Table *table, const char *key, size_t keyLength);
     static void **lookupReference(Table *table, const char *key, size_t keyLength, void ***first);
+    static void **lookupReference(Table *table, size_t keyHash, const char *key, size_t keyLength, void ***first);
 
     static void *lookup(Table *table, const char *key, size_t keyLength, bool *found);
 

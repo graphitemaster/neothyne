@@ -9,27 +9,35 @@
 namespace s {
 
 char text[] = R"(
-fn foo(oh) {
-    if (oh > 10) {
-        let s1 = 0;
-        let s2 = 1;
-        let a = 0;
-        while (a < 100) {
-            let b = 0;
-            while (b < 1000) {
-                s1 = s1 + 1;
-                s2 = s2 * s1;
-                b = b + 1;
-            }
-            a = a + 1;
-        }
-        print(s);
-    } else {
-        return foo(oh + 1);
-    }
-    return 1;
+fn ack(m, n) {
+    if (m == 0) return n + 1;
+    if (n == 0) return ack(m - 1, 1);
+    return ack(m - 1, ack(m, n - 1));
 }
-foo(0);
+
+ack(3, 4);
+
+let Class = {
+    a = 0
+};
+
+let Subclass = new Class {
+    b = 0,
+    test = method() {
+        print("a + b = ", this.a + this.b);
+    }
+};
+
+let obj = new Subclass;
+obj.a = 5;
+obj.b = 8;
+
+let i = 0;
+while (i < 4096) {
+    obj.test();
+    i = i + 1;
+}
+
 )";
 
 void test() {
