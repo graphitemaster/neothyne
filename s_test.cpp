@@ -17,26 +17,25 @@ fn ack(m, n) {
 
 ack(3, 4);
 
-let Class = {
-    a = 0
-};
+fn factorial(x) {
+    if (x == 1) return x;
+    return x * factorial(x - 1);
+}
 
-let Subclass = new Class {
-    b = 0,
-    test = method() {
-        print("a + b = ", this.a + this.b);
-    }
-};
+factorial(4096);
 
-let obj = new Subclass;
-obj.a = 5;
-obj.b = 8;
+fn mod(a, b) {
+    return a-(a/b*b);
+}
 
 let i = 0;
+let j = 1;
 while (i < 4096) {
-    obj.test();
+    print(mod(i, j));
     i = i + 1;
+    j = j + i;
 }
+
 
 )";
 
