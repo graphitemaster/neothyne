@@ -102,7 +102,6 @@ long long VM::getClockDifference(struct timespec *targetClock,
 }
 
 void VM::recordProfile(State *state) {
-    state->m_profileState->m_nextCheck = gCycleCount + 1024;
     struct timespec profileTime;
     long long nsDifference = getClockDifference(&profileTime, &state->m_profileState->m_lastTime);
     if (nsDifference > kSampleStrideSize) {
@@ -110,8 +109,6 @@ void VM::recordProfile(State *state) {
         Table *directTable = &state->m_profileState->m_directTable;
         Table *indirectTable = &state->m_profileState->m_indirectTable;
         int innerRange = 0;
-        int outerRange = 0;
-        size_t bloomFilter = 0;
         for (State *currentState = state; currentState; currentState = currentState->m_parent) {
             for (int i = currentState->m_length - 1; i >= 0; --i, ++innerRange) {
                 CallFrame *currentFrame = &currentState->m_stack[i];
@@ -130,29 +127,7 @@ void VM::recordProfile(State *state) {
                         (*(int *)findField)++;
                     else
                         (*(int *)freeField) = 1;
-                }
-                // Don't count ranges again if we've seen them before; this is
-                // possible because of recursion
-                bool alreadyCounted = false;
-                if ((bloomFilter & keyHash) == keyHash) {
-                    // We've potentially seen this range before
-                    outerRange = 0;
-                    for (State *search = state; search; search = search->m_parent) {
-                        for (int l = search->m_length - 1; l >= 0; --l, ++outerRange) {
-                            if (outerRange == innerRange)
-                                goto leaveOuterRange;
-                            if (currentInstruction->m_belongsTo ==
-                                search->m_stack[l].m_instructions->m_belongsTo)
-                            {
-                                alreadyCounted = true;
-                                goto leaveOuterRange;
-                            }
-                        }
-                    }
-                }
-leaveOuterRange:
-                if (!alreadyCounted) {
-                    bloomFilter |= keyHash;
+                } else if (currentInstruction->m_belongsTo->m_lastCycleSeen != gCycleCount) {
                     void **freeField = nullptr;
                     void **findField = Table::lookupReference(indirectTable,
                                                               keyHash,
@@ -164,6 +139,7 @@ leaveOuterRange:
                     else
                         (*(int *)freeField) = 1;
                 }
+                currentInstruction->m_belongsTo->m_lastCycleSeen = gCycleCount;
             }
             // TODO backoff profiling samples if it's slowing us down too much
             // and adding noise
@@ -448,7 +424,7 @@ void VM::step(State *state, void **preallocatedArguments) {
         nextInstruction = (Instruction *)(closeObject + 1);
         BREAK;
 
-    case kCall: BEGIN
+    case kCall: {
         I(call, Instruction::Call);
 
         Slot functionSlot = call->m_functionSlot;
@@ -496,6 +472,23 @@ void VM::step(State *state, void **preallocatedArguments) {
             neoFree(arguments);
 
         nextInstruction = (Instruction *)(call + 1);
+
+        // Ugly hack for sample accurate profiling
+        if (state->m_length == previousStackLength && nextInstruction->m_type == kSaveResult) {
+            instruction = nextInstruction;
+            // fall straight into kSaveResult
+        } else {
+            break;
+        }
+    }
+
+    case kSaveResult: BEGIN
+        I(saveResult, Instruction::SaveResult);
+        Slot saveSlot = saveResult->m_targetSlot;
+        VM_ASSERT(saveSlot < frame->m_count, "slot addressing error");
+        frame->m_slots[saveSlot] = state->m_result;
+        state->m_result = nullptr;
+        nextInstruction = (Instruction *)(saveResult + 1);
         BREAK;
 
     case kReturn: BEGIN
@@ -507,15 +500,6 @@ void VM::step(State *state, void **preallocatedArguments) {
         delFrame(state);
         state->m_result = result;
         nextInstruction = (Instruction *)(ret + 1);
-        BREAK;
-
-    case kSaveResult: BEGIN
-        I(saveResult, Instruction::SaveResult);
-        Slot saveSlot = saveResult->m_targetSlot;
-        VM_ASSERT(saveSlot < frame->m_count, "slot addressing error");
-        frame->m_slots[saveSlot] = state->m_result;
-        state->m_result = nullptr;
-        nextInstruction = (Instruction *)(saveResult + 1);
         BREAK;
 
     case kBranch: BEGIN
@@ -558,8 +542,10 @@ void VM::step(State *state, void **preallocatedArguments) {
         break;
     }
 
-    if (U_UNLIKELY(state->m_profileState && gCycleCount > state->m_profileState->m_nextCheck))
+    if (U_UNLIKELY(state->m_profileState && gCycleCount > state->m_profileState->m_nextCheck)) {
+        state->m_profileState->m_nextCheck = gCycleCount + 1021;
         recordProfile(state);
+    }
 
     if (state->m_runState == kErrored)
         return;
@@ -743,14 +729,14 @@ void ProfileState::dump(SourceRange source, ProfileState *profileState) {
     u::fprint(dump, "<html>\n");
     u::fprint(dump, "<head>\n");
     u::fprint(dump, "<style>\n");
-    u::fprint(dump, "span { border: 1px solid gray60; }\n");
-    u::fprint(dump, "body { background-color: white; }\n");
+    u::fprint(dump, "span { position: relative; }\n");
     u::fprint(dump, "</style>\n");
     u::fprint(dump, "</head>\n");
     u::fprint(dump, "<body>\n");
     u::fprint(dump, "<pre>\n");
 
     char *currentCharacter = source.m_begin;
+    int spanIndex = 100000;
     size_t currentEntryIndex = 0;
     while (currentCharacter != source.m_end) {
         // Close all
@@ -778,16 +764,27 @@ void ProfileState::dump(SourceRange source, ProfileState *profileState) {
             int samplesDirect = samplesDirectSearch ? *samplesDirectSearch : 0;
             int samplesIndirect = samplesIndirectSearch ? *samplesIndirectSearch : 0;
             double percentDirect = (samplesDirect * 100.0) / sumSamplesDirect;
-            double percentIndirect = (samplesIndirect * 100.0) / sumSamplesIndirect;
             int hexDirect = 255 - (samplesDirect * 255LL) / maxSamplesDirect;
-            int weightIndirect = 100 + (samplesIndirect * 800UL) / maxSamplesIndirect;
-            float borderIndirect = samplesIndirect * 3.0 / maxSamplesIndirect;
-            int fontSizeIndirect = 100 + (samplesIndirect * 10LL) / maxSamplesIndirect;
-
+            double percentIndirect = (samplesIndirect * 100.0) / sumSamplesDirect;
+            int weightIndirect = 100 + 100 * ((samplesIndirect * 8LL) / sumSamplesDirect);
+            float borderIndirect = samplesIndirect * 3.0 / sumSamplesDirect;
+            int fontSizeIndirect = 100 + (samplesIndirect * 10LL) / sumSamplesDirect;
+            int borderColumnIndirect = 15 - (int)(15 * ((borderIndirect < 1) ? borderIndirect : 1));
             u::fprint(dump, "<span title=\"%.2f%% active, %.2f%% in backtrace\""
-                " style=\"background-color:#ff%02x%02x;font-weight:%i;border-bottom:%fpx solid black;font-size:%i%%;\">",
-                percentDirect, percentIndirect,
-                hexDirect, hexDirect, weightIndirect, borderIndirect, fontSizeIndirect);
+                " style =\"",
+                percentDirect,
+                percentIndirect);
+            if (hexDirect <= 250)
+                u::fprint(dump, "background-color:#ff%02x%02x;", hexDirect, hexDirect);
+            u::fprint(dump, "font-weight:%d; border-bottom:%fpx solid #%1x%1x%1x; font-size: %d%%;",
+                weightIndirect,
+                borderIndirect,
+                borderColumnIndirect,
+                borderColumnIndirect,
+                borderColumnIndirect,
+                fontSizeIndirect);
+            u::fprint(dump, "z-index: %d;", --spanIndex);
+            u::fprint(dump, "\">");
             currentEntryIndex++;
         }
         // Close all the zero size ones

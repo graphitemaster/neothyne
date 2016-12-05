@@ -43,6 +43,7 @@ struct FileRange {
     int m_colFrom;
     int m_rowTo;
     int m_colTo;
+    int m_lastCycleSeen;
 
     static void recordStart(char *text, FileRange *range);
     static void recordEnd(char *text, FileRange *range);
