@@ -40,47 +40,56 @@ while (i < 4096) {
 )";
 
 void test() {
-    State state;
-    memset(&state, 0, sizeof state);
-    state.m_gc = (GCState *)neoCalloc(sizeof *state.m_gc, 1);
-    state.m_profileState = (ProfileState *)neoCalloc(sizeof *state.m_profileState, 1);
+    // Allocate Neo state
+    State state = { };
+    state.m_shared = (SharedState *)neoCalloc(sizeof *state.m_shared, 1);
 
+    // Initialize garbage collector
+    GC::init(&state);
+
+    // Create a frame on the VM to execute the root object construction
     VM::addFrame(&state, 0);
     Object *root = createRoot(&state);
     VM::delFrame(&state);
 
     char *contents = text;
 
+    // Create the pinning set for the GC
     RootSet set;
     GC::addRoots(&state, &root, 1, &set);
 
+    // Specify the source contents
     SourceRange source;
     source.m_begin = contents;
     source.m_end = contents + sizeof text;
     SourceRecord::registerSource(source, "test", 0, 0);
 
+    // Parse the result into our module
     UserFunction *module;
     char *text = source.m_begin;
     ParseResult result = Parser::parseModule(&text, &module);
     (void)result;
     if (result == kParseOk) {
-        //U_ASSERT(result == kParseOk);
-        //UserFunction::dump(module, 0);
-
+        // Execute the result on the VM
         VM::callFunction(&state, root, module, nullptr, 0);
         VM::run(&state);
 
-        // dump the profile
-        ProfileState::dump(source, state.m_profileState);
+        // Export the profile of the code
+        ProfileState::dump(source, &state.m_shared->m_profileState);
 
-        // print any errors from running
-        if (state.m_runState == kErrored)
+        // Did we error out while running?
+        if (state.m_runState == kErrored) {
             u::Log::err("%s\n", state.m_error);
+        }
     }
 
+    // Tear down the objects represented by this set
     GC::delRoots(&state, &set);
+
+    // Reclaim memory
     GC::run(&state);
 
+    // Destroy the function
     neoFree(module);
 }
 

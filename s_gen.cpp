@@ -120,6 +120,7 @@ Slot Gen::addNewIntObject(Gen *gen, Slot, int value) {
     newIntObject.m_belongsTo = nullptr;
     newIntObject.m_targetSlot = gen->m_slot++;
     newIntObject.m_value = value;
+    newIntObject.m_intObject = nullptr;
     addInstruction(gen, sizeof newIntObject, (Instruction *)&newIntObject);
     return gen->m_slot - 1;
 }
@@ -130,6 +131,7 @@ Slot Gen::addNewFloatObject(Gen *gen, Slot, float value) {
     newFloatObject.m_belongsTo = nullptr;
     newFloatObject.m_targetSlot = gen->m_slot++;
     newFloatObject.m_value = value;
+    newFloatObject.m_floatObject = nullptr;
     addInstruction(gen, sizeof newFloatObject, (Instruction *)&newFloatObject);
     return gen->m_slot - 1;
 }
@@ -149,6 +151,7 @@ Slot Gen::addNewStringObject(Gen *gen, Slot, const char *value) {
     newStringObject.m_belongsTo = nullptr;
     newStringObject.m_targetSlot = gen->m_slot++;
     newStringObject.m_value = value;
+    newStringObject.m_stringObject = nullptr;
     addInstruction(gen, sizeof newStringObject, (Instruction *)&newStringObject);
     return gen->m_slot - 1;
 }

@@ -73,10 +73,7 @@ void VM::error(State *state, const char *fmt, ...) {
 #define BEGIN {
 #define BREAK } break
 
-// TODO: move to State object
-static int gCycleCount = 0;
-
-// TODO: make a console variable?
+// TODO: make a console variable
 static constexpr long long kSampleStrideSize = 100000LL; // 0.1ms
 
 long long VM::getClockDifference(struct timespec *targetClock,
@@ -93,11 +90,11 @@ long long VM::getClockDifference(struct timespec *targetClock,
 
 void VM::recordProfile(State *state) {
     struct timespec profileTime;
-    long long nsDifference = getClockDifference(&profileTime, &state->m_profileState->m_lastTime);
+    long long nsDifference = getClockDifference(&profileTime, &state->m_shared->m_profileState.m_lastTime);
     if (nsDifference > kSampleStrideSize) {
-        state->m_profileState->m_lastTime = profileTime;
-        Table *directTable = &state->m_profileState->m_directTable;
-        Table *indirectTable = &state->m_profileState->m_indirectTable;
+        state->m_shared->m_profileState.m_lastTime = profileTime;
+        Table *directTable = &state->m_shared->m_profileState.m_directTable;
+        Table *indirectTable = &state->m_shared->m_profileState.m_indirectTable;
         int innerRange = 0;
         for (State *currentState = state; currentState; currentState = currentState->m_parent) {
             for (int i = currentState->m_length - 1; i >= 0; --i, ++innerRange) {
@@ -117,7 +114,7 @@ void VM::recordProfile(State *state) {
                         (*(int *)findField)++;
                     else
                         (*(int *)freeField) = 1;
-                } else if (currentInstruction->m_belongsTo->m_lastCycleSeen != gCycleCount) {
+                } else if (currentInstruction->m_belongsTo->m_lastCycleSeen != state->m_shared->m_cycleCount) {
                     void **freeField = nullptr;
                     void **findField = Table::lookupReference(indirectTable,
                                                               keyHash,
@@ -129,7 +126,7 @@ void VM::recordProfile(State *state) {
                     else
                         (*(int *)freeField) = 1;
                 }
-                currentInstruction->m_belongsTo->m_lastCycleSeen = gCycleCount;
+                currentInstruction->m_belongsTo->m_lastCycleSeen = state->m_shared->m_cycleCount;
             }
             // TODO backoff profiling samples if it's slowing us down too much
             // and adding noise
@@ -137,11 +134,12 @@ void VM::recordProfile(State *state) {
     }
 }
 
-void VM::step(State *state, void **preallocatedArguments) {
+void VM::step(State *state) {
     Object *root = state->m_root;
     CallFrame *frame = &state->m_stack[state->m_length - 1];
 
-    gCycleCount++;
+    state->m_shared->m_cycleCount++;
+
     Instruction *instruction = frame->m_instructions;
     Instruction *nextInstruction = nullptr;
     switch (instruction->m_type) {
@@ -225,13 +223,11 @@ void VM::step(State *state, void **preallocatedArguments) {
                     keyObject = Object::newString(state, accessStringKey->m_key);
 
                 // setup another virtual machine to place this call
-                State substate;
-                memset(&substate, 0, sizeof substate);
+                State substate = { };
 
                 substate.m_parent = state;
                 substate.m_root = state->m_root;
-                substate.m_gc = state->m_gc;
-                substate.m_profileState = state->m_profileState;
+                substate.m_shared = state->m_shared;
 
                 if (functionIndexOperation)
                     functionIndexOperation->m_function(&substate, object, indexOperation, &keyObject, 1);
@@ -241,7 +237,7 @@ void VM::step(State *state, void **preallocatedArguments) {
                 run(&substate);
                 VM_ASSERT(substate.m_runState != kErrored, "overload failed '[]' %s", &substate.m_error[0]);
 
-                frame->m_slots[targetSlot] = substate.m_result;
+                frame->m_slots[targetSlot] = substate.m_resultValue;
 
                 objectFound = true;
             }
@@ -363,7 +359,12 @@ void VM::step(State *state, void **preallocatedArguments) {
         Slot targetSlot = newIntObject->m_targetSlot;
         int value = newIntObject->m_value;
         VM_ASSERT(targetSlot < frame->m_count, "slot addressing error");
-        frame->m_slots[targetSlot] = Object::newInt(state, value);
+        if (U_UNLIKELY(!newIntObject->m_intObject)) {
+            Object *object = Object::newInt(state, value);
+            newIntObject->m_intObject = object;
+            GC::addPermanent(state, object);
+        }
+        frame->m_slots[targetSlot] = newIntObject->m_intObject;
         nextInstruction = (Instruction *)(newIntObject + 1);
     BREAK;
 
@@ -381,7 +382,9 @@ void VM::step(State *state, void **preallocatedArguments) {
         I(newArrayObject, Instruction::NewArrayObject);
         Slot targetSlot = newArrayObject->m_targetSlot;
         VM_ASSERT(targetSlot < frame->m_count, "slot addressing error");
-        frame->m_slots[targetSlot] = Object::newArray(state, nullptr, 0);
+        frame->m_slots[targetSlot] = Object::newArray(state,
+                                                      nullptr,
+                                                      (IntObject *)state->m_shared->m_valueCache.m_intZero);
         nextInstruction = (Instruction *)(newArrayObject + 1);
     BREAK;
 
@@ -390,7 +393,12 @@ void VM::step(State *state, void **preallocatedArguments) {
         Slot targetSlot = newStringObject->m_targetSlot;
         const char *value = newStringObject->m_value;
         VM_ASSERT(targetSlot < frame->m_count, "slot addressing error");
-        frame->m_slots[targetSlot] = Object::newString(state, value);
+        if (U_UNLIKELY(!newStringObject->m_stringObject)) {
+            Object *object = Object::newString(state, value);
+            newStringObject->m_stringObject = object;
+            GC::addPermanent(state, object);
+        }
+        frame->m_slots[targetSlot] = newStringObject->m_stringObject;
         nextInstruction = (Instruction *)(newStringObject + 1);
     BREAK;
 
@@ -420,7 +428,7 @@ void VM::step(State *state, void **preallocatedArguments) {
         Slot functionSlot = call->m_functionSlot;
         Slot thisSlot = call->m_thisSlot;
 
-        size_t count = call->m_count;
+        const size_t argumentsLength = call->m_count;
 
         VM_ASSERT(functionSlot < frame->m_count, "slot addressing error");
         VM_ASSERT(thisSlot < frame->m_count, "slot addressing error");
@@ -434,14 +442,17 @@ void VM::step(State *state, void **preallocatedArguments) {
         FunctionObject *functionObject = (FunctionObject *)Object::instanceOf(funObject, functionBase);
         ClosureObject *closureObject = (ClosureObject *)Object::instanceOf(funObject, closureBase);
 
-        VM_ASSERT(functionObject || closureObject,
-            "object isn't callable");
+        VM_ASSERT(functionObject || closureObject, "object isn't callable");
 
-        Object **arguments = count < 10
-            ? (Object **)preallocatedArguments[count]
-            : (Object **)neoMalloc(sizeof(Object *) * count);
+        Object **arguments = nullptr;
+        if (argumentsLength < 10) {
+            arguments = state->m_shared->m_valueCache.m_preallocatedArguments[argumentsLength];
+        } else {
+            arguments = (Object **)neoMalloc(sizeof(Object *) * argumentsLength);
+        }
 
-        for (size_t i = 0; i < count; i++) {
+        // Copy all arguments into the functions frame
+        for (size_t i = 0; i < argumentsLength; i++) {
             Slot argumentSlot = call->m_arguments[i];
             VM_ASSERT(argumentSlot < frame->m_count, "slot addressing error");
             arguments[i] = frame->m_slots[argumentSlot];
@@ -449,17 +460,21 @@ void VM::step(State *state, void **preallocatedArguments) {
 
         size_t previousStackLength = state->m_length;
 
-        if (functionObject)
-            functionObject->m_function(state, thisObject, funObject, arguments, count);
-        else
-            closureObject->m_function(state, thisObject, funObject, arguments, count);
+        if (functionObject) {
+            functionObject->m_function(state, thisObject, funObject, arguments, argumentsLength);
+        } else {
+            closureObject->m_function(state, thisObject, funObject, arguments, argumentsLength);
+        }
 
         // m_function may have triggered a stack reallocation which means a different
         // frame location
         frame = (CallFrame *)&state->m_stack[previousStackLength - 1];
 
-        if (count >= 10)
+        // was allocated to place the call since the preallocated arena is not
+        // large enough to deal with that many argumets
+        if (argumentsLength >= 10) {
             neoFree(arguments);
+        }
 
         nextInstruction = (Instruction *)(call + 1);
 
@@ -476,8 +491,8 @@ void VM::step(State *state, void **preallocatedArguments) {
         I(saveResult, Instruction::SaveResult);
         Slot saveSlot = saveResult->m_targetSlot;
         VM_ASSERT(saveSlot < frame->m_count, "slot addressing error");
-        frame->m_slots[saveSlot] = state->m_result;
-        state->m_result = nullptr;
+        frame->m_slots[saveSlot] = state->m_resultValue;
+        state->m_resultValue = nullptr;
         nextInstruction = (Instruction *)(saveResult + 1);
         BREAK;
 
@@ -488,7 +503,7 @@ void VM::step(State *state, void **preallocatedArguments) {
         Object *result = frame->m_slots[returnSlot];
         GC::delRoots(state, &frame->m_root);
         delFrame(state);
-        state->m_result = result;
+        state->m_resultValue = result;
         nextInstruction = (Instruction *)(ret + 1);
         BREAK;
 
@@ -532,33 +547,43 @@ void VM::step(State *state, void **preallocatedArguments) {
         break;
     }
 
-    if (U_UNLIKELY(state->m_profileState && gCycleCount > state->m_profileState->m_nextCheck)) {
-        state->m_profileState->m_nextCheck = gCycleCount + 1021;
+    if (U_UNLIKELY(state->m_shared->m_cycleCount > state->m_shared->m_profileState.m_nextCheck)) {
+        state->m_shared->m_profileState.m_nextCheck = state->m_shared->m_cycleCount + 1021;
         recordProfile(state);
     }
 
-    if (state->m_runState == kErrored)
+    if (state->m_runState == kErrored) {
         return;
+    }
 
     frame->m_instructions = nextInstruction;
 }
 
 void VM::run(State *state) {
     U_ASSERT(state->m_runState == kTerminated || state->m_runState == kErrored);
-    if (state->m_length == 0)
+    if (state->m_length == 0) {
         return;
+    }
     U_ASSERT(state->m_length);
     state->m_runState = kRunning;
     state->m_error.clear();
-    // preallocate space for 10 arguments to place function calls
-    void **arguments = (void **)neoMalloc(sizeof(void *) * 10);
-    for (size_t i = 0; i < 10; i++)
-        arguments[i] = neoMalloc(sizeof(Object *) * i);
-    while (state->m_runState == kRunning) {
-        step(state, arguments);
-        if (state->m_length == 0)
-            state->m_runState = kTerminated;
+    if (!state->m_shared->m_valueCache.m_preallocatedArguments) {
+        state->m_shared->m_valueCache.m_preallocatedArguments =
+            (Object ***)neoMalloc(sizeof(Object **) * 10);
+        for (size_t i = 0; i < 10; i++) {
+            state->m_shared->m_valueCache.m_preallocatedArguments[i] =
+                (Object **)neoMalloc(sizeof(Object *) * i);
+        }
     }
+    RootSet resultSet;
+    GC::addRoots(state, &state->m_resultValue, 1, &resultSet);
+    while (state->m_runState == kRunning) {
+        step(state);
+        if (state->m_length == 0) {
+            state->m_runState = kTerminated;
+        }
+    }
+    GC::delRoots(state, &resultSet);
 }
 
 void VM::callFunction(State *state, Object *context, UserFunction *function, Object **arguments, size_t count) {

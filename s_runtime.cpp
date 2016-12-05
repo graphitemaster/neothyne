@@ -16,7 +16,7 @@ static void boolNot(State *state, Object *self, Object *function, Object **argum
     (void)function;
     (void)arguments;
     VM_ASSERT(count == 0, "wrong number of parameters: expected 0, got %zu", count);
-    state->m_result = Object::newBool(state, !((BoolObject *)self)->m_value);
+    state->m_resultValue = Object::newBool(state, !((BoolObject *)self)->m_value);
 }
 
 /// [Int]
@@ -36,10 +36,10 @@ static void intMath(State *state, Object *self, Object *, Object **arguments, si
         int value1 = ((IntObject *)intObj1)->m_value;
         int value2 = ((IntObject *)intObj2)->m_value;
         switch (op) {
-        case kAdd: state->m_result = Object::newInt(state, value1 + value2); return;
-        case kSub: state->m_result = Object::newInt(state, value1 - value2); return;
-        case kMul: state->m_result = Object::newInt(state, value1 * value2); return;
-        case kDiv: state->m_result = Object::newInt(state, value1 / value2); return;
+        case kAdd: state->m_resultValue = Object::newInt(state, value1 + value2); return;
+        case kSub: state->m_resultValue = Object::newInt(state, value1 - value2); return;
+        case kMul: state->m_resultValue = Object::newInt(state, value1 * value2); return;
+        case kDiv: state->m_resultValue = Object::newInt(state, value1 / value2); return;
         }
     }
 
@@ -50,10 +50,10 @@ static void intMath(State *state, Object *self, Object *, Object **arguments, si
         float value1 = ((IntObject *)intObj1)->m_value;
         float value2 = ((FloatObject *)floatObj2)->m_value;
         switch (op) {
-        case kAdd: state->m_result = Object::newFloat(state, value1 + value2); return;
-        case kSub: state->m_result = Object::newFloat(state, value1 - value2); return;
-        case kMul: state->m_result = Object::newFloat(state, value1 * value2); return;
-        case kDiv: state->m_result = Object::newFloat(state, value1 / value2); return;
+        case kAdd: state->m_resultValue = Object::newFloat(state, value1 + value2); return;
+        case kSub: state->m_resultValue = Object::newFloat(state, value1 - value2); return;
+        case kMul: state->m_resultValue = Object::newFloat(state, value1 * value2); return;
+        case kDiv: state->m_resultValue = Object::newFloat(state, value1 / value2); return;
         }
     }
 
@@ -92,11 +92,11 @@ static void intCompare(State *state, Object *self, Object *, Object **arguments,
         int value1 = ((IntObject *)intObj1)->m_value;
         int value2 = ((IntObject *)intObj2)->m_value;
         switch (compare) {
-        case kEq: state->m_result = Object::newBool(state, value1 == value2); return;
-        case kLt: state->m_result = Object::newBool(state, value1 < value2); return;
-        case kGt: state->m_result = Object::newBool(state, value1 > value2); return;
-        case kLe: state->m_result = Object::newBool(state, value1 <= value2); return;
-        case kGe: state->m_result = Object::newBool(state, value1 >= value2); return;
+        case kEq: state->m_resultValue = Object::newBool(state, value1 == value2); return;
+        case kLt: state->m_resultValue = Object::newBool(state, value1 < value2); return;
+        case kGt: state->m_resultValue = Object::newBool(state, value1 > value2); return;
+        case kLe: state->m_resultValue = Object::newBool(state, value1 <= value2); return;
+        case kGe: state->m_resultValue = Object::newBool(state, value1 >= value2); return;
         }
     }
 
@@ -107,11 +107,11 @@ static void intCompare(State *state, Object *self, Object *, Object **arguments,
         float value1 = ((IntObject *)intObj1)->m_value;
         float value2 = ((FloatObject *)floatObj2)->m_value;
         switch (compare) {
-        case kEq: state->m_result = Object::newBool(state, value1 == value2); return;
-        case kLt: state->m_result = Object::newBool(state, value1 < value2); return;
-        case kGt: state->m_result = Object::newBool(state, value1 > value2); return;
-        case kLe: state->m_result = Object::newBool(state, value1 <= value2); return;
-        case kGe: state->m_result = Object::newBool(state, value1 >= value2); return;
+        case kEq: state->m_resultValue = Object::newBool(state, value1 == value2); return;
+        case kLt: state->m_resultValue = Object::newBool(state, value1 < value2); return;
+        case kGt: state->m_resultValue = Object::newBool(state, value1 > value2); return;
+        case kLe: state->m_resultValue = Object::newBool(state, value1 <= value2); return;
+        case kGe: state->m_resultValue = Object::newBool(state, value1 >= value2); return;
         }
     }
 
@@ -156,10 +156,10 @@ static void floatMath(State *state, Object *self, Object *, Object **arguments, 
     float value1 = ((FloatObject *)floatObj1)->m_value;
     float value2 = floatObj2 ? ((FloatObject *)floatObj2)->m_value : ((IntObject *)intObj2)->m_value;
     switch (op) {
-    case kAdd: state->m_result = Object::newFloat(state, value1 + value2); return;
-    case kSub: state->m_result = Object::newFloat(state, value1 - value2); return;
-    case kMul: state->m_result = Object::newFloat(state, value1 * value2); return;
-    case kDiv: state->m_result = Object::newFloat(state, value1 / value2); return;
+    case kAdd: state->m_resultValue = Object::newFloat(state, value1 + value2); return;
+    case kSub: state->m_resultValue = Object::newFloat(state, value1 - value2); return;
+    case kMul: state->m_resultValue = Object::newFloat(state, value1 * value2); return;
+    case kDiv: state->m_resultValue = Object::newFloat(state, value1 / value2); return;
     }
 
     U_UNREACHABLE();
@@ -198,11 +198,11 @@ static void floatCompare(State *state, Object *self, Object *, Object **argument
     float value1 = ((FloatObject *)floatObj1)->m_value;
     float value2 = floatObj2 ? ((FloatObject *)floatObj2)->m_value : ((IntObject *)intObj2)->m_value;
     switch (compare) {
-    case kEq: state->m_result = Object::newBool(state, value1 == value2); return;
-    case kLt: state->m_result = Object::newBool(state, value1 < value2); return;
-    case kGt: state->m_result = Object::newBool(state, value1 > value2); return;
-    case kLe: state->m_result = Object::newBool(state, value1 <= value2); return;
-    case kGe: state->m_result = Object::newBool(state, value1 >= value2); return;
+    case kEq: state->m_resultValue = Object::newBool(state, value1 == value2); return;
+    case kLt: state->m_resultValue = Object::newBool(state, value1 < value2); return;
+    case kGt: state->m_resultValue = Object::newBool(state, value1 > value2); return;
+    case kLe: state->m_resultValue = Object::newBool(state, value1 <= value2); return;
+    case kGe: state->m_resultValue = Object::newBool(state, value1 >= value2); return;
     }
 
     U_UNREACHABLE();
@@ -241,9 +241,10 @@ static void stringAdd(State *state, Object *self, Object *, Object **arguments, 
 
     VM_ASSERT(strObj1 && strObj2, "wrong type: expected string");
 
-    state->m_result = Object::newString(state,
-        u::format("%s%s", ((StringObject *)strObj1)->m_value,
-            ((StringObject *)strObj2)->m_value).c_str());
+    state->m_resultValue = Object::newString(state,
+                                             u::format("%s%s",
+                                                       ((StringObject *)strObj1)->m_value,
+                                                       ((StringObject *)strObj2)->m_value).c_str());
 }
 
 static void stringCompare(State *state, Object *self, Object *, Object **arguments, size_t count) {
@@ -261,7 +262,7 @@ static void stringCompare(State *state, Object *self, Object *, Object **argumen
     const char *str1 = ((StringObject *)strObj1)->m_value;
     const char *str2 = ((StringObject *)strObj2)->m_value;
 
-    state->m_result = Object::newBool(state, strcmp(str1, str2) == 0);
+    state->m_resultValue = Object::newBool(state, strcmp(str1, str2) == 0);
 }
 
 /// [Closure]
@@ -269,8 +270,9 @@ static void closureMark(State *state, Object *object) {
     Object *root = state->m_root;
     Object *closureBase = Object::lookup(root, "closure", nullptr);
     ClosureObject *closureObject = (ClosureObject*)Object::instanceOf(object, closureBase);
-    if (closureObject)
+    if (closureObject) {
         Object::mark(state, closureObject->m_context);
+    }
 }
 
 /// [Array]
@@ -279,8 +281,9 @@ static void arrayMark(State *state, Object *object) {
     Object *arrayBase = Object::lookup(root, "array", nullptr);
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(object, arrayBase);
     if (arrayObject) {
-        for (int i = 0; i < arrayObject->m_length; i++)
+        for (int i = 0; i < arrayObject->m_length; i++) {
             Object::mark(state, arrayObject->m_contents[i]);
+        }
     }
 }
 
@@ -309,7 +312,7 @@ static void arrayResize(State *state, Object *self, Object *, Object **arguments
 
     Object::setNormal(self, "length", Object::newInt(state, newSize));
 
-    state->m_result = self;
+    state->m_resultValue = self;
 }
 
 static void arrayPush(State *state, Object *self, Object *, Object **arguments, size_t count) {
@@ -329,7 +332,7 @@ static void arrayPush(State *state, Object *self, Object *, Object **arguments, 
 
     Object::setNormal(self, "length", Object::newInt(state, arrayObject->m_length));
 
-    state->m_result = self;
+    state->m_resultValue = self;
 }
 
 static void arrayPop(State *state, Object *self, Object *, Object **, size_t count) {
@@ -348,7 +351,7 @@ static void arrayPop(State *state, Object *self, Object *, Object **, size_t cou
 
     Object::setNormal(self, "length", Object::newInt(state, arrayObject->m_length));
 
-    state->m_result = result;
+    state->m_resultValue = result;
 }
 
 static void arrayIndex(State *state, Object *self, Object *, Object **arguments, size_t count) {
@@ -364,11 +367,11 @@ static void arrayIndex(State *state, Object *self, Object *, Object **arguments,
 
     if (intObject) {
         VM_ASSERT(arrayObject, "wrong type: expected array");
-        int index = intObject->m_value;
+        const int index = intObject->m_value;
         VM_ASSERT(index >= 0 && index < arrayObject->m_length, "index out of range");
-        state->m_result = arrayObject->m_contents[index];
+        state->m_resultValue = arrayObject->m_contents[index];
     } else {
-        state->m_result = nullptr;
+        state->m_resultValue = nullptr;
     }
 }
 
@@ -386,10 +389,10 @@ static void arrayIndexAssign(State *state, Object *self, Object *, Object **argu
     VM_ASSERT(arrayObject, "wrong type: expected array");
     VM_ASSERT(intObject, "wrong type: expected int");
 
-    int index = intObject->m_value;
+    const int index = intObject->m_value;
     VM_ASSERT(index >= 0 && index < arrayObject->m_length, "index out of range");
     arrayObject->m_contents[index] = arguments[1];
-    state->m_result = nullptr;
+    state->m_resultValue = nullptr;
 }
 
 static void print(State *state, Object *, Object *, Object **arguments, size_t count) {
@@ -424,7 +427,7 @@ static void print(State *state, Object *, Object *, Object **arguments, size_t c
         }
     }
     u::Log::out("\n");
-    state->m_result = nullptr;
+    state->m_resultValue = nullptr;
 }
 
 Object *createRoot(State *state) {
@@ -455,6 +458,12 @@ Object *createRoot(State *state) {
     boolObject->m_flags |= kNoInherit;
     Object::setNormal(root, "bool", boolObject);
     Object::setNormal(boolObject, "!", Object::newFunction(state, boolNot));
+    Object *trueObject = Object::newBoolUncached(state, true);
+    Object *falseObject = Object::newBoolUncached(state, false);
+    Object::setNormal(root, "true", trueObject);
+    Object::setNormal(root, "false", falseObject);
+    state->m_shared->m_valueCache.m_boolTrue = trueObject;
+    state->m_shared->m_valueCache.m_boolFalse = falseObject;
 
     // int
     Object *intObject = Object::newObject(state, nullptr);
@@ -469,6 +478,7 @@ Object *createRoot(State *state) {
     Object::setNormal(intObject, ">", Object::newFunction(state, intCompareGt));
     Object::setNormal(intObject, "<=", Object::newFunction(state, intCompareLe));
     Object::setNormal(intObject, ">=", Object::newFunction(state, intCompareGe));
+    state->m_shared->m_valueCache.m_intZero = Object::newInt(state, 0);
 
     // float
     Object *floatObject = Object::newObject(state, nullptr);

@@ -231,17 +231,17 @@ void Object::setNormal(Object *object, const char *key, Object *value) {
 }
 
 void *Object::allocate(State *state, size_t size) {
-    if (state->m_count > state->m_capacity) {
+    if (state->m_shared->m_gcState.m_numObjectsAllocated > state->m_shared->m_gcState.m_nextRun) {
         GC::run(state);
         // run gc after 20% growth or 10k elements
-        state->m_capacity = size_t(state->m_count * 1.2) + 10000;
+        state->m_shared->m_gcState.m_nextRun = (int)(state->m_shared->m_gcState.m_numObjectsAllocated * 1.5) + 10000;
     }
 
     Object *result = (Object *)neoCalloc(size, 1);
-    result->m_prev = state->m_last;
+    result->m_prev = state->m_shared->m_gcState.m_lastObjectAllocated;
     result->m_size = size;
-    state->m_last = result;
-    state->m_count++;
+    state->m_shared->m_gcState.m_lastObjectAllocated = result;
+    state->m_shared->m_gcState.m_numObjectsAllocated++;
 
     return result;
 }
@@ -269,13 +269,20 @@ Object *Object::newFloat(State *state, float value) {
     return (Object *)object;
 }
 
-Object *Object::newBool(State *state, bool value) {
+Object *Object::newBoolUncached(State *state, bool value) {
     Object *boolBase = lookup(state->m_root, "bool", nullptr);
     BoolObject *object = (BoolObject *)allocate(state, sizeof *object);
     object->m_parent = boolBase;
     object->m_flags = kImmutable | kClosed;
     object->m_value = value;
     return (Object *)object;
+}
+
+Object *Object::newBool(State *state, bool value) {
+    if (value) {
+        return state->m_shared->m_valueCache.m_boolTrue;
+    }
+    return state->m_shared->m_valueCache.m_boolFalse;
 }
 
 Object *Object::newString(State *state, const char *value) {
@@ -290,15 +297,13 @@ Object *Object::newString(State *state, const char *value) {
     return (Object *)object;
 }
 
-Object *Object::newArray(State *state, Object **contents, size_t length) {
+Object *Object::newArray(State *state, Object **contents, IntObject *length) {
     Object *arrayBase = lookup(state->m_root, "array", nullptr);
     ArrayObject *object = (ArrayObject *)allocate(state, sizeof *object);
     object->m_parent = arrayBase;
     object->m_contents = contents;
-    object->m_length = length;
-    GC::disable(state);
-    setNormal((Object *)object, "length", newInt(state, length));
-    GC::enable(state);
+    object->m_length = length->m_value;
+    setNormal((Object *)object, "length", (Object *)length);
     return (Object *)object;
 }
 

@@ -8,6 +8,7 @@ namespace s {
 using Slot = size_t;
 
 struct FileRange;
+struct Object;
 
 enum InstructionType {
     kInvalid = -1,
@@ -100,11 +101,13 @@ struct Instruction::NewObject : Instruction {
 struct Instruction::NewIntObject : Instruction {
     Slot m_targetSlot;
     int m_value;
+    Object *m_intObject;
 };
 
 struct Instruction::NewFloatObject : Instruction {
     Slot m_targetSlot;
     float m_value;
+    Object *m_floatObject;
 };
 
 struct Instruction::NewArrayObject : Instruction {
@@ -114,6 +117,7 @@ struct Instruction::NewArrayObject : Instruction {
 struct Instruction::NewStringObject : Instruction {
     Slot m_targetSlot;
     const char *m_value;
+    Object *m_stringObject;
 };
 
 struct Instruction::NewClosureObject : Instruction {

@@ -21,9 +21,11 @@ struct VM {
 
 private:
     static void recordProfile(State *state);
+
     static long long getClockDifference(struct timespec *targetClock,
                                         struct timespec *compareClock);
-    static void step(State *state, void **arguments);
+
+    static void step(State *state);
 };
 
 #define VM_ASSERT(CONDITION, ...) \

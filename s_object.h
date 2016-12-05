@@ -27,6 +27,7 @@ struct Table;
 struct RootSet;
 struct CallFrame;
 struct State;
+struct IntObject;
 
 struct Field {
     const char *m_name;
@@ -68,7 +69,8 @@ struct Object {
     static Object *newFloat(State *state, float value);
     static Object *newString(State *state, const char *value);
     static Object *newBool(State *state, bool value);
-    static Object *newArray(State *state, Object **data, size_t count);
+    static Object *newBoolUncached(State *state, bool value);
+    static Object *newArray(State *state, Object **data, IntObject *length);
     static Object *newFunction(State *state, FunctionPointer function);
     static Object *newMark(State *state);
     static Object *newClosure(Object *context, UserFunction *function);
@@ -105,7 +107,19 @@ enum RunState {
 
 struct GCState {
     RootSet *m_tail;
-    size_t m_disabledCount;
+    Object *m_lastObjectAllocated;
+    int m_numObjectsAllocated;
+    int m_nextRun;
+    RootSet m_permanents;
+    int m_disabledness;
+    bool m_missed;
+};
+
+struct ValueCache {
+    Object *m_boolFalse;
+    Object *m_boolTrue;
+    Object *m_intZero;
+    Object ***m_preallocatedArguments;
 };
 
 struct ProfileState {
@@ -116,19 +130,24 @@ struct ProfileState {
     static void dump(SourceRange source, ProfileState *profileState);
 };
 
+struct SharedState {
+    GCState m_gcState;
+    ProfileState m_profileState;
+    ValueCache m_valueCache;
+    int m_cycleCount;
+};
+
 struct State {
     State *m_parent;
+    SharedState *m_shared;
+
     CallFrame *m_stack;
     size_t m_length;
     Object *m_root;
-    Object *m_result;
+    Object *m_resultValue;
     RunState m_runState;
     u::string m_error;
-    GCState *m_gc;
-    Object *m_last;
     size_t m_count;
-    size_t m_capacity;
-    ProfileState *m_profileState;
 };
 
 struct FunctionObject : Object {
