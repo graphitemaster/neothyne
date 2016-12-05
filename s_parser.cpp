@@ -12,56 +12,6 @@
 
 namespace s {
 
-SourceRecord *SourceRecord::m_record = nullptr;
-
-void SourceRecord::registerSource(SourceRange source,
-                                  const char *name,
-                                  int rowBegin,
-                                  int colBegin)
-{
-    SourceRecord *record = new SourceRecord;
-    record->m_prev = m_record;
-    record->m_source = source;
-    record->m_name = name;
-    record->m_rowBegin = rowBegin;
-    record->m_colBegin = colBegin;
-    m_record = record;
-}
-
-bool SourceRecord::findSourcePosition(char *source,
-                                      const char **name,
-                                      SourceRange *line,
-                                      int *rowBegin,
-                                      int *colBegin)
-{
-    SourceRecord *record = m_record;
-    while (record) {
-        if (source >= record->m_source.m_begin && source < record->m_source.m_end) {
-            *name = record->m_name;
-            int rowCount = 0;
-            SourceRange lineSearch = { record->m_source.m_begin, record->m_source.m_begin };
-            while (lineSearch.m_begin < record->m_source.m_end) {
-                while (lineSearch.m_end < record->m_source.m_end && *lineSearch.m_end != '\n')
-                    lineSearch.m_end++;
-                if (lineSearch.m_end < record->m_source.m_end)
-                    lineSearch.m_end++;
-                if (source >= lineSearch.m_begin && source < lineSearch.m_end) {
-                    int colCount = source - lineSearch.m_begin;
-                    *line = lineSearch;
-                    *rowBegin = rowCount + record->m_rowBegin;
-                    *colBegin = colCount + ((rowCount == 0) ? record->m_colBegin : 0);
-                    return true;
-                }
-                lineSearch.m_begin = lineSearch.m_end;
-                rowCount++;
-            }
-            U_ASSERT(0 && "text in range but not in any line");
-        }
-        record = record->m_prev;
-    }
-    return false;
-}
-
 static void logParseError(char *location, const char *format, ...) {
     SourceRange line;
     const char *file;
@@ -334,14 +284,18 @@ Parser::Reference Parser::Reference::getScope(Gen *gen, const char *name) {
 ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlot) {
     char *text = *contents;
     while (!consumeString(&text, "}")) {
+        FileRange *addEntryRange = Gen::newRange(text);
         char *keyName = (char *)parseIdentifier(&text);
         if (!keyName) {
             ParseResult result = parseString(&text, &keyName);
             if (result != kParseOk) {
                 logParseError(text, "expected identifier");
+                neoFree(addEntryRange);
                 return kParseError;
             }
         }
+        FileRange::recordEnd(text, addEntryRange);
+
         if (!consumeString(&text, "=")) {
             logParseError(text, "object literal expects 'name = value'");
             return kParseError;
@@ -354,9 +308,11 @@ ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlo
         U_ASSERT(result == kParseOk);
 
         if (gen) {
+            Gen::useRangeStart(gen, addEntryRange);
             Slot keySlot = Gen::addNewStringObject(gen, gen->m_scope, keyName);
             Slot valueSlot = Reference::access(gen, value);
             Gen::addAssign(gen, objectSlot, keySlot, valueSlot, kAssignPlain);
+            Gen::useRangeEnd(gen, addEntryRange);
         }
 
         if (consumeString(&text, ","))
@@ -373,21 +329,27 @@ ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlo
 
 ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Reference *reference) {
     char *text = *contents;
-
-    if (!consumeString(&text, "{"))
+    FileRange *range = Gen::newRange(text);
+    if (!consumeString(&text, "{")) {
+        neoFree(range);
         return kParseNone;
+    }
 
     Slot objectSlot = 0;
+    Gen::useRangeStart(gen, range);
     if (gen)
         objectSlot = Gen::addNewObject(gen, gen->m_slot++);
+    Gen::useRangeEnd(gen, range);
 
     *contents = text;
     *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
 
-    return parseObjectLiteral(contents, gen, objectSlot);
+    ParseResult result = parseObjectLiteral(contents, gen, objectSlot);
+    FileRange::recordEnd(text, range);
+    return result;
 }
 
-ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot) {
+ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot, FileRange *range) {
     char *text = *contents;
     u::vector<Reference> values;
     while (!consumeString(&text, "]")) {
@@ -410,6 +372,7 @@ ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot
 
     *contents = text;
     if (gen) {
+        Gen::useRangeStart(gen, range);
         Slot keySlot1 = Gen::addNewStringObject(gen, gen->m_scope, "resize");
         Slot keySlot2 = Gen::addNewStringObject(gen, gen->m_scope, "[]=");
         Slot resizeFunction = Reference::access(gen, { objectSlot, keySlot1, Reference::kObject });
@@ -420,6 +383,7 @@ ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot
             Slot indexSlot = Gen::addNewIntObject(gen, gen->m_scope, i);
             Gen::addCall(gen, assignFunction, objectSlot, indexSlot, Reference::access(gen, values[i]));
         }
+        Gen::useRangeEnd(gen, range);
     }
 
     return kParseOk;
@@ -427,25 +391,35 @@ ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot
 
 ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Reference *reference) {
     char *text = *contents;
-    if (!consumeString(&text, "["))
+    FileRange *literalRange = Gen::newRange(text);
+    if (!consumeString(&text, "[")) {
+        neoFree(literalRange);
         return kParseNone;
-
+    }
     Slot objectSlot = 0;
+    Gen::useRangeStart(gen, literalRange);
     if (gen)
         objectSlot = Gen::addNewArrayObject(gen, gen->m_scope);
-
     *contents = text;
     *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
+    Gen::useRangeEnd(gen, literalRange);
 
-    return parseArrayLiteral(contents, gen, objectSlot);
+    ParseResult result = parseArrayLiteral(contents, gen, objectSlot, literalRange);
+    FileRange::recordEnd(text, literalRange);
+    return result;
 }
 
 ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *reference) {
     char *text = *contents;
+    FileRange *range = Gen::newRange(text);
     const char *identifier = parseIdentifier(&text);
+
     if (identifier) {
         *contents = text;
+        FileRange::recordEnd(text, range);
+        Gen::useRangeStart(gen, range);
         *reference = Reference::getScope(gen, identifier);
+        Gen::useRangeEnd(gen, range);
         return kParseOk;
     }
 
@@ -454,8 +428,11 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
         float value = 0.0f;
         if (parseFloat(&text, &value)) {
             *contents = text;
+            FileRange::recordEnd(text, range);
             if (gen) {
+                Gen::useRangeStart(gen, range);
                 Slot slot = Gen::addNewFloatObject(gen, gen->m_scope, value);
+                Gen::useRangeEnd(gen, range);
                 *reference = { slot, Reference::NoSlot, Reference::kNone };
             }
             return kParseOk;
@@ -466,8 +443,11 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
         int value = 0;
         if (parseInteger(&text, &value)) {
             *contents = text;
+            FileRange::recordEnd(text, range);
             if (gen) {
+                Gen::useRangeStart(gen, range);
                 Slot slot = Gen::addNewIntObject(gen, gen->m_scope, value);
+                Gen::useRangeEnd(gen, range);
                 *reference = { slot, Reference::NoSlot, Reference::kNone };
             }
             return kParseOk;
@@ -480,8 +460,11 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
         if ((result = parseString(&text, &value)) != kParseNone) {
             if (result == kParseOk) {
                 *contents = text;
+                FileRange::recordEnd(text, range);
                 if (gen) {
+                    Gen::useRangeStart(gen, range);
                     Slot slot = Gen::addNewStringObject(gen, gen->m_scope, value);
+                    Gen::useRangeEnd(gen, range);
                     *reference = { slot, Reference::NoSlot, Reference::kNone };
                 }
             }
@@ -495,6 +478,7 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
     if ((result = parseObjectLiteral(&text, gen, reference)) != kParseNone) {
         if (result == kParseOk)
             *contents = text;
+        neoFree(range);
         return result;
     }
 
@@ -502,10 +486,13 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
     if ((result = parseArrayLiteral(&text, gen, reference)) != kParseNone) {
         if (result == kParseOk)
             *contents = text;
+        neoFree(range);
         return result;
     }
 
     if (consumeString(&text, "(")) {
+        neoFree(range);
+
         result = parseExpression(&text, gen, 0, reference);
         if (result == kParseError)
             return result;
@@ -522,6 +509,8 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
 
     bool isMethod = false;
     if (consumeKeyword(&text, "fn") || (consumeKeyword(&text, "method") && (isMethod = true))) {
+        FileRange::recordEnd(text, range);
+
         UserFunction *function;
         ParseResult result = parseFunctionExpression(&text, &function);
         if (result == kParseError)
@@ -532,23 +521,29 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
 
         if (gen) {
             function->m_isMethod = isMethod;
+            Gen::useRangeStart(gen, range); // count closure allocation as function
             Slot slot = Gen::addNewClosureObject(gen, gen->m_scope, function);
+            Gen::useRangeEnd(gen, range);
             *reference = { slot, Reference::NoSlot, Reference::kNone };
         }
         return kParseOk;
     }
 
     if (consumeKeyword(&text, "new")) {
+        FileRange::recordEnd(text, range);
+
         Reference parentVariable;
         ParseResult result = parseExpression(&text, gen, 0, &parentVariable);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
 
+        Gen::useRangeStart(gen, range);
         Slot parentSlot = Reference::access(gen, parentVariable);
         Slot objectSlot = 0;
         if (gen)
             objectSlot = Gen::addNewObject(gen, parentSlot);
+        Gen::useRangeEnd(gen, range);
 
         *contents = text;
         if (consumeString(contents, "{")) {
@@ -561,15 +556,22 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
         *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
         return kParseOk;
     }
+    neoFree(range);
 
     logParseError(text, "expected expression");
     return kParseError;
 }
 
-ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression) {
+ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression, FileRange *expressionRange) {
     char *text = *contents;
-    if (!consumeString(&text, "("))
+    FileRange *callRange = Gen::newRange(text);
+    FileRange *exprRange = (FileRange *)neoMalloc(sizeof *exprRange);
+    *exprRange = *expressionRange;
+
+    if (!consumeString(&text, "(")) {
+        neoFree(callRange);
         return kParseNone;
+    }
 
     *contents = text;
     Slot *arguments = nullptr;
@@ -587,10 +589,14 @@ ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression) 
             return result;
         U_ASSERT(result == kParseOk);
 
+        Gen::useRangeStart(gen, callRange);
         Slot slot = Reference::access(gen, argument);
+        Gen::useRangeEnd(gen, callRange);
         arguments = (Slot *)neoRealloc(arguments, sizeof(Slot) * ++length);
         arguments[length - 1] = slot;
     }
+
+    FileRange::recordEnd(text, callRange);
 
     *contents = text;
 
@@ -601,11 +607,15 @@ ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression) 
         else
             thisSlot = gen->m_slot++;
 
+        //Gen::useRangeStart(gen, callRange);
+        Gen::useRangeStart(gen, exprRange);
         *expression = {
             Gen::addCall(gen, Reference::access(gen, *expression), thisSlot, arguments, length),
             Reference::NoSlot,
             Reference::kNone
         };
+        //Gen::useRangeEnd(gen, callRange);
+        Gen::useRangeEnd(gen, exprRange);
     }
 
     return kParseOk;
@@ -613,20 +623,31 @@ ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression) 
 
 ParseResult Parser::parseArrayAccess(char **contents, Gen *gen, Reference *expression) {
     char *text = *contents;
-    if (!consumeString(&text, "["))
+    FileRange *accessRange = Gen::newRange(text);
+
+    if (!consumeString(&text, "[")) {
+        neoFree(accessRange);
         return kParseNone;
+    }
 
     Reference key;
     ParseResult result = parseExpression(&text, gen, 0, &key);
-    if (result == kParseError)
+    if (result == kParseError) {
+        neoFree(accessRange);
         return result;
+    }
+
     U_ASSERT(result == kParseOk);
 
     if (!consumeString(&text, "]")) {
         logParseError(*contents, "expected closing ']'");
+        neoFree(accessRange);
         return kParseError;
     }
 
+    FileRange::recordEnd(text, accessRange);
+
+    Gen::useRangeStart(gen, accessRange);
     Slot keySlot = Reference::access(gen, key);
 
     *contents = text;
@@ -636,39 +657,50 @@ ParseResult Parser::parseArrayAccess(char **contents, Gen *gen, Reference *expre
         keySlot,
         Reference::kIndex
     };
+    Gen::useRangeEnd(gen, accessRange);
 
     return kParseOk;
 }
 
 ParseResult Parser::parsePropertyAccess(char **contents, Gen *gen, Reference *expression) {
     char *text = *contents;
-    if (!consumeString(&text, "."))
+
+    FileRange *propertyRange = Gen::newRange(text);
+    if (!consumeString(&text, ".")) {
+        neoFree(propertyRange);
         return kParseNone;
+    }
 
     const char *keyName = parseIdentifier(&text);
+    FileRange::recordEnd(text, propertyRange);
     *contents = text;
 
     Slot keySlot = 0;
+    Gen::useRangeStart(gen, propertyRange);
     if (gen)
         keySlot = Gen::addNewStringObject(gen, gen->m_scope, keyName);
-
     *expression = {
         Reference::access(gen, *expression),
         keySlot,
         Reference::kObject
     };
+    Gen::useRangeEnd(gen, propertyRange);
 
     return kParseOk;
 }
 
 ParseResult Parser::parseExpression(char **contents, Gen *gen, Reference *reference) {
+    FileRange *exprRange = Gen::newRange(*contents);
     ParseResult result = parseExpressionStem(contents, gen, reference);
-    if (result == kParseError)
+    if (result == kParseError) {
+        neoFree(exprRange);
         return result;
+    }
     U_ASSERT(result == kParseOk);
 
     for (;;) {
-        if ((result = parseCall(contents, gen, reference)) == kParseOk)
+        FileRange::recordEnd(*contents, exprRange);
+        if ((result = parseCall(contents, gen, reference, exprRange)) == kParseOk)
             continue;
         if (result == kParseError)
             return result;
@@ -686,12 +718,14 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, Reference *refere
     return kParseOk;
 }
 
-void Parser::buildOperation(Gen *gen, const char *op, Reference *lhs, Reference rhs) {
+void Parser::buildOperation(Gen *gen, const char *op, Reference *lhs, Reference rhs, FileRange *range) {
     if (gen) {
+        Gen::useRangeStart(gen, range);
         Slot lhsSlot = Reference::access(gen, *lhs);
         Slot rhsSlot = Reference::access(gen, rhs);
         Slot function = Gen::addAccess(gen, lhsSlot, Gen::addNewStringObject(gen, gen->m_scope, op));
         *lhs = { Gen::addCall(gen, function, lhsSlot, rhsSlot), Reference::NoSlot, Reference::kNone };
+        Gen::useRangeEnd(gen, range);
     }
 }
 
@@ -710,22 +744,26 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
 
     Reference expression;
     for (;;) {
+        FileRange *range = Gen::newRange(text);
         if (consumeString(&text, "*")) {
+            FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 3, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "*", reference, expression);
+            buildOperation(gen, "*", reference, expression, range);
             continue;
         }
         if (consumeString(&text, "/")) {
+            FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 3, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "/", reference, expression);
+            buildOperation(gen, "/", reference, expression, range);
             continue;
         }
+        neoFree(range);
         break;
     }
 
@@ -735,22 +773,26 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
     }
 
     for (;;) {
+        FileRange *range = Gen::newRange(text);
         if (consumeString(&text, "+")) {
+            FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 2, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "+", reference, expression);
+            buildOperation(gen, "+", reference, expression, range);
             continue;
         }
         if (consumeString(&text, "-")) {
+            FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 2, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "-", reference, expression);
+            buildOperation(gen, "-", reference, expression, range);
             continue;
         }
+        neoFree(range);
         break;
     }
 
@@ -761,65 +803,75 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
 
     bool negated = false;
 
+    FileRange *range = Gen::newRange(text);
     if (consumeString(&text, "==")) {
+        FileRange::recordEnd(text, range);
         result = parseExpression(&text, gen, 1, &expression);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
-        buildOperation(gen, "==", reference, expression);
+        buildOperation(gen, "==", reference, expression, range);
     } else if (consumeString(&text, "!=")) {
+        FileRange::recordEnd(text, range);
         // the same code except result is negated
         result = parseExpression(&text, gen, 1, &expression);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
-        buildOperation(gen, "==", reference, expression);
+        buildOperation(gen, "==", reference, expression, range);
         negated = true;
     } else {
         // this allows for operators like !<, !>, !<=, !>=
         if (consumeString(&text, "!"))
             negated = true;
         if (consumeString(&text, "<=")) {
+            FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "<=", reference, expression);
+            buildOperation(gen, "<=", reference, expression, range);
         } else if (consumeString(&text, ">=")) {
+            FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, ">=", reference, expression);
+            buildOperation(gen, ">=", reference, expression, range);
         } else if (consumeString(&text, "<")) {
+            FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "<", reference, expression);
+            buildOperation(gen, "<", reference, expression, range);
         } else if (consumeString(&text, ">")) {
+            FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, ">", reference, expression);
+            buildOperation(gen, ">", reference, expression, range);
         } else if (negated) {
+            neoFree(range);
             logParseError(text, "expected comparison operator");
             return kParseError;
         }
     }
 
     if (negated && gen) {
+        Gen::useRangeStart(gen, range);
         Slot lhs = Reference::access(gen, *reference);
         Slot bnot = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "!"));
         *reference = { Gen::addCall(gen, bnot, lhs), Reference::NoSlot, Reference::kNone };
+        Gen::useRangeEnd(gen, range);
     }
 
     *contents = text;
     return kParseOk;
 }
 
-ParseResult Parser::parseIfStatement(char **contents, Gen *gen) {
+ParseResult Parser::parseIfStatement(char **contents, Gen *gen, FileRange *keywordRange) {
     char *text = *contents;
     if (!consumeString(&text, "(")) {
         logParseError(text, "expected opening paren after 'if'");
@@ -832,16 +884,17 @@ ParseResult Parser::parseIfStatement(char **contents, Gen *gen) {
         return result;
     U_ASSERT(result == kParseOk);
 
+    Gen::useRangeStart(gen, keywordRange);
     Slot testSlot = Reference::access(gen, testExpression);
     if (!consumeString(&text, ")")) {
         logParseError(text, "expected closing paren after 'if'");
         return kParseError;
     }
-
     BlockRef trueBlock;
     BlockRef falseBlock;
     BlockRef endBlock;
     Gen::addTestBranch(gen, testSlot, &trueBlock, &falseBlock);
+    Gen::useRangeEnd(gen, keywordRange);
 
     Gen::setBlockRef(gen, trueBlock, Gen::newBlock(gen));
 
@@ -850,7 +903,9 @@ ParseResult Parser::parseIfStatement(char **contents, Gen *gen) {
         return kParseError;
     U_ASSERT(result == kParseOk);
 
+    Gen::useRangeStart(gen, keywordRange);
     Gen::addBranch(gen, &endBlock);
+    Gen::useRangeEnd(gen, keywordRange);
 
     size_t falseBlockIndex = Gen::newBlock(gen);
     Gen::setBlockRef(gen, falseBlock, falseBlockIndex);
@@ -860,7 +915,9 @@ ParseResult Parser::parseIfStatement(char **contents, Gen *gen) {
             return kParseError;
         U_ASSERT(result == kParseOk);
         BlockRef elseEndBlock;
+        Gen::useRangeStart(gen, keywordRange);
         Gen::addBranch(gen, &elseEndBlock);
+        Gen::useRangeEnd(gen, keywordRange);
 
         size_t blockIndex = Gen::newBlock(gen);
         Gen::setBlockRef(gen, elseEndBlock, blockIndex);
@@ -873,18 +930,19 @@ ParseResult Parser::parseIfStatement(char **contents, Gen *gen) {
     return kParseOk;
 }
 
-ParseResult Parser::parseWhile(char **contents, Gen *gen) {
+ParseResult Parser::parseWhile(char **contents, Gen *gen, FileRange *range) {
     char *text = *contents;
     if (!consumeString(&text, "(")) {
         logParseError(text, "expected opening paren after 'while'");
         return kParseError;
     }
 
-
+    Gen::useRangeStart(gen, range);
     BlockRef testBlock;
     Gen::addBranch(gen, &testBlock);
     size_t testBlockIndex = Gen::newBlock(gen);
     Gen::setBlockRef(gen, testBlock, testBlockIndex);
+    Gen::useRangeEnd(gen, range);
 
     BlockRef loopBlock;
     BlockRef endBlock;
@@ -895,13 +953,14 @@ ParseResult Parser::parseWhile(char **contents, Gen *gen) {
         return result;
     U_ASSERT(result == kParseOk);
 
+    Gen::useRangeStart(gen, range);
     Slot testSlot = Reference::access(gen, testExpression);
     if (!consumeString(&text, ")")) {
         logParseError(text, "expected closing paren after 'while'");
         return kParseError;
     }
-
     Gen::addTestBranch(gen, testSlot, &loopBlock, &endBlock);
+    Gen::useRangeEnd(gen, range);
 
     Gen::setBlockRef(gen, loopBlock, Gen::newBlock(gen));
     result = parseBlock(&text, gen);
@@ -909,8 +968,10 @@ ParseResult Parser::parseWhile(char **contents, Gen *gen) {
         return result;
     U_ASSERT(result == kParseOk);
 
+    Gen::useRangeStart(gen, range);
     BlockRef testBlock2;
     Gen::addBranch(gen, &testBlock2);
+    Gen::useRangeEnd(gen, range);
 
     Gen::setBlockRef(gen, testBlock2, testBlockIndex);
     Gen::setBlockRef(gen, endBlock, Gen::newBlock(gen));
@@ -919,54 +980,78 @@ ParseResult Parser::parseWhile(char **contents, Gen *gen) {
     return kParseOk;
 }
 
-ParseResult Parser::parseReturnStatement(char **contents, Gen *gen) {
+ParseResult Parser::parseReturnStatement(char **contents, Gen *gen, FileRange *keywordRange) {
     Reference returnValue;
     ParseResult result = parseExpression(contents, gen, 0, &returnValue);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
 
+    Gen::useRangeStart(gen, keywordRange);
     Slot value = Reference::access(gen, returnValue);
     if (!consumeString(contents, ";")) {
+        Gen::useRangeEnd(gen, keywordRange);
         logParseError(*contents, "expected semicolon");
         return kParseError;
     }
 
     Gen::addReturn(gen, value);
     Gen::newBlock(gen);
+    Gen::useRangeEnd(gen, keywordRange);
 
     return kParseOk;
 }
 
-ParseResult Parser::parseLetDeclaration(char **contents, Gen *gen) {
+ParseResult Parser::parseLetDeclaration(char **contents, Gen *gen, FileRange *letRange) {
     char *text = *contents;
 
     // allocate a new scope immediately to allow recursion for closures
     // i.e allow: let foo = fn() { foo(); };
+    Gen::useRangeStart(gen, letRange);
     gen->m_scope = Gen::addNewObject(gen, gen->m_scope);
+    Gen::useRangeEnd(gen, letRange);
 
+    FileRange *letName = Gen::newRange(text);
     const char *variableName = parseIdentifier(&text);
+    FileRange::recordEnd(text, letName);
+
+    Gen::useRangeStart(gen, letName);
     Slot value;
     Slot variableNameSlot = Gen::addNewStringObject(gen, gen->m_scope, variableName);
+    Gen::useRangeEnd(gen, letName);
+
+    FileRange *assignRange = Gen::newRange(text);
+
     if (!consumeString(&text, "=")) {
+        neoFree(assignRange);
+        assignRange = letName;
         value = gen->m_slot++;
     } else {
+        FileRange::recordEnd(text, assignRange);
         Reference reference;
+
+        FileRange *expressionRange = Gen::newRange(text);
         ParseResult result = parseExpression(&text, gen, 0, &reference);
+        FileRange::recordEnd(text, expressionRange);
+
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
 
+        Gen::useRangeStart(gen, expressionRange);
         value = Reference::access(gen, reference);
+        Gen::useRangeEnd(gen, expressionRange);
     }
 
+    Gen::useRangeStart(gen, assignRange);
     Gen::addAssign(gen, gen->m_scope, variableNameSlot, value, kAssignPlain);
     Gen::addCloseObject(gen, gen->m_scope);
+    Gen::useRangeEnd(gen, assignRange);
 
     // let a, b
     if (consumeString(&text, ",")) {
         *contents = text;
-        return parseLetDeclaration(contents, gen);
+        return parseLetDeclaration(contents, gen, letRange);
     }
 
     if (!consumeString(&text, ";")) {
@@ -978,44 +1063,52 @@ ParseResult Parser::parseLetDeclaration(char **contents, Gen *gen) {
     return kParseOk;
 }
 
-ParseResult Parser::parseFunctionDeclaration(char **contents, Gen *gen) {
+ParseResult Parser::parseFunctionDeclaration(char **contents, Gen *gen, FileRange *range) {
+    Gen::useRangeStart(gen, range);
     gen->m_scope = Gen::addNewObject(gen, gen->m_scope);
+    Gen::useRangeEnd(gen, range);
 
     UserFunction *function;
     ParseResult result = parseFunctionExpression(contents, &function);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
-
+    Gen::useRangeStart(gen, range);
     Slot nameSlot = Gen::addNewStringObject(gen, gen->m_scope, function->m_name);
     Slot slot = Gen::addNewClosureObject(gen, gen->m_scope, function);
     Gen::addAssign(gen, gen->m_scope, nameSlot, slot, kAssignPlain);
     Gen::addCloseObject(gen, gen->m_scope);
-
+    Gen::useRangeEnd(gen, range);
     return kParseOk;
 }
 
 ParseResult Parser::parseStatement(char **contents, Gen *gen) {
     char *text = *contents;
+    FileRange *keywordRange = Gen::newRange(text);
     if (consumeKeyword(&text, "if")) {
+        FileRange::recordEnd(text, keywordRange);
         *contents = text;
-        return parseIfStatement(contents, gen);
+        return parseIfStatement(contents, gen, keywordRange);
     }
     if (consumeKeyword(&text, "return")) {
+        FileRange::recordEnd(text, keywordRange);
         *contents = text;
-        return parseReturnStatement(contents, gen);
+        return parseReturnStatement(contents, gen, keywordRange);
     }
     if (consumeKeyword(&text, "let")) {
+        FileRange::recordEnd(text, keywordRange);
         *contents = text;
-        return parseLetDeclaration(contents, gen);
+        return parseLetDeclaration(contents, gen, keywordRange);
     }
     if (consumeKeyword(&text, "fn")) {
+        FileRange::recordEnd(text, keywordRange);
         *contents = text;
-        return parseFunctionDeclaration(contents, gen);
+        return parseFunctionDeclaration(contents, gen, keywordRange);
     }
     if (consumeKeyword(&text, "while")) {
+        FileRange::recordEnd(text, keywordRange);
         *contents = text;
-        return parseWhile(contents, gen);
+        return parseWhile(contents, gen, keywordRange);
     }
 
     // variable assignment
@@ -1029,21 +1122,26 @@ ParseResult Parser::parseStatement(char **contents, Gen *gen) {
         if (result == kParseOk && consumeString(&next, "=")) {
             result = parseExpression(&text, gen, &reference);
             U_ASSERT(result == kParseOk);
-
-            if (!consumeString(&text, "=")) {
+            FileRange *assignRange = Gen::newRange(text);
+            if (!consumeString(&text, "="))
                 U_ASSERT(0 && "internal compiler error");
-            }
+            FileRange::recordEnd(text, assignRange);
 
             Reference valueExpression;
             result = parseExpression(&text, gen, 0, &valueExpression);
-            if (result == kParseError)
+            if (result == kParseError) {
+                neoFree(assignRange);
                 return result;
+            }
             U_ASSERT(result == kParseOk);
 
+            Gen::useRangeStart(gen, assignRange);
             Slot value = Reference::access(gen, valueExpression);
 
             switch (reference.m_mode) {
             case Reference::kNone:
+                Gen::useRangeEnd(gen, assignRange);
+                neoFree(assignRange);
                 logParseError(text, "cannot assign to non-reference expression");
                 return kParseError;
             case Reference::kVariable:
@@ -1058,6 +1156,8 @@ ParseResult Parser::parseStatement(char **contents, Gen *gen) {
             default:
                 U_ASSERT(0 && "internal compiler error");
             }
+
+            Gen::useRangeEnd(gen, assignRange);
 
             if (!consumeString(&text, ";")) {
                 logParseError(text, "expected ';' to terminate assignment statement");
@@ -1120,8 +1220,10 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     char *text = *contents;
     const char *functionName = parseIdentifier(&text);
 
+    FileRange *functionFrameRange = Gen::newRange(text);
     if (!consumeString(&text, "(")) {
         logParseError(text, "expected opening paren for parameter list");
+        neoFree(functionFrameRange);
         return kParseError;
     }
 
@@ -1130,16 +1232,19 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     while (!consumeString(&text, ")")) {
         if (length && !consumeString(&text, ",")) {
             logParseError(text, "expected comma in parameter list");
+            neoFree(functionFrameRange);
             return kParseError;
         }
         const char *argument = parseIdentifier(&text);
         if (!argument) {
             logParseError(text, "expected identifier for parameter in parameter list");
+            neoFree(functionFrameRange);
             return kParseError;
         }
         arguments = (const char **)neoRealloc(arguments, sizeof(const char *) * ++length);
         arguments[length - 1] = argument;
     }
+    FileRange::recordEnd(text, functionFrameRange);
 
     *contents = text;
 
@@ -1149,9 +1254,11 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     gen->m_slot = length;
     gen->m_name = functionName;
     gen->m_blockTerminated = true;
+    gen->m_currentRange = nullptr;
 
     // generate lexical scope
     Gen::newBlock(gen);
+    Gen::useRangeStart(gen, functionFrameRange);
     Slot contextSlot = Gen::addGetContext(gen);
     gen->m_scope = Gen::addNewObject(gen, contextSlot);
     for (size_t i = 0; i < length; i++) {
@@ -1159,13 +1266,18 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
         Gen::addAssign(gen, gen->m_scope, argumentSlot, i, kAssignPlain);
     }
     Gen::addCloseObject(gen, gen->m_scope);
+    Gen::useRangeEnd(gen, functionFrameRange);
 
     ParseResult result = parseBlock(contents, gen);
-    if (result == kParseError)
+    if (result == kParseError) {
+        neoFree(functionFrameRange);
         return result;
+    }
     U_ASSERT(result == kParseOk);
 
+    Gen::useRangeStart(gen, functionFrameRange);
     Gen::terminate(gen);
+    Gen::useRangeEnd(gen, functionFrameRange);
 
     *function = Gen::optimize(Gen::buildFunction(gen));
     neoFree(gen);
@@ -1177,9 +1289,16 @@ ParseResult Parser::parseModule(char **contents, UserFunction **function) {
     gen->m_slot = 0;
     gen->m_name = nullptr;
     gen->m_blockTerminated = true;
+    gen->m_currentRange = nullptr;
 
+    // capture future module statement
+    FileRange *moduleRange = Gen::newRange(*contents);
+    FileRange::recordEnd(*contents, moduleRange);
+
+    Gen::useRangeStart(gen, moduleRange);
     Gen::newBlock(gen);
     gen->m_scope = Gen::addGetContext(gen);
+    Gen::useRangeEnd(gen, moduleRange);
 
     for (;;) {
         consumeFiller(contents);
@@ -1191,7 +1310,9 @@ ParseResult Parser::parseModule(char **contents, UserFunction **function) {
         U_ASSERT(result == kParseOk);
     }
 
+    Gen::useRangeStart(gen, moduleRange);
     Gen::addReturn(gen, gen->m_scope);
+    Gen::useRangeEnd(gen, moduleRange);
     *function = Gen::optimize(Gen::buildFunction(gen));
     neoFree(gen);
     return kParseOk;

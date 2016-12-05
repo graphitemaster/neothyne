@@ -2,38 +2,12 @@
 #define S_PARSER_HDR
 
 #include "s_instr.h"
+#include "s_util.h"
 
 namespace s {
 
 struct Gen;
 struct UserFunction;
-
-struct SourceRange {
-    char *m_begin;
-    char *m_end;
-};
-
-struct SourceRecord {
-    static void registerSource(SourceRange source,
-                               const char *name,
-                               int rowBegin,
-                               int colBegin);
-
-    static bool findSourcePosition(char *source,
-                                   const char **name,
-                                   SourceRange *line,
-                                   int *rowBegin,
-                                   int *colBegin);
-
-private:
-    SourceRecord *m_prev;
-    SourceRange m_source;
-    const char *m_name;
-    int m_rowBegin;
-    int m_colBegin;
-
-    static SourceRecord *m_record;
-};
 
 enum ParseResult {
     kParseNone,
@@ -45,6 +19,9 @@ struct Parser {
     static ParseResult parseModule(char **contents, UserFunction **function);
 
 private:
+    friend struct FileRange;
+    friend struct SourceRange;
+
     struct Reference {
         static constexpr Slot NoSlot = (Slot)-1;
 
@@ -79,24 +56,24 @@ private:
 
     static ParseResult parseObjectLiteral(char **contents, Gen *gen, Slot objectSlot);
     static ParseResult parseObjectLiteral(char **contents, Gen *gen, Reference *reference);
-    static ParseResult parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot);
+    static ParseResult parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot, FileRange *range);
     static ParseResult parseArrayLiteral(char **contents, Gen *gen, Reference *reference);
     static ParseResult parseExpressionStem(char **contents, Gen *gen, Reference *reference);
-    static ParseResult parseCall(char **contents, Gen *gen, Reference *expression);
+    static ParseResult parseCall(char **contents, Gen *gen, Reference *expression, FileRange *expressionRange);
     static ParseResult parseArrayAccess(char **contents, Gen *gen, Reference *expression);
     static ParseResult parsePropertyAccess(char **contents, Gen *gen, Reference *expression);
     static ParseResult parseExpression(char **contents, Gen *gen, Reference *reference);
     static ParseResult parseExpression(char **contents, Gen *gen, int level, Reference *reference);
-    static ParseResult parseIfStatement(char **contents, Gen *gen);
-    static ParseResult parseWhile(char **contents, Gen *gen);
-    static ParseResult parseReturnStatement(char **contents, Gen *gen);
-    static ParseResult parseLetDeclaration(char **contents, Gen *gen);
-    static ParseResult parseFunctionDeclaration(char **contents, Gen *gen);
+    static ParseResult parseIfStatement(char **contents, Gen *gen, FileRange *keywordRange);
+    static ParseResult parseWhile(char **contents, Gen *gen, FileRange *range);
+    static ParseResult parseReturnStatement(char **contents, Gen *gen, FileRange *range);
+    static ParseResult parseLetDeclaration(char **contents, Gen *gen, FileRange *range);
+    static ParseResult parseFunctionDeclaration(char **contents, Gen *gen, FileRange *range);
     static ParseResult parseStatement(char **contents, Gen *gen);
     static ParseResult parseBlock(char **contents, Gen *gen);
     static ParseResult parseFunctionExpression(char **contents, UserFunction **function);
 
-    static void buildOperation(Gen *gen, const char *op, Reference *lhs, Reference rhs);
+    static void buildOperation(Gen *gen, const char *op, Reference *lhs, Reference rhs, FileRange *range);
 };
 
 }

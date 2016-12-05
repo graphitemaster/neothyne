@@ -16,6 +16,10 @@ struct Gen {
     static BlockRef newBlockRef(Gen *gen, unsigned char *instruction, unsigned char *address);
     static void setBlockRef(Gen *gen, BlockRef ref, size_t value);
 
+    static void useRangeStart(Gen *gen, FileRange *range);
+    static void useRangeEnd(Gen *gen, FileRange *range);
+    static FileRange *newRange(char *text);
+
     static size_t newBlock(Gen *gen);
 
     static void terminate(Gen *gen);
@@ -61,6 +65,7 @@ private:
     Slot m_scope;
     Slot m_slot;
     bool m_blockTerminated;
+    FileRange *m_currentRange;
     FunctionBody m_body;
 };
 

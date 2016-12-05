@@ -19,6 +19,24 @@ void Gen::setBlockRef(Gen *gen, BlockRef reference, size_t value) {
     *(size_t *)((unsigned char *)block->m_instructions + reference.m_distance) = value;
 }
 
+void Gen::useRangeStart(Gen *gen, FileRange *range) {
+    if (!gen) return;
+    U_ASSERT(!gen->m_currentRange);
+    gen->m_currentRange = range;
+}
+
+void Gen::useRangeEnd(Gen *gen, FileRange *range) {
+    if (!gen) return;
+    U_ASSERT(gen->m_currentRange == range);
+    gen->m_currentRange = nullptr;
+}
+
+FileRange *Gen::newRange(char *text) {
+    FileRange *range = (FileRange *)neoCalloc(sizeof *range, 1);
+    FileRange::recordStart(text, range);
+    return range;
+}
+
 size_t Gen::newBlock(Gen *gen) {
     U_ASSERT(gen->m_blockTerminated);
     FunctionBody *body = &gen->m_body;
@@ -35,6 +53,8 @@ void Gen::terminate(Gen *gen) {
 void Gen::addInstruction(Gen *gen, size_t size, Instruction *instruction) {
     U_ASSERT(Instruction::size(instruction) == size);
     U_ASSERT(!gen->m_blockTerminated);
+    U_ASSERT(gen->m_currentRange);
+    instruction->m_belongsTo = gen->m_currentRange;
     FunctionBody *body = &gen->m_body;
     InstructionBlock *block = &body->m_blocks[body->m_count - 1];
     const size_t currentLength = (unsigned char *)block->m_instructionsEnd - (unsigned char *)block->m_instructions;
@@ -49,6 +69,7 @@ void Gen::addInstruction(Gen *gen, size_t size, Instruction *instruction) {
 Slot Gen::addAccess(Gen *gen, Slot objectSlot, Slot keySlot) {
     Instruction::Access access;
     access.m_type = kAccess;
+    access.m_belongsTo = nullptr;
     access.m_objectSlot = objectSlot;
     access.m_keySlot = keySlot;
     access.m_targetSlot = gen->m_slot++;
@@ -59,6 +80,7 @@ Slot Gen::addAccess(Gen *gen, Slot objectSlot, Slot keySlot) {
 void Gen::addAssign(Gen *gen, Slot objectSlot, Slot keySlot, Slot valueSlot, AssignType assignType) {
     Instruction::Assign assign;
     assign.m_type = kAssign;
+    assign.m_belongsTo = nullptr;
     assign.m_objectSlot = objectSlot;
     assign.m_keySlot = keySlot;
     assign.m_valueSlot = valueSlot;
@@ -76,6 +98,7 @@ void Gen::addCloseObject(Gen *gen, Slot objectSlot) {
 Slot Gen::addGetContext(Gen *gen) {
     Instruction::GetContext getContext;
     getContext.m_type = kGetContext;
+    getContext.m_belongsTo = nullptr;
     getContext.m_slot = gen->m_slot++;
     addInstruction(gen, sizeof getContext, (Instruction *)&getContext);
     return gen->m_slot - 1;
@@ -84,6 +107,7 @@ Slot Gen::addGetContext(Gen *gen) {
 Slot Gen::addNewObject(Gen *gen, Slot parentSlot) {
     Instruction::NewObject newObject;
     newObject.m_type = kNewObject;
+    newObject.m_belongsTo = nullptr;
     newObject.m_targetSlot = gen->m_slot++;
     newObject.m_parentSlot = parentSlot;
     addInstruction(gen, sizeof newObject, (Instruction *)&newObject);
@@ -93,6 +117,7 @@ Slot Gen::addNewObject(Gen *gen, Slot parentSlot) {
 Slot Gen::addNewIntObject(Gen *gen, Slot, int value) {
     Instruction::NewIntObject newIntObject;
     newIntObject.m_type = kNewIntObject;
+    newIntObject.m_belongsTo = nullptr;
     newIntObject.m_targetSlot = gen->m_slot++;
     newIntObject.m_value = value;
     addInstruction(gen, sizeof newIntObject, (Instruction *)&newIntObject);
@@ -102,6 +127,7 @@ Slot Gen::addNewIntObject(Gen *gen, Slot, int value) {
 Slot Gen::addNewFloatObject(Gen *gen, Slot, float value) {
     Instruction::NewFloatObject newFloatObject;
     newFloatObject.m_type = kNewFloatObject;
+    newFloatObject.m_belongsTo = nullptr;
     newFloatObject.m_targetSlot = gen->m_slot++;
     newFloatObject.m_value = value;
     addInstruction(gen, sizeof newFloatObject, (Instruction *)&newFloatObject);
@@ -111,6 +137,7 @@ Slot Gen::addNewFloatObject(Gen *gen, Slot, float value) {
 Slot Gen::addNewArrayObject(Gen *gen, Slot) {
     Instruction::NewArrayObject newArrayObject;
     newArrayObject.m_type = kNewArrayObject;
+    newArrayObject.m_belongsTo = nullptr;
     newArrayObject.m_targetSlot = gen->m_slot++;
     addInstruction(gen, sizeof newArrayObject, (Instruction *)&newArrayObject);
     return gen->m_slot - 1;
@@ -119,6 +146,7 @@ Slot Gen::addNewArrayObject(Gen *gen, Slot) {
 Slot Gen::addNewStringObject(Gen *gen, Slot, const char *value) {
     Instruction::NewStringObject newStringObject;
     newStringObject.m_type = kNewStringObject;
+    newStringObject.m_belongsTo = nullptr;
     newStringObject.m_targetSlot = gen->m_slot++;
     newStringObject.m_value = value;
     addInstruction(gen, sizeof newStringObject, (Instruction *)&newStringObject);
@@ -128,6 +156,7 @@ Slot Gen::addNewStringObject(Gen *gen, Slot, const char *value) {
 Slot Gen::addNewClosureObject(Gen *gen, Slot contextSlot, UserFunction *function) {
     Instruction::NewClosureObject newClosureObject;
     newClosureObject.m_type = kNewClosureObject;
+    newClosureObject.m_belongsTo = nullptr;
     newClosureObject.m_targetSlot = gen->m_slot++;
     newClosureObject.m_contextSlot = contextSlot;
     newClosureObject.m_function = function;
@@ -138,6 +167,7 @@ Slot Gen::addNewClosureObject(Gen *gen, Slot contextSlot, UserFunction *function
 Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot *arguments, size_t count) {
     Instruction::Call call;
     call.m_type = kCall;
+    call.m_belongsTo = nullptr;
     call.m_functionSlot = functionSlot;
     call.m_thisSlot = thisSlot;
     call.m_arguments = arguments;
@@ -173,6 +203,7 @@ Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot argument0, Sl
 void Gen::addTestBranch(Gen *gen, Slot testSlot, BlockRef *trueBranch, BlockRef *falseBranch) {
     Instruction::TestBranch testBranch;
     testBranch.m_type = kTestBranch;
+    testBranch.m_belongsTo = nullptr;
     testBranch.m_testSlot = testSlot;
     *trueBranch = newBlockRef(gen, (unsigned char *)&testBranch, (unsigned char *)&testBranch.m_trueBlock);
     *falseBranch = newBlockRef(gen, (unsigned char *)&testBranch, (unsigned char *)&testBranch.m_falseBlock);
@@ -183,6 +214,7 @@ void Gen::addTestBranch(Gen *gen, Slot testSlot, BlockRef *trueBranch, BlockRef 
 void Gen::addBranch(Gen *gen, BlockRef *branchBlock) {
     Instruction::Branch branch;
     branch.m_type = kBranch;
+    branch.m_belongsTo = nullptr;
     *branchBlock = newBlockRef(gen, (unsigned char *)&branch, (unsigned char *)&branch.m_block);
     addInstruction(gen, sizeof branch, (Instruction *)&branch);
 }
@@ -190,6 +222,7 @@ void Gen::addBranch(Gen *gen, BlockRef *branchBlock) {
 void Gen::addReturn(Gen *gen, Slot returnSlot) {
     Instruction::Return return_;
     return_.m_type = kReturn;
+    return_.m_belongsTo = nullptr;
     return_.m_returnSlot = returnSlot;
 
     addInstruction(gen, sizeof return_, (Instruction *)&return_);
@@ -268,6 +301,7 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
     Gen *gen = (Gen *)neoCalloc(sizeof *gen, 1);
     gen->m_slot = 0;
     gen->m_blockTerminated = true;
+    gen->m_currentRange = nullptr;
     u::vector<const char *> slotTable;
     for (size_t i = 0; i < function->m_body.m_count; i++) {
         InstructionBlock *block = &function->m_body.m_blocks[i];
@@ -295,7 +329,9 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
                 accessStringKey.m_objectSlot = access->m_objectSlot;
                 accessStringKey.m_targetSlot = access->m_targetSlot;
                 accessStringKey.m_key = slotTable[access->m_keySlot];
+                useRangeStart(gen, access->m_belongsTo);
                 addInstruction(gen, sizeof accessStringKey, (Instruction *)&accessStringKey);
+                useRangeEnd(gen, access->m_belongsTo);
                 instruction = (Instruction *)(access + 1);
                 continue;
             }
@@ -308,11 +344,15 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
                 assignStringKey.m_valueSlot = assign->m_valueSlot;
                 assignStringKey.m_key = slotTable[assign->m_keySlot];
                 assignStringKey.m_assignType = assign->m_assignType;
+                useRangeStart(gen, assign->m_belongsTo);
                 addInstruction(gen, sizeof assignStringKey, (Instruction *)&assignStringKey);
+                useRangeEnd(gen, assign->m_belongsTo);
                 instruction = (Instruction *)(assign + 1);
                 continue;
             }
+            useRangeStart(gen, instruction->m_belongsTo);
             addInstruction(gen, Instruction::size(instruction), instruction);
+            useRangeEnd(gen, instruction->m_belongsTo);
             instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
         }
     }

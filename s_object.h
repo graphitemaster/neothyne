@@ -2,8 +2,10 @@
 #define S_OBJECT_HDR
 
 #include <string.h>
+#include <time.h>
 
 #include "s_instr.h"
+#include "s_util.h"
 
 #include "u_new.h"
 #include "u_string.h"
@@ -29,14 +31,14 @@ struct State;
 struct Field {
     const char *m_name;
     size_t m_nameLength;
-    Object *m_value;
+    void *m_value;
 };
 
 struct Table {
-    static Object **lookupReference(Table *table, const char *key, size_t keyLength);
-    static Object **lookupReference(Table *table, const char *key, size_t keyLength, Object ***first);
+    static void **lookupReference(Table *table, const char *key, size_t keyLength);
+    static void **lookupReference(Table *table, const char *key, size_t keyLength, void ***first);
 
-    static Object *lookup(Table *table, const char *key, size_t keyLength, bool *found);
+    static void *lookup(Table *table, const char *key, size_t keyLength, bool *found);
 
     Field *m_fields;
     size_t m_fieldsNum;
@@ -105,7 +107,16 @@ struct GCState {
     size_t m_disabledCount;
 };
 
+struct ProfileState {
+    struct timespec m_lastTime;
+    int m_nextCheck;
+    Table m_directTable;
+    Table m_indirectTable;
+    static void dump(SourceRange source, ProfileState *profileState);
+};
+
 struct State {
+    State *m_parent;
     CallFrame *m_stack;
     size_t m_length;
     Object *m_root;
@@ -116,6 +127,7 @@ struct State {
     Object *m_last;
     size_t m_count;
     size_t m_capacity;
+    ProfileState *m_profileState;
 };
 
 struct FunctionObject : Object {

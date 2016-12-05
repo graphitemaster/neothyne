@@ -5,7 +5,9 @@
 #include "s_vm.h"
 
 #include "u_assert.h"
+#include "u_file.h"
 #include "u_misc.h"
+#include "u_log.h"
 
 namespace s {
 
@@ -71,9 +73,64 @@ void VM::error(State *state, const char *fmt, ...) {
 #define BEGIN {
 #define BREAK } break
 
+// TODO: move to State object
+static int gCycleCount = 0;
+
 void VM::step(State *state, void **preallocatedArguments) {
     Object *root = state->m_root;
     CallFrame *frame = &state->m_stack[state->m_length - 1];
+
+    gCycleCount++;
+    if (U_UNLIKELY(state->m_profileState && gCycleCount > state->m_profileState->m_nextCheck)) {
+        state->m_profileState->m_nextCheck = gCycleCount + 1024;
+        struct timespec profileTime;
+        const int result = clock_gettime(CLOCK_MONOTONIC, &profileTime);
+        if (result != 0)
+            U_ASSERT(0 && "failed to profile");
+        const long nsDifference = profileTime.tv_nsec - state->m_profileState->m_lastTime.tv_nsec;
+        const int sDifference = profileTime.tv_sec - state->m_profileState->m_lastTime.tv_sec;
+        const long long nsTotalDifference = (long long)sDifference * 1000000000LL + (long long)nsDifference;
+        if (nsTotalDifference > 100000LL) {
+            // 0.1ms spent on this operation: mark it as a hot spot
+            state->m_profileState->m_lastTime = profileTime;
+            Table *directTable = &state->m_profileState->m_directTable;
+            Table *indirectTable = &state->m_profileState->m_indirectTable;
+            int k = 0;
+            for (State *currentState = state; currentState; ) {
+                for (int i = currentState->m_length - 1; i >= 0; --i) {
+                    CallFrame *currentFrame = &currentState->m_stack[i];
+                    Instruction *instruction = currentFrame->m_instructions;
+                    // Ranges are always unique and instructions live as long as the state lives
+                    // so the pointer inside the instruction can be safely used as a key
+                    const char *key = (char *)&instruction->m_belongsTo;
+                    if (k == 0) {
+                        void **freeEntry = nullptr;
+                        void **findEntry = Table::lookupReference(directTable,
+                                                                  key,
+                                                                  sizeof(instruction->m_belongsTo),
+                                                                  &freeEntry);
+                        if (findEntry)
+                            (*(int *)findEntry)++;
+                        else
+                            (*(int *)freeEntry) = 1;
+                    } else {
+                        void **freeEntry = nullptr;
+                        void **findEntry = Table::lookupReference(indirectTable,
+                                                                  key,
+                                                                  sizeof(instruction->m_belongsTo),
+                                                                  &freeEntry);
+                        if (findEntry)
+                            (*(int *)findEntry)++;
+                        else
+                            (*(int *)freeEntry) = 1;
+                    }
+                    k++;
+                }
+                currentState = currentState->m_parent;
+            }
+        }
+    }
+
     Instruction *instruction = frame->m_instructions;
     Instruction *nextInstruction = nullptr;
     switch (instruction->m_type) {
@@ -160,8 +217,10 @@ void VM::step(State *state, void **preallocatedArguments) {
                 State substate;
                 memset(&substate, 0, sizeof substate);
 
+                substate.m_parent = state;
                 substate.m_root = state->m_root;
                 substate.m_gc = state->m_gc;
+                substate.m_profileState = state->m_profileState;
 
                 if (functionIndexOperation)
                     functionIndexOperation->m_function(&substate, object, indexOperation, &keyObject, 1);
@@ -517,6 +576,180 @@ Object *Object::newClosure(Object *context, UserFunction *function) {
     closureObject->m_context = context;
     closureObject->m_closure = *function;
     return (Object *)closureObject;
+}
+
+/* Profiling */
+struct ProfileRecord {
+    const char *m_textFrom;
+    const char *m_textTo;
+    int m_numSamples;
+    bool m_direct;
+};
+
+struct OpenRange {
+    ProfileRecord *m_record;
+    OpenRange *m_prev;
+    static void pushRecord(OpenRange **range, ProfileRecord *record);
+    static void dropRecord(OpenRange **range);
+};
+
+void OpenRange::pushRecord(OpenRange **range, ProfileRecord *record) {
+    OpenRange *newRange = (OpenRange *)neoMalloc(sizeof *newRange);
+    newRange->m_record = record;
+    newRange->m_prev = *range;
+    *range = newRange;
+}
+
+void OpenRange::dropRecord(OpenRange **range) {
+    *range = (*range)->m_prev;
+}
+
+void ProfileState::dump(SourceRange source, ProfileState *profileState) {
+    Table *directTable = &profileState->m_directTable;
+    Table *indirectTable = &profileState->m_indirectTable;
+    const size_t numDirectRecords = directTable->m_fieldsStored;
+    const size_t numIndirectRecords = indirectTable->m_fieldsStored;
+    const size_t numRecords = numDirectRecords + numIndirectRecords;
+
+    ProfileRecord *recordEntries = (ProfileRecord *)neoCalloc(sizeof *recordEntries, numRecords);
+
+    int maxSamplesDirect = 0;
+    int sumSamplesDirect = 0;
+    int maxSamplesIndirect = 0;
+    int sumSamplesIndirect = 0;
+    int k = 0;
+
+    union Value { void *p; int asInt; };
+
+    // Calculate direct samples
+    for (size_t i = 0; i < directTable->m_fieldsNum; ++i) {
+        Field *field = &directTable->m_fields[i];
+        if (field->m_name) {
+            FileRange *range = *(FileRange **)field->m_name;
+            //const int samples = *(int *)&field->m_value;
+            const Value samplesValue = { field->m_value };
+            const int samples = samplesValue.asInt;
+            if (samples > maxSamplesDirect)
+                maxSamplesDirect = samples;
+            sumSamplesDirect += samples;
+            // add a direct entry
+            recordEntries[k++] = {
+                range->m_textFrom,
+                range->m_textTo,
+                samples,
+                true
+            };
+        }
+    }
+
+    // Calculate indirect samples
+    for (size_t i = 0; i < indirectTable->m_fieldsNum; i++) {
+        Field *field = &indirectTable->m_fields[i];
+        if (field->m_name) {
+            FileRange *range = *(FileRange **)field->m_name;
+            //const int samples = *(int *)&field->m_value;
+            const Value samplesValue = { field->m_value };
+            const int samples = samplesValue.asInt;
+            if (samples > maxSamplesIndirect)
+                maxSamplesIndirect = samples;
+            sumSamplesIndirect += samples;
+            // add a direct entry
+            recordEntries[k++] = {
+                range->m_textFrom,
+                range->m_textTo,
+                samples,
+                false
+            };
+        }
+    }
+
+    U_ASSERT(k == (int)numRecords);
+
+    qsort(recordEntries, numRecords, sizeof(ProfileRecord), [](const void *a, const void *b) -> int {
+        const ProfileRecord *recordA = (const ProfileRecord *)a;
+        const ProfileRecord *recordB = (const ProfileRecord *)b;
+
+        // Ranges which start early should come first
+        if (recordA->m_textFrom < recordB->m_textFrom)
+            return -1;
+        if (recordA->m_textFrom > recordB->m_textFrom)
+            return 1;
+
+        // Ranges that end later which are outermost
+        if (recordA->m_textTo > recordB->m_textTo)
+            return -1;
+        if (recordA->m_textTo < recordB->m_textTo)
+            return 1;
+
+        // Ranges are identical (we have a direct/indirect collision)
+        return 0;
+    });
+
+    // Generate the sampling profile
+    OpenRange *openRangeHead = nullptr;
+
+    u::file dump = u::fopen("profile.html", "w");
+    u::fprint(dump, "<!DOCTYPE html>\n");
+    u::fprint(dump, "<html>\n");
+    u::fprint(dump, "<head>\n");
+    u::fprint(dump, "<style>span { border: 1px solid gray60; }</style>\n");
+    u::fprint(dump, "</head>\n");
+    u::fprint(dump, "<body>\n");
+    u::fprint(dump, "<pre>\n");
+
+    char *currentCharacter = source.m_begin;
+    size_t currentEntryIndex = 0;
+    while (currentCharacter != source.m_end) {
+        // Close all
+        while (openRangeHead && openRangeHead->m_record->m_textTo == currentCharacter) {
+            OpenRange::dropRecord(&openRangeHead);
+            u::fprint(dump, "</span>");
+        }
+        // Open any new
+        while (currentEntryIndex < numRecords && recordEntries[currentEntryIndex].m_textFrom == currentCharacter) {
+            OpenRange::pushRecord(&openRangeHead, &recordEntries[currentEntryIndex]);
+            int *samplesDirectSearch = nullptr;
+            int *samplesIndirectSearch = nullptr;
+            OpenRange *current = openRangeHead;
+            // Search for the innermost direct or indirect values
+            while (current && (!samplesDirectSearch || !samplesIndirectSearch)) {
+                if (!samplesDirectSearch && current->m_record->m_direct)
+                    samplesDirectSearch = &current->m_record->m_numSamples;
+                if (!samplesIndirectSearch && !current->m_record->m_direct)
+                    samplesIndirectSearch = &current->m_record->m_numSamples;
+                current = current->m_prev;
+            }
+            int samplesDirect = samplesDirectSearch ? *samplesDirectSearch : 0;
+            int samplesIndirect = samplesIndirectSearch ? *samplesIndirectSearch : 0;
+            double percentDirect = (samplesDirect * 100.0) / sumSamplesDirect;
+            double percentIndirect = (samplesIndirect * 100.0) / sumSamplesIndirect;
+            int hexDirect = 255 - (samplesDirect * 255LL) / maxSamplesDirect;
+            int weightIndirect = 100 + (samplesIndirect * 800UL) / maxSamplesIndirect;
+            float borderIndirect = samplesIndirect * 3.0 / maxSamplesIndirect;
+            int fontSizeIndirect = 100 + (samplesIndirect * 10LL) / maxSamplesIndirect;
+
+            u::fprint(dump, "<span title=\"%.2f%% active, %.2f%% in backtrace\""
+                " style=\"background-color:#ff%02x%02x;font-weight:%i;border-bottom:%fpx solid black;font-size:%i%%;\">",
+                percentDirect, percentIndirect,
+                hexDirect, hexDirect, weightIndirect, borderIndirect, fontSizeIndirect);
+            currentEntryIndex++;
+        }
+        // Close all the zero size ones
+        while (openRangeHead && openRangeHead->m_record->m_textTo == currentCharacter) {
+            OpenRange::dropRecord(&openRangeHead);
+            u::fprint(dump, "</span>");
+        }
+        if (*currentCharacter == '<')
+            u::fprint(dump, "&lt;");
+        else if (*currentCharacter == '>')
+            u::fprint(dump, "&gt;");
+        else
+            u::fprint(dump, "%c", *currentCharacter);
+        currentCharacter++;
+    }
+    u::fprint(dump, "</pre>\n");
+    u::fprint(dump, "</body>\n");
+    u::fprint(dump, "</html>\n");
 }
 
 }

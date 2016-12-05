@@ -20,7 +20,7 @@ static inline size_t djb2(const char *str, size_t length) {
 }
 
 ///! Table
-Object **Table::lookupReference(Table *table, const char *key, size_t keyLength) {
+void **Table::lookupReference(Table *table, const char *key, size_t keyLength) {
     U_ASSERT(key);
     if (table->m_fieldsStored == 0)
         return nullptr;
@@ -32,7 +32,7 @@ Object **Table::lookupReference(Table *table, const char *key, size_t keyLength)
                 && field->m_nameLength == keyLength
                 && (keyLength == 0 || key[0] == field->m_name[0])
                 && (keyLength == 1 || key[1] == field->m_name[1])
-                && strncmp(key, field->m_name, keyLength) == 0)
+                && memcmp(key, field->m_name, keyLength) == 0)
             {
                 return &field->m_value;
             }
@@ -48,7 +48,7 @@ Object **Table::lookupReference(Table *table, const char *key, size_t keyLength)
             if (field->m_nameLength == keyLength
                 && (keyLength == 0 || key[0] == field->m_name[0])
                 && (keyLength == 1 || key[1] == field->m_name[1])
-                && strncmp(key, field->m_name, keyLength) == 0)
+                && memcmp(key, field->m_name, keyLength) == 0)
             {
                 return &field->m_value;
             }
@@ -57,7 +57,7 @@ Object **Table::lookupReference(Table *table, const char *key, size_t keyLength)
     return nullptr;
 }
 
-Object **Table::lookupReference(Table *table, const char *key, size_t keyLength, Object ***first) {
+void **Table::lookupReference(Table *table, const char *key, size_t keyLength, void ***first) {
     U_ASSERT(key);
     *first = nullptr;
     size_t fieldsNum = table->m_fieldsNum;
@@ -73,7 +73,7 @@ Object **Table::lookupReference(Table *table, const char *key, size_t keyLength,
                 && field->m_nameLength == keyLength
                 && (keyLength == 0 || key[0] == field->m_name[0])
                 && (keyLength == 1 || key[1] == field->m_name[1])
-                && strncmp(key, field->m_name, keyLength) == 0)
+                && memcmp(key, field->m_name, keyLength) == 0)
             {
                 return &field->m_value;
             }
@@ -101,8 +101,8 @@ Object **Table::lookupReference(Table *table, const char *key, size_t keyLength,
         for (size_t i = 0; i < fieldsNum; i++) {
             Field *field = &table->m_fields[i];
             if (field->m_name) {
-                Object **freeObject;
-                Object **lookupObject = lookupReference(&newTable, field->m_name, field->m_nameLength, &freeObject);
+                void **freeObject;
+                void **lookupObject = lookupReference(&newTable, field->m_name, field->m_nameLength, &freeObject);
                 U_ASSERT(!lookupObject);
                 *freeObject = field->m_value;
             }
@@ -113,8 +113,8 @@ Object **Table::lookupReference(Table *table, const char *key, size_t keyLength,
     return lookupReference(table, key, keyLength, first);
 }
 
-Object *Table::lookup(Table *table, const char *key, size_t keyLength, bool *found) {
-    Object **object = lookupReference(table, key, keyLength);
+void *Table::lookup(Table *table, const char *key, size_t keyLength, bool *found) {
+    void **object = lookupReference(table, key, keyLength);
     if (!object) {
         if (found)
             *found = false;
@@ -130,7 +130,7 @@ Object *Object::lookup(Object *object, const char *key, bool *found) {
     const size_t keyLength = strlen(key);
     while (object) {
         bool contains = false;
-        Object *value = Table::lookup(&object->m_table, key, keyLength, &contains);
+        Object *value = (Object *)Table::lookup(&object->m_table, key, keyLength, &contains);
         if (contains) {
             if (found)
                 *found = true;
@@ -160,7 +160,7 @@ void Object::mark(State *state, Object *object) {
         for (size_t i = 0; i < table->m_fieldsNum; i++) {
             Field *field = &table->m_fields[i];
             if (field->m_name)
-                mark(state, field->m_value);
+                mark(state, (Object *)field->m_value);
         }
 
         // run any custom mark functions if they exist
@@ -194,7 +194,7 @@ bool Object::setExisting(Object *object, const char *key, Object *value) {
     Object *current = object;
     const size_t keyLength = strlen(key);
     while (current) {
-        Object **search = Table::lookupReference(&current->m_table, key, keyLength);
+        Object **search = (Object **)Table::lookupReference(&current->m_table, key, keyLength);
         if (search) {
             U_ASSERT(!(current->m_flags & kImmutable));
             *search = value;
@@ -211,7 +211,7 @@ bool Object::setShadowing(Object *object, const char *key, Object *value) {
     Object *current = object;
     const size_t keyLength = strlen(key);
     while (current) {
-        Object **search = Table::lookupReference(&current->m_table, key, keyLength);
+        Object **search = (Object **)Table::lookupReference(&current->m_table, key, keyLength);
         if (search) {
             setNormal(object, key, value);
             return true;
@@ -224,13 +224,13 @@ bool Object::setShadowing(Object *object, const char *key, Object *value) {
 // set property
 void Object::setNormal(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
-    Object **free = nullptr;
-    Object **search = Table::lookupReference(&object->m_table, key, strlen(key), &free);
+    void **free = nullptr;
+    Object **search = (Object **)Table::lookupReference(&object->m_table, key, strlen(key), &free);
     if (search) {
         U_ASSERT(!(object->m_flags & kImmutable));
     } else {
         U_ASSERT(!(object->m_flags & kClosed));
-        search = free;
+        search = (Object **)free;
     }
     *search = value;
 }

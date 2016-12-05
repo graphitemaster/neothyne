@@ -7,6 +7,8 @@ namespace s {
 
 using Slot = size_t;
 
+struct FileRange;
+
 enum InstructionType {
     kInvalid = -1,
     kGetRoot,
@@ -59,6 +61,7 @@ struct Instruction {
     static size_t size(Instruction *instruction);
 
     InstructionType m_type;
+    FileRange *m_belongsTo;
 };
 
 struct InstructionBlock {
