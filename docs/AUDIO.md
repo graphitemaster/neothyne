@@ -56,7 +56,7 @@ There are faders to do the following
 Filters are used to modify sound in some fashion or another. Typical
 uses for them include creating environmental effects such as echoing.
 
-There exists a variety of filters
+There are a variety of filters
 
 - Biquadratic Resonance
   - Low pass filter
@@ -78,8 +78,8 @@ effect they have on the samples
 - cut off resonance
 
 ### Echo Filter
-The echo filter is as the name suggests, a way to produce an echo.
-At it's core it just records and replays samples based on two parameters
+The echo filter is, as the name suggests, a way to produce an echo.
+At its core, it simply records and replays samples based on two parameters
 
 - delay
 - decay
