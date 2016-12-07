@@ -78,9 +78,9 @@ Neo is *case-sensitive*, all of the following are unique identifiers:
 foo FOO Foo
 ```
 
-The following is a list of recognized tokens:
+The following is a list of recognized discrete tokens:
 ```
-+ - * / += -= *= /= // /* */ ! == != = < !< > !> <= !<= >= !>= ( ) { } [ ] , ; "
++ - * / += -= *= /= // /* */ ! == != = < !< > !> <= !<= >= !>= ( ) { } [ ] , ; ++, --
 ```
 
 Literal strings are delimited by matching double quotes
@@ -236,9 +236,9 @@ which only allows it as the last statement of a block.
 ### Arithmetic operators
 Neo supports the following arithmetic operators:
 * `+` addition
-* `-` subtraction
-*  `*` multiplication
-*  `/` division
+* `-` subtraction (and unary negation)
+* `*` multiplication
+* `/` division
 
 ### Coercions and Conversions
 Neo provides some automatic conversions between some types and representations
