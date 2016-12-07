@@ -34,23 +34,23 @@ found in `u_traits.h` and `u_algorithm.h` respectively. Miscellaneous utilites c
 be found in `u_misc.h`.
 
 ## Strings
-String in Neothyne are allocated using a special string heap with a fixed size.
+Strings in Neothyne are allocated using a special string heap with a fixed size.
 A custom allocator is used for allocating strings which allocates from this fixed
 size heap. The allocation strategy is buddy allocation and will always make blocks
-of memory for strings of size 8, 16, 32, 64, 128, 256, ...
+of memory for strings of size 8, 16, 32, 64, 128, 256, and so on.
 
 ## Shaders
 
 Shaders in Neothyne are written in GLSL with a bit of syntax sugar.
 
 Neothyne will emit a prelude to each shader containing the version of GLSL to
-utilize as well as things like `HAS_TEXTURE_RECTANGLE` if the GPU supports that
+use as well as things like `HAS_TEXTURE_RECTANGLE` if the GPU supports that
 feature. You can find a list of the macros it emits by searching for
 `method::define` in the code-base.
 
 Neothyne supports the `#include` directive in GLSL.
 
-If supported, Neothyne will fetch compiled program binaries and cache them disk
+If supported, Neothyne will fetch compiled program binaries and cache them to disk
 for subsequent launches to reduce startup costs associated with processing,
 compiling and linking source.
 
@@ -142,7 +142,7 @@ map only when the light's properties have changed.
 The geometry pass renders into a frame buffer with two texture attachments and
 a depth-stencil attachment which are used to store diffuse, normal and spec information.
 
-All geometry is rendered here including map models.
+All geometry is rendered here, including map models.
 
 Ambient occlusion also happens during this pass on a separate FBO.
 
@@ -179,7 +179,7 @@ The result of the shadow map is used immediately after it's available during the
 lighting pass. There is only one shadow map, this is to keep the memory requirements
 low. No batching or caching of shadow maps is done.
 
-To make use of throughput an unusual PCF algorithm is used when sampling shadow
+To make use of throughput, an unusual PCF algorithm is used when sampling shadow
 maps which makes sure the distance between taps is 4 unique pixels and that
 they're correctly weighted by the area they take up in the final average.
 The filter is listed here:

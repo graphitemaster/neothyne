@@ -47,7 +47,7 @@ below:
     * ATI1
     * ATI2
 
-In addition to those supported texture formats. Neothyne also builds BPTC, DXT1,
+In addition to those supported texture formats, Neothyne also builds BPTC, DXT1,
 DXT5 and RGTC compressed textures at runtime and caches them to disk. It will
 prefer the cached textures if the hardware supports BPTC, S3TC or RGTC texture
 compression.
