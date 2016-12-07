@@ -42,10 +42,11 @@ As of late Neothyne is just an engine offering
 * Scripting language (Neo language)
   * Heavily inspired by Javascript, C++, Lua, Ruby, C#, Java (In order of inspiration)
   * Dynamically typed
+  * Structured
   * First class values
   * Lexically scoped
   * Type rich (function, method, bool, int, float, string, array, object)
-  * Object oriented (Single inheritence using technique similar to Javascript prototype chain)
+  * Object oriented (Single inheritence multiple-interface)
   * Garbage collected
 
 * Fire and forget audio mixer (which can do)
