@@ -56,7 +56,7 @@ and not being a reserved word. Identifiers are used to name variables and fields
 
 The following keywords are reserved and cannot be used as identifiers
 ```
-let new if else while fn method
+let new if else while for fn method
 ```
 
 Neo is *case-sensitive*, all of the following are unique identifiers:
@@ -66,7 +66,7 @@ foo FOO Foo
 
 The following is a list of recognized tokens:
 ```
-+ - * / // /* */ ! == != = < !< > !> <= !<= >= !>= ( ) { } [ ] , ; "
++ - * / += -= *= /= // /* */ ! == != = < !< > !> <= !<= >= !>= ( ) { } [ ] , ; "
 ```
 
 Literal strings are delimited by matching double quotes
@@ -128,6 +128,15 @@ reset the "active scope" at the end. This, unlike Lua or Javascript allows us to
 scope immediately after the variable declaration, allowing later optimization.
 
 ### Assignment
+Assignment is done with the `=` operator and there also exists the following
+compound assignment operators.
+```
+a += b; // sugar for: a = a + b
+a -= b; // sugar for: a = a - b
+a /= b; // sugar for: a = a / b
+a *= b; // sugar for: a = a * b
+```
+
 The assignment statement first evaluates all its expressions and only then the assignment
 is performed. All expressions are evaluated left to right. This is in contrast to Javascript
 and many other languages that leave this up to *sequence points* and in some cases undefined.
