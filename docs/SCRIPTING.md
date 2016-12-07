@@ -141,6 +141,7 @@ The assignment statement first evaluates all its expressions and only then the a
 is performed. All expressions are evaluated left to right. This is in contrast to Javascript
 and many other languages that leave this up to *sequence points* and in some cases undefined.
 
+
 ### Classes
 Neo supports classes through the Javascript method of prototype-chains. The `new` keyword can be
 used to construct a new instance of an Object and also subclass an existing object.
@@ -151,16 +152,54 @@ let c = new b;           // constructs a new instance of b
 b.b = 10;                // does not change c.b since c is a new instance of b
 ```
 
-#### Inheritence
-Any object of a subclass is also immediately an object of all superclasses.
-All classes inherit from an Object class that forms the root of the object
-hierarchy. Anything which is added to a superclass in the creation of a
-subclass appears beneath all the data which describes that superclass.
-What this means in practice is that any data which belongs to the superclass
-will not be messed with or shifted around, or to put another way: any object
-of a class starts with a *smaller* object of the superclass, which starts with
-etc all the way up to the root of the hierarchy.
+This may appear strange to some programmers as we're subclassing on an object
+and not a type. In Neo classes are always object references opposted to the more
+traditional value-type approach in languages like C++.
 
+#### Inheritence
+Neo language supports single-inheritence multiple-interface object oriented
+programming, much like Java and C#.
+
+The decision to not support multiple-inheritence has to deal with Neo's strong
+interpretation of Liskov's Principle. The Liskov Principle (LSP), in summary,
+states that a class inheritence is empirically a strong "is-a" relationship.
+Which means any object of a subclass is-a object of the parent class.
+For instance any *Cat* is-a *Animal*. There is a major difference to be made
+between "is-a" and "can-be-with-complex-transformation". What this means is that
+any object of a subclass is also immediately (and indefinitely) an object of
+all superclasses. In Neo there is a root class called Object which forms the
+root of the object hierarchy. What this means is a reference to the "vtable"
+(which Neo doesn't really have in the traditional sense) has to be in Object
+itself, since you couldn't for instance have it at the end of the class otherwise
+adding new members would move the reference to the "vtable" around.
+
+This however is not the final nail in the coffin. LSP also states that anything
+which is added to a superclass in the creation of a subclass must be "beneath"
+all the data which describes the superclass. This idea does not permit any data
+that belongs to the superclass to be moved around, shifted, etc. This also
+includes the data a "vtable" traditionally encodes. If the object has a reference
+to it than it must be beneath as well.
+
+So basically new members go underneath the superclass's members and new functions
+underneath the old class's functions and so on. This technique does not permit
+a clean and straight forward implementation of multiple-inheritence though.
+So why would we want it at all then? It's simple and efficent because no data
+moves around which means references to a superclass from a subclass are always
+static after the fact. For instance we can inline the access during execution.
+
+Neo language is very dynamic so it isn't difficult to actually emulate
+interfaces with classes itself. This idea was derived from the observation that
+interfaces are essentially objects and that the LSP rules work for them too.
+For instance if you consider that all interface references are-a reference to
+their first parent interface and that an interface can only add functions, not
+data. Then they operate exactly the same way.
+
+This means all that is required of an interface function is to call them with
+object references.
+
+Similarly techniques like multiple dispatch can be done with multiple levels
+of single dispatch in Neo by creating the appropriate interface object
+and subclassing it for your classes that implement that interface.
 
 ### Control Structures
 The control structures `if` and `while` and `return` have the usual meaning and familiar syntax.
