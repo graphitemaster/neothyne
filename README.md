@@ -40,7 +40,7 @@ As of late Neothyne is just an engine offering
     * Brightness and contrast
 
 * Scripting language (Neo language)
-  * Heavily inspired by Lua, Javascript, Ruby and C/C++
+  * Heavily inspired by Javascript, Java, C#, C++, Ruby and Lua.
   * Dynamically typed
   * First class values
   * Lexically scoped
