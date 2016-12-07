@@ -736,6 +736,29 @@ void Parser::buildOperation(Gen *gen, const char *op, Reference *result, Referen
     Gen::useRangeEnd(gen, range);
 }
 
+bool Parser::assignSlot(Gen *gen, Reference ref, Slot value, FileRange *assignRange) {
+    switch (ref.m_mode) {
+    case Reference::kNone:
+        Gen::useRangeEnd(gen, assignRange);
+        neoFree(assignRange);
+        return false;
+    case Reference::kVariable:
+        Reference::assignExisting(gen, ref, value);
+        break;
+    case Reference::kObject:
+        Reference::assignShadowing(gen, ref, value);
+        break;
+    case Reference::kIndex:
+        Reference::assignPlain(gen, ref, value);
+        break;
+    default:
+        U_ASSERT(0 && "internal compiler error");
+        return false;
+    }
+    Gen::useRangeEnd(gen, assignRange);
+    return true;
+}
+
 ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Reference *reference) {
     char *text = *contents;
 
@@ -1098,27 +1121,10 @@ ParseResult Parser::parseAssign(char **contents, Gen *gen) {
     Gen::useRangeStart(gen, assignRange);
     Slot value = Reference::access(gen, valueExpression);
 
-    switch (ref.m_mode) {
-    case Reference::kNone:
-        Gen::useRangeEnd(gen, assignRange);
-        neoFree(assignRange);
-        logParseError(text, "cannot assign to expression yielding non-reference");
+    if (!assignSlot(gen, ref, value, assignRange)) {
+        logParseError(text, "cannot perform assignment: expression is non-reference");
         return kParseError;
-    case Reference::kVariable:
-        Reference::assignExisting(gen, ref, value);
-        break;
-    case Reference::kObject:
-        Reference::assignShadowing(gen, ref, value);
-        break;
-    case Reference::kIndex:
-        Reference::assignPlain(gen, ref, value);
-        break;
-    default:
-        U_ASSERT(0 && "internal compiler error");
-        break;
     }
-
-    Gen::useRangeEnd(gen, assignRange);
 
     *contents = text;
     return kParseOk;
@@ -1200,7 +1206,7 @@ ParseResult Parser::parseForStatement(char **contents, Gen *gen, FileRange *rang
 
     parseBlock(&text, gen);
 
-    result = parseAssign(&step, gen);
+    result = parseSemicolonStatement(&step, gen);
     U_ASSERT(result == kParseOk);
 
     Gen::useRangeStart(gen, range);
@@ -1309,7 +1315,9 @@ ParseResult Parser::parseStatement(char **contents, Gen *gen) {
 
     // expression as statement
     ParseResult result = parseSemicolonStatement(&text, gen);
-    if (result != kParseNone) {
+    if (result == kParseError)
+        return kParseError;
+    if (result == kParseOk) {
         if (!consumeString(&text, ";")) {
             logParseError(text, "expected ';' after statement");
             return kParseError;
