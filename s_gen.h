@@ -54,6 +54,9 @@ struct Gen {
 
     static UserFunction *inlinePass(UserFunction *function, bool *primitiveSlots);
 
+    static size_t scopeEnter(Gen *gen);
+    static void scopeLeave(Gen *gen, size_t backup);
+
 private:
     friend struct Parser;
 

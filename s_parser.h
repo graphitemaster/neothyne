@@ -54,6 +54,9 @@ private:
     static bool parseFloat(char **contents, float *out);
     static ParseResult parseString(char **contents, char **out);
 
+    static ParseResult parseAssign(char **contents, Gen *gen);
+    static ParseResult parseSemicolonStatement(char **contents, Gen *gen);
+    static ParseResult parseForStatement(char **contents, Gen *gen, FileRange *range);
     static ParseResult parseObjectLiteral(char **contents, Gen *gen, Slot objectSlot);
     static ParseResult parseObjectLiteral(char **contents, Gen *gen, Reference *reference);
     static ParseResult parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot, FileRange *range);

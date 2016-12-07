@@ -370,4 +370,12 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
     return optimized;
 }
 
+size_t Gen::scopeEnter(Gen *gen) {
+    return gen->m_scope;
+}
+
+void Gen::scopeLeave(Gen *gen, size_t backup) {
+    gen->m_scope = backup;
+}
+
 }

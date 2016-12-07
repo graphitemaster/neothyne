@@ -17,6 +17,10 @@ fn ack(m, n) {
 
 ack(3, 4);
 
+for (let i = 0; i < 4096; i = i + 1) {
+    print(i);
+}
+
 fn factorial(x) {
     if (x == 1) return x;
     return x * factorial(x - 1);
@@ -30,7 +34,7 @@ fn mod(a, b) {
 
 let i = 0;
 let j = 1;
-while (i < 4096) {
+while (i < 2) {
     print(mod(i, j));
     i = i + 1;
     j = j + i;
