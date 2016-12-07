@@ -2,7 +2,7 @@
 
 ## Types and Values
 Neo is a *dynamically typed* language that borrows heavily from
-Javascript, Java, C#, C++, Ruby and Lua.
+Javascript, C++, Lua, Ruby, C#, Java (In order of inspiration.)
 
 All values in Neo are *first-class values*. This means that all values can be
 stored in variables,
