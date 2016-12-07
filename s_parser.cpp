@@ -721,15 +721,15 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, Reference *refere
     return kParseOk;
 }
 
-void Parser::buildOperation(Gen *gen, const char *op, Reference *lhs, Reference rhs, FileRange *range) {
-    if (gen) {
-        Gen::useRangeStart(gen, range);
-        Slot lhsSlot = Reference::access(gen, *lhs);
-        Slot rhsSlot = Reference::access(gen, rhs);
-        Slot function = Gen::addAccess(gen, lhsSlot, Gen::addNewStringObject(gen, gen->m_scope, op));
-        *lhs = { Gen::addCall(gen, function, lhsSlot, rhsSlot), Reference::NoSlot, Reference::kNone };
-        Gen::useRangeEnd(gen, range);
-    }
+void Parser::buildOperation(Gen *gen, const char *op, Reference *result, Reference lhs, Reference rhs, FileRange *range)
+{
+    if (!gen) return;
+    Gen::useRangeStart(gen, range);
+    Slot lhsSlot = Reference::access(gen, lhs);
+    Slot rhsSlot = Reference::access(gen, rhs);
+    Slot function = Gen::addAccess(gen, lhsSlot, Gen::addNewStringObject(gen, gen->m_scope, op));
+    *result = { Gen::addCall(gen, function, lhsSlot, rhsSlot), Reference::NoSlot, Reference::kNone };
+    Gen::useRangeEnd(gen, range);
 }
 
 ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Reference *reference) {
@@ -754,7 +754,7 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "*", reference, expression, range);
+            buildOperation(gen, "*", reference, *reference, expression, range);
             continue;
         }
         if (consumeString(&text, "/")) {
@@ -763,7 +763,7 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "/", reference, expression, range);
+            buildOperation(gen, "/", reference, *reference, expression, range);
             continue;
         }
         neoFree(range);
@@ -783,7 +783,7 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "+", reference, expression, range);
+            buildOperation(gen, "+", reference, *reference, expression, range);
             continue;
         }
         if (consumeString(&text, "-")) {
@@ -792,7 +792,7 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "-", reference, expression, range);
+            buildOperation(gen, "-", reference, *reference, expression, range);
             continue;
         }
         neoFree(range);
@@ -813,7 +813,7 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
-        buildOperation(gen, "==", reference, expression, range);
+        buildOperation(gen, "==", reference, *reference, expression, range);
     } else if (consumeString(&text, "!=")) {
         FileRange::recordEnd(text, range);
         // the same code except result is negated
@@ -821,7 +821,7 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
-        buildOperation(gen, "==", reference, expression, range);
+        buildOperation(gen, "==", reference, *reference, expression, range);
         negated = true;
     } else {
         // this allows for operators like !<, !>, !<=, !>=
@@ -833,28 +833,28 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "<=", reference, expression, range);
+            buildOperation(gen, "<=", reference, *reference, expression, range);
         } else if (consumeString(&text, ">=")) {
             FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, ">=", reference, expression, range);
+            buildOperation(gen, ">=", reference, *reference, expression, range);
         } else if (consumeString(&text, "<")) {
             FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, "<", reference, expression, range);
+            buildOperation(gen, "<", reference, *reference, expression, range);
         } else if (consumeString(&text, ">")) {
             FileRange::recordEnd(text, range);
             result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
-            buildOperation(gen, ">", reference, expression, range);
+            buildOperation(gen, ">", reference, *reference, expression, range);
         } else if (negated) {
             neoFree(range);
             logParseError(text, "expected comparison operator");
@@ -1044,15 +1044,33 @@ ParseResult Parser::parseAssign(char **contents, Gen *gen) {
     Reference ref;
     ParseResult result = parseExpression(&text, nullptr, &ref); // speculative parse
     if (result != kParseOk)
+        return result;
+
+    const char *operation = nullptr;
+    const char *assignment = nullptr;
+    if (consumeString(&text, "+=")) {
+        operation = "+";
+        assignment = "+=";
+    } else if (consumeString(&text, "-=")) {
+        operation = "-";
+        assignment = "-=";
+    } else if (consumeString(&text, "*=")) {
+        operation = "*";
+        assignment = "*=";
+    } else if (consumeString(&text, "/=")) {
+        operation = "/";
+        assignment = "/=";
+    } else if (consumeString(&text, "=")) {
+        assignment = "=";
+    } else {
         return kParseNone;
-    if (!consumeString(&text, "="))
-        return kParseNone;
+    }
 
     text = *contents;
     result = parseExpression(&text, gen, &ref);
     U_ASSERT(result == kParseOk);
     FileRange *assignRange = Gen::newRange(text);
-    if (!consumeString(&text, "="))
+    if (!consumeString(&text, assignment))
         U_ASSERT(0 && "internal compiler error");
     FileRange::recordEnd(text, assignRange);
 
@@ -1063,6 +1081,15 @@ ParseResult Parser::parseAssign(char **contents, Gen *gen) {
         return result;
     }
     U_ASSERT(result == kParseOk);
+
+    if (operation) {
+        buildOperation(gen,
+                       operation,
+                       &valueExpression,
+                       ref,
+                       valueExpression,
+                       assignRange);
+    }
 
     Gen::useRangeStart(gen, assignRange);
     Slot value = Reference::access(gen, valueExpression);

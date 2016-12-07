@@ -76,7 +76,7 @@ private:
     static ParseResult parseBlock(char **contents, Gen *gen);
     static ParseResult parseFunctionExpression(char **contents, UserFunction **function);
 
-    static void buildOperation(Gen *gen, const char *op, Reference *lhs, Reference rhs, FileRange *range);
+    static void buildOperation(Gen *gen, const char *op, Reference *result, Reference lhs, Reference rhs, FileRange *range);
 };
 
 }
