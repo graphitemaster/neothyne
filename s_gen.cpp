@@ -1,4 +1,5 @@
 #include "s_gen.h"
+#include "s_memory.h"
 
 #include "u_assert.h"
 #include "u_vector.h"
@@ -31,16 +32,22 @@ void Gen::useRangeEnd(Gen *gen, FileRange *range) {
     gen->m_currentRange = nullptr;
 }
 
-FileRange *Gen::newRange(char *text) {
-    FileRange *range = (FileRange *)neoCalloc(sizeof *range, 1);
+FileRange *Gen::newRange(Gen *gen, char *text) {
+    if (!gen) return nullptr;
+    FileRange *range = (FileRange *)Memory::allocate(gen->m_memory, sizeof *range, 1);
     FileRange::recordStart(text, range);
     return range;
+}
+
+void Gen::delRange(Gen *gen, FileRange *range) {
+    if (!gen) return;
+    Memory::free(gen->m_memory, range);
 }
 
 size_t Gen::newBlock(Gen *gen) {
     U_ASSERT(gen->m_blockTerminated);
     FunctionBody *body = &gen->m_body;
-    body->m_blocks = (InstructionBlock *)neoRealloc(body->m_blocks, ++body->m_count * sizeof *body->m_blocks);
+    body->m_blocks = (InstructionBlock *)Memory::reallocate(gen->m_memory, body->m_blocks, ++body->m_count * sizeof *body->m_blocks);
     body->m_blocks[body->m_count - 1] = { nullptr, nullptr };
     gen->m_blockTerminated = false;
     return body->m_count - 1;
@@ -59,7 +66,7 @@ void Gen::addInstruction(Gen *gen, size_t size, Instruction *instruction) {
     InstructionBlock *block = &body->m_blocks[body->m_count - 1];
     const size_t currentLength = (unsigned char *)block->m_instructionsEnd - (unsigned char *)block->m_instructions;
     const size_t newLength = currentLength + size;
-    block->m_instructions = (Instruction *)neoRealloc(block->m_instructions, newLength);
+    block->m_instructions = (Instruction *)Memory::reallocate(gen->m_memory, block->m_instructions, newLength);
     block->m_instructionsEnd = (Instruction *)((unsigned char *)block->m_instructions + newLength);
     memcpy((unsigned char *)block->m_instructions + currentLength, instruction, size);
     if (instruction->m_type == kBranch || instruction->m_type == kTestBranch || instruction->m_type == kReturn)
@@ -191,13 +198,13 @@ Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot) {
 
 
 Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot argument0) {
-    Slot *arguments = (Slot *)neoMalloc(sizeof *arguments * 1);
+    Slot *arguments = (Slot *)Memory::allocate(gen->m_memory, sizeof *arguments * 1);
     arguments[0] = argument0;
     return addCall(gen, functionSlot, thisSlot, arguments, 1);
 }
 
 Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot argument0, Slot argument1) {
-    Slot *arguments = (Slot *)neoMalloc(sizeof *arguments * 2);
+    Slot *arguments = (Slot *)Memory::allocate(gen->m_memory, sizeof *arguments * 2);
     arguments[0] = argument0;
     arguments[1] = argument1;
     return addCall(gen, functionSlot, thisSlot, arguments, 2);
@@ -232,6 +239,8 @@ void Gen::addReturn(Gen *gen, Slot returnSlot) {
 }
 
 UserFunction *Gen::buildFunction(Gen *gen) {
+    // NOTE: this should not use gen->m_memory since functions are garbage
+    //       collected instead
     U_ASSERT(gen->m_blockTerminated);
     UserFunction *function = (UserFunction *)neoMalloc(sizeof *function);
     function->m_arity = gen->m_count;
@@ -242,8 +251,8 @@ UserFunction *Gen::buildFunction(Gen *gen) {
     return function;
 }
 
-static inline void findPrimitiveSlots(UserFunction *function, bool **slots) {
-    *slots = (bool *)neoMalloc(sizeof **slots * function->m_slots);
+static inline void findPrimitiveSlots(Memory *memory, UserFunction *function, bool **slots) {
+    *slots = (bool *)Memory::allocate(memory, sizeof **slots * function->m_slots);
     for (size_t i = 0; i < function->m_slots; i++)
         (*slots)[i] = true;
     for (size_t i = 0; i < function->m_body.m_count; i++) {
@@ -291,24 +300,26 @@ static inline void findPrimitiveSlots(UserFunction *function, bool **slots) {
     }
 }
 
-UserFunction *Gen::optimize(UserFunction *function) {
+UserFunction *Gen::optimize(Gen *gen, UserFunction *function) {
     bool *primitiveSlots = nullptr;
-    findPrimitiveSlots(function, &primitiveSlots);
-    UserFunction *optimized = inlinePass(function, primitiveSlots);
-    neoFree(primitiveSlots);
+    findPrimitiveSlots(gen->m_memory, function, &primitiveSlots);
+    UserFunction *optimized = inlinePass(gen->m_memory, function, primitiveSlots);
+    Memory::free(gen->m_memory, primitiveSlots);
+    // NOTE: function is garbage collected at runtime
     neoFree(function);
     return optimized;
 }
 
-UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
-    Gen *gen = (Gen *)neoCalloc(sizeof *gen, 1);
-    gen->m_slot = 0;
-    gen->m_blockTerminated = true;
-    gen->m_currentRange = nullptr;
+UserFunction *Gen::inlinePass(Memory *memory, UserFunction *function, bool *primitiveSlots) {
+    Gen gen = { };
+    gen.m_memory = memory;
+    gen.m_slot = 0;
+    gen.m_blockTerminated = true;
+    gen.m_currentRange = nullptr;
     u::vector<const char *> slotTable;
     for (size_t i = 0; i < function->m_body.m_count; i++) {
         InstructionBlock *block = &function->m_body.m_blocks[i];
-        newBlock(gen);
+        newBlock(&gen);
 
         Instruction *instruction = block->m_instructions;
         while (instruction != block->m_instructionsEnd) {
@@ -332,9 +343,9 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
                 accessStringKey.m_objectSlot = access->m_objectSlot;
                 accessStringKey.m_targetSlot = access->m_targetSlot;
                 accessStringKey.m_key = slotTable[access->m_keySlot];
-                useRangeStart(gen, access->m_belongsTo);
-                addInstruction(gen, sizeof accessStringKey, (Instruction *)&accessStringKey);
-                useRangeEnd(gen, access->m_belongsTo);
+                useRangeStart(&gen, access->m_belongsTo);
+                addInstruction(&gen, sizeof accessStringKey, (Instruction *)&accessStringKey);
+                useRangeEnd(&gen, access->m_belongsTo);
                 instruction = (Instruction *)(access + 1);
                 continue;
             }
@@ -347,25 +358,24 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
                 assignStringKey.m_valueSlot = assign->m_valueSlot;
                 assignStringKey.m_key = slotTable[assign->m_keySlot];
                 assignStringKey.m_assignType = assign->m_assignType;
-                useRangeStart(gen, assign->m_belongsTo);
-                addInstruction(gen, sizeof assignStringKey, (Instruction *)&assignStringKey);
-                useRangeEnd(gen, assign->m_belongsTo);
+                useRangeStart(&gen, assign->m_belongsTo);
+                addInstruction(&gen, sizeof assignStringKey, (Instruction *)&assignStringKey);
+                useRangeEnd(&gen, assign->m_belongsTo);
                 instruction = (Instruction *)(assign + 1);
                 continue;
             }
-            useRangeStart(gen, instruction->m_belongsTo);
-            addInstruction(gen, Instruction::size(instruction), instruction);
-            useRangeEnd(gen, instruction->m_belongsTo);
+            useRangeStart(&gen, instruction->m_belongsTo);
+            addInstruction(&gen, Instruction::size(instruction), instruction);
+            useRangeEnd(&gen, instruction->m_belongsTo);
             instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
         }
     }
 
-    UserFunction *optimized = buildFunction(gen);
+    UserFunction *optimized = buildFunction(&gen);
     optimized->m_slots = function->m_slots;
     optimized->m_arity = function->m_arity;
     optimized->m_name = function->m_name;
     optimized->m_isMethod = function->m_isMethod;
-    neoFree(gen);
 
     return optimized;
 }

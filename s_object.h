@@ -140,7 +140,6 @@ struct SharedState {
 struct State {
     State *m_parent;
     SharedState *m_shared;
-
     CallFrame *m_stack;
     size_t m_length;
     Object *m_root;

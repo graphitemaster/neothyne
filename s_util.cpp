@@ -60,6 +60,7 @@ bool SourceRecord::findSourcePosition(char *source,
 
 ///! FileRange
 void FileRange::recordStart(char *text, FileRange *range) {
+    if (!range) return;
     SourceRange line;
     Parser::consumeFiller(&text);
     range->m_textFrom = text;
@@ -73,6 +74,7 @@ void FileRange::recordStart(char *text, FileRange *range) {
 }
 
 void FileRange::recordEnd(char *text, FileRange *range) {
+    if (!range) return;
     SourceRange line;
     const char *file;
     range->m_textTo = text;

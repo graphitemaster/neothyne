@@ -584,6 +584,7 @@ void VM::run(State *state) {
         }
     }
     GC::delRoots(state, &resultSet);
+    // TODO: tear down value cache
 }
 
 void VM::callFunction(State *state, Object *context, UserFunction *function, Object **arguments, size_t count) {

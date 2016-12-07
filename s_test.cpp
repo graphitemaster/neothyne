@@ -3,6 +3,7 @@
 #include "s_runtime.h"
 #include "s_vm.h"
 #include "s_gc.h"
+#include "s_memory.h"
 
 #include "u_log.h"
 
@@ -40,10 +41,13 @@ while (i < 2) {
     j = j + i;
 }
 
-
 )";
 
 void test() {
+    // Allocate memory for Neo
+    Memory memory;
+    Memory::init(&memory);
+
     // Allocate Neo state
     State state = { };
     state.m_shared = (SharedState *)neoCalloc(sizeof *state.m_shared, 1);
@@ -69,9 +73,9 @@ void test() {
     SourceRecord::registerSource(source, "test", 0, 0);
 
     // Parse the result into our module
-    UserFunction *module;
+    UserFunction *module = nullptr;
     char *text = source.m_begin;
-    ParseResult result = Parser::parseModule(&text, &module);
+    ParseResult result = Parser::parseModule(&memory, &text, &module);
     (void)result;
     if (result == kParseOk) {
         // Execute the result on the VM
@@ -93,8 +97,17 @@ void test() {
     // Reclaim memory
     GC::run(&state);
 
+    // Reclaim shared state
+    neoFree(state.m_shared);
+
+    // Tear down any stack frames made
+    neoFree((CallFrame *)state.m_stack - 1);
+
     // Destroy the function
     neoFree(module);
+
+    // Reclaim any leaking memory
+    Memory::destroy(&memory);
 }
 
 }
