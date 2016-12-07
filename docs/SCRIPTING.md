@@ -219,7 +219,7 @@ data. Then they operate exactly the same way.
 This means all that is required of an interface function is to call them with
 object references.
 
-Similarly techniques like multiple dispatch can be done with multiple levels
+Similarly, techniques like multiple dispatch can be done with multiple levels
 of single dispatch in Neo by creating the appropriate interface object
 and subclassing it for your classes that implement that interface.
 
