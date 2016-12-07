@@ -802,10 +802,30 @@ ParseResult Parser::parsePostfix(char **contents, Gen *gen, Reference *reference
 ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Reference *reference) {
     char *text = *contents;
 
+    bool negate = false;
+    FileRange *negatedRange = Gen::newRange(text);
+    if (consumeString(&text, "-")) {
+        FileRange::recordEnd(text, negatedRange);
+        negate = true;
+    } else {
+        neoFree(negatedRange);
+    }
+
     ParseResult result = parseExpression(&text, gen, reference);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
+
+    if (negate) {
+        Gen::useRangeStart(gen, negatedRange);
+        Slot zero = 0;
+        if (gen) {
+            zero = Gen::addNewIntObject(gen, gen->m_scope, 0);
+        }
+        Gen::useRangeEnd(gen, negatedRange);
+        Reference ref = { zero, Reference::NoSlot, Reference::kNone };
+        buildOperation(gen, "-", reference, ref, *reference, negatedRange);
+    }
 
     if (level > 2) {
         *contents = text;
