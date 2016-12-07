@@ -717,6 +717,8 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, Reference *refere
             return result;
         if ((result = parseArrayAccess(contents, gen, reference)) == kParseOk)
             continue;
+        if ((result = parsePostfix(contents, gen, reference)) == kParseOk)
+            continue;
         if (result == kParseError)
             return result;
         break;
@@ -757,6 +759,44 @@ bool Parser::assignSlot(Gen *gen, Reference ref, Slot value, FileRange *assignRa
     }
     Gen::useRangeEnd(gen, assignRange);
     return true;
+}
+
+ParseResult Parser::parsePostfix(char **contents, Gen *gen, Reference *reference) {
+    char *text = *contents;
+    FileRange *operatorRange = Gen::newRange(text);
+    const char *op = nullptr;
+    if (consumeString(&text, "++")) {
+        op = "+";
+    } else if (consumeString(&text, "--")) {
+        op = "-";
+    } else {
+        neoFree(operatorRange);
+        return kParseNone;
+    }
+
+    FileRange::recordEnd(text, operatorRange);
+
+    Gen::useRangeStart(gen, operatorRange);
+    Slot prev = 0;
+    Slot one = 0;
+    if (gen) {
+        prev = Reference::access(gen, *reference);
+        one = Gen::addNewIntObject(gen, gen->m_scope, 1);
+    }
+    Gen::useRangeEnd(gen, operatorRange);
+
+    Reference sum;
+    buildOperation(gen, op, &sum, *reference,
+        { one, Reference::NoSlot, Reference::kNone }, operatorRange);
+    Gen::useRangeStart(gen, operatorRange);
+    if (!assignSlot(gen, *reference, Reference::access(gen, sum), operatorRange)) {
+        logParseError(*contents, "postfix cannot assign: expression is non-reference");
+        return kParseError;
+    }
+    *contents = text;
+    *reference = { prev, Reference::NoSlot, Reference::kNone };
+
+    return kParseOk;
 }
 
 ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Reference *reference) {

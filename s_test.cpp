@@ -17,7 +17,7 @@ fn ack(m, n) {
 
 ack(3, 4);
 
-for (let i = 0; i < 4096; i += 1) {
+for (let i = 0; i < 4096; i++) {
     print(i);
 }
 
