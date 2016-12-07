@@ -432,12 +432,13 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
         if (parseFloat(&text, &value)) {
             *contents = text;
             FileRange::recordEnd(text, range);
+            Slot slot = 0;
             if (gen) {
                 Gen::useRangeStart(gen, range);
-                Slot slot = Gen::addNewFloatObject(gen, gen->m_scope, value);
+                slot = Gen::addNewFloatObject(gen, gen->m_scope, value);
                 Gen::useRangeEnd(gen, range);
-                *reference = { slot, Reference::NoSlot, Reference::kNone };
             }
+            *reference = { slot, Reference::NoSlot, Reference::kNone };
             return kParseOk;
         }
     }
@@ -447,12 +448,13 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
         if (parseInteger(&text, &value)) {
             *contents = text;
             FileRange::recordEnd(text, range);
+            Slot slot = 0;
             if (gen) {
                 Gen::useRangeStart(gen, range);
-                Slot slot = Gen::addNewIntObject(gen, gen->m_scope, value);
+                slot = Gen::addNewIntObject(gen, gen->m_scope, value);
                 Gen::useRangeEnd(gen, range);
-                *reference = { slot, Reference::NoSlot, Reference::kNone };
             }
+            *reference = { slot, Reference::NoSlot, Reference::kNone };
             return kParseOk;
         }
     }
@@ -461,16 +463,17 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
         ParseResult result;
         char *value = nullptr;
         if ((result = parseString(&text, &value)) != kParseNone) {
+            Slot slot = 0;
             if (result == kParseOk) {
                 *contents = text;
                 FileRange::recordEnd(text, range);
                 if (gen) {
                     Gen::useRangeStart(gen, range);
-                    Slot slot = Gen::addNewStringObject(gen, gen->m_scope, value);
+                    slot = Gen::addNewStringObject(gen, gen->m_scope, value);
                     Gen::useRangeEnd(gen, range);
-                    *reference = { slot, Reference::NoSlot, Reference::kNone };
                 }
             }
+            *reference = { slot, Reference::NoSlot, Reference::kNone };
             return result;
         }
     }
@@ -522,13 +525,14 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
 
         *contents = text;
 
+        Slot slot = 0;
         if (gen) {
             function->m_isMethod = isMethod;
             Gen::useRangeStart(gen, range); // count closure allocation as function
-            Slot slot = Gen::addNewClosureObject(gen, gen->m_scope, function);
+            slot = Gen::addNewClosureObject(gen, gen->m_scope, function);
             Gen::useRangeEnd(gen, range);
-            *reference = { slot, Reference::NoSlot, Reference::kNone };
         }
+        *reference = { slot, Reference::NoSlot, Reference::kNone };
         return kParseOk;
     }
 
