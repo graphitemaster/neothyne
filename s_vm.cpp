@@ -352,7 +352,8 @@ static VMFnWrap instrAccess(VMState *state) {
 
             VM::run(&subState);
 
-            VM_ASSERTION(subState.m_runState != kErrored, "[] overload failed: %s\n", subState.m_error);
+            VM_ASSERTION(subState.m_runState != kErrored, "[] overload failed: %s\n",
+                subState.m_error.c_str());
 
             state->m_cf->m_slots[targetSlot] = subState.m_resultValue;
 
@@ -395,7 +396,8 @@ static VMFnWrap instrAccessStringKey(VMState *state) {
             auto *functionObject = (FunctionObject *)Object::instanceOf(indexOperation, functionBase);
             auto *closureObject = (ClosureObject *)Object::instanceOf(indexOperation, closureBase);
 
-            VM_ASSERTION(functionObject || closureObject, "cannot call index operation: not a function or closure");
+            VM_ASSERTION(functionObject || closureObject,
+                "cannot call index operation: not a function or closure");
 
             Object *keyObject = Object::newString(state->m_restState, instruction->m_key);
 
@@ -412,7 +414,8 @@ static VMFnWrap instrAccessStringKey(VMState *state) {
 
             VM::run(&subState);
 
-            VM_ASSERTION(subState.m_runState != kErrored, "[] overload failed: %s\n", subState.m_error);
+            VM_ASSERTION(subState.m_runState != kErrored, "[] overload failed: %s\n",
+                subState.m_error.c_str());
 
             state->m_cf->m_slots[targetSlot] = subState.m_resultValue;
 
