@@ -41,11 +41,14 @@ struct Field {
 };
 
 struct Table {
-    static void **lookupReference(Table *table, const char *key, size_t keyLength);
-    static void **lookupReference(Table *table, const char *key, size_t keyLength, void ***first);
-    static void **lookupReference(Table *table, size_t keyHash, const char *key, size_t keyLength, void ***first);
+    static void **lookupReferenceAllocWithHash(Table *table, const char *key, size_t keyLength, size_t keyHash, void ***first);
+    static void **lookupReferenceAlloc(Table *table, const char *key, size_t keyLength, void ***first);
+
+    static void **lookupReferenceWithHash(Table *table, const char *key, size_t keyLength, size_t hash) U_PURE;
+    static void **lookupReference(Table *table, const char *key, size_t keyLength) U_PURE;
 
     static void *lookup(Table *table, const char *key, size_t keyLength, bool *found);
+    static void *lookupWithHash(Table *table, const char *key, size_t keyLength, size_t keyHash, bool *found);
 
     // Array of fields
     Field *m_fields;
@@ -55,12 +58,17 @@ struct Table {
 
     // The amount of fields stored
     size_t m_fieldsStored;
+
+private:
+    static void **lookupReferenceAllocWithHashInternal(Table *table, const char *key, size_t keyLength, size_t keyHash, void ***first);
+    static void **lookupReferenceWithHashInternal(Table *table, const char *key, size_t keyLength, size_t hash);
 };
 
 typedef void (*FunctionPointer)(State *state, Object *self, Object *function, Object **arguments, size_t count);
 
 struct Object {
 
+    static Object *lookupWithHash(Object *object, const char *key, size_t keyLength, size_t keyHash, bool *found);
     static Object *lookup(Object *object, const char *key, bool *found);
 
     static bool setExisting(Object *object, const char *key, Object *value);

@@ -79,6 +79,17 @@
 #   define U_MALLOC_LIKE
 #endif
 
+// Compiler hint: indicate the function is pure; it has not effects except the
+// return value which only depends on parameters. This allows it to get
+// subexpression elimination and loop optimization in cases where it otherwise
+// would not
+#if defined(__GNUC__)
+#   define U_PURE \
+        __attribute__((pure))
+#else
+#   define U_PURE
+#endif
+
 namespace u {
 
 /// nullptr_t

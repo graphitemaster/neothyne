@@ -105,22 +105,22 @@ void VM::recordProfile(State *state) {
                 const size_t keyHash = djb2(keyData, keyLength);
                 if (innerRange == 0) {
                     void **freeField = nullptr;
-                    void **findField = Table::lookupReference(directTable,
-                                                              keyHash,
-                                                              keyData,
-                                                              keyLength,
-                                                              &freeField);
+                    void **findField = Table::lookupReferenceAllocWithHash(directTable,
+                                                                           keyData,
+                                                                           keyLength,
+                                                                           keyHash,
+                                                                           &freeField);
                     if (findField)
                         (*(int *)findField)++;
                     else
                         (*(int *)freeField) = 1;
                 } else if (currentInstruction->m_belongsTo->m_lastCycleSeen != state->m_shared->m_cycleCount) {
                     void **freeField = nullptr;
-                    void **findField = Table::lookupReference(indirectTable,
-                                                              keyHash,
-                                                              keyData,
-                                                              keyLength,
-                                                              &freeField);
+                    void **findField = Table::lookupReferenceAllocWithHash(indirectTable,
+                                                                           keyData,
+                                                                           keyLength,
+                                                                           keyHash,
+                                                                           &freeField);
                     if (findField)
                         (*(int *)findField)++;
                     else
@@ -671,16 +671,12 @@ void ProfileState::dump(SourceRange source, ProfileState *profileState) {
     int sumSamplesIndirect = 0;
     int k = 0;
 
-    union Value { void *p; int asInt; };
-
     // Calculate direct samples
     for (size_t i = 0; i < directTable->m_fieldsNum; ++i) {
         Field *field = &directTable->m_fields[i];
         if (field->m_name) {
             FileRange *range = *(FileRange **)field->m_name;
-            //const int samples = *(int *)&field->m_value;
-            const Value samplesValue = { field->m_value };
-            const int samples = samplesValue.asInt;
+            const int samples = (intptr_t)field->m_value;
             if (samples > maxSamplesDirect)
                 maxSamplesDirect = samples;
             sumSamplesDirect += samples;
@@ -699,9 +695,7 @@ void ProfileState::dump(SourceRange source, ProfileState *profileState) {
         Field *field = &indirectTable->m_fields[i];
         if (field->m_name) {
             FileRange *range = *(FileRange **)field->m_name;
-            //const int samples = *(int *)&field->m_value;
-            const Value samplesValue = { field->m_value };
-            const int samples = samplesValue.asInt;
+            const int samples = (intptr_t)field->m_value;
             if (samples > maxSamplesIndirect)
                 maxSamplesIndirect = samples;
             sumSamplesIndirect += samples;

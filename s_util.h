@@ -49,7 +49,12 @@ struct FileRange {
     static void recordEnd(char *text, FileRange *range);
 };
 
-size_t djb2(const char *str, size_t length);
+inline size_t djb2(const char *str, size_t length) {
+    size_t hash = 5381;
+    for (size_t i = 0; i < length; i++)
+        hash = hash * 33 + str[i];
+    return hash;
+}
 
 }
 
