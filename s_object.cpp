@@ -11,19 +11,19 @@
 namespace s {
 
 ///! Table
-void **Table::lookupReferenceWithHashInternal(Table *table, const char *key, size_t keyLength, size_t hash) {
+void **Table::lookupReferenceWithHashInternalUnroll(Table *table, const char *key, size_t keyLength, size_t hash) {
     U_ASSERT(key);
     if (table->m_fieldsStored == 0)
         return nullptr;
     const size_t fieldsNum = table->m_fieldsNum;
-    if (fieldsNum <= 4) {
+    if (fieldsNum <= 8) {
         // Just do a direct scan in the table
         for (size_t i = 0; i < fieldsNum; i++) {
             Field *field = &table->m_fields[i];
             if (field->m_nameLength == keyLength
                 && (field->m_name == key ||
                 ((keyLength == 0 || key[0] == field->m_name[0]) &&
-                 (keyLength == 1 || key[1] == field->m_name[1]) &&
+                 (keyLength <= 1 || key[1] == field->m_name[1]) &&
                 memcmp(key, field->m_name, keyLength) == 0)))
             {
                 return &field->m_value;
@@ -40,7 +40,7 @@ void **Table::lookupReferenceWithHashInternal(Table *table, const char *key, siz
             if (field->m_nameLength == keyLength
                 && (field->m_name == key ||
                 ((keyLength == 0 || key[0] == field->m_name[0]) &&
-                 (keyLength == 1 || key[1] == field->m_name[1]) &&
+                 (keyLength <= 1 || key[1] == field->m_name[1]) &&
                  memcmp(key, field->m_name, keyLength) == 0)))
             {
                 return &field->m_value;
@@ -50,12 +50,24 @@ void **Table::lookupReferenceWithHashInternal(Table *table, const char *key, siz
     return nullptr;
 }
 
+void **Table::lookupReferenceWithHashInternal(Table *table, const char *key, size_t keyLength, size_t hash) {
+    // Some partial unrolling here for short keys
+    if (U_UNLIKELY(keyLength == 0))
+        return lookupReferenceWithHashInternalUnroll(table, key, 0, hash);
+    if (U_UNLIKELY(keyLength == 1))
+        return lookupReferenceWithHashInternalUnroll(table, key, 1, hash);
+    if (U_UNLIKELY(keyLength == 2))
+        return lookupReferenceWithHashInternalUnroll(table, key, 2, hash);
+
+    return lookupReferenceWithHashInternalUnroll(table, key, keyLength, hash);
+}
+
 void **Table::lookupReferenceWithHash(Table *table, const char *key, size_t keyLength, size_t hash) {
     return lookupReferenceWithHashInternal(table, key, keyLength, hash);
 }
 
 void **Table::lookupReference(Table *table, const char *key, size_t keyLength) {
-    const size_t hash = table->m_fieldsNum > 4 ? djb2(key, keyLength) : 0;
+    const size_t hash = table->m_fieldsNum > 8 ? djb2(key, keyLength) : 0;
     return lookupReferenceWithHashInternal(table, key, keyLength, hash);
 }
 
@@ -81,7 +93,7 @@ void **Table::lookupReferenceAllocWithHashInternal(Table *table,
             if (field->m_nameLength == keyLength
                 && (field->m_name == key ||
                 ((keyLength == 0 || key[0] == field->m_name[0]) &&
-                 (keyLength == 1 || key[1] == field->m_name[1]) &&
+                 (keyLength <= 1 || key[1] == field->m_name[1]) &&
                  memcmp(key, field->m_name, keyLength) == 0)))
             {
                 return &field->m_value;
@@ -138,7 +150,7 @@ void **Table::lookupReferenceAlloc(Table *table, const char *key, size_t keyLeng
 
 void *Table::lookup(Table *table, const char *key, size_t keyLength, bool *found) {
     const size_t keyHash = table->m_fieldsNum > 4 ? djb2(key, keyLength) : 0;
-    void **search = lookupReferenceWithHash(table, key, keyLength, keyHash);
+    void **search = lookupReferenceWithHashInternalUnroll(table, key, keyLength, keyHash);
     if (!search) {
         if (found)
             *found = false;
@@ -150,7 +162,7 @@ void *Table::lookup(Table *table, const char *key, size_t keyLength, bool *found
 }
 
 void *Table::lookupWithHash(Table *table, const char *key, size_t keyLength, size_t keyHash, bool *found) {
-    void **search = lookupReferenceWithHash(table, key, keyLength, keyHash);
+    void **search = lookupReferenceWithHashInternalUnroll(table, key, keyLength, keyHash);
     if (!search) {
         if (found)
             *found = false;

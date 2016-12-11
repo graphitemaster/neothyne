@@ -61,6 +61,8 @@ struct Table {
 
 private:
     static void **lookupReferenceAllocWithHashInternal(Table *table, const char *key, size_t keyLength, size_t keyHash, void ***first);
+
+    static void **lookupReferenceWithHashInternalUnroll(Table *table, const char *key, size_t keyLength, size_t keyHash);
     static void **lookupReferenceWithHashInternal(Table *table, const char *key, size_t keyLength, size_t hash);
 };
 
