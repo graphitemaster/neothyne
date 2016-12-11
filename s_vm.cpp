@@ -87,6 +87,7 @@ void VM::recordProfile(State *state) {
     long long nsDifference = getClockDifference(&profileTime, &state->m_shared->m_profileState.m_lastTime);
     if (nsDifference > kSampleStrideSize) {
         state->m_shared->m_profileState.m_lastTime = profileTime;
+        const int cycleCount = state->m_shared->m_cycleCount;
         Table *directTable = &state->m_shared->m_profileState.m_directTable;
         Table *indirectTable = &state->m_shared->m_profileState.m_indirectTable;
         int innerRange = 0;
@@ -108,7 +109,7 @@ void VM::recordProfile(State *state) {
                         (*(int *)findField)++;
                     else
                         (*(int *)freeField) = 1;
-                } else if (currentInstruction->m_belongsTo->m_lastCycleSeen != state->m_shared->m_cycleCount) {
+                } else if (currentInstruction->m_belongsTo->m_lastCycleSeen != cycleCount) {
                     void **freeField = nullptr;
                     void **findField = Table::lookupReferenceAllocWithHash(indirectTable,
                                                                            keyData,
@@ -120,7 +121,7 @@ void VM::recordProfile(State *state) {
                     else
                         (*(int *)freeField) = 1;
                 }
-                currentInstruction->m_belongsTo->m_lastCycleSeen = state->m_shared->m_cycleCount;
+                currentInstruction->m_belongsTo->m_lastCycleSeen = cycleCount;
             }
             // TODO backoff profiling samples if it's slowing us down too much
             // and adding noise
@@ -715,8 +716,8 @@ void VM::step(State *state) {
         fn = fn(&vmState).self;
     }
     state->m_shared->m_cycleCount += i * 9;
-    recordProfile(state);
     state->m_stack[state->m_length - 1].m_instructions = vmState.m_instr;
+    recordProfile(state);
     vmState.m_cf->m_instructions = vmState.m_instr;
 }
 
