@@ -15,6 +15,8 @@ void **Table::lookupReferenceWithHashInternalUnroll(Table *table, const char *ke
     U_ASSERT(key);
     if (table->m_fieldsStored == 0)
         return nullptr;
+    if ((table->m_bloom & hash) != hash)
+        return nullptr;
     const size_t fieldsNum = table->m_fieldsNum;
     if (fieldsNum <= 8) {
         // Just do a direct scan in the table
@@ -109,6 +111,7 @@ void **Table::lookupReferenceAllocWithHashInternal(Table *table,
             free->m_name = key;
             free->m_nameLength = keyLength;
             table->m_fieldsStored++;
+            table->m_bloom |= keyHash;
             *first = &free->m_value;
             return nullptr;
         }
@@ -118,6 +121,7 @@ void **Table::lookupReferenceAllocWithHashInternal(Table *table,
     newTable.m_fields = (Field *)neoCalloc(sizeof(Field), newLength);
     newTable.m_fieldsNum = newLength;
     newTable.m_fieldsStored = 0;
+    newTable.m_bloom = 0;
     if (table->m_fieldsStored) {
         for (size_t i = 0; i < fieldsNum; i++) {
             Field *field = &table->m_fields[i];

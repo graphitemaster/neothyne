@@ -59,6 +59,9 @@ struct Table {
     // The amount of fields stored
     size_t m_fieldsStored;
 
+    // Bloom filter
+    size_t m_bloom;
+
 private:
     static void **lookupReferenceAllocWithHashInternal(Table *table, const char *key, size_t keyLength, size_t keyHash, void ***first);
 
