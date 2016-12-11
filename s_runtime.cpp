@@ -8,7 +8,7 @@
 
 namespace s {
 
-enum { kAdd, kSub, kMul, kDiv };
+enum { kAdd, kSub, kMul, kDiv, kBitOr, kBitAnd };
 enum { kEq, kLt, kGt, kLe, kGe };
 
 /// [Bool]
@@ -36,10 +36,12 @@ static void intMath(State *state, Object *self, Object *, Object **arguments, si
         int value1 = ((IntObject *)intObj1)->m_value;
         int value2 = ((IntObject *)intObj2)->m_value;
         switch (op) {
-        case kAdd: state->m_resultValue = Object::newInt(state, value1 + value2); return;
-        case kSub: state->m_resultValue = Object::newInt(state, value1 - value2); return;
-        case kMul: state->m_resultValue = Object::newInt(state, value1 * value2); return;
-        case kDiv: state->m_resultValue = Object::newInt(state, value1 / value2); return;
+        case kAdd:    state->m_resultValue = Object::newInt(state, value1 + value2); return;
+        case kSub:    state->m_resultValue = Object::newInt(state, value1 - value2); return;
+        case kMul:    state->m_resultValue = Object::newInt(state, value1 * value2); return;
+        case kDiv:    state->m_resultValue = Object::newInt(state, value1 / value2); return;
+        case kBitAnd: state->m_resultValue = Object::newInt(state, value1 & value2); return;
+        case kBitOr:  state->m_resultValue = Object::newInt(state, value1 | value2); return;
         }
     }
 
@@ -74,6 +76,14 @@ static void intMul(State *state, Object *self, Object *function, Object **argume
 
 static void intDiv(State *state, Object *self, Object *function, Object **arguments, size_t count) {
     intMath(state, self, function, arguments, count, kDiv);
+}
+
+static void intBitAnd(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intMath(state, self, function, arguments, count, kBitAnd);
+}
+
+static void intBitOr(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    intMath(state, self, function, arguments, count, kBitOr);
 }
 
 static void intCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
@@ -473,6 +483,8 @@ Object *createRoot(State *state) {
     Object::setNormal(intObject, "-", Object::newFunction(state, intSub));
     Object::setNormal(intObject, "*", Object::newFunction(state, intMul));
     Object::setNormal(intObject, "/", Object::newFunction(state, intDiv));
+    Object::setNormal(intObject, "&", Object::newFunction(state, intBitAnd));
+    Object::setNormal(intObject, "|", Object::newFunction(state, intBitOr));
     Object::setNormal(intObject, "==", Object::newFunction(state, intCompareEq));
     Object::setNormal(intObject, "<", Object::newFunction(state, intCompareLt));
     Object::setNormal(intObject, ">", Object::newFunction(state, intCompareGt));

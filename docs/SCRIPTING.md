@@ -80,7 +80,7 @@ foo FOO Foo
 
 The following is a list of recognized discrete tokens:
 ```
-+ - * / += -= *= /= // /* */ ! == != = < !< > !> <= !<= >= !>= ( ) { } [ ] , ; ++, --
++ - * / & | += -= *= /= // /* */ ! == != = < !< > !> <= !<= >= !>= ( ) { } [ ] , ; ++, --
 ```
 
 Literal strings are delimited by matching double quotes
@@ -239,6 +239,12 @@ Neo supports the following arithmetic operators:
 * `-` subtraction (and unary negation)
 * `*` multiplication
 * `/` division
+
+### Bitwise operators
+Neo language supports bitwise operators on integers only.
+The following bitwise operators are supported:
+* `&` bit and
+* `|` bit or
 
 ### Coercions and Conversions
 Neo provides some automatic conversions between some types and representations

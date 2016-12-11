@@ -825,12 +825,56 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
         buildOperation(gen, "-", reference, ref, *reference, negatedRange);
     }
 
+    Reference expression;
+
+    // Precedence level 4:
+    if (level > 4) {
+        *contents = text;
+        return kParseOk;
+    }
+
+    for (;;) {
+        FileRange *range = Gen::newRange(gen, text);
+        if (consumeString(&text, "&")) {
+            FileRange::recordEnd(text, range);
+            result = parseExpression(memory, &text, gen, 4, &expression);
+            if (result == kParseError)
+                return kParseError;
+            U_ASSERT(result == kParseOk);
+            buildOperation(gen, "&", reference, *reference, expression, range);
+            continue;
+        }
+        neoFree(range);
+        break;
+    }
+
+    // Precedence level 3:
+    if (level > 3) {
+        *contents = text;
+        return kParseOk;
+    }
+
+    for (;;) {
+        FileRange *range = Gen::newRange(gen, text);
+        if (consumeString(&text, "|")) {
+            FileRange::recordEnd(text, range);
+            result = parseExpression(memory, &text, gen, 4, &expression);
+            if (result == kParseError)
+                return kParseError;
+            U_ASSERT(result == kParseOk);
+            buildOperation(gen, "|", reference, *reference, expression, range);
+            continue;
+        }
+        neoFree(range);
+        break;
+    }
+
+    // Precedence level 2:
     if (level > 2) {
         *contents = text;
         return kParseOk;
     }
 
-    Reference expression;
     for (;;) {
         FileRange *range = Gen::newRange(gen, text);
         if (consumeString(&text, "*")) {
@@ -855,6 +899,7 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
         break;
     }
 
+    // Precedence level 1:
     if (level > 1) {
         *contents = text;
         return kParseOk;
@@ -883,6 +928,8 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
         Gen::delRange(gen, range);
         break;
     }
+
+    // Precedence level 0:
 
     if (level > 0) {
         *contents = text;

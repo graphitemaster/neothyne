@@ -41,6 +41,11 @@ while (i < 2) {
     j = j + i;
 }
 
+let a = 1024 | 2048;
+let b = a & (-1 - 1024);
+print(a);
+print(b);
+
 )";
 
 void test() {
