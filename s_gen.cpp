@@ -3,6 +3,7 @@
 
 #include "u_assert.h"
 #include "u_vector.h"
+#include "u_log.h"
 
 namespace s {
 
@@ -238,6 +239,14 @@ void Gen::addReturn(Gen *gen, Slot returnSlot) {
     addInstruction(gen, sizeof return_, (Instruction *)&return_);
 }
 
+void Gen::addFreeze(Gen *gen, Slot object) {
+    Instruction::Freeze freeze;
+    freeze.m_type = kFreeze;
+    freeze.m_belongsTo = nullptr;
+    freeze.m_slot = object;
+    addInstruction(gen, sizeof freeze, (Instruction *)&freeze);
+}
+
 UserFunction *Gen::buildFunction(Gen *gen) {
     // NOTE: this should not use gen->m_memory since functions are garbage
     //       collected instead
@@ -251,6 +260,68 @@ UserFunction *Gen::buildFunction(Gen *gen) {
     return function;
 }
 
+void Gen::copyFunctionStats(UserFunction *from, UserFunction *to) {
+    to->m_slots = from->m_slots;
+    to->m_arity = from->m_arity;
+    to->m_name = from->m_name;
+    to->m_isMethod = from->m_isMethod;
+}
+
+// Searches for static object slots which are any objects that are marked closed
+// and any assignments are with static keys
+struct SlotObjectInfo {
+    bool m_staticObject;
+    Slot m_parentSlot;
+    char **m_names;
+    size_t m_namesLength;
+};
+
+static inline void findStaticObjectSlots(Memory *memory, UserFunction *function, SlotObjectInfo **slots) {
+    *slots = (SlotObjectInfo *)Memory::allocate(memory, sizeof(SlotObjectInfo), function->m_slots);
+    for (size_t i = 0; i < function->m_body.m_count; i++) {
+        InstructionBlock *block = &function->m_body.m_blocks[i];
+        Instruction *instruction = block->m_instructions;
+        Instruction *instructionsEnd = block->m_instructionsEnd;
+        while (instruction != instructionsEnd) {
+            if (instruction->m_type == kNewObject) {
+                const auto *newObjectInstruction = (Instruction::NewObject *)instruction;
+                bool failed = false;
+                char **names = nullptr;
+                size_t namesLength = 0;
+                while (instruction != instructionsEnd && instruction->m_type == kAssignStringKey) {
+                    const auto *assignStringKey = (Instruction::AssignStringKey *)instruction;
+                    if (assignStringKey->m_assignType != kAssignPlain) {
+                        failed = true;
+                        break;
+                    }
+                    instruction = (Instruction *)(assignStringKey + 1);
+                    names = (char **)Memory::reallocate(memory, names, sizeof(char *) * ++namesLength);
+                    names[namesLength - 1] = (char *)assignStringKey->m_key;
+                }
+                if (instruction->m_type != kCloseObject) {
+                    failed = true;
+                }
+                if (failed) {
+                    Memory::free(memory, names);
+                    // TODO: check if this is correct
+                    instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
+                    continue;
+                }
+                instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
+                const Slot targetSlot = newObjectInstruction->m_targetSlot;
+                (*slots)[targetSlot].m_staticObject = true;
+                (*slots)[targetSlot].m_parentSlot = newObjectInstruction->m_parentSlot;
+                (*slots)[targetSlot].m_names = names;
+                (*slots)[targetSlot].m_namesLength = namesLength;
+                continue;
+            }
+            instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
+        }
+    }
+}
+
+// Searches for slots which are primitive. Slots which are primitive are plain
+// objects, calls, returns, branches and plain access and assignments.
 static inline void findPrimitiveSlots(Memory *memory, UserFunction *function, bool **slots) {
     *slots = (bool *)Memory::allocate(memory, sizeof **slots * function->m_slots);
     for (size_t i = 0; i < function->m_slots; i++)
@@ -300,22 +371,18 @@ static inline void findPrimitiveSlots(Memory *memory, UserFunction *function, bo
     }
 }
 
-UserFunction *Gen::optimize(Gen *gen, UserFunction *function) {
-    bool *primitiveSlots = nullptr;
-    findPrimitiveSlots(gen->m_memory, function, &primitiveSlots);
-    UserFunction *optimized = inlinePass(gen->m_memory, function, primitiveSlots);
-    Memory::free(gen->m_memory, primitiveSlots);
-    // NOTE: function is garbage collected at runtime
-    neoFree(function);
-    return optimized;
-}
-
+// For access and assignments to primitive slots, inline the access/assignment with
+// a static key instead
 UserFunction *Gen::inlinePass(Memory *memory, UserFunction *function, bool *primitiveSlots) {
     Gen gen = { };
+
     gen.m_memory = memory;
     gen.m_slot = 0;
     gen.m_blockTerminated = true;
     gen.m_currentRange = nullptr;
+
+    size_t count = 0;
+
     u::vector<const char *> slotTable;
     for (size_t i = 0; i < function->m_body.m_count; i++) {
         InstructionBlock *block = &function->m_body.m_blocks[i];
@@ -347,6 +414,7 @@ UserFunction *Gen::inlinePass(Memory *memory, UserFunction *function, bool *prim
                 addInstruction(&gen, sizeof accessStringKey, (Instruction *)&accessStringKey);
                 useRangeEnd(&gen, access->m_belongsTo);
                 instruction = (Instruction *)(access + 1);
+                count++;
                 continue;
             }
             if (instruction->m_type == kAssign
@@ -362,6 +430,7 @@ UserFunction *Gen::inlinePass(Memory *memory, UserFunction *function, bool *prim
                 addInstruction(&gen, sizeof assignStringKey, (Instruction *)&assignStringKey);
                 useRangeEnd(&gen, assign->m_belongsTo);
                 instruction = (Instruction *)(assign + 1);
+                count++;
                 continue;
             }
             useRangeStart(&gen, instruction->m_belongsTo);
@@ -370,14 +439,95 @@ UserFunction *Gen::inlinePass(Memory *memory, UserFunction *function, bool *prim
             instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
         }
     }
+    UserFunction *optimized = buildFunction(&gen);
+    copyFunctionStats(function, optimized);
+    u::Log::out("Inlined Assignments/Accesses: %zu\n", count);
+    return optimized;
+}
+
+UserFunction *Gen::predictPass(Memory *memory, UserFunction *function) {
+    SlotObjectInfo *info = nullptr;
+    findStaticObjectSlots(memory, function, &info);
+
+    size_t count = 0;
+
+    Gen gen = { };
+    gen.m_slot = 0;
+    gen.m_blockTerminated = true;
+    gen.m_memory = memory;
+
+    for (size_t i = 0; i < function->m_body.m_count; i++) {
+        const InstructionBlock *const block = &function->m_body.m_blocks[i];
+        newBlock(&gen);
+
+        Instruction *instruction = block->m_instructions;
+        while (instruction != block->m_instructionsEnd) {
+            const auto *accessStringKey = (Instruction::AccessStringKey *)instruction;
+            if (instruction->m_type == kAccessStringKey) {
+                auto *newAccessStringKey = (Instruction::AccessStringKey *)Memory::allocate(memory, sizeof(Instruction::AccessStringKey));
+                *newAccessStringKey = *accessStringKey;
+                for (;;) {
+                    const Slot objectSlot = newAccessStringKey->m_objectSlot;
+                    if (!info[objectSlot].m_staticObject) {
+                        break;
+                    }
+                    bool keyInObject = false;
+                    for (size_t i = 0; i < info[objectSlot].m_namesLength; i++) {
+                        const char *objectKey = info[objectSlot].m_names[i];
+                        if (strcmp(objectKey, newAccessStringKey->m_key) == 0) {
+                            keyInObject = true;
+                            break;
+                        }
+                    }
+                    if (keyInObject) {
+                        break;
+                    }
+                    // So the key was not found in the object. We now know statically
+                    // that the lookup will never succeed at runtime either.
+                    // So automatically set the object slot to the parent. This
+                    // allows us to skip searching up the object chain.
+                    newAccessStringKey->m_objectSlot = info[objectSlot].m_parentSlot;
+                    count++;
+                }
+                useRangeStart(&gen, instruction->m_belongsTo);
+                addInstruction(&gen, sizeof *newAccessStringKey, (Instruction *)newAccessStringKey);
+                useRangeEnd(&gen, instruction->m_belongsTo);
+                instruction = (Instruction *)(accessStringKey + 1);
+                continue;
+            }
+
+            useRangeStart(&gen, instruction->m_belongsTo);
+            addInstruction(&gen, Instruction::size(instruction), instruction);
+            useRangeEnd(&gen, instruction->m_belongsTo);
+
+            instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
+        }
+    }
+
+    Memory::free(memory, info);
 
     UserFunction *optimized = buildFunction(&gen);
-    optimized->m_slots = function->m_slots;
-    optimized->m_arity = function->m_arity;
-    optimized->m_name = function->m_name;
-    optimized->m_isMethod = function->m_isMethod;
+    copyFunctionStats(function, optimized);
+
+    u::Log::out("Redirected predictable lookup misses: %zu\n", count);
 
     return optimized;
+}
+
+UserFunction *Gen::optimize(Gen *gen, UserFunction *function) {
+    bool *primitiveSlots = nullptr;
+    findPrimitiveSlots(gen->m_memory, function, &primitiveSlots);
+
+    UserFunction *f0 = function;
+    UserFunction *f1 = inlinePass(gen->m_memory, f0, primitiveSlots);
+    UserFunction *f2 = predictPass(gen->m_memory, f1);
+
+    Memory::free(gen->m_memory, primitiveSlots);
+
+    neoFree(f0);
+    neoFree(f1);
+
+    return f2;
 }
 
 size_t Gen::scopeEnter(Gen *gen) {

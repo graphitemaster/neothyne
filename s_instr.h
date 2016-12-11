@@ -22,6 +22,7 @@ enum InstructionType {
     kNewClosureObject,
     kCloseObject,
     kAccess,
+    kFreeze,
     kAssign,
     kCall,
     kReturn,
@@ -49,6 +50,7 @@ struct Instruction {
     struct NewClosureObject;
     struct CloseObject;
     struct Access;
+    struct Freeze;
     struct Assign;
     struct Call;
     struct Return;
@@ -134,6 +136,10 @@ struct Instruction::Access : Instruction {
     Slot m_objectSlot;
     Slot m_keySlot;
     Slot m_targetSlot;
+};
+
+struct Instruction::Freeze : Instruction {
+    Slot m_slot;
 };
 
 struct Instruction::Assign : Instruction {

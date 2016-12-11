@@ -70,7 +70,7 @@ name variables and fields.
 
 The following keywords are reserved and cannot be used as identifiers
 ```
-let new if else while for fn method
+let const new if else while for fn method
 ```
 
 Neo is *case-sensitive*, all of the following are unique identifiers:
@@ -114,6 +114,14 @@ The dot `.` can be used to index an object
 object.field
 ```
 The syntax `variable.name` is just syntactic sugar for `variable["name"]`
+
+Immutable variables can be created with `const`. These types of variables
+work exactly the same except once they've been initialized their values cannot
+be changed.
+```
+const a = 5;
+a = 10; // runtime error (object is immutable)
+```
 
 ## Statements
 Neo supports a conventional set of statements, similar to those in C.

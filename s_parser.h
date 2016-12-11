@@ -71,7 +71,7 @@ private:
     static ParseResult parseIfStatement(Memory *memory, char **contents, Gen *gen, FileRange *keywordRange);
     static ParseResult parseWhile(Memory *memory, char **contents, Gen *gen, FileRange *range);
     static ParseResult parseReturnStatement(Memory *memory, char **contents, Gen *gen, FileRange *range);
-    static ParseResult parseLetDeclaration(Memory *memory, char **contents, Gen *gen, FileRange *range);
+    static ParseResult parseLetDeclaration(Memory *memory, char **contents, Gen *gen, FileRange *range, bool isConst);
     static ParseResult parseFunctionDeclaration(Memory *memory, char **contents, Gen *gen, FileRange *range);
     static ParseResult parseStatement(Memory *memory, char **contents, Gen *gen);
     static ParseResult parseBlock(Memory *memory, char **contents, Gen *gen);

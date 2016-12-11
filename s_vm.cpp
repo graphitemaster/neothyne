@@ -147,6 +147,7 @@ static VMFnWrap instrNewStringObject(VMState *state) U_PURE;
 static VMFnWrap instrNewClosureObject(VMState *state) U_PURE;
 static VMFnWrap instrCloseObject(VMState *state) U_PURE;
 static VMFnWrap instrAccess(VMState *state) U_PURE;
+static VMFnWrap instrFreeze(VMState *state) U_PURE;
 static VMFnWrap instrAccessStringKey(VMState *state) U_PURE;
 static VMFnWrap instrAssign(VMState *state) U_PURE;
 static VMFnWrap instrAssignStringKey(VMState *state) U_PURE;
@@ -168,6 +169,7 @@ static const VMInstrFn instrFunctions[] = {
     instrNewClosureObject,
     instrCloseObject,
     instrAccess,
+    instrFreeze,
     instrAssign,
     instrCall,
     instrReturn,
@@ -367,6 +369,19 @@ static VMFnWrap instrAccess(VMState *state) {
             VM_ASSERTION(false, "property not found");
         }
     }
+    state->m_instr = (Instruction *)(instruction + 1);
+    return { instrFunctions[state->m_instr->m_type] };
+}
+
+static VMFnWrap instrFreeze(VMState *state) {
+    const auto *instruction = (Instruction::Freeze *)state->m_instr;
+    const Slot slot = instruction->m_slot;
+
+    VM_ASSERTION(slot < state->m_cf->m_count, "slot addressing error");
+
+    Object *object = state->m_cf->m_slots[slot];
+    VM_ASSERTION(!(object->m_flags & kImmutable), "object is already frozen");
+    object->m_flags |= kImmutable;
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
 }

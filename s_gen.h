@@ -51,14 +51,19 @@ struct Gen {
 
     static void addReturn(Gen *gen, Slot slot);
 
+    static void addFreeze(Gen *gen, Slot object);
+
     static UserFunction *buildFunction(Gen *gen);
 
     static UserFunction *optimize(Gen *gen, UserFunction *function);
 
     static UserFunction *inlinePass(Memory *memory, UserFunction *function, bool *primitiveSlots);
+    static UserFunction *predictPass(Memory *memory, UserFunction *function);
 
     static size_t scopeEnter(Gen *gen);
     static void scopeLeave(Gen *gen, size_t backup);
+
+    static void copyFunctionStats(UserFunction *from, UserFunction *to);
 
 private:
     friend struct Parser;

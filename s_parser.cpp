@@ -1114,13 +1114,14 @@ ParseResult Parser::parseWhile(Memory *memory, char **contents, Gen *gen, FileRa
     return kParseOk;
 }
 
-ParseResult Parser::parseLetDeclaration(Memory *memory, char **contents, Gen *gen, FileRange *letRange) {
+ParseResult Parser::parseLetDeclaration(Memory *memory, char **contents, Gen *gen, FileRange *letRange, bool isConst) {
     char *text = *contents;
 
     // allocate a new scope immediately to allow recursion for closures
     // i.e allow: let foo = fn() { foo(); };
     Gen::useRangeStart(gen, letRange);
     gen->m_scope = Gen::addNewObject(gen, gen->m_scope);
+    const size_t letScope = gen->m_scope;
     Gen::useRangeEnd(gen, letRange);
 
     FileRange *letName = Gen::newRange(gen, text);
@@ -1129,7 +1130,10 @@ ParseResult Parser::parseLetDeclaration(Memory *memory, char **contents, Gen *ge
 
     Gen::useRangeStart(gen, letName);
     Slot value;
-    Slot variableNameSlot = Gen::addNewStringObject(gen, gen->m_scope, variableName);
+    Slot variableNameSlot = Gen::addNewStringObject(gen, letScope, variableName);
+    Slot nullSlot = gen->m_slot++;
+    Gen::addAssign(gen, letScope, variableNameSlot, nullSlot, kAssignPlain);
+    Gen::addCloseObject(gen, letScope);
     Gen::useRangeEnd(gen, letName);
 
     FileRange *assignRange = Gen::newRange(gen, text);
@@ -1137,7 +1141,7 @@ ParseResult Parser::parseLetDeclaration(Memory *memory, char **contents, Gen *ge
     if (!consumeString(&text, "=")) {
         Gen::delRange(gen, assignRange);
         assignRange = letName;
-        value = gen->m_slot++;
+        value = nullSlot;
     } else {
         FileRange::recordEnd(text, assignRange);
         Reference reference;
@@ -1156,14 +1160,16 @@ ParseResult Parser::parseLetDeclaration(Memory *memory, char **contents, Gen *ge
     }
 
     Gen::useRangeStart(gen, assignRange);
-    Gen::addAssign(gen, gen->m_scope, variableNameSlot, value, kAssignPlain);
-    Gen::addCloseObject(gen, gen->m_scope);
+    Gen::addAssign(gen, letScope, variableNameSlot, value, kAssignExisting);
+    if (isConst) {
+        Gen::addFreeze(gen, letScope);
+    }
     Gen::useRangeEnd(gen, assignRange);
 
     // let a, b
     if (consumeString(&text, ",")) {
         *contents = text;
-        return parseLetDeclaration(memory, contents, gen, letRange);
+        return parseLetDeclaration(memory, contents, gen, letRange, isConst);
     }
 
     *contents = text;
@@ -1244,7 +1250,7 @@ ParseResult Parser::parseForStatement(Memory *memory, char **contents, Gen *gen,
 
     FileRange *declarationRange = Gen::newRange(gen, text);
     if (consumeKeyword(memory, &text, "let")) {
-        ParseResult result = parseLetDeclaration(memory, &text, gen, declarationRange);
+        ParseResult result = parseLetDeclaration(memory, &text, gen, declarationRange, false);
         if (result == kParseError)
             return kParseError;
         U_ASSERT(result == kParseOk);
@@ -1358,6 +1364,7 @@ ParseResult Parser::parseFunctionDeclaration(Memory *memory, char **contents, Ge
     Slot slot = Gen::addNewClosureObject(gen, gen->m_scope, function);
     Gen::addAssign(gen, gen->m_scope, nameSlot, slot, kAssignPlain);
     Gen::addCloseObject(gen, gen->m_scope);
+    Gen::addFreeze(gen, gen->m_scope);
     Gen::useRangeEnd(gen, range);
     return kParseOk;
 }
@@ -1371,7 +1378,10 @@ ParseResult Parser::parseSemicolonStatement(Memory *memory, char **contents, Gen
         result = parseReturnStatement(memory, &text, gen, keywordRange);
     } else if (consumeKeyword(memory, &text, "let")) {
         FileRange::recordEnd(text, keywordRange);
-        result = parseLetDeclaration(memory, &text, gen, keywordRange);
+        result = parseLetDeclaration(memory, &text, gen, keywordRange, false);
+    } else if (consumeKeyword(memory, &text, "const")) {
+        FileRange::recordEnd(text, keywordRange);
+        result = parseLetDeclaration(memory, &text, gen, keywordRange, true);
     } else {
         result = parseAssign(memory, &text, gen);
         if (result == kParseNone) {
