@@ -1,6 +1,7 @@
 #include <stdarg.h>
 
 #include "s_object.h"
+#include "s_memory.h"
 #include "s_gc.h"
 #include "s_vm.h"
 
@@ -22,7 +23,7 @@ CallFrame *VM::addFrame(State *state, size_t slots) {
                 newCapacity = newSize;
             void *old = stack;
             void *base = (void *)((CallFrame*)stack - 1);
-            stack = neoMalloc(newCapacity + sizeof(CallFrame));
+            stack = Memory::allocate(newCapacity + sizeof(CallFrame));
             stack = (void *)((CallFrame *)stack + 1);
             *((size_t *)stack - 1) = newCapacity;
             // tear down old gc roots
@@ -35,12 +36,12 @@ CallFrame *VM::addFrame(State *state, size_t slots) {
                 CallFrame *frame = &state->m_stack[i];
                 GC::addRoots(state, frame->m_slots, frame->m_count, &frame->m_root);
             }
-            neoFree(base);
+            Memory::free(base);
         }
     } else {
         U_ASSERT(state->m_length == 0);
         size_t initialCapacity = sizeof(CallFrame);
-        stack = neoMalloc(initialCapacity + sizeof(CallFrame));
+        stack = Memory::allocate(initialCapacity + sizeof(CallFrame));
         stack = (void *)((CallFrame *)stack + 1);
         *((size_t *)stack - 1) = initialCapacity;
         state->m_stack = (CallFrame *)stack;
@@ -48,13 +49,13 @@ CallFrame *VM::addFrame(State *state, size_t slots) {
     state->m_length = state->m_length + 1;
     CallFrame *frame = &state->m_stack[state->m_length - 1];
     frame->m_count = slots;
-    frame->m_slots = (Object **)neoCalloc(sizeof(Object *), slots);
+    frame->m_slots = (Object **)Memory::allocate(sizeof(Object *), slots);
     return frame;
 }
 
 void VM::delFrame(State *state) {
     CallFrame *frame = &state->m_stack[state->m_length - 1];
-    neoFree(frame->m_slots);
+    Memory::free(frame->m_slots);
     state->m_length = state->m_length - 1;
 }
 
@@ -574,7 +575,7 @@ static VMFnWrap instrCall(VMState *state) {
     if (argsLength < 10) {
         arguments = state->m_restState->m_shared->m_valueCache.m_preallocatedArguments[argsLength];
     } else {
-        arguments = (Object **)neoMalloc(sizeof(Object *) * argsLength);
+        arguments = (Object **)Memory::allocate(sizeof(Object *) * argsLength);
     }
 
     for (size_t i = 0; i < argsLength; i++) {
@@ -601,7 +602,7 @@ static VMFnWrap instrCall(VMState *state) {
 
     if (state->m_restState->m_runState == kErrored) {
         if (argsLength >= 10) {
-            neoFree(arguments);
+            Memory::free(arguments);
         }
         return { instrHalt };
     }
@@ -611,7 +612,7 @@ static VMFnWrap instrCall(VMState *state) {
     oldCallFrame->m_instructions = (Instruction *)(instruction + 1);
 
     if (argsLength >= 10) {
-        neoFree(arguments);
+        Memory::free(arguments);
     }
 
     state->m_cf = &state->m_restState->m_stack[state->m_restState->m_length - 1];
@@ -732,10 +733,10 @@ void VM::run(State *state) {
     state->m_error.clear();
     if (!state->m_shared->m_valueCache.m_preallocatedArguments) {
         state->m_shared->m_valueCache.m_preallocatedArguments =
-            (Object ***)neoMalloc(sizeof(Object **) * 10);
+            (Object ***)Memory::allocate(sizeof(Object **) * 10);
         for (size_t i = 0; i < 10; i++) {
             state->m_shared->m_valueCache.m_preallocatedArguments[i] =
-                (Object **)neoMalloc(sizeof(Object *) * i);
+                (Object **)Memory::allocate(sizeof(Object *) * i);
         }
     }
     RootSet resultSet;
@@ -778,7 +779,7 @@ void VM::methodHandler(State *state, Object *self, Object *function, Object **ar
 }
 
 Object *Object::newClosure(State *state, Object *context, UserFunction *function) {
-    ClosureObject *closureObject = (ClosureObject *)neoCalloc(sizeof *closureObject, 1);
+    ClosureObject *closureObject = (ClosureObject *)Memory::allocate(sizeof *closureObject, 1);
     closureObject->m_parent = state->m_shared->m_valueCache.m_closureBase;
     if (function->m_isMethod)
         closureObject->m_function = VM::methodHandler;
@@ -805,7 +806,7 @@ struct OpenRange {
 };
 
 void OpenRange::pushRecord(OpenRange **range, ProfileRecord *record) {
-    OpenRange *newRange = (OpenRange *)neoMalloc(sizeof *newRange);
+    OpenRange *newRange = (OpenRange *)Memory::allocate(sizeof *newRange);
     newRange->m_record = record;
     newRange->m_prev = *range;
     *range = newRange;
@@ -822,7 +823,7 @@ void ProfileState::dump(SourceRange source, ProfileState *profileState) {
     const size_t numIndirectRecords = indirectTable->m_fieldsStored;
     const size_t numRecords = numDirectRecords + numIndirectRecords;
 
-    ProfileRecord *recordEntries = (ProfileRecord *)neoCalloc(sizeof *recordEntries, numRecords);
+    ProfileRecord *recordEntries = (ProfileRecord *)Memory::allocate(sizeof *recordEntries, numRecords);
 
     int maxSamplesDirect = 0;
     int sumSamplesDirect = 0;

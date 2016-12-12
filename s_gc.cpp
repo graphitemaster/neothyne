@@ -1,5 +1,6 @@
 #include "s_gc.h"
 #include "s_object.h"
+#include "s_memory.h"
 
 #include "u_assert.h"
 
@@ -11,8 +12,8 @@ void GC::init(State *state) {
 
 void GC::addPermanent(State *state, Object *object) {
     RootSet *permanents = &state->m_shared->m_gcState.m_permanents;
-    permanents->m_objects = (Object **)neoRealloc(permanents->m_objects,
-                                                  sizeof(Object *) * ++permanents->m_count);
+    permanents->m_objects = (Object **)Memory::reallocate(permanents->m_objects,
+                                                          sizeof(Object *) * ++permanents->m_count);
     permanents->m_objects[permanents->m_count -1] = object;
 }
 

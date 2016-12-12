@@ -161,7 +161,7 @@ void test() {
 
     // Allocate Neo state
     State state = { };
-    state.m_shared = (SharedState *)neoCalloc(sizeof *state.m_shared, 1);
+    state.m_shared = (SharedState *)Memory::allocate(sizeof *state.m_shared, 1);
 
     // Initialize garbage collector
     GC::init(&state);
@@ -207,12 +207,6 @@ void test() {
 
     // Reclaim memory
     GC::run(&state);
-
-    // Reclaim shared state
-    neoFree(state.m_shared);
-
-    // Tear down any stack frames made
-    neoFree((CallFrame *)state.m_stack - 1);
 
     // Reclaim any leaking memory
     Memory::destroy();

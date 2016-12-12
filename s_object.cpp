@@ -2,6 +2,7 @@
 
 #include "s_object.h"
 #include "s_runtime.h"
+#include "s_memory.h"
 #include "s_gc.h"
 
 #include "u_new.h"
@@ -118,7 +119,7 @@ void **Table::lookupReferenceAllocWithHashInternal(Table *table,
         newLength = fieldsNum * 2;
     }
     Table newTable;
-    newTable.m_fields = (Field *)neoCalloc(sizeof(Field), newLength);
+    newTable.m_fields = (Field *)Memory::allocate(sizeof(Field), newLength);
     newTable.m_fieldsNum = newLength;
     newTable.m_fieldsStored = 0;
     newTable.m_bloom = 0;
@@ -133,7 +134,7 @@ void **Table::lookupReferenceAllocWithHashInternal(Table *table,
             }
         }
     }
-    neoFree(table->m_fields);
+    Memory::free(table->m_fields);
     *table = newTable;
     return lookupReferenceAlloc(table, key, keyLength, first);
 }
@@ -231,8 +232,8 @@ void Object::mark(State *state, Object *object) {
 }
 
 void Object::free(Object *object) {
-    neoFree(object->m_table.m_fields);
-    neoFree(object);
+    Memory::free(object->m_table.m_fields);
+    Memory::free(object);
 }
 
 Object *Object::instanceOf(Object *object, Object *prototype) {
@@ -301,7 +302,7 @@ void *Object::allocate(State *state, size_t size) {
         state->m_shared->m_gcState.m_nextRun = (int)(state->m_shared->m_gcState.m_numObjectsAllocated * 1.5) + 10000;
     }
 
-    Object *result = (Object *)neoCalloc(size, 1);
+    Object *result = (Object *)Memory::allocate(size, 1);
     result->m_prev = state->m_shared->m_gcState.m_lastObjectAllocated;
     result->m_size = size;
     state->m_shared->m_gcState.m_lastObjectAllocated = result;

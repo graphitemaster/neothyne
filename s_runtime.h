@@ -1,8 +1,6 @@
 #ifndef S_RUNTIME_HDR
 #define S_RUNTIME_HDR
 
-#include <stddef.h>
-
 namespace s {
 
 struct State;

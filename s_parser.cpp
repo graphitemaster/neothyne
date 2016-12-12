@@ -842,7 +842,7 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
             buildOperation(gen, "&", reference, *reference, expression, range);
             continue;
         }
-        neoFree(range);
+        Gen::delRange(range);
         break;
     }
 
@@ -863,7 +863,7 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
             buildOperation(gen, "|", reference, *reference, expression, range);
             continue;
         }
-        neoFree(range);
+        Gen::delRange(range);
         break;
     }
 

@@ -1,7 +1,9 @@
 #ifndef S_MEMORY_HDR
 #define S_MEMORY_HDR
 
-#include "u_set.h"
+#include <stddef.h>
+
+#include "u_traits.h"
 
 namespace s {
 

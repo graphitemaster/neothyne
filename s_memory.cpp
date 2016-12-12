@@ -1,5 +1,7 @@
 #include "s_memory.h"
 
+#include "u_set.h"
+
 namespace s {
 
 static constexpr size_t kMemoryBits = 7_z;

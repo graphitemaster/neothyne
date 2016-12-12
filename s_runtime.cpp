@@ -1,5 +1,6 @@
 #include "s_runtime.h"
 #include "s_object.h"
+#include "s_memory.h"
 #include "s_vm.h"
 #include "s_gc.h"
 
@@ -317,7 +318,7 @@ static void arrayResize(State *state, Object *self, Object *, Object **arguments
 
     VM_ASSERT(newSize >= 0, "'array.resize(%d)' not allowed", newSize);
 
-    arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * newSize);
+    arrayObject->m_contents = (Object **)Memory::reallocate(arrayObject->m_contents, sizeof(Object *) * newSize);
     memset(arrayObject->m_contents + oldSize, 0, sizeof(Object *) * (newSize - oldSize));
     arrayObject->m_length = newSize;
 
@@ -336,7 +337,7 @@ static void arrayPush(State *state, Object *self, Object *, Object **arguments, 
     VM_ASSERT(arrayObject, "wrong type: expected array");
 
     Object *value = *arguments;
-    arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * ++arrayObject->m_length);
+    arrayObject->m_contents = (Object **)Memory::reallocate(arrayObject->m_contents, sizeof(Object *) * ++arrayObject->m_length);
     arrayObject->m_contents[arrayObject->m_length - 1] = value;
 
     Object::setNormal(self, "length", Object::newInt(state, arrayObject->m_length));
@@ -354,7 +355,7 @@ static void arrayPop(State *state, Object *self, Object *, Object **, size_t cou
     VM_ASSERT(arrayObject, "wrong type: expected array");
 
     Object *result = arrayObject->m_contents[arrayObject->m_length - 1];
-    arrayObject->m_contents = (Object **)neoRealloc(arrayObject->m_contents, sizeof(Object *) * --arrayObject->m_length);
+    arrayObject->m_contents = (Object **)Memory::reallocate(arrayObject->m_contents, sizeof(Object *) * --arrayObject->m_length);
 
     Object::setNormal(self, "length", Object::newInt(state, arrayObject->m_length));
 
