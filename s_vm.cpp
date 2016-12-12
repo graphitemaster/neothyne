@@ -153,12 +153,12 @@ static VMFnWrap instrFreeze(VMState *state) U_PURE;
 static VMFnWrap instrAccessStringKey(VMState *state) U_PURE;
 static VMFnWrap instrAssign(VMState *state) U_PURE;
 static VMFnWrap instrAssignStringKey(VMState *state) U_PURE;
-static VMFnWrap instrCall(VMState *state) U_PURE;
+static VMFnWrap instrCall(VMState *state) U_HOT;
 static VMFnWrap instrSaveResult(VMState *state) U_PURE;
 static VMFnWrap instrHalt(VMState *state) U_PURE;
 static VMFnWrap instrReturn(VMState *state) U_PURE;
 static VMFnWrap instrBranch(VMState *state) U_PURE;
-static VMFnWrap instrTestBranch(VMState *state) U_PURE;
+static VMFnWrap instrTestBranch(VMState *state) U_HOT;
 
 static const VMInstrFn instrFunctions[] = {
     instrGetRoot,
@@ -813,7 +813,9 @@ void OpenRange::pushRecord(OpenRange **range, ProfileRecord *record) {
 }
 
 void OpenRange::dropRecord(OpenRange **range) {
-    *range = (*range)->m_prev;
+    OpenRange *prev = (*range)->m_prev;
+    Memory::free(*range);
+    *range = prev;
 }
 
 void ProfileState::dump(SourceRange source, ProfileState *profileState) {

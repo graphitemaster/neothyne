@@ -567,6 +567,8 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
         *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
         return kParseOk;
     }
+    Gen::delRange(range);
+
     logParseError(text, "expected expression");
     return kParseError;
 }
@@ -697,8 +699,10 @@ ParseResult Parser::parsePropertyAccess(char **contents, Gen *gen, Reference *ex
 ParseResult Parser::parseExpression(char **contents, Gen *gen, Reference *reference) {
     FileRange *exprRange = Gen::newRange(*contents);
     ParseResult result = parseExpressionStem(contents, gen, reference);
-    if (result == kParseError)
+    if (result == kParseError) {
+        Gen::delRange(exprRange);
         return result;
+    }
     U_ASSERT(result == kParseOk);
 
     for (;;) {
@@ -1250,7 +1254,10 @@ ParseResult Parser::parseForStatement(char **contents, Gen *gen, FileRange *rang
         ParseResult result = parseLetDeclaration(&text, gen, declarationRange, false);
         if (result == kParseError)
             return kParseError;
-        U_ASSERT(result == kParseOk);
+        if (result == kParseNone) {
+            logParseError(text, "expected let declaration or assignment in 'for'");
+            return kParseError;
+        }
     } else {
         ParseResult result = parseAssign(&text, gen);
         if (result == kParseError)

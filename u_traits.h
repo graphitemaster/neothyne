@@ -90,6 +90,14 @@
 #   define U_PURE
 #endif
 
+// Compiler hint: indicate the function is hot
+#if defined(__GNUC__)
+#   define U_HOT \
+        __attribute__((hot))
+#else
+#   define U_HOT
+#endif
+
 namespace u {
 
 /// nullptr_t
