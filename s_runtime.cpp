@@ -25,9 +25,7 @@ static void boolNot(State *state, Object *self, Object *function, Object **argum
 static void intMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *intBase = Object::lookup(root, "int", nullptr);
+    Object *intBase = state->m_shared->m_valueCache.m_intBase;
 
     Object *intObj1 = Object::instanceOf(self, intBase);
     Object *intObj2 = Object::instanceOf(*arguments, intBase);
@@ -47,7 +45,7 @@ static void intMath(State *state, Object *self, Object *, Object **arguments, si
         }
     }
 
-    Object *floatBase = Object::lookup(root, "float", nullptr);
+    Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
     Object *floatObj2 = Object::instanceOf(*arguments, floatBase);
 
     if (floatObj2) {
@@ -91,9 +89,7 @@ static void intBitOr(State *state, Object *self, Object *function, Object **argu
 static void intCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *intBase = Object::lookup(root, "int", nullptr);
+    Object *intBase = state->m_shared->m_valueCache.m_intBase;
 
     Object *intObj1 = Object::instanceOf(self, intBase);
     Object *intObj2 = Object::instanceOf(*arguments, intBase);
@@ -112,7 +108,7 @@ static void intCompare(State *state, Object *self, Object *, Object **arguments,
         }
     }
 
-    Object *floatBase = Object::lookup(root, "float", nullptr);
+    Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
     Object *floatObj2 = Object::instanceOf(*arguments, floatBase);
 
     if (floatObj2) {
@@ -154,10 +150,8 @@ static void intCompareGe(State *state, Object *self, Object *function, Object **
 static void floatMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *intBase = Object::lookup(root, "int", nullptr);
-    Object *floatBase = Object::lookup(root, "float", nullptr);
+    Object *intBase = state->m_shared->m_valueCache.m_intBase;
+    Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
 
     Object *floatObj1 = Object::instanceOf(self, floatBase);
     Object *intObj2 = Object::instanceOf(*arguments, intBase);
@@ -196,10 +190,8 @@ static void floatDiv(State *state, Object *self, Object *function, Object **argu
 static void floatCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *intBase = Object::lookup(root, "int", nullptr);
-    Object *floatBase = Object::lookup(root, "float", nullptr);
+    Object *intBase = state->m_shared->m_valueCache.m_intBase;
+    Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
 
     Object *floatObj1 = Object::instanceOf(self, floatBase);
     Object *intObj2 = Object::instanceOf(*arguments, intBase);
@@ -244,9 +236,7 @@ static void floatCompareGe(State *state, Object *self, Object *function, Object 
 static void stringAdd(State *state, Object *self, Object *, Object **arguments, size_t count) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *stringBase = Object::lookup(root, "string", nullptr);
+    Object *stringBase = state->m_shared->m_valueCache.m_stringBase;
 
     Object *strObj1 = Object::instanceOf(self, stringBase);
     Object *strObj2 = Object::instanceOf(*arguments, stringBase);
@@ -262,9 +252,7 @@ static void stringAdd(State *state, Object *self, Object *, Object **arguments, 
 static void stringCompare(State *state, Object *self, Object *, Object **arguments, size_t count) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *stringBase = Object::lookup(root, "string", nullptr);
+    Object *stringBase = state->m_shared->m_valueCache.m_stringBase;
 
     Object *strObj1 = Object::instanceOf(self, stringBase);
     Object *strObj2 = Object::instanceOf(*arguments, stringBase);
@@ -279,8 +267,7 @@ static void stringCompare(State *state, Object *self, Object *, Object **argumen
 
 /// [Closure]
 static void closureMark(State *state, Object *object) {
-    Object *root = state->m_root;
-    Object *closureBase = Object::lookup(root, "closure", nullptr);
+    Object *closureBase = state->m_shared->m_valueCache.m_closureBase;
     ClosureObject *closureObject = (ClosureObject*)Object::instanceOf(object, closureBase);
     if (closureObject) {
         Object::mark(state, closureObject->m_context);
@@ -289,8 +276,7 @@ static void closureMark(State *state, Object *object) {
 
 /// [Array]
 static void arrayMark(State *state, Object *object) {
-    Object *root = state->m_root;
-    Object *arrayBase = Object::lookup(root, "array", nullptr);
+    Object *arrayBase = state->m_shared->m_valueCache.m_arrayBase;
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(object, arrayBase);
     if (arrayObject) {
         for (int i = 0; i < arrayObject->m_length; i++) {
@@ -302,10 +288,8 @@ static void arrayMark(State *state, Object *object) {
 static void arrayResize(State *state, Object *self, Object *, Object **arguments, size_t count) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *intBase = Object::lookup(root, "int", nullptr);
-    Object *arrayBase = Object::lookup(root, "array", nullptr);
+    Object *intBase = state->m_shared->m_valueCache.m_intBase;
+    Object *arrayBase = state->m_shared->m_valueCache.m_arrayBase;
 
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
     IntObject *intObject = (IntObject *)Object::instanceOf(*arguments, intBase);
@@ -330,9 +314,7 @@ static void arrayResize(State *state, Object *self, Object *, Object **arguments
 static void arrayPush(State *state, Object *self, Object *, Object **arguments, size_t count) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *arrayBase = Object::lookup(root, "array", nullptr);
+    Object *arrayBase = state->m_shared->m_valueCache.m_arrayBase;
 
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
 
@@ -350,9 +332,7 @@ static void arrayPush(State *state, Object *self, Object *, Object **arguments, 
 static void arrayPop(State *state, Object *self, Object *, Object **, size_t count) {
     VM_ASSERT(count == 0, "wrong number of parameters: expected 0, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *arrayBase = Object::lookup(root, "array", nullptr);
+    Object *arrayBase = state->m_shared->m_valueCache.m_arrayBase;
 
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
 
@@ -369,10 +349,8 @@ static void arrayPop(State *state, Object *self, Object *, Object **, size_t cou
 static void arrayIndex(State *state, Object *self, Object *, Object **arguments, size_t count) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *intBase = Object::lookup(root, "int", nullptr);
-    Object *arrayBase = Object::lookup(root, "array", nullptr);
+    Object *intBase = state->m_shared->m_valueCache.m_intBase;
+    Object *arrayBase = state->m_shared->m_valueCache.m_arrayBase;
 
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
     IntObject *intObject = (IntObject *)Object::instanceOf(*arguments, intBase);
@@ -390,10 +368,8 @@ static void arrayIndex(State *state, Object *self, Object *, Object **arguments,
 static void arrayIndexAssign(State *state, Object *self, Object *, Object **arguments, size_t count) {
     VM_ASSERT(count == 2, "wrong number of parameters: expected 2, got %zu", count);
 
-    Object *root = state->m_root;
-
-    Object *intBase = Object::lookup(root, "int", nullptr);
-    Object *arrayBase = Object::lookup(root, "array", nullptr);
+    Object *intBase = state->m_shared->m_valueCache.m_intBase;
+    Object *arrayBase = state->m_shared->m_valueCache.m_arrayBase;
 
     ArrayObject *arrayObject = (ArrayObject *)Object::instanceOf(self, arrayBase);
     IntObject *intObject = (IntObject *)Object::instanceOf(*arguments, intBase);
@@ -408,12 +384,10 @@ static void arrayIndexAssign(State *state, Object *self, Object *, Object **argu
 }
 
 static void print(State *state, Object *, Object *, Object **arguments, size_t count) {
-    Object *root = state->m_root;
-
-    Object *intBase = Object::lookup(root, "int", nullptr);
-    Object *boolBase = Object::lookup(root, "bool", nullptr);
-    Object *floatBase = Object::lookup(root, "float", nullptr);
-    Object *stringBase = Object::lookup(root, "string", nullptr);
+    Object *intBase = state->m_shared->m_valueCache.m_intBase;
+    Object *boolBase = state->m_shared->m_valueCache.m_boolBase;
+    Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
+    Object *stringBase = state->m_shared->m_valueCache.m_stringBase;
 
     for (size_t i = 0; i < count; i++) {
         Object *argument = arguments[i];
@@ -443,10 +417,9 @@ static void print(State *state, Object *, Object *, Object **arguments, size_t c
 
 enum { kSin, kCos, kTan, kSqrt };
 
-static void mathTrig(State *state, Object *self, Object **arguments, size_t count, int type) {
-    Object *root = state->m_root;
+static void mathTrig(State *state, Object *, Object **arguments, size_t count, int type) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
-    Object *floatBase = Object::lookup(root, "float", nullptr);
+    Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
     FloatObject *floatObject = (FloatObject *)Object::instanceOf(*arguments, floatBase);
     VM_ASSERT(floatObject, "wrong type: expected float");
     switch (type) {
@@ -473,10 +446,9 @@ static void mathSqrt(State *state, Object *self, Object *, Object **arguments, s
     return mathTrig(state, self, arguments, count, kSqrt);
 }
 
-static void mathPow(State *state, Object *self, Object *, Object **arguments, size_t count) {
-    Object *root = state->m_root;
+static void mathPow(State *state, Object *, Object *, Object **arguments, size_t count) {
     VM_ASSERT(count == 2, "wrong number of parameters: expected 2, got %zu", count);
-    Object *floatBase = Object::lookup(root, "float", nullptr);
+    Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
     FloatObject *lhsObject = (FloatObject *)Object::instanceOf(arguments[0], floatBase);
     FloatObject *rhsObject = (FloatObject *)Object::instanceOf(arguments[1], floatBase);
     VM_ASSERT(lhsObject && rhsObject, "wrong type: expected float");
@@ -497,17 +469,21 @@ Object *createRoot(State *state) {
 
     // function
     Object *functionObject = Object::newObject(state, nullptr);
+    state->m_shared->m_valueCache.m_functionBase = functionObject;
     functionObject->m_flags |= kNoInherit;
     Object::setNormal(root, "function", functionObject);
+    functionObject->m_flags |= kImmutable;
 
     // closure
     Object *closureObject = Object::newObject(state, nullptr);
+    state->m_shared->m_valueCache.m_closureBase = closureObject;
     closureObject->m_flags |= kNoInherit;
     Object::setNormal(root, "closure", closureObject);
     closureObject->m_mark = closureMark;
 
     // bool
     Object *boolObject = Object::newObject(state, nullptr);
+    state->m_shared->m_valueCache.m_boolBase = boolObject;
     boolObject->m_flags |= kNoInherit;
     Object::setNormal(root, "bool", boolObject);
     Object::setNormal(boolObject, "!", Object::newFunction(state, boolNot));
@@ -517,9 +493,11 @@ Object *createRoot(State *state) {
     Object::setNormal(root, "false", falseObject);
     state->m_shared->m_valueCache.m_boolTrue = trueObject;
     state->m_shared->m_valueCache.m_boolFalse = falseObject;
+    boolObject->m_flags |= kImmutable;
 
     // int
     Object *intObject = Object::newObject(state, nullptr);
+    state->m_shared->m_valueCache.m_intBase = intObject;
     intObject->m_flags |= kNoInherit;
     Object::setNormal(root, "int", intObject);
     Object::setNormal(intObject, "+", Object::newFunction(state, intAdd));
@@ -535,9 +513,11 @@ Object *createRoot(State *state) {
     Object::setNormal(intObject, ">=", Object::newFunction(state, intCompareGe));
     state->m_shared->m_valueCache.m_intZero = Object::newInt(state, 0);
     GC::addPermanent(state, state->m_shared->m_valueCache.m_intZero);
+    intObject->m_flags |= kImmutable;
 
     // float
     Object *floatObject = Object::newObject(state, nullptr);
+    state->m_shared->m_valueCache.m_floatBase = floatObject;
     floatObject->m_flags |= kNoInherit;
     Object::setNormal(root, "float", floatObject);
     Object::setNormal(floatObject, "+", Object::newFunction(state, floatAdd));
@@ -549,16 +529,20 @@ Object *createRoot(State *state) {
     Object::setNormal(floatObject, ">", Object::newFunction(state, floatCompareGt));
     Object::setNormal(floatObject, "<=", Object::newFunction(state, floatCompareLe));
     Object::setNormal(floatObject, ">=", Object::newFunction(state, floatCompareGe));
+    floatObject->m_flags |= kImmutable;
 
     // string
     Object *stringObject = Object::newObject(state, nullptr);
+    state->m_shared->m_valueCache.m_stringBase = stringObject;
     stringObject->m_flags |= kNoInherit;
     Object::setNormal(root, "string", stringObject);
     Object::setNormal(stringObject, "+", Object::newFunction(state, stringAdd));
     Object::setNormal(stringObject, "==", Object::newFunction(state, stringCompare));
+    stringObject->m_flags |= kImmutable;
 
     // array
     Object *arrayObject = Object::newObject(state, nullptr);
+    state->m_shared->m_valueCache.m_arrayBase = arrayObject;
     arrayObject->m_flags |= kNoInherit;
     Object::setNormal(root, "array", arrayObject);
     arrayObject->m_mark = arrayMark;
@@ -567,19 +551,21 @@ Object *createRoot(State *state) {
     Object::setNormal(arrayObject, "pop", Object::newFunction(state, arrayPop));
     Object::setNormal(arrayObject, "[]", Object::newFunction(state, arrayIndex));
     Object::setNormal(arrayObject, "[]=", Object::newFunction(state, arrayIndexAssign));
+    arrayObject->m_flags |= kClosed | kImmutable;
 
     // others
     Object::setNormal(root, "print", Object::newFunction(state, print));
 
     // Math
     Object *mathObject = Object::newObject(state, nullptr);
-    mathObject->m_flags |= kNoInherit;
+    mathObject->m_flags |= kNoInherit | kImmutable;
     Object::setNormal(root, "Math", mathObject);
     Object::setNormal(mathObject, "sin", Object::newFunction(state, mathSin));
     Object::setNormal(mathObject, "cos", Object::newFunction(state, mathCos));
     Object::setNormal(mathObject, "tan", Object::newFunction(state, mathTan));
     Object::setNormal(mathObject, "sqrt", Object::newFunction(state, mathSqrt));
     Object::setNormal(mathObject, "pow", Object::newFunction(state, mathPow));
+    mathObject->m_flags |= kClosed;
 
     GC::delRoots(state, &pinned);
 

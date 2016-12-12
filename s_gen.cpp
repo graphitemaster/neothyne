@@ -372,7 +372,7 @@ static inline void findPrimitiveSlots(UserFunction *function, bool **slots) {
 UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
     Gen gen = { };
 
-    gen.m_slot = 0;
+    gen.m_slot = 1;
     gen.m_blockTerminated = true;
     gen.m_currentRange = nullptr;
 
@@ -447,7 +447,7 @@ UserFunction *Gen::predictPass(UserFunction *function) {
     size_t count = 0;
 
     Gen gen = { };
-    gen.m_slot = 0;
+    gen.m_slot = 1;
     gen.m_blockTerminated = true;
 
     for (size_t i = 0; i < function->m_body.m_count; i++) {

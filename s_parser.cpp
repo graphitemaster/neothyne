@@ -342,7 +342,7 @@ ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Reference *ref
     Slot objectSlot = 0;
     Gen::useRangeStart(gen, range);
     if (gen)
-        objectSlot = Gen::addNewObject(gen, gen->m_slot++);
+        objectSlot = Gen::addNewObject(gen, 0);
     Gen::useRangeEnd(gen, range);
 
     *contents = text;
@@ -615,7 +615,7 @@ ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression, 
         if (expression->m_key)
             thisSlot = expression->m_base;
         else
-            thisSlot = gen->m_slot++;
+            thisSlot = 0;
 
         Gen::useRangeStart(gen, exprRange);
         *expression = {
@@ -1129,8 +1129,7 @@ ParseResult Parser::parseLetDeclaration(char **contents, Gen *gen, FileRange *le
     Gen::useRangeStart(gen, letName);
     Slot value;
     Slot variableNameSlot = Gen::addNewStringObject(gen, letScope, variableName);
-    Slot nullSlot = gen->m_slot++;
-    Gen::addAssign(gen, letScope, variableNameSlot, nullSlot, kAssignPlain);
+    Gen::addAssign(gen, letScope, variableNameSlot, 0, kAssignPlain);
     Gen::addCloseObject(gen, letScope);
     Gen::useRangeEnd(gen, letName);
 
@@ -1139,7 +1138,7 @@ ParseResult Parser::parseLetDeclaration(char **contents, Gen *gen, FileRange *le
     if (!consumeString(&text, "=")) {
         Gen::delRange(assignRange);
         assignRange = letName;
-        value = nullSlot;
+        value = 0;
     } else {
         FileRange::recordEnd(text, assignRange);
         Reference reference;
@@ -1499,7 +1498,7 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     Gen gen = { };
     gen.m_arguments = arguments;
     gen.m_count = length;
-    gen.m_slot = length;
+    gen.m_slot = length + 1;
     gen.m_name = functionName;
     gen.m_blockTerminated = true;
 
@@ -1510,7 +1509,7 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     gen.m_scope = Gen::addNewObject(&gen, contextSlot);
     for (size_t i = 0; i < length; i++) {
         Slot argumentSlot = Gen::addNewStringObject(&gen, gen.m_scope, arguments[i]);
-        Gen::addAssign(&gen, gen.m_scope, argumentSlot, i, kAssignPlain);
+        Gen::addAssign(&gen, gen.m_scope, argumentSlot, i + 1, kAssignPlain);
     }
     Gen::addCloseObject(&gen, gen.m_scope);
     Gen::useRangeEnd(&gen, functionFrameRange);
@@ -1531,6 +1530,7 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
 ParseResult Parser::parseModule(char **contents, UserFunction **function) {
     Gen gen = { };
     gen.m_blockTerminated = true;
+    gen.m_slot = 1;
 
     // capture future module statement
     FileRange *moduleRange = Gen::newRange(*contents);

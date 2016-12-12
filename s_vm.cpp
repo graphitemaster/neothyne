@@ -282,7 +282,8 @@ static VMFnWrap instrNewClosureObject(VMState *state) {
     VM_ASSERTION(targetSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(contextSlot < state->m_cf->m_count, "slot addressing error");
 
-    state->m_cf->m_slots[targetSlot] = Object::newClosure(state->m_cf->m_slots[contextSlot],
+    state->m_cf->m_slots[targetSlot] = Object::newClosure(state->m_restState,
+                                                          state->m_cf->m_slots[contextSlot],
                                                           instruction->m_function);
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
@@ -317,7 +318,7 @@ static VMFnWrap instrAccess(VMState *state) {
 
     Object *object = state->m_cf->m_slots[objectSlot];
 
-    Object *stringBase = Object::lookup(state->m_root, "string", nullptr);
+    Object *stringBase = state->m_restState->m_shared->m_valueCache.m_stringBase;
     Object *keyObject = state->m_cf->m_slots[keySlot];
 
     auto *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
@@ -332,8 +333,8 @@ static VMFnWrap instrAccess(VMState *state) {
     if (!objectFound) {
         Object *indexOperation = Object::lookup(object, "[]", nullptr);
         if (indexOperation) {
-            Object *functionBase = Object::lookup(state->m_root, "function", nullptr);
-            Object *closureBase = Object::lookup(state->m_root, "closure", nullptr);
+            Object *functionBase = state->m_restState->m_shared->m_valueCache.m_functionBase;
+            Object *closureBase = state->m_restState->m_shared->m_valueCache.m_closureBase;
 
             auto *functionObject = (FunctionObject *)Object::instanceOf(indexOperation, functionBase);
             auto *closureObject = (ClosureObject *)Object::instanceOf(indexOperation, closureBase);
@@ -406,8 +407,8 @@ static VMFnWrap instrAccessStringKey(VMState *state) {
     if (!objectFound) {
         Object *indexOperation = Object::lookup(object, "[]", nullptr);
         if (indexOperation) {
-            Object *functionBase = Object::lookup(state->m_root, "function", nullptr);
-            Object *closureBase = Object::lookup(state->m_root, "closure", nullptr);
+            Object *functionBase = state->m_restState->m_shared->m_valueCache.m_functionBase;
+            Object *closureBase = state->m_restState->m_shared->m_valueCache.m_closureBase;
 
             auto *functionObject = (FunctionObject *)Object::instanceOf(indexOperation, functionBase);
             auto *closureObject = (ClosureObject *)Object::instanceOf(indexOperation, closureBase);
@@ -459,14 +460,14 @@ static VMFnWrap instrAssign(VMState *state) {
 
     Object *object = state->m_cf->m_slots[objectSlot];
     Object *valueObject = state->m_cf->m_slots[valueSlot];
-    Object *stringBase = Object::lookup(state->m_root, "string", nullptr);
+    Object *stringBase = state->m_restState->m_shared->m_valueCache.m_stringBase;
     Object *keyObject = state->m_cf->m_slots[keySlot];
     StringObject *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
     if (!stringKey) {
         Object *indexAssignOperation = Object::lookup(object, "[]=", nullptr);
         if (indexAssignOperation) {
-            Object *functionBase = Object::lookup(state->m_root, "function", nullptr);
-            Object *closureBase = Object::lookup(state->m_root, "closure", nullptr);
+            Object *functionBase = state->m_restState->m_shared->m_valueCache.m_functionBase;
+            Object *closureBase = state->m_restState->m_shared->m_valueCache.m_closureBase;
 
             auto *functionObject =
                 (FunctionObject *)Object::instanceOf(indexAssignOperation, functionBase);
@@ -561,8 +562,8 @@ static VMFnWrap instrCall(VMState *state) {
     Object *thisObject_ = state->m_cf->m_slots[thisSlot];
     Object *functionObject_ = state->m_cf->m_slots[functionSlot];
 
-    Object *closureBase = Object::lookup(state->m_root, "closure", nullptr);
-    Object *functionBase = Object::lookup(state->m_root, "function", nullptr);
+    Object *closureBase = state->m_restState->m_shared->m_valueCache.m_functionBase;
+    Object *functionBase = state->m_restState->m_shared->m_valueCache.m_closureBase;
 
     auto *functionObject = (FunctionObject *)Object::instanceOf(functionObject_, functionBase);
     auto *closureObject = (ClosureObject *)Object::instanceOf(functionObject_, closureBase);
@@ -667,8 +668,8 @@ static VMFnWrap instrTestBranch(VMState *state) {
 
     Object *testObject = state->m_cf->m_slots[testSlot];
 
-    Object *boolBase = Object::lookup(state->m_root, "bool", nullptr);
-    Object *intBase = Object::lookup(state->m_root, "int", nullptr);
+    Object *boolBase = state->m_restState->m_shared->m_valueCache.m_boolBase;
+    Object *intBase = state->m_restState->m_shared->m_valueCache.m_intBase;
     Object *boolObject = Object::instanceOf(testObject, boolBase);
     Object *intObject = Object::instanceOf(testObject, intBase);
 
@@ -757,7 +758,7 @@ void VM::callFunction(State *state, Object *context, UserFunction *function, Obj
 
     VM_ASSERT(count == frame->m_function->m_arity, "arity violation in call");
     for (size_t i = 0; i < count; i++)
-        frame->m_slots[i] = arguments[i];
+        frame->m_slots[i + 1] = arguments[i];
 
     VM_ASSERT(frame->m_function->m_body.m_count, "invalid function");
     frame->m_instructions = frame->m_function->m_body.m_blocks[0].m_instructions;
@@ -776,13 +777,9 @@ void VM::methodHandler(State *state, Object *self, Object *function, Object **ar
     callFunction(state, context, &functionObject->m_closure, arguments, count);
 }
 
-Object *Object::newClosure(Object *context, UserFunction *function) {
-    Object *root = context;
-    while (root->m_parent)
-        root = root->m_parent;
-    Object *closureBase = Object::lookup(root, "closure", nullptr);
+Object *Object::newClosure(State *state, Object *context, UserFunction *function) {
     ClosureObject *closureObject = (ClosureObject *)neoCalloc(sizeof *closureObject, 1);
-    closureObject->m_parent = closureBase;
+    closureObject->m_parent = state->m_shared->m_valueCache.m_closureBase;
     if (function->m_isMethod)
         closureObject->m_function = VM::methodHandler;
     else

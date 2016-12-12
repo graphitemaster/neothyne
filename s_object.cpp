@@ -317,7 +317,7 @@ Object *Object::newObject(State *state, Object *parent) {
 }
 
 Object *Object::newInt(State *state, int value) {
-    Object *intBase = lookup(state->m_root, "int", nullptr);
+    Object *intBase = state->m_shared->m_valueCache.m_intBase;
     IntObject *object = (IntObject *)allocate(state, sizeof *object);
     object->m_parent = intBase;
     object->m_value = value;
@@ -325,7 +325,7 @@ Object *Object::newInt(State *state, int value) {
 }
 
 Object *Object::newFloat(State *state, float value) {
-    Object *floatBase = lookup(state->m_root, "float", nullptr);
+    Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
     FloatObject *object = (FloatObject *)allocate(state, sizeof *object);
     object->m_parent = floatBase;
     object->m_flags = kImmutable | kClosed;
@@ -334,7 +334,7 @@ Object *Object::newFloat(State *state, float value) {
 }
 
 Object *Object::newBoolUncached(State *state, bool value) {
-    Object *boolBase = lookup(state->m_root, "bool", nullptr);
+    Object *boolBase = state->m_shared->m_valueCache.m_boolBase;
     BoolObject *object = (BoolObject *)allocate(state, sizeof *object);
     object->m_parent = boolBase;
     object->m_flags = kImmutable | kClosed;
@@ -350,11 +350,10 @@ Object *Object::newBool(State *state, bool value) {
 }
 
 Object *Object::newString(State *state, const char *value) {
-    Object *stringBase = lookup(state->m_root, "string", nullptr);
     const size_t length = strlen(value);
     // string gets allocated as part of the object
     StringObject *object = (StringObject *)allocate(state, sizeof *object + length + 1);
-    object->m_parent = stringBase;
+    object->m_parent = state->m_shared->m_valueCache.m_stringBase;
     object->m_flags = kImmutable | kClosed;
     object->m_value = ((char *)object) + sizeof *object;
     strncpy(object->m_value, value, length + 1);
@@ -362,9 +361,8 @@ Object *Object::newString(State *state, const char *value) {
 }
 
 Object *Object::newArray(State *state, Object **contents, IntObject *length) {
-    Object *arrayBase = lookup(state->m_root, "array", nullptr);
     ArrayObject *object = (ArrayObject *)allocate(state, sizeof *object);
-    object->m_parent = arrayBase;
+    object->m_parent = state->m_shared->m_valueCache.m_arrayBase;
     object->m_contents = contents;
     object->m_length = length->m_value;
     setNormal((Object *)object, "length", (Object *)length);
@@ -372,7 +370,7 @@ Object *Object::newArray(State *state, Object **contents, IntObject *length) {
 }
 
 Object *Object::newFunction(State *state, FunctionPointer function) {
-    Object *functionBase = lookup(state->m_root, "function", nullptr);
+    Object *functionBase = state->m_shared->m_valueCache.m_functionBase;
     FunctionObject *object = (FunctionObject*)allocate(state, sizeof *object);
     object->m_parent = functionBase;
     object->m_function = function;

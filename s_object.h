@@ -96,7 +96,7 @@ struct Object {
     static Object *newArray(State *state, Object **data, IntObject *length);
     static Object *newFunction(State *state, FunctionPointer function);
     static Object *newMark(State *state);
-    static Object *newClosure(Object *context, UserFunction *function);
+    static Object *newClosure(State *state, Object *context, UserFunction *function);
 
     // Objects are basically tables
     Table m_table;
@@ -196,6 +196,15 @@ struct ValueCache {
 
     // Preallocated array of objects used to place function calls
     Object ***m_preallocatedArguments;
+
+    // [Base]
+    Object *m_intBase;
+    Object *m_boolBase;
+    Object *m_floatBase;
+    Object *m_closureBase;
+    Object *m_functionBase;
+    Object *m_stringBase;
+    Object *m_arrayBase;
 };
 
 struct ProfileState {
