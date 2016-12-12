@@ -21,6 +21,21 @@ static void boolNot(State *state, Object *self, Object *function, Object **argum
     state->m_resultValue = Object::newBool(state, !((BoolObject *)self)->m_value);
 }
 
+static void boolCmp(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    (void)function;
+    (void)arguments;
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+
+    Object *boolBase = state->m_shared->m_valueCache.m_boolBase;
+
+    auto *boolObj1 = (BoolObject *)Object::instanceOf(self, boolBase);
+    auto *boolObj2 = (BoolObject *)Object::instanceOf(*arguments, boolBase);
+
+    VM_ASSERT(boolObj1, "wrong type: expected bool");
+
+    state->m_resultValue = Object::newBool(state, boolObj1->m_value == boolObj2->m_value);
+}
+
 /// [Int]
 static void intMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
     VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
@@ -487,6 +502,7 @@ Object *createRoot(State *state) {
     boolObject->m_flags |= kNoInherit;
     Object::setNormal(root, "bool", boolObject);
     Object::setNormal(boolObject, "!", Object::newFunction(state, boolNot));
+    Object::setNormal(boolObject, "==", Object::newFunction(state, boolCmp));
     Object *trueObject = Object::newBoolUncached(state, true);
     Object *falseObject = Object::newBoolUncached(state, false);
     Object::setNormal(root, "true", trueObject);

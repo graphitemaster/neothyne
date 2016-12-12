@@ -124,11 +124,11 @@ let position = [].resize(N);
 fn is_safe(queen, row) {
     for (let i = 0; i < queen; i++) {
         let other = position[i];
-        if (other == row) return 0; // same row
-        if (other == row - (queen - i)) return 0; // same diagonal
-        if (other == row + (queen - i)) return 0; // same diagonal
+        if (other == row) return false; // same row
+        if (other == row - (queen - i)) return false; // same diagonal
+        if (other == row + (queen - i)) return false; // same diagonal
     }
-    return 1;
+    return true;
 }
 
 fn solve(k) {
@@ -141,7 +141,7 @@ fn solve(k) {
     } else {
         for (let i = 0; i < N; i++) {
             // before putting a queen (the k-th) into a row, check if it's safe
-            if (is_safe(k, i) == 1) {
+            if (is_safe(k, i)) {
                 position[k] = i;
                 // go again
                 solve(k + 1);
