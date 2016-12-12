@@ -17,29 +17,29 @@ namespace s {
 // long and many of them would collect over time.
 
 struct Memory {
-    static void init(Memory *memory);
-    static void destroy(Memory *memory);
+    static void init();
+    static void destroy();
 
-    U_MALLOC_LIKE static void *allocate(Memory *memory, size_t size);
-    U_MALLOC_LIKE static void *allocate(Memory *memory, size_t count, size_t size);
-    U_MALLOC_LIKE static void *reallocate(Memory *memory, void *old, size_t resize);
+    U_MALLOC_LIKE static void *allocate(size_t size);
+    U_MALLOC_LIKE static void *allocate(size_t count, size_t size);
+    U_MALLOC_LIKE static void *reallocate(void *old, size_t resize);
 
-    static void free(Memory *memory, void *old);
+    static void free(void *old);
 
 private:
-    static bool addMember(Memory *memory, void *member);
+    static bool addMember(void *member);
 
-    static bool add(Memory *memory, void *member);
-    static bool del(Memory *memory, void *member);
+    static bool add(void *member);
+    static bool del(void *member);
 
-    static void maybeRehash(Memory *memory);
+    static void maybeRehash();
 
-    size_t m_numBits;
-    size_t m_mask;
-    size_t m_capacity;
-    void **m_items;
-    size_t m_numItems;
-    size_t m_numDeletedItems;
+    static size_t m_numBits;
+    static size_t m_mask;
+    static size_t m_capacity;
+    static void **m_items;
+    static size_t m_numItems;
+    static size_t m_numDeletedItems;
 };
 
 }

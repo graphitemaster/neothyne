@@ -6,6 +6,8 @@
 #include "u_log.h"
 #include "u_misc.h"
 
+#include "m_trig.h"
+
 namespace s {
 
 enum { kAdd, kSub, kMul, kDiv, kBitOr, kBitAnd };
@@ -436,8 +438,49 @@ static void print(State *state, Object *, Object *, Object **arguments, size_t c
             continue;
         }
     }
-    u::Log::out("\n");
     state->m_resultValue = nullptr;
+}
+
+enum { kSin, kCos, kTan, kSqrt };
+
+static void mathTrig(State *state, Object *self, Object **arguments, size_t count, int type) {
+    Object *root = state->m_root;
+    VM_ASSERT(count == 1, "wrong number of parameters: expected 1, got %zu", count);
+    Object *floatBase = Object::lookup(root, "float", nullptr);
+    FloatObject *floatObject = (FloatObject *)Object::instanceOf(*arguments, floatBase);
+    VM_ASSERT(floatObject, "wrong type: expected float");
+    switch (type) {
+    case kSin:  state->m_resultValue = Object::newFloat(state, m::sin(floatObject->m_value));  break;
+    case kCos:  state->m_resultValue = Object::newFloat(state, m::cos(floatObject->m_value));  break;
+    case kTan:  state->m_resultValue = Object::newFloat(state, m::tan(floatObject->m_value));  break;
+    case kSqrt: state->m_resultValue = Object::newFloat(state, m::sqrt(floatObject->m_value)); break;
+    }
+}
+
+static void mathSin(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    return mathTrig(state, self, arguments, count, kSin);
+}
+
+static void mathCos(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    return mathTrig(state, self, arguments, count, kCos);
+}
+
+static void mathTan(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    return mathTrig(state, self, arguments, count, kTan);
+}
+
+static void mathSqrt(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    return mathTrig(state, self, arguments, count, kSqrt);
+}
+
+static void mathPow(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    Object *root = state->m_root;
+    VM_ASSERT(count == 2, "wrong number of parameters: expected 2, got %zu", count);
+    Object *floatBase = Object::lookup(root, "float", nullptr);
+    FloatObject *lhsObject = (FloatObject *)Object::instanceOf(arguments[0], floatBase);
+    FloatObject *rhsObject = (FloatObject *)Object::instanceOf(arguments[1], floatBase);
+    VM_ASSERT(lhsObject && rhsObject, "wrong type: expected float");
+    state->m_resultValue = Object::newFloat(state, m::pow(lhsObject->m_value, rhsObject->m_value));
 }
 
 Object *createRoot(State *state) {
@@ -491,6 +534,7 @@ Object *createRoot(State *state) {
     Object::setNormal(intObject, "<=", Object::newFunction(state, intCompareLe));
     Object::setNormal(intObject, ">=", Object::newFunction(state, intCompareGe));
     state->m_shared->m_valueCache.m_intZero = Object::newInt(state, 0);
+    GC::addPermanent(state, state->m_shared->m_valueCache.m_intZero);
 
     // float
     Object *floatObject = Object::newObject(state, nullptr);
@@ -526,6 +570,16 @@ Object *createRoot(State *state) {
 
     // others
     Object::setNormal(root, "print", Object::newFunction(state, print));
+
+    // Math
+    Object *mathObject = Object::newObject(state, nullptr);
+    mathObject->m_flags |= kNoInherit;
+    Object::setNormal(root, "Math", mathObject);
+    Object::setNormal(mathObject, "sin", Object::newFunction(state, mathSin));
+    Object::setNormal(mathObject, "cos", Object::newFunction(state, mathCos));
+    Object::setNormal(mathObject, "tan", Object::newFunction(state, mathTan));
+    Object::setNormal(mathObject, "sqrt", Object::newFunction(state, mathSqrt));
+    Object::setNormal(mathObject, "pow", Object::newFunction(state, mathPow));
 
     GC::delRoots(state, &pinned);
 

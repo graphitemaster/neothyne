@@ -7,8 +7,6 @@
 
 namespace s {
 
-struct Memory;
-
 struct BlockRef {
     size_t m_block;
     uintptr_t m_distance;
@@ -20,8 +18,8 @@ struct Gen {
 
     static void useRangeStart(Gen *gen, FileRange *range);
     static void useRangeEnd(Gen *gen, FileRange *range);
-    static FileRange *newRange(Gen *gen, char *text);
-    static void delRange(Gen *gen, FileRange *range);
+    static FileRange *newRange(char *text);
+    static void delRange(FileRange *range);
 
     static size_t newBlock(Gen *gen);
 
@@ -55,10 +53,10 @@ struct Gen {
 
     static UserFunction *buildFunction(Gen *gen);
 
-    static UserFunction *optimize(Gen *gen, UserFunction *function);
+    static UserFunction *optimize(UserFunction *function);
 
-    static UserFunction *inlinePass(Memory *memory, UserFunction *function, bool *primitiveSlots);
-    static UserFunction *predictPass(Memory *memory, UserFunction *function);
+    static UserFunction *inlinePass(UserFunction *function, bool *primitiveSlots);
+    static UserFunction *predictPass(UserFunction *function);
 
     static size_t scopeEnter(Gen *gen);
     static void scopeLeave(Gen *gen, size_t backup);
@@ -70,7 +68,6 @@ private:
 
     static void addInstruction(Gen *gen, size_t size, Instruction *instruction);
 
-    Memory *m_memory;
     const char *m_name;
     const char **m_arguments;
     size_t m_count;

@@ -483,7 +483,7 @@ static VMFnWrap instrAssign(VMState *state) {
             }
             // BUG!?
             //break;
-            abort();
+            //abort();
             state->m_instr = (Instruction *)(instruction + 1);
             return { instrFunctions[state->m_instr->m_type] };
         }

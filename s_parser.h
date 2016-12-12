@@ -17,7 +17,7 @@ enum ParseResult {
 };
 
 struct Parser {
-    static ParseResult parseModule(Memory *memory, char **contents, UserFunction **function);
+    static ParseResult parseModule(char **contents, UserFunction **function);
 
 private:
     friend struct FileRange;
@@ -46,36 +46,36 @@ private:
 
     static void consumeFiller(char **contents);
     static bool consumeString(char **contents, const char *identifier);
-    static bool consumeKeyword(Memory *memory, char **contents, const char *keyword);
+    static bool consumeKeyword(char **contents, const char *keyword);
 
-    static const char *parseIdentifierAll(Memory *memory, char **contents);
-    static const char *parseIdentifier(Memory *memory, char **contents);
+    static const char *parseIdentifierAll(char **contents);
+    static const char *parseIdentifier(char **contents);
 
-    static bool parseInteger(Memory *memory, char **contents, int *out);
-    static bool parseFloat(Memory *memory, char **contents, float *out);
-    static ParseResult parseString(Memory *memory, char **contents, char **out);
+    static bool parseInteger(char **contents, int *out);
+    static bool parseFloat(char **contents, float *out);
+    static ParseResult parseString(char **contents, char **out);
 
-    static ParseResult parseAssign(Memory *memory, char **contents, Gen *gen);
-    static ParseResult parseSemicolonStatement(Memory *memory, char **contents, Gen *gen);
-    static ParseResult parseForStatement(Memory *memory, char **contents, Gen *gen, FileRange *range);
-    static ParseResult parseObjectLiteral(Memory *memory, char **contents, Gen *gen, Slot objectSlot);
-    static ParseResult parseObjectLiteral(Memory *memory, char **contents, Gen *gen, Reference *reference);
-    static ParseResult parseArrayLiteral(Memory *memory, char **contents, Gen *gen, Slot objectSlot, FileRange *range);
-    static ParseResult parseArrayLiteral(Memory *memory, char **contents, Gen *gen, Reference *reference);
-    static ParseResult parseExpressionStem(Memory *memory, char **contents, Gen *gen, Reference *reference);
-    static ParseResult parseCall(Memory *memory, char **contents, Gen *gen, Reference *expression, FileRange *expressionRange);
-    static ParseResult parseArrayAccess(Memory *memory, char **contents, Gen *gen, Reference *expression);
-    static ParseResult parsePropertyAccess(Memory *memory, char **contents, Gen *gen, Reference *expression);
-    static ParseResult parseExpression(Memory *memory, char **contents, Gen *gen, Reference *reference);
-    static ParseResult parseExpression(Memory *memory, char **contents, Gen *gen, int level, Reference *reference);
-    static ParseResult parseIfStatement(Memory *memory, char **contents, Gen *gen, FileRange *keywordRange);
-    static ParseResult parseWhile(Memory *memory, char **contents, Gen *gen, FileRange *range);
-    static ParseResult parseReturnStatement(Memory *memory, char **contents, Gen *gen, FileRange *range);
-    static ParseResult parseLetDeclaration(Memory *memory, char **contents, Gen *gen, FileRange *range, bool isConst);
-    static ParseResult parseFunctionDeclaration(Memory *memory, char **contents, Gen *gen, FileRange *range);
-    static ParseResult parseStatement(Memory *memory, char **contents, Gen *gen);
-    static ParseResult parseBlock(Memory *memory, char **contents, Gen *gen);
-    static ParseResult parseFunctionExpression(Memory *memory, char **contents, Gen *gen, UserFunction **function);
+    static ParseResult parseAssign(char **contents, Gen *gen);
+    static ParseResult parseSemicolonStatement(char **contents, Gen *gen);
+    static ParseResult parseForStatement(char **contents, Gen *gen, FileRange *range);
+    static ParseResult parseObjectLiteral(char **contents, Gen *gen, Slot objectSlot);
+    static ParseResult parseObjectLiteral(char **contents, Gen *gen, Reference *reference);
+    static ParseResult parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot, FileRange *range);
+    static ParseResult parseArrayLiteral(char **contents, Gen *gen, Reference *reference);
+    static ParseResult parseExpressionStem(char **contents, Gen *gen, Reference *reference);
+    static ParseResult parseCall(char **contents, Gen *gen, Reference *expression, FileRange *expressionRange);
+    static ParseResult parseArrayAccess(char **contents, Gen *gen, Reference *expression);
+    static ParseResult parsePropertyAccess(char **contents, Gen *gen, Reference *expression);
+    static ParseResult parseExpression(char **contents, Gen *gen, Reference *reference);
+    static ParseResult parseExpression(char **contents, Gen *gen, int level, Reference *reference);
+    static ParseResult parseIfStatement(char **contents, Gen *gen, FileRange *keywordRange);
+    static ParseResult parseWhile(char **contents, Gen *gen, FileRange *range);
+    static ParseResult parseReturnStatement(char **contents, Gen *gen, FileRange *range);
+    static ParseResult parseLetDeclaration(char **contents, Gen *gen, FileRange *range, bool isConst);
+    static ParseResult parseFunctionDeclaration(char **contents, Gen *gen, FileRange *range);
+    static ParseResult parseStatement(char **contents, Gen *gen);
+    static ParseResult parseBlock(char **contents, Gen *gen);
+    static ParseResult parseFunctionExpression(char **contents, UserFunction **function);
     static ParseResult parsePostfix(char **contents, Gen *gen, Reference *reference);
 
     static bool assignSlot(Gen *gen, Reference ref, Slot slot, FileRange *assignRange);

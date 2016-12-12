@@ -33,22 +33,20 @@ void Gen::useRangeEnd(Gen *gen, FileRange *range) {
     gen->m_currentRange = nullptr;
 }
 
-FileRange *Gen::newRange(Gen *gen, char *text) {
-    if (!gen) return nullptr;
-    FileRange *range = (FileRange *)Memory::allocate(gen->m_memory, sizeof *range, 1);
+FileRange *Gen::newRange(char *text) {
+    FileRange *range = (FileRange *)Memory::allocate(sizeof *range, 1);
     FileRange::recordStart(text, range);
     return range;
 }
 
-void Gen::delRange(Gen *gen, FileRange *range) {
-    if (!gen) return;
-    Memory::free(gen->m_memory, range);
+void Gen::delRange(FileRange *range) {
+    Memory::free(range);
 }
 
 size_t Gen::newBlock(Gen *gen) {
     U_ASSERT(gen->m_blockTerminated);
     FunctionBody *body = &gen->m_body;
-    body->m_blocks = (InstructionBlock *)Memory::reallocate(gen->m_memory, body->m_blocks, ++body->m_count * sizeof *body->m_blocks);
+    body->m_blocks = (InstructionBlock *)Memory::reallocate(body->m_blocks, ++body->m_count * sizeof *body->m_blocks);
     body->m_blocks[body->m_count - 1] = { nullptr, nullptr };
     gen->m_blockTerminated = false;
     return body->m_count - 1;
@@ -67,7 +65,7 @@ void Gen::addInstruction(Gen *gen, size_t size, Instruction *instruction) {
     InstructionBlock *block = &body->m_blocks[body->m_count - 1];
     const size_t currentLength = (unsigned char *)block->m_instructionsEnd - (unsigned char *)block->m_instructions;
     const size_t newLength = currentLength + size;
-    block->m_instructions = (Instruction *)Memory::reallocate(gen->m_memory, block->m_instructions, newLength);
+    block->m_instructions = (Instruction *)Memory::reallocate(block->m_instructions, newLength);
     block->m_instructionsEnd = (Instruction *)((unsigned char *)block->m_instructions + newLength);
     memcpy((unsigned char *)block->m_instructions + currentLength, instruction, size);
     if (instruction->m_type == kBranch || instruction->m_type == kTestBranch || instruction->m_type == kReturn)
@@ -199,13 +197,13 @@ Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot) {
 
 
 Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot argument0) {
-    Slot *arguments = (Slot *)Memory::allocate(gen->m_memory, sizeof *arguments * 1);
+    Slot *arguments = (Slot *)Memory::allocate(sizeof *arguments * 1);
     arguments[0] = argument0;
     return addCall(gen, functionSlot, thisSlot, arguments, 1);
 }
 
 Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot argument0, Slot argument1) {
-    Slot *arguments = (Slot *)Memory::allocate(gen->m_memory, sizeof *arguments * 2);
+    Slot *arguments = (Slot *)Memory::allocate(sizeof *arguments * 2);
     arguments[0] = argument0;
     arguments[1] = argument1;
     return addCall(gen, functionSlot, thisSlot, arguments, 2);
@@ -248,10 +246,8 @@ void Gen::addFreeze(Gen *gen, Slot object) {
 }
 
 UserFunction *Gen::buildFunction(Gen *gen) {
-    // NOTE: this should not use gen->m_memory since functions are garbage
-    //       collected instead
     U_ASSERT(gen->m_blockTerminated);
-    UserFunction *function = (UserFunction *)neoMalloc(sizeof *function);
+    UserFunction *function = (UserFunction *)Memory::allocate(sizeof *function);
     function->m_arity = gen->m_count;
     function->m_slots = gen->m_slot;
     function->m_name = gen->m_name;
@@ -276,8 +272,8 @@ struct SlotObjectInfo {
     size_t m_namesLength;
 };
 
-static inline void findStaticObjectSlots(Memory *memory, UserFunction *function, SlotObjectInfo **slots) {
-    *slots = (SlotObjectInfo *)Memory::allocate(memory, sizeof(SlotObjectInfo), function->m_slots);
+static inline void findStaticObjectSlots(UserFunction *function, SlotObjectInfo **slots) {
+    *slots = (SlotObjectInfo *)Memory::allocate(sizeof(SlotObjectInfo), function->m_slots);
     for (size_t i = 0; i < function->m_body.m_count; i++) {
         InstructionBlock *block = &function->m_body.m_blocks[i];
         Instruction *instruction = block->m_instructions;
@@ -295,14 +291,14 @@ static inline void findStaticObjectSlots(Memory *memory, UserFunction *function,
                         break;
                     }
                     instruction = (Instruction *)(assignStringKey + 1);
-                    names = (char **)Memory::reallocate(memory, names, sizeof(char *) * ++namesLength);
+                    names = (char **)Memory::reallocate(names, sizeof(char *) * ++namesLength);
                     names[namesLength - 1] = (char *)assignStringKey->m_key;
                 }
                 if (instruction->m_type != kCloseObject) {
                     failed = true;
                 }
                 if (failed) {
-                    Memory::free(memory, names);
+                    Memory::free(names);
                     // TODO: check if this is correct
                     instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
                     continue;
@@ -322,8 +318,8 @@ static inline void findStaticObjectSlots(Memory *memory, UserFunction *function,
 
 // Searches for slots which are primitive. Slots which are primitive are plain
 // objects, calls, returns, branches and plain access and assignments.
-static inline void findPrimitiveSlots(Memory *memory, UserFunction *function, bool **slots) {
-    *slots = (bool *)Memory::allocate(memory, sizeof **slots * function->m_slots);
+static inline void findPrimitiveSlots(UserFunction *function, bool **slots) {
+    *slots = (bool *)Memory::allocate(sizeof **slots * function->m_slots);
     for (size_t i = 0; i < function->m_slots; i++)
         (*slots)[i] = true;
     for (size_t i = 0; i < function->m_body.m_count; i++) {
@@ -373,10 +369,9 @@ static inline void findPrimitiveSlots(Memory *memory, UserFunction *function, bo
 
 // For access and assignments to primitive slots, inline the access/assignment with
 // a static key instead
-UserFunction *Gen::inlinePass(Memory *memory, UserFunction *function, bool *primitiveSlots) {
+UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
     Gen gen = { };
 
-    gen.m_memory = memory;
     gen.m_slot = 0;
     gen.m_blockTerminated = true;
     gen.m_currentRange = nullptr;
@@ -445,16 +440,15 @@ UserFunction *Gen::inlinePass(Memory *memory, UserFunction *function, bool *prim
     return optimized;
 }
 
-UserFunction *Gen::predictPass(Memory *memory, UserFunction *function) {
+UserFunction *Gen::predictPass(UserFunction *function) {
     SlotObjectInfo *info = nullptr;
-    findStaticObjectSlots(memory, function, &info);
+    findStaticObjectSlots(function, &info);
 
     size_t count = 0;
 
     Gen gen = { };
     gen.m_slot = 0;
     gen.m_blockTerminated = true;
-    gen.m_memory = memory;
 
     for (size_t i = 0; i < function->m_body.m_count; i++) {
         const InstructionBlock *const block = &function->m_body.m_blocks[i];
@@ -464,17 +458,16 @@ UserFunction *Gen::predictPass(Memory *memory, UserFunction *function) {
         while (instruction != block->m_instructionsEnd) {
             const auto *accessStringKey = (Instruction::AccessStringKey *)instruction;
             if (instruction->m_type == kAccessStringKey) {
-                auto *newAccessStringKey = (Instruction::AccessStringKey *)Memory::allocate(memory, sizeof(Instruction::AccessStringKey));
-                *newAccessStringKey = *accessStringKey;
+                Instruction::AccessStringKey newAccessStringKey = *accessStringKey;
                 for (;;) {
-                    const Slot objectSlot = newAccessStringKey->m_objectSlot;
+                    const Slot objectSlot = newAccessStringKey.m_objectSlot;
                     if (!info[objectSlot].m_staticObject) {
                         break;
                     }
                     bool keyInObject = false;
                     for (size_t i = 0; i < info[objectSlot].m_namesLength; i++) {
                         const char *objectKey = info[objectSlot].m_names[i];
-                        if (strcmp(objectKey, newAccessStringKey->m_key) == 0) {
+                        if (strcmp(objectKey, newAccessStringKey.m_key) == 0) {
                             keyInObject = true;
                             break;
                         }
@@ -486,11 +479,11 @@ UserFunction *Gen::predictPass(Memory *memory, UserFunction *function) {
                     // that the lookup will never succeed at runtime either.
                     // So automatically set the object slot to the parent. This
                     // allows us to skip searching up the object chain.
-                    newAccessStringKey->m_objectSlot = info[objectSlot].m_parentSlot;
+                    newAccessStringKey.m_objectSlot = info[objectSlot].m_parentSlot;
                     count++;
                 }
                 useRangeStart(&gen, instruction->m_belongsTo);
-                addInstruction(&gen, sizeof *newAccessStringKey, (Instruction *)newAccessStringKey);
+                addInstruction(&gen, sizeof newAccessStringKey, (Instruction *)&newAccessStringKey);
                 useRangeEnd(&gen, instruction->m_belongsTo);
                 instruction = (Instruction *)(accessStringKey + 1);
                 continue;
@@ -504,7 +497,7 @@ UserFunction *Gen::predictPass(Memory *memory, UserFunction *function) {
         }
     }
 
-    Memory::free(memory, info);
+    Memory::free(info);
 
     UserFunction *optimized = buildFunction(&gen);
     copyFunctionStats(function, optimized);
@@ -514,18 +507,17 @@ UserFunction *Gen::predictPass(Memory *memory, UserFunction *function) {
     return optimized;
 }
 
-UserFunction *Gen::optimize(Gen *gen, UserFunction *function) {
+UserFunction *Gen::optimize(UserFunction *function) {
     bool *primitiveSlots = nullptr;
-    findPrimitiveSlots(gen->m_memory, function, &primitiveSlots);
+    findPrimitiveSlots(function, &primitiveSlots);
 
     UserFunction *f0 = function;
-    UserFunction *f1 = inlinePass(gen->m_memory, f0, primitiveSlots);
-    UserFunction *f2 = predictPass(gen->m_memory, f1);
+    UserFunction *f1 = inlinePass(f0, primitiveSlots);
+    UserFunction *f2 = predictPass(f1);
 
-    Memory::free(gen->m_memory, primitiveSlots);
-
-    neoFree(f0);
-    neoFree(f1);
+    Memory::free(primitiveSlots);
+    Memory::free(f0);
+    Memory::free(f1);
 
     return f2;
 }

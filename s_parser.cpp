@@ -103,7 +103,7 @@ bool Parser::consumeString(char **contents, const char *identifier) {
 }
 
 // returns memory which can leak
-const char *Parser::parseIdentifierAll(Memory *memory, char **contents) {
+const char *Parser::parseIdentifierAll(char **contents) {
     char *text = *contents;
     consumeFiller(&text);
     char *start = text;
@@ -113,27 +113,27 @@ const char *Parser::parseIdentifierAll(Memory *memory, char **contents) {
     while (*text && (isAlpha(*text) || isDigit(*text) || *text == '_'))
         text++;
     size_t length = text - start;
-    char *result = (char *)Memory::allocate(memory, length + 1);
+    char *result = (char *)Memory::allocate(length + 1);
     memcpy(result, start, length);
     result[length] = '\0';
     *contents = text;
     return result;
 }
 
-const char *Parser::parseIdentifier(Memory *memory, char **contents) {
+const char *Parser::parseIdentifier(char **contents) {
     char *text = *contents;
-    const char *result = parseIdentifierAll(memory, &text);
+    const char *result = parseIdentifierAll(&text);
     if (!result)
         return nullptr;
     if (!strncmp(result, "fn", 2) || !strncmp(result, "method", 6) || !strcmp(result, "new")) {
-        Memory::free(memory, (void *)result);
+        Memory::free((void *)result);
         return nullptr;
     }
     *contents = text;
     return result;
 }
 
-bool Parser::parseInteger(Memory *memory, char **contents, int *out) {
+bool Parser::parseInteger(char **contents, int *out) {
     char *text = *contents;
     consumeFiller(&text);
     char *start = text;
@@ -155,15 +155,15 @@ bool Parser::parseInteger(Memory *memory, char **contents, int *out) {
         return false;
     *contents = text;
     size_t length = text - start;
-    char *result = (char *)Memory::allocate(memory, length + 1);
+    char *result = (char *)Memory::allocate(length + 1);
     memcpy(result, start, length);
     result[length] = '\0';
     *out = strtol(result, nullptr, base);
-    Memory::free(memory, result);
+    Memory::free(result);
     return true;
 }
 
-bool Parser::parseFloat(Memory *memory, char **contents, float *out) {
+bool Parser::parseFloat(char **contents, float *out) {
     char *text = *contents;
     consumeFiller(&text);
     char *start = text;
@@ -178,14 +178,14 @@ bool Parser::parseFloat(Memory *memory, char **contents, float *out) {
         text++;
     *contents = text;
     size_t length = text - start;
-    char *result = (char *)Memory::allocate(memory, length + 1);
+    char *result = (char *)Memory::allocate(length + 1);
     memcpy(result, start, length);
     *out = atof(result);
-    Memory::free(memory, result);
+    Memory::free(result);
     return true;
 }
 
-ParseResult Parser::parseString(Memory *memory, char **contents, char **out) {
+ParseResult Parser::parseString(char **contents, char **out) {
     char *text = *contents;
     consumeFiller(&text);
     char *start = text;
@@ -211,7 +211,7 @@ ParseResult Parser::parseString(Memory *memory, char **contents, char **out) {
     text++;
 
     char *scan = start + 1;
-    char *result = (char *)Memory::allocate(memory, escaped + 1);
+    char *result = (char *)Memory::allocate(escaped + 1);
     for (int i = 0; i < escaped; scan++, i++) {
         if (*scan == '\\') {
             scan++;
@@ -236,11 +236,11 @@ ParseResult Parser::parseString(Memory *memory, char **contents, char **out) {
     return kParseOk;
 }
 
-bool Parser::consumeKeyword(Memory *memory, char **contents, const char *keyword) {
+bool Parser::consumeKeyword(char **contents, const char *keyword) {
     char *text = *contents;
-    const char *compare = parseIdentifierAll(memory, &text);
+    const char *compare = parseIdentifierAll(&text);
     if (!compare || strcmp(compare, keyword) != 0) {
-        Memory::free(memory, (void *)compare);
+        Memory::free((void *)compare);
         return false;
     }
     *contents = text;
@@ -286,13 +286,13 @@ Parser::Reference Parser::Reference::getScope(Gen *gen, const char *name) {
 }
 
 ///! Parser
-ParseResult Parser::parseObjectLiteral(Memory *memory, char **contents, Gen *gen, Slot objectSlot) {
+ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlot) {
     char *text = *contents;
     while (!consumeString(&text, "}")) {
-        FileRange *addEntryRange = Gen::newRange(gen, text);
-        char *keyName = (char *)parseIdentifier(memory, &text);
+        FileRange *addEntryRange = Gen::newRange(text);
+        char *keyName = (char *)parseIdentifier(&text);
         if (!keyName) {
-            ParseResult result = parseString(memory, &text, &keyName);
+            ParseResult result = parseString(&text, &keyName);
             if (result != kParseOk) {
                 logParseError(text, "expected identifier");
                 return kParseError;
@@ -306,7 +306,7 @@ ParseResult Parser::parseObjectLiteral(Memory *memory, char **contents, Gen *gen
         }
 
         Reference value;
-        ParseResult result = parseExpression(memory, &text, gen, 0, &value);
+        ParseResult result = parseExpression(&text, gen, 0, &value);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
@@ -331,11 +331,11 @@ ParseResult Parser::parseObjectLiteral(Memory *memory, char **contents, Gen *gen
     return kParseOk;
 }
 
-ParseResult Parser::parseObjectLiteral(Memory *memory, char **contents, Gen *gen, Reference *reference) {
+ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Reference *reference) {
     char *text = *contents;
-    FileRange *range = Gen::newRange(gen, text);
+    FileRange *range = Gen::newRange(text);
     if (!consumeString(&text, "{")) {
-        Gen::delRange(gen, range);
+        Gen::delRange(range);
         return kParseNone;
     }
 
@@ -348,17 +348,17 @@ ParseResult Parser::parseObjectLiteral(Memory *memory, char **contents, Gen *gen
     *contents = text;
     *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
 
-    ParseResult result = parseObjectLiteral(memory, contents, gen, objectSlot);
+    ParseResult result = parseObjectLiteral(contents, gen, objectSlot);
     FileRange::recordEnd(text, range);
     return result;
 }
 
-ParseResult Parser::parseArrayLiteral(Memory *memory, char **contents, Gen *gen, Slot objectSlot, FileRange *range) {
+ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot, FileRange *range) {
     char *text = *contents;
     u::vector<Reference> values;
     while (!consumeString(&text, "]")) {
         Reference value;
-        ParseResult result = parseExpression(memory, &text, gen, 0, &value);
+        ParseResult result = parseExpression(&text, gen, 0, &value);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
@@ -393,11 +393,11 @@ ParseResult Parser::parseArrayLiteral(Memory *memory, char **contents, Gen *gen,
     return kParseOk;
 }
 
-ParseResult Parser::parseArrayLiteral(Memory *memory, char **contents, Gen *gen, Reference *reference) {
+ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Reference *reference) {
     char *text = *contents;
-    FileRange *literalRange = Gen::newRange(gen, text);
+    FileRange *literalRange = Gen::newRange(text);
     if (!consumeString(&text, "[")) {
-        Gen::delRange(gen, literalRange);
+        Gen::delRange(literalRange);
         return kParseNone;
     }
     Slot objectSlot = 0;
@@ -409,15 +409,15 @@ ParseResult Parser::parseArrayLiteral(Memory *memory, char **contents, Gen *gen,
     *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
     Gen::useRangeEnd(gen, literalRange);
 
-    ParseResult result = parseArrayLiteral(memory, contents, gen, objectSlot, literalRange);
+    ParseResult result = parseArrayLiteral(contents, gen, objectSlot, literalRange);
     FileRange::recordEnd(text, literalRange);
     return result;
 }
 
-ParseResult Parser::parseExpressionStem(Memory *memory, char **contents, Gen *gen, Reference *reference) {
+ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *reference) {
     char *text = *contents;
-    FileRange *range = Gen::newRange(gen, text);
-    const char *identifier = parseIdentifier(memory, &text);
+    FileRange *range = Gen::newRange(text);
+    const char *identifier = parseIdentifier(&text);
 
     if (identifier) {
         *contents = text;
@@ -431,7 +431,7 @@ ParseResult Parser::parseExpressionStem(Memory *memory, char **contents, Gen *ge
     // float?
     {
         float value = 0.0f;
-        if (parseFloat(memory, &text, &value)) {
+        if (parseFloat(&text, &value)) {
             *contents = text;
             FileRange::recordEnd(text, range);
             Slot slot = 0;
@@ -447,7 +447,7 @@ ParseResult Parser::parseExpressionStem(Memory *memory, char **contents, Gen *ge
     // int?
     {
         int value = 0;
-        if (parseInteger(memory, &text, &value)) {
+        if (parseInteger(&text, &value)) {
             *contents = text;
             FileRange::recordEnd(text, range);
             Slot slot = 0;
@@ -464,7 +464,7 @@ ParseResult Parser::parseExpressionStem(Memory *memory, char **contents, Gen *ge
     {
         ParseResult result;
         char *value = nullptr;
-        if ((result = parseString(memory, &text, &value)) != kParseNone) {
+        if ((result = parseString(&text, &value)) != kParseNone) {
             Slot slot = 0;
             if (result == kParseOk) {
                 *contents = text;
@@ -483,25 +483,25 @@ ParseResult Parser::parseExpressionStem(Memory *memory, char **contents, Gen *ge
     ParseResult result;
 
     // object literal
-    if ((result = parseObjectLiteral(memory, &text, gen, reference)) != kParseNone) {
+    if ((result = parseObjectLiteral(&text, gen, reference)) != kParseNone) {
         if (result == kParseOk)
             *contents = text;
-        Gen::delRange(gen, range);
+        Gen::delRange(range);
         return result;
     }
 
     // array literal
-    if ((result = parseArrayLiteral(memory, &text, gen, reference)) != kParseNone) {
+    if ((result = parseArrayLiteral(&text, gen, reference)) != kParseNone) {
         if (result == kParseOk)
             *contents = text;
-        Gen::delRange(gen, range);
+        Gen::delRange(range);
         return result;
     }
 
     if (consumeString(&text, "(")) {
-        Gen::delRange(gen, range);
+        Gen::delRange(range);
 
-        result = parseExpression(memory, &text, gen, 0, reference);
+        result = parseExpression(&text, gen, 0, reference);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
@@ -516,13 +516,13 @@ ParseResult Parser::parseExpressionStem(Memory *memory, char **contents, Gen *ge
     }
 
     bool isMethod = false;
-    if (consumeKeyword(memory, &text, "fn")
-    || (consumeKeyword(memory, &text, "method") && (isMethod = true)))
+    if (consumeKeyword(&text, "fn")
+    || (consumeKeyword(&text, "method") && (isMethod = true)))
     {
         FileRange::recordEnd(text, range);
 
         UserFunction *function;
-        ParseResult result = parseFunctionExpression(memory, &text, gen, &function);
+        ParseResult result = parseFunctionExpression(&text, &function);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
@@ -540,11 +540,11 @@ ParseResult Parser::parseExpressionStem(Memory *memory, char **contents, Gen *ge
         return kParseOk;
     }
 
-    if (consumeKeyword(memory, &text, "new")) {
+    if (consumeKeyword(&text, "new")) {
         FileRange::recordEnd(text, range);
 
         Reference parentVariable;
-        ParseResult result = parseExpression(memory, &text, gen, 0, &parentVariable);
+        ParseResult result = parseExpression(&text, gen, 0, &parentVariable);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
@@ -558,7 +558,7 @@ ParseResult Parser::parseExpressionStem(Memory *memory, char **contents, Gen *ge
 
         *contents = text;
         if (consumeString(contents, "{")) {
-            ParseResult result = parseObjectLiteral(memory, contents, gen, objectSlot);
+            ParseResult result = parseObjectLiteral(contents, gen, objectSlot);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
@@ -571,15 +571,15 @@ ParseResult Parser::parseExpressionStem(Memory *memory, char **contents, Gen *ge
     return kParseError;
 }
 
-ParseResult Parser::parseCall(Memory *memory, char **contents, Gen *gen, Reference *expression, FileRange *expressionRange) {
+ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression, FileRange *expressionRange) {
     char *text = *contents;
-    FileRange *callRange = Gen::newRange(gen, text);
-    FileRange *exprRange = (FileRange *)Memory::allocate(memory, sizeof *exprRange);
+    FileRange *callRange = Gen::newRange(text);
+    FileRange *exprRange = (FileRange *)Memory::allocate(sizeof *exprRange);
     if (gen)
         *exprRange = *expressionRange;
 
     if (!consumeString(&text, "(")) {
-        Gen::delRange(gen, callRange);
+        Gen::delRange(callRange);
         return kParseNone;
     }
 
@@ -594,7 +594,7 @@ ParseResult Parser::parseCall(Memory *memory, char **contents, Gen *gen, Referen
         }
 
         Reference argument;
-        ParseResult result = parseExpression(memory, &text, gen, 0, &argument);
+        ParseResult result = parseExpression(&text, gen, 0, &argument);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
@@ -602,7 +602,7 @@ ParseResult Parser::parseCall(Memory *memory, char **contents, Gen *gen, Referen
         Gen::useRangeStart(gen, callRange);
         Slot slot = Reference::access(gen, argument);
         Gen::useRangeEnd(gen, callRange);
-        arguments = (Slot *)Memory::reallocate(memory, arguments, sizeof(Slot) * ++length);
+        arguments = (Slot *)Memory::reallocate(arguments, sizeof(Slot) * ++length);
         arguments[length - 1] = slot;
     }
 
@@ -617,31 +617,29 @@ ParseResult Parser::parseCall(Memory *memory, char **contents, Gen *gen, Referen
         else
             thisSlot = gen->m_slot++;
 
-        //Gen::useRangeStart(gen, callRange);
         Gen::useRangeStart(gen, exprRange);
         *expression = {
             Gen::addCall(gen, Reference::access(gen, *expression), thisSlot, arguments, length),
             Reference::NoSlot,
             Reference::kNone
         };
-        //Gen::useRangeEnd(gen, callRange);
         Gen::useRangeEnd(gen, exprRange);
     }
 
     return kParseOk;
 }
 
-ParseResult Parser::parseArrayAccess(Memory *memory, char **contents, Gen *gen, Reference *expression) {
+ParseResult Parser::parseArrayAccess(char **contents, Gen *gen, Reference *expression) {
     char *text = *contents;
-    FileRange *accessRange = Gen::newRange(gen, text);
+    FileRange *accessRange = Gen::newRange(text);
 
     if (!consumeString(&text, "[")) {
-        Gen::delRange(gen, accessRange);
+        Gen::delRange(accessRange);
         return kParseNone;
     }
 
     Reference key;
-    ParseResult result = parseExpression(memory, &text, gen, 0, &key);
+    ParseResult result = parseExpression(&text, gen, 0, &key);
     if (result == kParseError)
         return result;
 
@@ -669,16 +667,16 @@ ParseResult Parser::parseArrayAccess(Memory *memory, char **contents, Gen *gen, 
     return kParseOk;
 }
 
-ParseResult Parser::parsePropertyAccess(Memory *memory, char **contents, Gen *gen, Reference *expression) {
+ParseResult Parser::parsePropertyAccess(char **contents, Gen *gen, Reference *expression) {
     char *text = *contents;
 
-    FileRange *propertyRange = Gen::newRange(gen, text);
+    FileRange *propertyRange = Gen::newRange(text);
     if (!consumeString(&text, ".")) {
-        Gen::delRange(gen, propertyRange);
+        Gen::delRange(propertyRange);
         return kParseNone;
     }
 
-    const char *keyName = parseIdentifier(memory, &text);
+    const char *keyName = parseIdentifier(&text);
     FileRange::recordEnd(text, propertyRange);
     *contents = text;
 
@@ -696,24 +694,24 @@ ParseResult Parser::parsePropertyAccess(Memory *memory, char **contents, Gen *ge
     return kParseOk;
 }
 
-ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, Reference *reference) {
-    FileRange *exprRange = Gen::newRange(gen, *contents);
-    ParseResult result = parseExpressionStem(memory, contents, gen, reference);
+ParseResult Parser::parseExpression(char **contents, Gen *gen, Reference *reference) {
+    FileRange *exprRange = Gen::newRange(*contents);
+    ParseResult result = parseExpressionStem(contents, gen, reference);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
 
     for (;;) {
         FileRange::recordEnd(*contents, exprRange);
-        if ((result = parseCall(memory, contents, gen, reference, exprRange)) == kParseOk)
+        if ((result = parseCall(contents, gen, reference, exprRange)) == kParseOk)
             continue;
         if (result == kParseError)
             return result;
-        if ((result = parsePropertyAccess(memory, contents, gen, reference)) == kParseOk)
+        if ((result = parsePropertyAccess(contents, gen, reference)) == kParseOk)
             continue;
         if (result == kParseError)
             return result;
-        if ((result = parseArrayAccess(memory, contents, gen, reference)) == kParseOk)
+        if ((result = parseArrayAccess(contents, gen, reference)) == kParseOk)
             continue;
         if ((result = parsePostfix(contents, gen, reference)) == kParseOk)
             continue;
@@ -740,7 +738,7 @@ bool Parser::assignSlot(Gen *gen, Reference ref, Slot value, FileRange *assignRa
     switch (ref.m_mode) {
     case Reference::kNone:
         Gen::useRangeEnd(gen, assignRange);
-        Gen::delRange(gen, assignRange);
+        Gen::delRange(assignRange);
         return false;
     case Reference::kVariable:
         Reference::assignExisting(gen, ref, value);
@@ -761,14 +759,14 @@ bool Parser::assignSlot(Gen *gen, Reference ref, Slot value, FileRange *assignRa
 
 ParseResult Parser::parsePostfix(char **contents, Gen *gen, Reference *reference) {
     char *text = *contents;
-    FileRange *operatorRange = Gen::newRange(gen, text);
+    FileRange *operatorRange = Gen::newRange(text);
     const char *op = nullptr;
     if (consumeString(&text, "++")) {
         op = "+";
     } else if (consumeString(&text, "--")) {
         op = "-";
     } else {
-        Gen::delRange(gen, operatorRange);
+        Gen::delRange(operatorRange);
         return kParseNone;
     }
 
@@ -797,19 +795,19 @@ ParseResult Parser::parsePostfix(char **contents, Gen *gen, Reference *reference
     return kParseOk;
 }
 
-ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, int level, Reference *reference) {
+ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Reference *reference) {
     char *text = *contents;
 
     bool negate = false;
-    FileRange *negatedRange = Gen::newRange(gen, text);
+    FileRange *negatedRange = Gen::newRange(text);
     if (consumeString(&text, "-")) {
         FileRange::recordEnd(text, negatedRange);
         negate = true;
     } else {
-        Gen::delRange(gen, negatedRange);
+        Gen::delRange(negatedRange);
     }
 
-    ParseResult result = parseExpression(memory, &text, gen, reference);
+    ParseResult result = parseExpression(&text, gen, reference);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
@@ -834,10 +832,10 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
     }
 
     for (;;) {
-        FileRange *range = Gen::newRange(gen, text);
+        FileRange *range = Gen::newRange(text);
         if (consumeString(&text, "&")) {
             FileRange::recordEnd(text, range);
-            result = parseExpression(memory, &text, gen, 4, &expression);
+            result = parseExpression(&text, gen, 4, &expression);
             if (result == kParseError)
                 return kParseError;
             U_ASSERT(result == kParseOk);
@@ -855,10 +853,10 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
     }
 
     for (;;) {
-        FileRange *range = Gen::newRange(gen, text);
+        FileRange *range = Gen::newRange(text);
         if (consumeString(&text, "|")) {
             FileRange::recordEnd(text, range);
-            result = parseExpression(memory, &text, gen, 4, &expression);
+            result = parseExpression(&text, gen, 4, &expression);
             if (result == kParseError)
                 return kParseError;
             U_ASSERT(result == kParseOk);
@@ -876,10 +874,10 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
     }
 
     for (;;) {
-        FileRange *range = Gen::newRange(gen, text);
+        FileRange *range = Gen::newRange(text);
         if (consumeString(&text, "*")) {
             FileRange::recordEnd(text, range);
-            result = parseExpression(memory, &text, gen, 3, &expression);
+            result = parseExpression(&text, gen, 3, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
@@ -888,14 +886,14 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
         }
         if (consumeString(&text, "/")) {
             FileRange::recordEnd(text, range);
-            result = parseExpression(memory, &text, gen, 3, &expression);
+            result = parseExpression(&text, gen, 3, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
             buildOperation(gen, "/", reference, *reference, expression, range);
             continue;
         }
-        Gen::delRange(gen, range);
+        Gen::delRange(range);
         break;
     }
 
@@ -906,10 +904,10 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
     }
 
     for (;;) {
-        FileRange *range = Gen::newRange(gen, text);
+        FileRange *range = Gen::newRange(text);
         if (consumeString(&text, "+")) {
             FileRange::recordEnd(text, range);
-            result = parseExpression(memory, &text, gen, 2, &expression);
+            result = parseExpression(&text, gen, 2, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
@@ -918,14 +916,14 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
         }
         if (consumeString(&text, "-")) {
             FileRange::recordEnd(text, range);
-            result = parseExpression(memory, &text, gen, 2, &expression);
+            result = parseExpression(&text, gen, 2, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
             buildOperation(gen, "-", reference, *reference, expression, range);
             continue;
         }
-        Gen::delRange(gen, range);
+        Gen::delRange(range);
         break;
     }
 
@@ -938,10 +936,10 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
 
     bool negated = false;
 
-    FileRange *range = Gen::newRange(gen, text);
+    FileRange *range = Gen::newRange(text);
     if (consumeString(&text, "==")) {
         FileRange::recordEnd(text, range);
-        result = parseExpression(memory, &text, gen, 1, &expression);
+        result = parseExpression(&text, gen, 1, &expression);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
@@ -949,7 +947,7 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
     } else if (consumeString(&text, "!=")) {
         FileRange::recordEnd(text, range);
         // the same code except result is negated
-        result = parseExpression(memory, &text, gen, 1, &expression);
+        result = parseExpression(&text, gen, 1, &expression);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
@@ -961,28 +959,28 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
             negated = true;
         if (consumeString(&text, "<=")) {
             FileRange::recordEnd(text, range);
-            result = parseExpression(memory, &text, gen, 1, &expression);
+            result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
             buildOperation(gen, "<=", reference, *reference, expression, range);
         } else if (consumeString(&text, ">=")) {
             FileRange::recordEnd(text, range);
-            result = parseExpression(memory, &text, gen, 1, &expression);
+            result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
             buildOperation(gen, ">=", reference, *reference, expression, range);
         } else if (consumeString(&text, "<")) {
             FileRange::recordEnd(text, range);
-            result = parseExpression(memory, &text, gen, 1, &expression);
+            result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
             buildOperation(gen, "<", reference, *reference, expression, range);
         } else if (consumeString(&text, ">")) {
             FileRange::recordEnd(text, range);
-            result = parseExpression(memory, &text, gen, 1, &expression);
+            result = parseExpression(&text, gen, 1, &expression);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
@@ -1005,7 +1003,7 @@ ParseResult Parser::parseExpression(Memory *memory, char **contents, Gen *gen, i
     return kParseOk;
 }
 
-ParseResult Parser::parseIfStatement(Memory *memory, char **contents, Gen *gen, FileRange *keywordRange) {
+ParseResult Parser::parseIfStatement(char **contents, Gen *gen, FileRange *keywordRange) {
     char *text = *contents;
     if (!consumeString(&text, "(")) {
         logParseError(text, "expected opening paren after 'if'");
@@ -1013,7 +1011,7 @@ ParseResult Parser::parseIfStatement(Memory *memory, char **contents, Gen *gen, 
     }
 
     Reference testExpression;
-    ParseResult result = parseExpression(memory, &text, gen, 0, &testExpression);
+    ParseResult result = parseExpression(&text, gen, 0, &testExpression);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
@@ -1032,7 +1030,7 @@ ParseResult Parser::parseIfStatement(Memory *memory, char **contents, Gen *gen, 
 
     Gen::setBlockRef(gen, trueBlock, Gen::newBlock(gen));
 
-    result = parseBlock(memory, &text, gen);
+    result = parseBlock(&text, gen);
     if (result == kParseError)
         return kParseError;
     U_ASSERT(result == kParseOk);
@@ -1043,8 +1041,8 @@ ParseResult Parser::parseIfStatement(Memory *memory, char **contents, Gen *gen, 
 
     size_t falseBlockIndex = Gen::newBlock(gen);
     Gen::setBlockRef(gen, falseBlock, falseBlockIndex);
-    if (consumeKeyword(memory, &text, "else")) {
-        result = parseBlock(memory, &text, gen);
+    if (consumeKeyword(&text, "else")) {
+        result = parseBlock(&text, gen);
         if (result == kParseError)
             return kParseError;
         U_ASSERT(result == kParseOk);
@@ -1064,7 +1062,7 @@ ParseResult Parser::parseIfStatement(Memory *memory, char **contents, Gen *gen, 
     return kParseOk;
 }
 
-ParseResult Parser::parseWhile(Memory *memory, char **contents, Gen *gen, FileRange *range) {
+ParseResult Parser::parseWhile(char **contents, Gen *gen, FileRange *range) {
     char *text = *contents;
     if (!consumeString(&text, "(")) {
         logParseError(text, "expected opening paren after 'while'");
@@ -1082,7 +1080,7 @@ ParseResult Parser::parseWhile(Memory *memory, char **contents, Gen *gen, FileRa
     BlockRef endBlock;
 
     Reference testExpression;
-    ParseResult result = parseExpression(memory, &text, gen, 0, &testExpression);
+    ParseResult result = parseExpression(&text, gen, 0, &testExpression);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
@@ -1097,7 +1095,7 @@ ParseResult Parser::parseWhile(Memory *memory, char **contents, Gen *gen, FileRa
     Gen::useRangeEnd(gen, range);
 
     Gen::setBlockRef(gen, loopBlock, Gen::newBlock(gen));
-    result = parseBlock(memory, &text, gen);
+    result = parseBlock(&text, gen);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
@@ -1114,7 +1112,7 @@ ParseResult Parser::parseWhile(Memory *memory, char **contents, Gen *gen, FileRa
     return kParseOk;
 }
 
-ParseResult Parser::parseLetDeclaration(Memory *memory, char **contents, Gen *gen, FileRange *letRange, bool isConst) {
+ParseResult Parser::parseLetDeclaration(char **contents, Gen *gen, FileRange *letRange, bool isConst) {
     char *text = *contents;
 
     // allocate a new scope immediately to allow recursion for closures
@@ -1124,8 +1122,8 @@ ParseResult Parser::parseLetDeclaration(Memory *memory, char **contents, Gen *ge
     const size_t letScope = gen->m_scope;
     Gen::useRangeEnd(gen, letRange);
 
-    FileRange *letName = Gen::newRange(gen, text);
-    const char *variableName = parseIdentifier(memory, &text);
+    FileRange *letName = Gen::newRange(text);
+    const char *variableName = parseIdentifier(&text);
     FileRange::recordEnd(text, letName);
 
     Gen::useRangeStart(gen, letName);
@@ -1136,18 +1134,18 @@ ParseResult Parser::parseLetDeclaration(Memory *memory, char **contents, Gen *ge
     Gen::addCloseObject(gen, letScope);
     Gen::useRangeEnd(gen, letName);
 
-    FileRange *assignRange = Gen::newRange(gen, text);
+    FileRange *assignRange = Gen::newRange(text);
 
     if (!consumeString(&text, "=")) {
-        Gen::delRange(gen, assignRange);
+        Gen::delRange(assignRange);
         assignRange = letName;
         value = nullSlot;
     } else {
         FileRange::recordEnd(text, assignRange);
         Reference reference;
 
-        FileRange *expressionRange = Gen::newRange(gen, text);
-        ParseResult result = parseExpression(memory, &text, gen, 0, &reference);
+        FileRange *expressionRange = Gen::newRange(text);
+        ParseResult result = parseExpression(&text, gen, 0, &reference);
         FileRange::recordEnd(text, expressionRange);
 
         if (result == kParseError)
@@ -1169,17 +1167,17 @@ ParseResult Parser::parseLetDeclaration(Memory *memory, char **contents, Gen *ge
     // let a, b
     if (consumeString(&text, ",")) {
         *contents = text;
-        return parseLetDeclaration(memory, contents, gen, letRange, isConst);
+        return parseLetDeclaration(contents, gen, letRange, isConst);
     }
 
     *contents = text;
     return kParseOk;
 }
 
-ParseResult Parser::parseAssign(Memory *memory, char **contents, Gen *gen) {
+ParseResult Parser::parseAssign(char **contents, Gen *gen) {
     char *text = *contents;
     Reference ref;
-    ParseResult result = parseExpression(memory, &text, nullptr, &ref); // speculative parse
+    ParseResult result = parseExpression(&text, nullptr, &ref); // speculative parse
     if (result != kParseOk)
         return result;
 
@@ -1204,15 +1202,15 @@ ParseResult Parser::parseAssign(Memory *memory, char **contents, Gen *gen) {
     }
 
     text = *contents;
-    result = parseExpression(memory, &text, gen, &ref);
+    result = parseExpression(&text, gen, &ref);
     U_ASSERT(result == kParseOk);
-    FileRange *assignRange = Gen::newRange(gen, text);
+    FileRange *assignRange = Gen::newRange(text);
     if (!consumeString(&text, assignment))
         U_ASSERT(0 && "internal compiler error");
     FileRange::recordEnd(text, assignRange);
 
     Reference valueExpression;
-    result = parseExpression(memory, &text, gen, 0, &valueExpression);
+    result = parseExpression(&text, gen, 0, &valueExpression);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
@@ -1238,7 +1236,7 @@ ParseResult Parser::parseAssign(Memory *memory, char **contents, Gen *gen) {
     return kParseOk;
 }
 
-ParseResult Parser::parseForStatement(Memory *memory, char **contents, Gen *gen, FileRange *range) {
+ParseResult Parser::parseForStatement(char **contents, Gen *gen, FileRange *range) {
     char *text = *contents;
     if (!consumeString(&text, "(")) {
         logParseError(text, "expected opening parenthesis in 'for'");
@@ -1248,14 +1246,14 @@ ParseResult Parser::parseForStatement(Memory *memory, char **contents, Gen *gen,
     // variable is out of scope after the for loop
     size_t backup = Gen::scopeEnter(gen);
 
-    FileRange *declarationRange = Gen::newRange(gen, text);
-    if (consumeKeyword(memory, &text, "let")) {
-        ParseResult result = parseLetDeclaration(memory, &text, gen, declarationRange, false);
+    FileRange *declarationRange = Gen::newRange(text);
+    if (consumeKeyword(&text, "let")) {
+        ParseResult result = parseLetDeclaration(&text, gen, declarationRange, false);
         if (result == kParseError)
             return kParseError;
         U_ASSERT(result == kParseOk);
     } else {
-        ParseResult result = parseAssign(memory, &text, gen);
+        ParseResult result = parseAssign(&text, gen);
         if (result == kParseError)
             return kParseError;
         U_ASSERT(result == kParseOk);
@@ -1277,7 +1275,7 @@ ParseResult Parser::parseForStatement(Memory *memory, char **contents, Gen *gen,
     BlockRef endBlock;
 
     Reference testExpression;
-    ParseResult result = parseExpression(memory, &text, gen, 0, &testExpression);
+    ParseResult result = parseExpression(&text, gen, 0, &testExpression);
     if (result == kParseError)
         return kParseError;
     U_ASSERT(result == kParseOk);
@@ -1289,7 +1287,7 @@ ParseResult Parser::parseForStatement(Memory *memory, char **contents, Gen *gen,
 
     char *step = text;
     {
-        result = parseSemicolonStatement(memory, &text, nullptr);
+        result = parseSemicolonStatement(&text, nullptr);
         if (result == kParseError)
             return kParseError;
         if (result == kParseNone) {
@@ -1312,9 +1310,9 @@ ParseResult Parser::parseForStatement(Memory *memory, char **contents, Gen *gen,
     // loop body
     Gen::setBlockRef(gen, loopBlock, Gen::newBlock(gen));
 
-    parseBlock(memory, &text, gen);
+    parseBlock(&text, gen);
 
-    result = parseSemicolonStatement(memory, &step, gen);
+    result = parseSemicolonStatement(&step, gen);
     U_ASSERT(result == kParseOk);
 
     Gen::useRangeStart(gen, range);
@@ -1332,9 +1330,9 @@ ParseResult Parser::parseForStatement(Memory *memory, char **contents, Gen *gen,
     return kParseOk;
 }
 
-ParseResult Parser::parseReturnStatement(Memory *memory, char **contents, Gen *gen, FileRange *keywordRange) {
+ParseResult Parser::parseReturnStatement(char **contents, Gen *gen, FileRange *keywordRange) {
     Reference returnValue;
-    ParseResult result = parseExpression(memory, contents, gen, 0, &returnValue);
+    ParseResult result = parseExpression(contents, gen, 0, &returnValue);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
@@ -1349,13 +1347,13 @@ ParseResult Parser::parseReturnStatement(Memory *memory, char **contents, Gen *g
     return kParseOk;
 }
 
-ParseResult Parser::parseFunctionDeclaration(Memory *memory, char **contents, Gen *gen, FileRange *range) {
+ParseResult Parser::parseFunctionDeclaration(char **contents, Gen *gen, FileRange *range) {
     Gen::useRangeStart(gen, range);
     gen->m_scope = Gen::addNewObject(gen, gen->m_scope);
     Gen::useRangeEnd(gen, range);
 
     UserFunction *function;
-    ParseResult result = parseFunctionExpression(memory, contents, gen, &function);
+    ParseResult result = parseFunctionExpression(contents, &function);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
@@ -1369,25 +1367,25 @@ ParseResult Parser::parseFunctionDeclaration(Memory *memory, char **contents, Ge
     return kParseOk;
 }
 
-ParseResult Parser::parseSemicolonStatement(Memory *memory, char **contents, Gen *gen) {
+ParseResult Parser::parseSemicolonStatement(char **contents, Gen *gen) {
     char *text = *contents;
-    FileRange *keywordRange = Gen::newRange(gen, text);
+    FileRange *keywordRange = Gen::newRange(text);
     ParseResult result;
-    if (consumeKeyword(memory, &text, "return")) {
+    if (consumeKeyword(&text, "return")) {
         FileRange::recordEnd(text, keywordRange);
-        result = parseReturnStatement(memory, &text, gen, keywordRange);
-    } else if (consumeKeyword(memory, &text, "let")) {
+        result = parseReturnStatement(&text, gen, keywordRange);
+    } else if (consumeKeyword(&text, "let")) {
         FileRange::recordEnd(text, keywordRange);
-        result = parseLetDeclaration(memory, &text, gen, keywordRange, false);
-    } else if (consumeKeyword(memory, &text, "const")) {
+        result = parseLetDeclaration(&text, gen, keywordRange, false);
+    } else if (consumeKeyword(&text, "const")) {
         FileRange::recordEnd(text, keywordRange);
-        result = parseLetDeclaration(memory, &text, gen, keywordRange, true);
+        result = parseLetDeclaration(&text, gen, keywordRange, true);
     } else {
-        result = parseAssign(memory, &text, gen);
+        result = parseAssign(&text, gen);
         if (result == kParseNone) {
             // expressions as statements
             Reference ref;
-            result = parseExpression(memory, &text, gen, &ref);
+            result = parseExpression(&text, gen, &ref);
             if (result == kParseNone)
                 return kParseNone;
         }
@@ -1401,32 +1399,32 @@ ParseResult Parser::parseSemicolonStatement(Memory *memory, char **contents, Gen
     return kParseOk;
 }
 
-ParseResult Parser::parseStatement(Memory *memory, char **contents, Gen *gen) {
+ParseResult Parser::parseStatement(char **contents, Gen *gen) {
     char *text = *contents;
-    FileRange *keywordRange = Gen::newRange(gen, text);
-    if (consumeKeyword(memory, &text, "if")) {
+    FileRange *keywordRange = Gen::newRange(text);
+    if (consumeKeyword(&text, "if")) {
         FileRange::recordEnd(text, keywordRange);
         *contents = text;
-        return parseIfStatement(memory, contents, gen, keywordRange);
+        return parseIfStatement(contents, gen, keywordRange);
     }
-    if (consumeKeyword(memory, &text, "fn")) {
+    if (consumeKeyword(&text, "fn")) {
         FileRange::recordEnd(text, keywordRange);
         *contents = text;
-        return parseFunctionDeclaration(memory, contents, gen, keywordRange);
+        return parseFunctionDeclaration(contents, gen, keywordRange);
     }
-    if (consumeKeyword(memory, &text, "while")) {
+    if (consumeKeyword(&text, "while")) {
         FileRange::recordEnd(text, keywordRange);
         *contents = text;
-        return parseWhile(memory, contents, gen, keywordRange);
+        return parseWhile(contents, gen, keywordRange);
     }
-    if (consumeKeyword(memory, &text, "for")) {
+    if (consumeKeyword(&text, "for")) {
         FileRange::recordEnd(text, keywordRange);
         *contents = text;
-        return parseForStatement(memory, contents, gen, keywordRange);
+        return parseForStatement(contents, gen, keywordRange);
     }
 
     // expression as statement
-    ParseResult result = parseSemicolonStatement(memory, &text, gen);
+    ParseResult result = parseSemicolonStatement(&text, gen);
     if (result == kParseError)
         return kParseError;
     if (result == kParseOk) {
@@ -1443,7 +1441,7 @@ ParseResult Parser::parseStatement(Memory *memory, char **contents, Gen *gen) {
     return kParseError;
 }
 
-ParseResult Parser::parseBlock(Memory *memory, char **contents, Gen *gen) {
+ParseResult Parser::parseBlock(char **contents, Gen *gen) {
     char *text = *contents;
 
     // Note: blocks don't actually open new scopes
@@ -1452,13 +1450,13 @@ ParseResult Parser::parseBlock(Memory *memory, char **contents, Gen *gen) {
     ParseResult result;
     if (consumeString(&text, "{")) {
         while (!consumeString(&text, "}")) {
-            result = parseStatement(memory, &text, gen);
+            result = parseStatement(&text, gen);
             if (result == kParseError)
                 return result;
             U_ASSERT(result == kParseOk);
         }
     } else {
-        result = parseStatement(memory, &text, gen);
+        result = parseStatement(&text, gen);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
@@ -1469,11 +1467,11 @@ ParseResult Parser::parseBlock(Memory *memory, char **contents, Gen *gen) {
     return kParseOk;
 }
 
-ParseResult Parser::parseFunctionExpression(Memory *memory, char **contents, Gen *gen_, UserFunction **function) {
+ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **function) {
     char *text = *contents;
-    const char *functionName = parseIdentifier(memory, &text);
+    const char *functionName = parseIdentifier(&text);
 
-    FileRange *functionFrameRange = Gen::newRange(gen_, text);
+    FileRange *functionFrameRange = Gen::newRange(text);
     if (!consumeString(&text, "(")) {
         logParseError(text, "expected opening paren for parameter list");
         return kParseError;
@@ -1486,12 +1484,12 @@ ParseResult Parser::parseFunctionExpression(Memory *memory, char **contents, Gen
             logParseError(text, "expected comma in parameter list");
             return kParseError;
         }
-        const char *argument = parseIdentifier(memory, &text);
+        const char *argument = parseIdentifier(&text);
         if (!argument) {
             logParseError(text, "expected identifier for parameter in parameter list");
             return kParseError;
         }
-        arguments = (const char **)Memory::reallocate(memory, arguments, sizeof(const char *) * ++length);
+        arguments = (const char **)Memory::reallocate(arguments, sizeof(const char *) * ++length);
         arguments[length - 1] = argument;
     }
     FileRange::recordEnd(text, functionFrameRange);
@@ -1499,7 +1497,6 @@ ParseResult Parser::parseFunctionExpression(Memory *memory, char **contents, Gen
     *contents = text;
 
     Gen gen = { };
-    gen.m_memory = memory;
     gen.m_arguments = arguments;
     gen.m_count = length;
     gen.m_slot = length;
@@ -1518,7 +1515,7 @@ ParseResult Parser::parseFunctionExpression(Memory *memory, char **contents, Gen
     Gen::addCloseObject(&gen, gen.m_scope);
     Gen::useRangeEnd(&gen, functionFrameRange);
 
-    ParseResult result = parseBlock(memory, contents, &gen);
+    ParseResult result = parseBlock(contents, &gen);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
@@ -1527,17 +1524,16 @@ ParseResult Parser::parseFunctionExpression(Memory *memory, char **contents, Gen
     Gen::terminate(&gen);
     Gen::useRangeEnd(&gen, functionFrameRange);
 
-    *function = Gen::optimize(&gen, Gen::buildFunction(&gen));
+    *function = Gen::optimize(Gen::buildFunction(&gen));
     return kParseOk;
 }
 
-ParseResult Parser::parseModule(Memory *memory, char **contents, UserFunction **function) {
+ParseResult Parser::parseModule(char **contents, UserFunction **function) {
     Gen gen = { };
-    gen.m_memory = memory;
     gen.m_blockTerminated = true;
 
     // capture future module statement
-    FileRange *moduleRange = Gen::newRange(&gen, *contents);
+    FileRange *moduleRange = Gen::newRange(*contents);
     FileRange::recordEnd(*contents, moduleRange);
 
     Gen::useRangeStart(&gen, moduleRange);
@@ -1549,7 +1545,7 @@ ParseResult Parser::parseModule(Memory *memory, char **contents, UserFunction **
         consumeFiller(contents);
         if ((*contents)[0] == '\0')
             break;
-        ParseResult result = parseStatement(memory, contents, &gen);
+        ParseResult result = parseStatement(contents, &gen);
         if (result == kParseError)
             return result;
         U_ASSERT(result == kParseOk);
@@ -1558,7 +1554,7 @@ ParseResult Parser::parseModule(Memory *memory, char **contents, UserFunction **
     Gen::useRangeStart(&gen, moduleRange);
     Gen::addReturn(&gen, gen.m_scope);
     Gen::useRangeEnd(&gen, moduleRange);
-    *function = Gen::optimize(&gen, Gen::buildFunction(&gen));
+    *function = Gen::optimize(Gen::buildFunction(&gen));
     return kParseOk;
 }
 
