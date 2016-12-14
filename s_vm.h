@@ -57,6 +57,12 @@ private:
         } \
     } while(0)
 
+#define VM_ASSERT_TYPE(CONDITION, TYPE) \
+    VM_ASSERT(CONDITION, "wrong type: expected " TYPE)
+
+#define VM_ASSERT_ARITY(EXPECTED, GOT) \
+    VM_ASSERT((GOT) == (EXPECTED), "expected %zu arguments, got %zu", (EXPECTED), (GOT))
+
 }
 
 #endif

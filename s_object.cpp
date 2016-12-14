@@ -350,8 +350,7 @@ Object *Object::newBool(State *state, bool value) {
     return state->m_shared->m_valueCache.m_boolFalse;
 }
 
-Object *Object::newString(State *state, const char *value) {
-    const size_t length = strlen(value);
+Object *Object::newString(State *state, const char *value, size_t length) {
     // string gets allocated as part of the object
     StringObject *object = (StringObject *)allocate(state, sizeof *object + length + 1);
     object->m_parent = state->m_shared->m_valueCache.m_stringBase;

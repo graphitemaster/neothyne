@@ -90,7 +90,7 @@ struct Object {
     static Object *newObject(State *state, Object *parent);
     static Object *newInt(State *state, int value);
     static Object *newFloat(State *state, float value);
-    static Object *newString(State *state, const char *value);
+    static Object *newString(State *state, const char *value, size_t length);
     static Object *newBool(State *state, bool value);
     static Object *newBoolUncached(State *state, bool value);
     static Object *newArray(State *state, Object **data, IntObject *length);

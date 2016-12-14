@@ -265,7 +265,7 @@ static VMFnWrap instrNewStringObject(VMState *state) {
     const char *value = instruction->m_value;
     VM_ASSERTION(targetSlot < state->m_cf->m_count, "slot addressing error");
     if (U_UNLIKELY(!instruction->m_stringObject)) {
-        Object *object = Object::newString(state->m_restState, value);
+        Object *object = Object::newString(state->m_restState, value, strlen(value));
         instruction->m_stringObject = object;
         GC::addPermanent(state->m_restState, object);
     }
@@ -417,7 +417,7 @@ static VMFnWrap instrAccessStringKey(VMState *state) {
             VM_ASSERTION(functionObject || closureObject,
                 "cannot call index operation: not a function or closure");
 
-            Object *keyObject = Object::newString(state->m_restState, instruction->m_key);
+            Object *keyObject = Object::newString(state->m_restState, instruction->m_key, strlen(instruction->m_key));
 
             State subState = { };
             subState.m_parent = state->m_restState;

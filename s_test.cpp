@@ -152,6 +152,11 @@ fn solve(k) {
 
 solve(0); // kick it off
 
+// Array join
+let fragments = [ "this", "could", "be", "comma", "separated", "string" ];
+let total = fragments.join(", ");
+print(total, "\n");
+
 
 )";
 
