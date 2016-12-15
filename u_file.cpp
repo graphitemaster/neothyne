@@ -66,7 +66,7 @@ u::string fixPath(const u::string &path) {
 
 // file system stuff
 bool exists(const u::string &inputPath, pathType type) {
-    u::string &&path = u::move(u::fixPath(inputPath));
+    u::string &&path = u::fixPath(inputPath);
     if (type == kFile)
         return dir::isFile(path);
 
@@ -88,7 +88,7 @@ bool exists(const u::string &inputPath, pathType type) {
 }
 
 bool remove(const u::string &path, pathType type) {
-    u::string &&fix = u::move(fixPath(path));
+    u::string &&fix = u::fixPath(path);
     if (type == kFile) {
 #if defined(_WIN32)
         return DeleteFileA(&fix[0]) != 0;
@@ -106,7 +106,7 @@ bool remove(const u::string &path, pathType type) {
 }
 
 bool mkdir(const u::string &dir) {
-    u::string &&fix = u::move(u::fixPath(dir));
+    u::string &&fix = u::fixPath(dir);
 #if defined(_WIN32)
     return CreateDirectoryA(&fix[0], nullptr) != 0;
 #else
