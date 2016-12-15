@@ -57,8 +57,8 @@ U_MALLOC_LIKE void *Memory::reallocate(void *old, size_t resize) {
 }
 
 void Memory::free(void *old) {
-    neoFree(old);
     del(old);
+    neoFree(old);
 }
 
 void Memory::maybeRehash() {

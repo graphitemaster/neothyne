@@ -294,8 +294,8 @@ inline void buffer<T>::swap(buffer<T> &other) {
 template <typename T>
 inline void buffer<T>::shrink_to_fit() {
     if (last == first) {
-        neoFree(first);
         capacity = first;
+        neoFree(first);
     } else if (capacity != last) {
         const size_t size = size_t(last - first);
         T *resize = (T*)neoMalloc(sizeof *resize * size);

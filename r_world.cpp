@@ -300,9 +300,11 @@ bool World::PointLightChunk::buildMesh(kdMap *map) {
 
 ///! modelChunk
 World::ModelChunk::ModelChunk()
-    : collect(false)
+    : frame(0.0f)
+    , collect(false)
     , highlight(false)
     , visible(false)
+    , model(nullptr)
 {
 }
 
@@ -432,8 +434,10 @@ ColorGrader *World::getColorGrader() {
 ///! world
 World::World()
     : m_geomMethods(&geomMethods::instance())
+    , m_gun(nullptr)
     , m_kdWorld(nullptr)
     , m_uploaded(false)
+    , m_stats(nullptr)
 {
 }
 

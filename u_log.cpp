@@ -13,7 +13,10 @@ Logger Log::err(stderr);
 Logger Log::out(stdout);
 #endif
 
-Logger::Logger(FILE *fp) {
+Logger::Logger(FILE *fp)
+    : m_mutex(nullptr)
+    , m_file(nullptr)
+{
     // prevent concurrent initialization
     if (SDL_AtomicAdd(&m_init, 1) != 0) return;
     m_mutex = (void *)SDL_CreateMutex();
@@ -24,7 +27,10 @@ Logger::Logger(FILE *fp) {
     setvbuf(m_file, nullptr, _IONBF, 0);
 }
 
-Logger::Logger(const char *file) {
+Logger::Logger(const char *file)
+    : m_mutex(nullptr)
+    , m_file(nullptr)
+{
     // prevent concurrent initialization
     if (SDL_AtomicAdd(&m_init, 1) != 0) return;
     m_mutex = (void *)SDL_CreateMutex();

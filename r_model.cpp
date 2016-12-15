@@ -499,6 +499,7 @@ model::model()
     : m_geomMethods(&geomMethods::instance())
     , m_indices(0)
     , m_half(false)
+    , m_stats(nullptr)
 {
 }
 
