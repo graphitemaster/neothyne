@@ -29,6 +29,41 @@ A height map used for displacement mapping.
 ##### parallax
 Scale and bias used for displacement mapping. Bias is optional.
 
+##### animation
+Materials can be animated by having the textures contain any number of frames
+both horizontally and vertically in the textures. The animate key takes four
+arguments with two optional arguments: Width of a frame, height of a
+frame, rate at which to cycle through the frames (in fps) and the total amount of
+frames to read from the textures to form an animation.
+
+If the math doesn't work out the engine will fail to load the animated material.
+
+The two optional arguments are used to flip the texture coordinates along the
+S and T axis respectively.
+
+For instance if you have a texture with a total size of 1024x1024 you could
+store four frames each 256x256 in size horizontally and vertically. Giving you
+a total of 16 frames. The engine does not care how many frames you have
+horizontally or vertically, so long as the width of a frame is modulo the
+full texture width. When it reaches the end of a row it will move to the next
+row in the texture.
+
+For good looking animations with high framerates you'll need larger textures,
+but keep in mind the engine will not load textures larger than 4096x4096 in size.
+With a 4096x4096 texture you could store 1024 128x128 frames. At a playback rate
+of 24fps that gives you a total of 42 seconds.
+
+Lower resolution textures don't look that great if they're going to be used on
+large surfaces so you may want your frames to be no less than 256x256 in which
+case your theoretical maximum duration would be 10 seconds at 24fps.
+
+You can experiment with lower or higher playback rates however 24fps is just
+fast enough to be acceptably convincing when played back and maximizes the
+duration of your animations.
+
+Animated materials are not meant to be videos so don't use them as such. They're
+meant to make interesting looking textures like the jump pads in Q3A.
+
 ##### colorize
 Hexadecimal RGBA color to colorize (modulate) the texture by.
 
