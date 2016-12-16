@@ -69,7 +69,6 @@ private:
     static void addInstruction(Gen *gen, size_t size, Instruction *instruction);
 
     const char *m_name;
-    const char **m_arguments;
     size_t m_count;
     Slot m_scope;
     Slot m_slot;

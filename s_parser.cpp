@@ -1483,7 +1483,7 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
         return kParseError;
     }
 
-    const char **arguments = nullptr;
+    u::vector<const char *> arguments;
     size_t length = 0;
     while (!consumeString(&text, ")")) {
         if (length && !consumeString(&text, ",")) {
@@ -1495,15 +1495,13 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
             logParseError(text, "expected identifier for parameter in parameter list");
             return kParseError;
         }
-        arguments = (const char **)Memory::reallocate(arguments, sizeof(const char *) * ++length);
-        arguments[length - 1] = argument;
+        arguments.push_back(argument);
     }
     FileRange::recordEnd(text, functionFrameRange);
 
     *contents = text;
 
     Gen gen = { };
-    gen.m_arguments = arguments;
     gen.m_count = length;
     gen.m_slot = length + 1;
     gen.m_name = functionName;
