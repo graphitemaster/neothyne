@@ -1393,8 +1393,10 @@ ParseResult Parser::parseSemicolonStatement(char **contents, Gen *gen) {
             // expressions as statements
             Reference ref;
             result = parseExpression(&text, gen, &ref);
-            if (result == kParseNone)
+            if (result == kParseNone) {
+                Gen::delRange(keywordRange);
                 return kParseNone;
+            }
         }
     }
 
