@@ -2,6 +2,7 @@
 #define S_MEMORY_HDR
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include "u_traits.h"
 
@@ -29,17 +30,17 @@ struct Memory {
     static void free(void *old);
 
 private:
-    static bool addMember(void *member);
+    static bool addMember(uintptr_t member);
 
-    static bool add(void *member);
-    static bool del(void *member);
+    static bool add(uintptr_t member);
+    static bool del(uintptr_t member);
 
     static void maybeRehash();
 
     static size_t m_numBits;
     static size_t m_mask;
     static size_t m_capacity;
-    static void **m_items;
+    static uintptr_t *m_items;
     static size_t m_numItems;
     static size_t m_numDeletedItems;
 };
