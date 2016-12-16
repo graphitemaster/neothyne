@@ -197,6 +197,10 @@ bool zip::open(const u::string &fileName) {
         head.endianSwap();
         if (head.signature != centralDirectoryHead::kSignature)
             return false;
+        if (head.fileNameLength >= 4096) {
+            // Looks malicious
+            return false;
+        }
 
         // Construct an entry
         entry e;

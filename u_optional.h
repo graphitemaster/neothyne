@@ -170,10 +170,6 @@ struct optional : detail::storage<T> {
     constexpr optional(const value_type &v);
     constexpr optional(value_type &&v);
 
-    optional &operator=(nullopt_t);
-    optional &operator=(const optional &);
-    optional &operator=(optional &&);
-
     constexpr value_type const* operator->() const;
     value_type *operator->();
     constexpr const value_type &operator*() const;

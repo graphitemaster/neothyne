@@ -2256,8 +2256,8 @@ void Texture::shift(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t 
 
 template <size_t S>
 void Texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t stride, unsigned char *U_RESTRICT dst, size_t dw, size_t dh) {
-    size_t wfrac = (sw << 12) / dw;
-    size_t hfrac = (sh << 12) / dh;
+    size_t wfrac = (sw << 12U) / dw;
+    size_t hfrac = (sh << 12U) / dh;
     size_t darea = dw * dh;
     size_t sarea = sw * sh;
     int over, under;
@@ -2271,15 +2271,15 @@ void Texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t 
     dh *= hfrac;
     for (size_t y = 0; y < dh; y += hfrac) {
         const size_t yn = y + hfrac - 1;
-        const size_t yi = y >> 12;
-        const size_t h = (yn >> 12) - yi;
+        const size_t yi = y >> 12U;
+        const size_t h = (yn >> 12U) - yi;
         const size_t ylow = ((yn | (-int(h) >> 24)) & 0xFFFU) + 1 - (y & 0xFFFU);
         const size_t yhigh = (yn & 0xFFFU) + 1;
         const unsigned char *ysrc = src + yi * stride;
         for (size_t x = 0; x < dw; x += wfrac, dst += S) {
             const size_t xn = x + wfrac - 1;
-            const size_t xi = x >> 12;
-            const size_t w = (xn >> 12) - xi;
+            const size_t xi = x >> 12U;
+            const size_t w = (xn >> 12U) - xi;
             const size_t xlow = ((w + 0xFFFU) & 0x1000U) - (x & 0xFFFU);
             const size_t xhigh = (xn & 0xFFFU) + 1;
             const unsigned char *xsrc = ysrc + xi * S;
@@ -2289,7 +2289,7 @@ void Texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t 
                 for (size_t i = 0; i < S; i++)
                     r[i] += xcur[i];
             for (size_t i = 0; i < S; i++)
-                r[i] = (ylow * (r[i] + ((xsrc[i] * xlow + xend[i] * xhigh) >> 12))) >> cscale;
+                r[i] = (ylow * (r[i] + ((xsrc[i] * xlow + xend[i] * xhigh) >> 12U))) >> cscale;
             if (h) {
                 xsrc += stride;
                 xend += stride;
@@ -2299,14 +2299,14 @@ void Texture::scale(unsigned char *U_RESTRICT src, size_t sw, size_t sh, size_t 
                         for (size_t i = 0; i < S; i++)
                             p[i] += xcur[i];
                     for (size_t i = 0; i < S; i++)
-                        r[i] += ((p[i] << 12) + xsrc[i] * xlow + xend[i] * xhigh) >> cscale;
+                        r[i] += ((p[i] << 12U) + xsrc[i] * xlow + xend[i] * xhigh) >> cscale;
                 }
                 size_t p[S] = {0};
                 for (const unsigned char *xcur = xsrc + S; xcur < xend; xcur += S)
                     for (size_t i = 0; i < S; i++)
                         p[i] += xcur[i];
                 for (size_t i = 0; i < S; i++)
-                    r[i] += (yhigh * (p[i] + ((xsrc[i] * xlow + xend[i] * xhigh) >> 12))) >> cscale;
+                    r[i] += (yhigh * (p[i] + ((xsrc[i] * xlow + xend[i] * xhigh) >> 12U))) >> cscale;
             }
             for (size_t i = 0; i < S; i++)
                 dst[i] = (r[i] * area) >> dscale;

@@ -61,7 +61,9 @@ void Logger::write(u::string &&message) {
 
     // flush the buffer if need be
     if (find || message.size() + m_buffer.size() >= m_buffer.size()) {
-        fwrite(&m_buffer[0], m_buffer.size(), 1, m_file);
+        if (U_UNLIKELY(m_buffer.size() && fwrite(&m_buffer[0], m_buffer.size(), 1, m_file) != 1)) {
+            abort();
+        }
         m_buffer.clear();
     }
 
@@ -71,7 +73,9 @@ void Logger::write(u::string &&message) {
         // replace all instances of "\n" with "\r\n" for Windows
         message.replace_all("\n", "\r\n");
 #endif
-        fwrite(&message[0], message.size(), 1, m_file);
+        if (U_UNLIKELY(fwrite(&message[0], message.size(), 1, m_file) != 1)) {
+            abort();
+        }
     } else {
         // otherwise it will fit into our buffer
         m_buffer.insert(m_buffer.end(), message.begin(), message.end());
