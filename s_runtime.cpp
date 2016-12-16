@@ -563,6 +563,15 @@ static void mathPow(State *state, Object *, Object *, Object **arguments, size_t
     state->m_resultValue = Object::newFloat(state, m::pow(lhsObject->m_value, rhsObject->m_value));
 }
 
+// [Function]
+static void functionApply(State *state, Object *self, Object *, Object **arguments, size_t count) {
+    VM_ASSERT_ARITY(1_z, count);
+    Object *arrayBase = state->m_shared->m_valueCache.m_arrayBase;
+    auto *arrayObject = (ArrayObject *)Object::instanceOf(*arguments, arrayBase);
+    VM_ASSERT_TYPE(arrayObject, "Array");
+    VM::callCallable(state, nullptr, self, arrayObject->m_contents, arrayObject->m_length);
+}
+
 Object *createRoot(State *state) {
     Object *root = Object::newObject(state, nullptr);
 
@@ -580,6 +589,7 @@ Object *createRoot(State *state) {
     state->m_shared->m_valueCache.m_functionBase = functionObject;
     functionObject->m_flags |= kNoInherit;
     Object::setNormal(root, "Function", functionObject);
+    Object::setNormal(functionObject, "apply", Object::newFunction(state, functionApply));
     functionObject->m_flags |= kImmutable;
 
     // closure
@@ -587,6 +597,7 @@ Object *createRoot(State *state) {
     state->m_shared->m_valueCache.m_closureBase = closureObject;
     closureObject->m_flags |= kNoInherit;
     Object::setNormal(root, "Closure", closureObject);
+    Object::setNormal(closureObject, "apply", Object::newFunction(state, functionApply));
     closureObject->m_mark = closureMark;
 
     // bool

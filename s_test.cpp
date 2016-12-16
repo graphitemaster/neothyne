@@ -30,7 +30,7 @@ fn eval(m) {
         k1 = n;
     }
 }
-eval(0x100000);
+//eval(0x100000);
 
 // Thiele's interpolation formula
 const N = 32;
@@ -150,12 +150,22 @@ fn solve(k) {
     }
 }
 
-solve(0); // kick it off
+//solve(0); // kick it off
 
 // Array join
 let fragments = [ "this", "could", "be", "comma", "separated", "string" ];
 let total = fragments.join(", ");
 print(total, "\n");
+
+fn foo(...) {
+    for (let i = 0; i < $.length; i++)
+        print($[i], " ");
+    print("\n");
+}
+
+foo("hello", "world");
+fragments[3] = "space";
+foo.apply(fragments);
 
 )";
 

@@ -84,6 +84,7 @@ struct UserFunction {
     size_t m_slots;
     const char *m_name;
     bool m_isMethod;
+    bool m_hasVariadicTail;
     FunctionBody m_body;
 };
 

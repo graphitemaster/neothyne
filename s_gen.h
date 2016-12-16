@@ -75,6 +75,7 @@ private:
     bool m_blockTerminated;
     FileRange *m_currentRange;
     FunctionBody m_body;
+    bool m_hasVariadicTail;
 };
 
 }

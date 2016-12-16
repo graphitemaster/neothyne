@@ -107,7 +107,7 @@ const char *Parser::parseIdentifierAll(char **contents) {
     char *text = *contents;
     consumeFiller(&text);
     char *start = text;
-    if (*text && (isAlpha(*text) || *text == '_'))
+    if (*text && (isAlpha(*text) || (*text == '_' || *text == '$')))
         text++;
     else return nullptr;
     while (*text && (isAlpha(*text) || isDigit(*text) || *text == '_'))
@@ -1487,10 +1487,19 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     }
 
     u::vector<const char *> arguments;
+    bool hasVariadicTail = false;
     while (!consumeString(&text, ")")) {
         if (arguments.size() && !consumeString(&text, ",")) {
             logParseError(text, "expected comma in parameter list");
             return kParseError;
+        }
+        if (consumeString(&text, "...")) {
+            if (!consumeString(&text, ")")) {
+                logParseError(text, "varadic marker must be last argument in function");
+                return kParseError;
+            }
+            hasVariadicTail = true;
+            break;
         }
         const char *argument = parseIdentifier(&text);
         if (!argument) {
@@ -1508,6 +1517,7 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     gen.m_slot = arguments.size() + 1;
     gen.m_name = functionName;
     gen.m_blockTerminated = true;
+    gen.m_hasVariadicTail = hasVariadicTail;
 
     // generate lexical scope
     Gen::newBlock(&gen);

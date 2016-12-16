@@ -39,6 +39,8 @@ struct VM {
 
     static void callFunction(State *state, Object *context, UserFunction *function, Object **arguments, size_t count);
 
+    static bool callCallable(State *state, Object *self, Object *function, Object **arguments, size_t count);
+
 private:
     // Profiling
     static void recordProfile(State *state);
@@ -47,6 +49,8 @@ private:
 
     // Execute one cycle of the VM
     static void step(State *state);
+
+    static Object *setupVaradicArguments(State *state, Object *context, UserFunction *userFunction, Object **arguments, size_t count);
 };
 
 #define VM_ASSERT(CONDITION, ...) \

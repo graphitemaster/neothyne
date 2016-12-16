@@ -8,38 +8,38 @@ All values in Neo are *first-class values*. This means that all values can be
 stored in variables,
 passed as arguments to other functions and returned as results.
 
-There are nine types in Neo: `null`, `bool`, `int`, `float`, `array`, `object`,
-`string`, `function`, `method`.
+There are nine types in Neo: `Null`, `Bool`, `Int`, `Float`, `Array`, `Object`,
+`String`, `Function`, `Method`.
 
-The type `null` has a single value, `null`, who's only propery is to be
+The type `Null` has a single value, `null`, who's only propery is to be
 different from any other value. It's useful when representing the absence of a
 value and works exactly like Lua's `nil` type.
 
-The type `bool` has two values, `true` and `false`. Both `null` and `false` make
+The type `Bool` has two values, `true` and `false`. Both `null` and `false` make
 a condition false; any other value makes it true. This means values like `0`
 and empty string `""` also evaluate true.
 
-The type `int` represents a *signed* integer numbers in the range of
+The type `Int` represents a *signed* integer numbers in the range of
 `[-2,147,483,648, 2,147,483,647]`. Numbers outside that range *cannot* be
 represented.
 
-The type `float` represents a real (floating-point) number in the range of
+The type `Float` represents a real (floating-point) number in the range of
 `[1.175494e-38, 3.402823e+38]`.
 
-The type `array` represents an *heterogeneous* array. Heterogeneous means it
+The type `Array` represents an *heterogeneous* array. Heterogeneous means it
 can store anything, even other arrays.
 
-The type `object` represents an *heterogeneous* associative array. Objects are
+The type `Object` represents an *heterogeneous* associative array. Objects are
 the sole data-structure mechanism in Neo; they can be used to represent symbol
 tables, sets, records, graphs, trees, etc. Neo uses the field name as an index.
 This is provided by `a.name` being syntactic sugar for `a["name"]`.
 
-The type `string` represents an immutable sequence of bytes. Strings in Neo
+The type `String` represents an immutable sequence of bytes. Strings in Neo
 are 8-bit clean.
 
-The type `function` represents a function.
+The type `Function` represents a function.
 
-The type `method` represents a special function with an encapsulating `this`
+The type `Method` represents a special function with an encapsulating `this`
 local parameter for objects similar to C++ classes.
 
 ## Garbage Collection
@@ -80,7 +80,7 @@ foo FOO Foo
 
 The following is a list of recognized discrete tokens:
 ```
-+ - * / & | += -= *= /= // /* */ ! == != = < !< > !> <= !<= >= !>= ( ) { } [ ] , ; ++, --
++ - * / & | += -= *= /= // /* */ ! == != = < !< > !> <= !<= >= !>= ( ) { } [ ] , ; ++, -- ...
 ```
 
 Literal strings are delimited by matching double quotes
@@ -169,6 +169,50 @@ assignment is performed. All expressions are evaluated left to right. This is
 in contrast to Javascript and many other languages that leave this up to
 *sequence points* and in some cases undefined.
 
+
+### Functions
+In Neo functions are first class values.
+
+```
+const a = fn() { code; };
+```
+
+Is one way of writing a function however the following sugar exists
+```
+fn a() { code; }
+```
+
+Note that `a` is `const` and not `let` because the sugar form is immutable.
+You cannot change `a` later. If you need that functionality then you use the
+`let` variant.
+
+Functions can have any amount of arguments as well as variadic arguments.
+Variadic arguments are specified by placing the variadic marker as the last
+argument to a function. The variadic marker is `...`.
+
+```
+fn test1(...) { }       // all arguments are variadic
+fn test2(a, b, ...) { } // the first two are named, the rest of variadic
+fn test3(..., a) { }    // not legal
+fn test4(a, ..., b) { } // not legal
+```
+
+Varadic arguments are exposed to the function as an `Array` with the name `$`,
+so you can read them as such.
+```
+fn print_everything(...) {
+   for (let i = 0; i < $.length; i++) print($[i]);
+}
+print_everything(1, 2, "hello", 3.14, [1, 2]);
+```
+
+You can also place function calls by applying an array as arguments on a function,
+variadic or not. With the `apply()` method exposed via every `Function`.
+
+```
+let arguments = [ 1, 2, "hello", 3.14 ];
+print_everything.apply(arguments);
+```
 
 ### Classes
 Neo supports classes through the Javascript method of prototype-chains.

@@ -334,14 +334,6 @@ static VMFnWrap instrAccess(VMState *state) {
     if (!objectFound) {
         Object *indexOperation = Object::lookup(object, "[]", nullptr);
         if (indexOperation) {
-            Object *functionBase = state->m_restState->m_shared->m_valueCache.m_functionBase;
-            Object *closureBase = state->m_restState->m_shared->m_valueCache.m_closureBase;
-
-            auto *functionObject = (FunctionObject *)Object::instanceOf(indexOperation, functionBase);
-            auto *closureObject = (ClosureObject *)Object::instanceOf(indexOperation, closureBase);
-
-            VM_ASSERTION(functionObject || closureObject, "cannot call index operation: not a function or closure");
-
             Object *keyObject = state->m_cf->m_slots[keySlot];
 
             State subState = { };
@@ -349,10 +341,8 @@ static VMFnWrap instrAccess(VMState *state) {
             subState.m_root = state->m_root;
             subState.m_shared = state->m_restState->m_shared;
 
-            if (functionObject) {
-                functionObject->m_function(&subState, object, indexOperation, &keyObject, 1);
-            } else {
-                closureObject->m_function(&subState, object, indexOperation, &keyObject, 1);
+            if (!VM::callCallable(&subState, object, indexOperation, &keyObject, 1)) {
+                return { instrHalt };
             }
 
             VM::run(&subState);
@@ -408,15 +398,6 @@ static VMFnWrap instrAccessStringKey(VMState *state) {
     if (!objectFound) {
         Object *indexOperation = Object::lookup(object, "[]", nullptr);
         if (indexOperation) {
-            Object *functionBase = state->m_restState->m_shared->m_valueCache.m_functionBase;
-            Object *closureBase = state->m_restState->m_shared->m_valueCache.m_closureBase;
-
-            auto *functionObject = (FunctionObject *)Object::instanceOf(indexOperation, functionBase);
-            auto *closureObject = (ClosureObject *)Object::instanceOf(indexOperation, closureBase);
-
-            VM_ASSERTION(functionObject || closureObject,
-                "cannot call index operation: not a function or closure");
-
             Object *keyObject = Object::newString(state->m_restState, instruction->m_key, strlen(instruction->m_key));
 
             State subState = { };
@@ -424,10 +405,8 @@ static VMFnWrap instrAccessStringKey(VMState *state) {
             subState.m_root = state->m_root;
             subState.m_shared = state->m_restState->m_shared;
 
-            if (functionObject) {
-                functionObject->m_function(&subState, object, indexOperation, &keyObject, 1);
-            } else {
-                closureObject->m_function(&subState, object, indexOperation, &keyObject, 1);
+            if (!VM::callCallable(&subState, object, indexOperation, &keyObject, 1)) {
+                return { instrHalt };
             }
 
             VM::run(&subState);
@@ -467,25 +446,10 @@ static VMFnWrap instrAssign(VMState *state) {
     if (!stringKey) {
         Object *indexAssignOperation = Object::lookup(object, "[]=", nullptr);
         if (indexAssignOperation) {
-            Object *functionBase = state->m_restState->m_shared->m_valueCache.m_functionBase;
-            Object *closureBase = state->m_restState->m_shared->m_valueCache.m_closureBase;
-
-            auto *functionObject =
-                (FunctionObject *)Object::instanceOf(indexAssignOperation, functionBase);
-            auto *closureObject =
-                (ClosureObject *)Object::instanceOf(indexAssignOperation, closureBase);
-
-            VM_ASSERTION(functionObject || closureObject, "index assign operation isn't callable");
-
             Object *keyValuePair[] = { state->m_cf->m_slots[instruction->m_keySlot], valueObject };
-            if (functionObject) {
-                functionObject->m_function(state->m_restState, object, indexAssignOperation, keyValuePair, 2);
-            } else {
-                closureObject->m_function(state->m_restState, object, indexAssignOperation, keyValuePair, 2);
+            if (!VM::callCallable(state->m_restState, object, indexAssignOperation, keyValuePair, 2)) {
+                return { instrHalt };
             }
-            // BUG!?
-            //break;
-            //abort();
             state->m_instr = (Instruction *)(instruction + 1);
             return { instrFunctions[state->m_instr->m_type] };
         }
@@ -563,14 +527,6 @@ static VMFnWrap instrCall(VMState *state) {
     Object *thisObject_ = state->m_cf->m_slots[thisSlot];
     Object *functionObject_ = state->m_cf->m_slots[functionSlot];
 
-    Object *closureBase = state->m_restState->m_shared->m_valueCache.m_functionBase;
-    Object *functionBase = state->m_restState->m_shared->m_valueCache.m_closureBase;
-
-    auto *functionObject = (FunctionObject *)Object::instanceOf(functionObject_, functionBase);
-    auto *closureObject = (ClosureObject *)Object::instanceOf(functionObject_, closureBase);
-
-    VM_ASSERTION(functionObject || closureObject, "cannot call: not a function or closure");
-
     Object **arguments = nullptr;
     if (argsLength < 10) {
         arguments = state->m_restState->m_shared->m_valueCache.m_preallocatedArguments[argsLength];
@@ -586,18 +542,8 @@ static VMFnWrap instrCall(VMState *state) {
 
     const size_t prevStackLength = state->m_restState->m_length;
 
-    if (closureObject) {
-        closureObject->m_function(state->m_restState,
-                                  thisObject_,
-                                  functionObject_,
-                                  arguments,
-                                  argsLength);
-    } else {
-        functionObject->m_function(state->m_restState,
-                                   thisObject_,
-                                   functionObject_,
-                                   arguments,
-                                   argsLength);
+    if (!VM::callCallable(state->m_restState, thisObject_, functionObject_, arguments, argsLength)) {
+        return { instrHalt };
     }
 
     if (state->m_restState->m_runState == kErrored) {
@@ -751,13 +697,33 @@ void VM::run(State *state) {
     // TODO: tear down value cache
 }
 
+bool VM::callCallable(State *state, Object *self, Object *function, Object **arguments, size_t count) {
+    Object *closureBase = state->m_shared->m_valueCache.m_closureBase;
+    Object *functionBase = state->m_shared->m_valueCache.m_functionBase;
+    auto *functionObject = (FunctionObject *)Object::instanceOf(function, functionBase);
+    auto *closureObject = (ClosureObject *)Object::instanceOf(function, closureBase);
+    if (!(functionObject || closureObject)) {
+        VM::error(state, "object is not callable");
+        return false;
+    }
+    if (functionObject)
+        functionObject->m_function(state, self, function, arguments, count);
+    else
+        closureObject->m_function(state, self, function, arguments, count);
+    return true;
+}
+
 void VM::callFunction(State *state, Object *context, UserFunction *function, Object **arguments, size_t count) {
     CallFrame *frame = addFrame(state, function->m_slots);
     frame->m_function = function;
     frame->m_context = context;
     GC::addRoots(state, frame->m_slots, frame->m_count, &frame->m_root);
 
-    VM_ASSERT(count == frame->m_function->m_arity, "arity violation in call");
+    if (frame->m_function->m_hasVariadicTail)
+        VM_ASSERT(count >= frame->m_function->m_arity, "arity violation in call");
+    else
+        VM_ASSERT(count == frame->m_function->m_arity, "arity violation in call");
+
     for (size_t i = 0; i < count; i++)
         frame->m_slots[i + 1] = arguments[i];
 
@@ -765,17 +731,40 @@ void VM::callFunction(State *state, Object *context, UserFunction *function, Obj
     frame->m_instructions = frame->m_function->m_body.m_blocks[0].m_instructions;
 }
 
+Object *VM::setupVaradicArguments(State *state, Object *context, UserFunction *userFunction, Object **arguments, size_t count) {
+    if (!userFunction->m_hasVariadicTail)
+        return context;
+    context = Object::newObject(state, context);
+    U_ASSERT(count >= userFunction->m_arity);
+    const size_t length = count - userFunction->m_arity;
+    Object **allArguments = (Object **)Memory::allocate(sizeof *allArguments * length);
+    for (size_t i = 0; i < length; i++)
+        allArguments[i] = arguments[userFunction->m_arity + i];
+    Object::setNormal(context, "$", Object::newArray(state, allArguments, (IntObject *)Object::newInt(state, length)));
+    context->m_flags |= kClosed;
+    return context;
+}
+
 void VM::functionHandler(State *state, Object *self, Object *function, Object **arguments, size_t count) {
     (void)self;
     ClosureObject *functionObject = (ClosureObject *)function;
-    callFunction(state, functionObject->m_context, &functionObject->m_closure, arguments, count);
+    Object *context = functionObject->m_context;
+    GC::disable(state);
+    context = setupVaradicArguments(state, context, &functionObject->m_closure, arguments, count);
+    callFunction(state, context, &functionObject->m_closure, arguments, count);
+    GC::enable(state);
+
 }
 
 void VM::methodHandler(State *state, Object *self, Object *function, Object **arguments, size_t count) {
     ClosureObject *functionObject = (ClosureObject *)function;
     Object *context = Object::newObject(state, functionObject->m_context);
     Object::setNormal(context, "this", self);
+    context->m_flags |= kClosed;
+    GC::disable(state);
+    context = setupVaradicArguments(state, context, &functionObject->m_closure, arguments, count);
     callFunction(state, context, &functionObject->m_closure, arguments, count);
+    GC::enable(state);
 }
 
 Object *Object::newClosure(State *state, Object *context, UserFunction *function) {

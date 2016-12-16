@@ -253,6 +253,7 @@ UserFunction *Gen::buildFunction(Gen *gen) {
     function->m_name = gen->m_name;
     function->m_body = gen->m_body;
     function->m_isMethod = false;
+    function->m_hasVariadicTail = gen->m_hasVariadicTail;
     return function;
 }
 
@@ -261,6 +262,7 @@ void Gen::copyFunctionStats(UserFunction *from, UserFunction *to) {
     to->m_arity = from->m_arity;
     to->m_name = from->m_name;
     to->m_isMethod = from->m_isMethod;
+    to->m_hasVariadicTail = from->m_hasVariadicTail;
 }
 
 // Searches for static object slots which are any objects that are marked closed
