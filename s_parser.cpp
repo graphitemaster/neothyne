@@ -125,7 +125,7 @@ const char *Parser::parseIdentifier(char **contents) {
     const char *result = parseIdentifierAll(&text);
     if (!result)
         return nullptr;
-    if (!strncmp(result, "fn", 2) || !strncmp(result, "method", 6) || !strcmp(result, "new")) {
+    if (!strcmp(result, "fn") || !strcmp(result, "method") || !strcmp(result, "new")) {
         Memory::free((void *)result);
         return nullptr;
     }
@@ -1485,9 +1485,8 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     }
 
     u::vector<const char *> arguments;
-    size_t length = 0;
     while (!consumeString(&text, ")")) {
-        if (length && !consumeString(&text, ",")) {
+        if (arguments.size() && !consumeString(&text, ",")) {
             logParseError(text, "expected comma in parameter list");
             return kParseError;
         }
@@ -1503,8 +1502,8 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     *contents = text;
 
     Gen gen = { };
-    gen.m_count = length;
-    gen.m_slot = length + 1;
+    gen.m_count = arguments.size();
+    gen.m_slot = arguments.size() + 1;
     gen.m_name = functionName;
     gen.m_blockTerminated = true;
 
@@ -1513,7 +1512,7 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     Gen::useRangeStart(&gen, functionFrameRange);
     Slot contextSlot = Gen::addGetContext(&gen);
     gen.m_scope = Gen::addNewObject(&gen, contextSlot);
-    for (size_t i = 0; i < length; i++) {
+    for (size_t i = 0; i < arguments.size(); i++) {
         Slot argumentSlot = Gen::addNewStringObject(&gen, gen.m_scope, arguments[i]);
         Gen::addAssign(&gen, gen.m_scope, argumentSlot, i + 1, kAssignPlain);
     }

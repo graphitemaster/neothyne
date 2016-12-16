@@ -157,7 +157,6 @@ let fragments = [ "this", "could", "be", "comma", "separated", "string" ];
 let total = fragments.join(", ");
 print(total, "\n");
 
-
 )";
 
 void test() {
