@@ -582,6 +582,7 @@ ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression, 
 
     if (!consumeString(&text, "(")) {
         Gen::delRange(callRange);
+        Memory::free(exprRange);
         return kParseNone;
     }
 
