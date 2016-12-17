@@ -53,7 +53,7 @@ size_t Gen::newBlock(Gen *gen) {
 }
 
 void Gen::terminate(Gen *gen) {
-    addReturn(gen, gen->m_slot++);
+    addReturn(gen, 0);
 }
 
 void Gen::addInstruction(Gen *gen, size_t size, Instruction *instruction) {
