@@ -50,10 +50,22 @@ struct FileRange {
 };
 
 inline size_t djb2(const char *str, size_t length) {
-    size_t hash = 5381;
-    for (size_t i = 0; i < length; i++)
-        hash = hash * 33 + str[i];
-    return hash;
+    size_t h = 5381;
+    size_t i = 0;
+    for (; i < (length & ~7); i += 8) {
+        h = h * 33 + str[i + 0];
+        h = h * 33 + str[i + 1];
+        h = h * 33 + str[i + 2];
+        h = h * 33 + str[i + 3];
+        h = h * 33 + str[i + 4];
+        h = h * 33 + str[i + 5];
+        h = h * 33 + str[i + 6];
+        h = h * 33 + str[i + 7];
+    }
+    for (; i < length; i++) {
+        h = h * 33 + str[i];
+    }
+    return h;
 }
 
 }
