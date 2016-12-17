@@ -12,7 +12,7 @@
 namespace s {
 
 ///! Table
-void **Table::lookupReferenceWithHashInternalUnroll(Table *table, const char *key, size_t keyLength, size_t hash) {
+Field *Table::lookupWithHashInternalUnroll(Table *table, const char *key, size_t keyLength, size_t hash) {
     U_ASSERT(key);
     if (table->m_fieldsStored == 0)
         return nullptr;
@@ -29,7 +29,7 @@ void **Table::lookupReferenceWithHashInternalUnroll(Table *table, const char *ke
                  (keyLength <= 1 || key[1] == field->m_name[1]) &&
                 memcmp(key, field->m_name, keyLength) == 0)))
             {
-                return &field->m_value;
+                return field;
             }
         }
     } else {
@@ -46,40 +46,39 @@ void **Table::lookupReferenceWithHashInternalUnroll(Table *table, const char *ke
                  (keyLength <= 1 || key[1] == field->m_name[1]) &&
                  memcmp(key, field->m_name, keyLength) == 0)))
             {
-                return &field->m_value;
+                return field;
             }
         }
     }
     return nullptr;
 }
 
-void **Table::lookupReferenceWithHashInternal(Table *table, const char *key, size_t keyLength, size_t hash) {
+Field *Table::lookupWithHashInternal(Table *table, const char *key, size_t keyLength, size_t hash) {
     // Some partial unrolling here for short keys
     if (U_UNLIKELY(keyLength == 0))
-        return lookupReferenceWithHashInternalUnroll(table, key, 0, hash);
+        return lookupWithHashInternalUnroll(table, key, 0, hash);
     if (U_UNLIKELY(keyLength == 1))
-        return lookupReferenceWithHashInternalUnroll(table, key, 1, hash);
+        return lookupWithHashInternalUnroll(table, key, 1, hash);
     if (U_UNLIKELY(keyLength == 2))
-        return lookupReferenceWithHashInternalUnroll(table, key, 2, hash);
-
-    return lookupReferenceWithHashInternalUnroll(table, key, keyLength, hash);
+        return lookupWithHashInternalUnroll(table, key, 2, hash);
+    return lookupWithHashInternalUnroll(table, key, keyLength, hash);
 }
 
-void **Table::lookupReferenceWithHash(Table *table, const char *key, size_t keyLength, size_t hash) {
-    return lookupReferenceWithHashInternal(table, key, keyLength, hash);
+Field *Table::lookupWithHash(Table *table, const char *key, size_t keyLength, size_t hash) {
+    return lookupWithHashInternal(table, key, keyLength, hash);
 }
 
-void **Table::lookupReference(Table *table, const char *key, size_t keyLength) {
+Field *Table::lookup(Table *table, const char *key, size_t keyLength) {
     const size_t hash = table->m_fieldsNum > 8 ? djb2(key, keyLength) : 0;
-    return lookupReferenceWithHashInternal(table, key, keyLength, hash);
+    return lookupWithHashInternal(table, key, keyLength, hash);
 }
 
 // Versions which allocate
-void **Table::lookupReferenceAllocWithHashInternal(Table *table,
-                                                   const char *key,
-                                                   size_t keyLength,
-                                                   size_t keyHash,
-                                                   void ***first)
+Field *Table::lookupAllocWithHashInternal(Table *table,
+                                          const char *key,
+                                          size_t keyLength,
+                                          size_t keyHash,
+                                          Field **first)
 {
     U_ASSERT(key);
     *first = nullptr;
@@ -99,7 +98,7 @@ void **Table::lookupReferenceAllocWithHashInternal(Table *table,
                  (keyLength <= 1 || key[1] == field->m_name[1]) &&
                  memcmp(key, field->m_name, keyLength) == 0)))
             {
-                return &field->m_value;
+                return field;
             }
             if (!field->m_name) {
                 free = field;
@@ -113,7 +112,7 @@ void **Table::lookupReferenceAllocWithHashInternal(Table *table,
             free->m_nameLength = keyLength;
             table->m_fieldsStored++;
             table->m_bloom |= keyHash;
-            *first = &free->m_value;
+            *first = free;
             return nullptr;
         }
         newLength = fieldsNum * 2;
@@ -127,78 +126,80 @@ void **Table::lookupReferenceAllocWithHashInternal(Table *table,
         for (size_t i = 0; i < fieldsNum; i++) {
             Field *field = &table->m_fields[i];
             if (field->m_name) {
-                void **freeObject;
-                void **lookupObject = lookupReferenceAlloc(&newTable, field->m_name, field->m_nameLength, &freeObject);
+                Field *freeObject = nullptr;
+                Field *lookupObject = lookupAlloc(&newTable,
+                                                  field->m_name,
+                                                  field->m_nameLength,
+                                                  &freeObject);
                 U_ASSERT(!lookupObject);
-                *freeObject = field->m_value;
+                freeObject->m_value = field->m_value;
             }
         }
     }
     Memory::free(table->m_fields);
     *table = newTable;
-    return lookupReferenceAlloc(table, key, keyLength, first);
+    return lookupAlloc(table, key, keyLength, first);
 }
 
-void **Table::lookupReferenceAllocWithHash(Table *table,
-                                           const char *key,
-                                           size_t keyLength,
-                                           size_t keyHash,
-                                           void ***first)
+Field *Table::lookupAllocWithHash(Table *table,
+                                  const char *key,
+                                  size_t keyLength,
+                                  size_t keyHash,
+                                  Field **first)
 {
-    return lookupReferenceAllocWithHashInternal(table, key, keyLength, keyHash, first);
+    return lookupAllocWithHashInternal(table, key, keyLength, keyHash, first);
 }
 
-void **Table::lookupReferenceAlloc(Table *table, const char *key, size_t keyLength, void ***first) {
+Field *Table::lookupAlloc(Table *table, const char *key, size_t keyLength, Field **first) {
     const size_t keyHash = table->m_fieldsNum ? djb2(key, keyLength) : 0;
-    return lookupReferenceAllocWithHashInternal(table, key, keyLength, keyHash, first);
-}
-
-void *Table::lookup(Table *table, const char *key, size_t keyLength, bool *found) {
-    const size_t keyHash = table->m_fieldsNum > 4 ? djb2(key, keyLength) : 0;
-    void **search = lookupReferenceWithHashInternalUnroll(table, key, keyLength, keyHash);
-    if (!search) {
-        if (found)
-            *found = false;
-        return nullptr;
-    }
-    if (found)
-        *found = true;
-    return *search;
-}
-
-void *Table::lookupWithHash(Table *table, const char *key, size_t keyLength, size_t keyHash, bool *found) {
-    void **search = lookupReferenceWithHashInternalUnroll(table, key, keyLength, keyHash);
-    if (!search) {
-        if (found)
-            *found = false;
-        return nullptr;
-    }
-    if (found)
-        *found = true;
-    return *search;
+    return lookupAllocWithHashInternal(table, key, keyLength, keyHash, first);
 }
 
 ///! Object
-Object *Object::lookupWithHash(Object *object, const char *key, size_t keyLength, size_t keyHash, bool *found) {
+Object **Object::lookupReferenceWithHash(Object *object, const char *key, size_t keyLength, size_t keyHash) {
     while (object) {
-        bool contains = false;
-        Object *value = (Object *)Table::lookupWithHash(&object->m_table, key, keyLength, keyHash, &contains);
-        if (contains) {
-            if (found)
-                *found = true;
+        Object **value = (Object **)&Table::lookupWithHash(&object->m_table, key, keyLength, keyHash)->m_value;
+        if (value)
             return value;
-        }
         object = object->m_parent;
     }
-    if (found)
-        *found = false;
     return nullptr;
 }
 
-Object *Object::lookup(Object *object, const char *key, bool *found) {
+Object **Object::lookupReference(Object *object, const char *key) {
     const size_t keyLength = strlen(key);
     const size_t keyHash = djb2(key, keyLength);
-    return lookupWithHash(object, key, keyLength, keyHash, found);
+    return lookupReferenceWithHash(object, key, keyLength, keyHash);
+}
+
+Object *Object::lookupWithHash(Object *object, const char *key, size_t keyLength, size_t keyHash, bool *keyFound) {
+    // Hoised the invariant out of the loop to avoid a branch every iteration;
+    // GCC failed to do this for us.
+    if (keyFound) {
+        while (object) {
+            Field *field = Table::lookupWithHash(&object->m_table, key, keyLength, keyHash);
+            if (field) {
+                *keyFound = true;
+                return (Object *)field->m_value;
+            }
+            object = object->m_parent;
+        }
+        *keyFound = false;
+    } else {
+        while (object) {
+            Field *field = Table::lookupWithHash(&object->m_table, key, keyLength, keyHash);
+            if (field)
+                return (Object *)field->m_value;
+            object = object->m_parent;
+        }
+    }
+    return nullptr;
+}
+
+Object *Object::lookup(Object *object, const char *key, bool *keyFound) {
+    const size_t keyLength = strlen(key);
+    const size_t keyHash = djb2(key, keyLength);
+    return lookupWithHash(object, key, keyLength, keyHash, keyFound);
 }
 
 void Object::mark(State *state, Object *object) {
@@ -253,10 +254,11 @@ bool Object::setExisting(Object *object, const char *key, Object *value) {
     const size_t keyLength = strlen(key);
     const size_t keyHash = djb2(key, keyLength);
     while (current) {
-        Object **search = (Object **)Table::lookupReferenceWithHash(&current->m_table, key, keyLength, keyHash);
-        if (search) {
-            U_ASSERT(!(current->m_flags & kImmutable));
-            *search = value;
+        Field *field = Table::lookupWithHash(&current->m_table, key, keyLength, keyHash);
+        if (field) {
+            if (current->m_flags & kImmutable)
+                return false;
+            field->m_value = (void *)value;
             return true;
         }
         current = current->m_parent;
@@ -271,8 +273,8 @@ bool Object::setShadowing(Object *object, const char *key, Object *value) {
     const size_t keyLength = strlen(key);
     const size_t keyHash = djb2(key, keyLength);
     while (current) {
-        Object **search = (Object **)Table::lookupReferenceWithHash(&current->m_table, key, keyLength, keyHash);
-        if (search) {
+        Field *field = Table::lookupWithHash(&current->m_table, key, keyLength, keyHash);
+        if (field) {
             setNormal(object, key, value);
             return true;
         }
@@ -284,15 +286,15 @@ bool Object::setShadowing(Object *object, const char *key, Object *value) {
 // set property
 void Object::setNormal(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
-    void **free = nullptr;
-    Object **search = (Object **)Table::lookupReferenceAlloc(&object->m_table, key, strlen(key), &free);
-    if (search) {
+    Field *free = nullptr;
+    Field *field = Table::lookupAlloc(&object->m_table, key, strlen(key), &free);
+    if (field) {
         U_ASSERT(!(object->m_flags & kImmutable));
+        field->m_value = (void *)value;
     } else {
         U_ASSERT(!(object->m_flags & kClosed));
-        search = (Object **)free;
+        free->m_value = (void *)value;
     }
-    *search = value;
 }
 
 void *Object::allocate(State *state, size_t size) {

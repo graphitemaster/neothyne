@@ -100,27 +100,19 @@ void VM::recordProfile(State *state) {
                 const size_t keyLength = sizeof currentInstruction->m_belongsTo;
                 const size_t keyHash = djb2(keyData, keyLength);
                 if (innerRange == 0) {
-                    void **freeField = nullptr;
-                    void **findField = Table::lookupReferenceAllocWithHash(directTable,
-                                                                           keyData,
-                                                                           keyLength,
-                                                                           keyHash,
-                                                                           &freeField);
-                    if (findField)
-                        (*(int *)findField)++;
+                    Field *free = nullptr;
+                    Field *find = Table::lookupAllocWithHash(directTable, keyData, keyLength, keyHash, &free);
+                    if (find)
+                        find->m_value = (void *)((size_t)find->m_value + 1);
                     else
-                        (*(int *)freeField) = 1;
+                        free->m_value = (void *)1;
                 } else if (currentInstruction->m_belongsTo->m_lastCycleSeen != cycleCount) {
-                    void **freeField = nullptr;
-                    void **findField = Table::lookupReferenceAllocWithHash(indirectTable,
-                                                                           keyData,
-                                                                           keyLength,
-                                                                           keyHash,
-                                                                           &freeField);
-                    if (findField)
-                        (*(int *)findField)++;
+                    Field *free = nullptr;
+                    Field *find = Table::lookupAllocWithHash(indirectTable, keyData, keyLength, keyHash, &free);
+                    if (find)
+                        find->m_value = (void *)((size_t)find->m_value + 1);
                     else
-                        (*(int *)freeField) = 1;
+                        free->m_value = (void *)1;
                 }
                 currentInstruction->m_belongsTo->m_lastCycleSeen = cycleCount;
             }

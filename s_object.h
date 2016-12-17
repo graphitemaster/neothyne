@@ -41,14 +41,17 @@ struct Field {
 };
 
 struct Table {
-    static void **lookupReferenceAllocWithHash(Table *table, const char *key, size_t keyLength, size_t keyHash, void ***first);
-    static void **lookupReferenceAlloc(Table *table, const char *key, size_t keyLength, void ***first);
+    static Field *lookupAllocWithHash(Table *table,
+                                      const char *key,
+                                      size_t keyLength,
+                                      size_t keyHash,
+                                      Field **first);
 
-    static void **lookupReferenceWithHash(Table *table, const char *key, size_t keyLength, size_t hash) U_PURE;
-    static void **lookupReference(Table *table, const char *key, size_t keyLength) U_PURE;
+    static Field *lookupAlloc(Table *table, const char *key, size_t keyLength, Field **first);
 
-    static void *lookup(Table *table, const char *key, size_t keyLength, bool *found);
-    static void *lookupWithHash(Table *table, const char *key, size_t keyLength, size_t keyHash, bool *found);
+    static Field *lookupWithHash(Table *table, const char *key, size_t keyLength, size_t hash);
+
+    static Field *lookup(Table *table, const char *key, size_t keyLength);
 
     // Array of fields
     Field *m_fields;
@@ -63,18 +66,23 @@ struct Table {
     size_t m_bloom;
 
 private:
-    static void **lookupReferenceAllocWithHashInternal(Table *table, const char *key, size_t keyLength, size_t keyHash, void ***first);
+    static Field *lookupWithHashInternalUnroll(Table *table, const char *key, size_t keyLength, size_t hash);
+    static Field *lookupWithHashInternal(Table *table, const char *key, size_t keyLength, size_t hash);
 
-    static void **lookupReferenceWithHashInternalUnroll(Table *table, const char *key, size_t keyLength, size_t keyHash);
-    static void **lookupReferenceWithHashInternal(Table *table, const char *key, size_t keyLength, size_t hash);
+    static Field *lookupAllocWithHashInternal(Table *table,
+                                              const char *key,
+                                              size_t keyLength,
+                                              size_t keyHash,
+                                              Field **first);
 };
 
 typedef void (*FunctionPointer)(State *state, Object *self, Object *function, Object **arguments, size_t count);
 
 struct Object {
-
-    static Object *lookupWithHash(Object *object, const char *key, size_t keyLength, size_t keyHash, bool *found);
-    static Object *lookup(Object *object, const char *key, bool *found);
+    static Object **lookupReferenceWithHash(Object *object, const char *key, size_t keyLength, size_t keyHash);
+    static Object **lookupReference(Object *object, const char *key);
+    static Object *lookupWithHash(Object *object, const char *key, size_t keyLength, size_t keyHash, bool *keyFound);
+    static Object *lookup(Object *object, const char *key, bool *keyFound);
 
     static bool setExisting(Object *object, const char *key, Object *value);
     static bool setShadowing(Object *object, const char *key, Object *value);
