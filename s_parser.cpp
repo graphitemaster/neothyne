@@ -627,6 +627,8 @@ ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression, 
             Reference::kNone
         };
         Gen::useRangeEnd(gen, exprRange);
+    } else {
+        Memory::free(arguments);
     }
 
     return kParseOk;

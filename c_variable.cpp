@@ -21,6 +21,8 @@ Variable<T>::Variable(int flags,
     : m_reference({ name, description, (void *)this, Trait<T>::value })
     , m_min(min)
     , m_max(max)
+    , m_default()
+    , m_current()
     , m_flags(flags)
 {
 }
@@ -115,6 +117,7 @@ Variable<u::string>::Variable(int flags,
                               const char *name,
                               const char *description)
     : m_reference({ name, description, (void *)this, kVarString })
+    , m_default(nullptr)
     , m_current(nullptr)
     , m_flags(flags)
 {
