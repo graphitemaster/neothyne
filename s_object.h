@@ -155,6 +155,12 @@ struct CallFrame {
     // The amount of slots for this call frame
     size_t m_count;
 
+    // References to slots in closed objects for this call frame
+    Object ***m_fastSlots;
+
+    // The amount of reference to slots in closed objects for this call frame
+    size_t m_fastSlotsCount;
+
     // A GC root object for this call frame
     RootSet m_root;
 

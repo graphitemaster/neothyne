@@ -12,7 +12,7 @@
 
 namespace s {
 
-CallFrame *VM::addFrame(State *state, size_t slots) {
+CallFrame *VM::addFrame(State *state, size_t slots, size_t fastSlots) {
     void *stack = (void *)state->m_stack;
     if (stack) {
         size_t capacity = *((size_t *)stack - 1);
@@ -50,6 +50,8 @@ CallFrame *VM::addFrame(State *state, size_t slots) {
     CallFrame *frame = &state->m_stack[state->m_length - 1];
     frame->m_count = slots;
     frame->m_slots = (Object **)Memory::allocate(sizeof(Object *), slots);
+    frame->m_fastSlotsCount = fastSlots;
+    frame->m_fastSlots = (Object ***)Memory::allocate(sizeof(Object **) * fastSlots);
     return frame;
 }
 
@@ -151,6 +153,9 @@ static VMFnWrap instrHalt(VMState *state) U_PURE;
 static VMFnWrap instrReturn(VMState *state) U_PURE;
 static VMFnWrap instrBranch(VMState *state) U_PURE;
 static VMFnWrap instrTestBranch(VMState *state) U_HOT;
+static VMFnWrap instrDefineFastSlot(VMState *state) U_PURE;
+static VMFnWrap instrReadFastSlot(VMState *state) U_PURE;
+static VMFnWrap instrWriteFastSlot(VMState *state) U_PURE;
 
 static const VMInstrFn instrFunctions[] = {
     instrGetRoot,
@@ -171,7 +176,10 @@ static const VMInstrFn instrFunctions[] = {
     instrBranch,
     instrTestBranch,
     instrAccessStringKey,
-    instrAssignStringKey
+    instrAssignStringKey,
+    instrDefineFastSlot,
+    instrReadFastSlot,
+    instrWriteFastSlot
 };
 
 static VMFnWrap instrGetRoot(VMState *state) {
@@ -630,6 +638,57 @@ static VMFnWrap instrTestBranch(VMState *state) {
     return { instrFunctions[state->m_instr->m_type] };
 }
 
+static VMFnWrap instrDefineFastSlot(VMState *state) {
+    const auto *instruction = (Instruction::DefineFastSlot *)state->m_instr;
+
+    const Slot targetSlot = instruction->m_targetSlot;
+    const Slot objectSlot = instruction->m_objectSlot;
+
+    VM_ASSERTION(objectSlot < state->m_cf->m_count, "slot addressing error");
+
+    Object *object = state->m_cf->m_slots[objectSlot];
+    Object **target = Object::lookupReferenceWithHash(object,
+                                                      instruction->m_key,
+                                                      instruction->m_keyLength,
+                                                      instruction->m_keyHash);
+
+    VM_ASSERTION(target, "key not in object");
+
+    state->m_cf->m_fastSlots[targetSlot] = target;
+    state->m_instr = (Instruction *)(instruction + 1);
+    return { instrFunctions[state->m_instr->m_type] };
+}
+
+static VMFnWrap instrReadFastSlot(VMState *state) {
+    const auto *instruction = (Instruction::ReadFastSlot *)state->m_instr;
+
+    const Slot targetSlot = instruction->m_targetSlot;
+    const Slot sourceSlot = instruction->m_sourceSlot;
+
+    VM_ASSERTION(targetSlot < state->m_cf->m_count, "slot addressing error");
+    VM_ASSERTION(sourceSlot < state->m_cf->m_fastSlotsCount, "fast slot addressing error");
+
+    state->m_cf->m_slots[targetSlot] = *state->m_cf->m_fastSlots[sourceSlot];
+
+    state->m_instr = (Instruction *)(instruction + 1);
+    return { instrFunctions[state->m_instr->m_type] };
+}
+
+static VMFnWrap instrWriteFastSlot(VMState *state) {
+    const auto *instruction = (Instruction::WriteFastSlot *)state->m_instr;
+
+    const Slot targetSlot = instruction->m_targetSlot;
+    const Slot sourceSlot = instruction->m_sourceSlot;
+
+    VM_ASSERTION(targetSlot < state->m_cf->m_fastSlotsCount, "fast slot addressing error");
+    VM_ASSERTION(sourceSlot < state->m_cf->m_count, "slot addressing error");
+
+    *state->m_cf->m_fastSlots[targetSlot] = state->m_cf->m_slots[sourceSlot];
+
+    state->m_instr = (Instruction *)(instruction + 1);
+    return { instrFunctions[state->m_instr->m_type] };
+}
+
 static VMFnWrap instrHalt(VMState *state) {
     (void)state;
     return { instrHalt };
@@ -706,7 +765,7 @@ bool VM::callCallable(State *state, Object *self, Object *function, Object **arg
 }
 
 void VM::callFunction(State *state, Object *context, UserFunction *function, Object **arguments, size_t count) {
-    CallFrame *frame = addFrame(state, function->m_slots);
+    CallFrame *frame = addFrame(state, function->m_slots, function->m_fastSlots);
     frame->m_function = function;
     frame->m_context = context;
     GC::addRoots(state, frame->m_slots, frame->m_count, &frame->m_root);

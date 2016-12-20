@@ -245,11 +245,44 @@ void Gen::addFreeze(Gen *gen, Slot object) {
     addInstruction(gen, sizeof freeze, (Instruction *)&freeze);
 }
 
+Slot Gen::addDefineFastSlot(Gen *gen, Slot objectSlot, const char *key) {
+    Instruction::DefineFastSlot defineFastSlot;
+    const size_t keyLength = strlen(key);
+    defineFastSlot.m_type = kDefineFastSlot;
+    defineFastSlot.m_belongsTo = nullptr;
+    defineFastSlot.m_objectSlot = objectSlot;
+    defineFastSlot.m_key = key;
+    defineFastSlot.m_keyLength = keyLength;
+    defineFastSlot.m_keyHash = djb2(key, keyLength);
+    defineFastSlot.m_targetSlot = gen->m_fastSlot++;
+    addInstruction(gen, sizeof defineFastSlot, (Instruction *)&defineFastSlot);
+    return defineFastSlot.m_targetSlot;
+}
+
+void Gen::addReadFastSlot(Gen *gen, Slot sourceSlot, Slot targetSlot) {
+    Instruction::ReadFastSlot readFastSlot;
+    readFastSlot.m_type = kReadFastSlot;
+    readFastSlot.m_belongsTo = nullptr;
+    readFastSlot.m_sourceSlot = sourceSlot;
+    readFastSlot.m_targetSlot = targetSlot;
+    addInstruction(gen, sizeof readFastSlot, (Instruction *)&readFastSlot);
+}
+
+void Gen::addWriteFastSlot(Gen *gen, Slot sourceSlot, Slot targetSlot) {
+    Instruction::WriteFastSlot writeFastSlot;
+    writeFastSlot.m_type = kWriteFastSlot;
+    writeFastSlot.m_belongsTo = nullptr;
+    writeFastSlot.m_sourceSlot = sourceSlot;
+    writeFastSlot.m_targetSlot = targetSlot;
+    addInstruction(gen, sizeof writeFastSlot, (Instruction *)&writeFastSlot);
+}
+
 UserFunction *Gen::buildFunction(Gen *gen) {
     U_ASSERT(gen->m_blockTerminated);
     UserFunction *function = (UserFunction *)Memory::allocate(sizeof *function);
     function->m_arity = gen->m_count;
     function->m_slots = gen->m_slot;
+    function->m_fastSlots = gen->m_fastSlot;
     function->m_name = gen->m_name;
     function->m_body = gen->m_body;
     function->m_isMethod = false;
@@ -259,6 +292,7 @@ UserFunction *Gen::buildFunction(Gen *gen) {
 
 void Gen::copyFunctionStats(UserFunction *from, UserFunction *to) {
     to->m_slots = from->m_slots;
+    to->m_fastSlots = from->m_fastSlots;
     to->m_arity = from->m_arity;
     to->m_name = from->m_name;
     to->m_isMethod = from->m_isMethod;
@@ -270,47 +304,50 @@ void Gen::copyFunctionStats(UserFunction *from, UserFunction *to) {
 struct SlotObjectInfo {
     bool m_staticObject;
     Slot m_parentSlot;
-    char **m_names;
+    const char **m_namesData;
     size_t m_namesLength;
+    FileRange *m_belongsTo;
+    Instruction *m_afterObjectDecl;
 };
 
 static inline void findStaticObjectSlots(UserFunction *function, SlotObjectInfo **slots) {
-    *slots = (SlotObjectInfo *)Memory::allocate(sizeof(SlotObjectInfo), function->m_slots);
+    *slots = (SlotObjectInfo *)Memory::allocate(sizeof **slots, function->m_slots);
     for (size_t i = 0; i < function->m_body.m_count; i++) {
-        InstructionBlock *block = &function->m_body.m_blocks[i];
+        const auto *block = &function->m_body.m_blocks[i];
         Instruction *instruction = block->m_instructions;
-        Instruction *instructionsEnd = block->m_instructionsEnd;
-        while (instruction != instructionsEnd) {
+        Instruction *instructionEnd = block->m_instructionsEnd;
+        while (instruction != instructionEnd) {
             if (instruction->m_type == kNewObject) {
                 const auto *newObjectInstruction = (Instruction::NewObject *)instruction;
+                instruction = (Instruction *)(newObjectInstruction + 1);
                 bool failed = false;
-                char **names = nullptr;
+                const char **namesData = nullptr;
                 size_t namesLength = 0;
-                while (instruction != instructionsEnd && instruction->m_type == kAssignStringKey) {
-                    const auto *assignStringKey = (Instruction::AssignStringKey *)instruction;
-                    if (assignStringKey->m_assignType != kAssignPlain) {
+                while (instruction != instructionEnd && instruction->m_type == kAssignStringKey) {
+                    const auto *assignStringKeyInstruction = (Instruction::AssignStringKey *)instruction;
+                    if (assignStringKeyInstruction->m_assignType != kAssignPlain) {
                         failed = true;
                         break;
                     }
-                    instruction = (Instruction *)(assignStringKey + 1);
-                    names = (char **)Memory::reallocate(names, sizeof(char *) * ++namesLength);
-                    names[namesLength - 1] = (char *)assignStringKey->m_key;
+                    instruction = (Instruction *)(assignStringKeyInstruction + 1);
+                    namesData = (const char **)Memory::reallocate(namesData, sizeof *namesData * ++namesLength);
+                    namesData[namesLength - 1] = assignStringKeyInstruction->m_key;
                 }
-                if (instruction->m_type != kCloseObject) {
+                if (instruction->m_type != kCloseObject)
                     failed = true;
-                }
                 if (failed) {
-                    Memory::free(names);
-                    // TODO: check if this is correct
-                    instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
+                    Memory::free(namesData);
                     continue;
                 }
-                instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
                 const Slot targetSlot = newObjectInstruction->m_targetSlot;
                 (*slots)[targetSlot].m_staticObject = true;
                 (*slots)[targetSlot].m_parentSlot = newObjectInstruction->m_parentSlot;
-                (*slots)[targetSlot].m_names = names;
+                (*slots)[targetSlot].m_namesData = namesData;
                 (*slots)[targetSlot].m_namesLength = namesLength;
+                (*slots)[targetSlot].m_belongsTo = instruction->m_belongsTo;
+
+                instruction = (Instruction *)((Instruction::CloseObject *)instruction + 1);
+                (*slots)[targetSlot].m_afterObjectDecl = instruction;
                 continue;
             }
             instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
@@ -375,6 +412,7 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
     Gen gen = { };
 
     gen.m_slot = 1;
+    gen.m_fastSlot = function->m_fastSlots;
     gen.m_blockTerminated = true;
     gen.m_currentRange = nullptr;
 
@@ -443,6 +481,7 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
 }
 
 UserFunction *Gen::predictPass(UserFunction *function) {
+    // TODO: audit and fix?
     SlotObjectInfo *info = nullptr;
     findStaticObjectSlots(function, &info);
 
@@ -450,6 +489,7 @@ UserFunction *Gen::predictPass(UserFunction *function) {
 
     Gen gen = { };
     gen.m_slot = 1;
+    gen.m_fastSlot = function->m_fastSlots;
     gen.m_blockTerminated = true;
 
     for (size_t i = 0; i < function->m_body.m_count; i++) {
@@ -468,7 +508,7 @@ UserFunction *Gen::predictPass(UserFunction *function) {
                     }
                     bool keyInObject = false;
                     for (size_t i = 0; i < info[objectSlot].m_namesLength; i++) {
-                        const char *objectKey = info[objectSlot].m_names[i];
+                        const char *objectKey = info[objectSlot].m_namesData[i];
                         if (strcmp(objectKey, newAccessStringKey.m_key) == 0) {
                             keyInObject = true;
                             break;
@@ -509,6 +549,111 @@ UserFunction *Gen::predictPass(UserFunction *function) {
     return optimized;
 }
 
+UserFunction *Gen::fastSlotPass(UserFunction *function) {
+    SlotObjectInfo *info = nullptr;
+    findStaticObjectSlots(function, &info);
+
+    size_t infoSlotsLength = 0;
+    for (size_t i = 0; i < function->m_slots; i++)
+        if (info[i].m_staticObject)
+            infoSlotsLength++;
+
+    u::vector<Slot> infoSlots(infoSlotsLength);
+    u::vector<bool> objectFastSlotsInitialized(function->m_slots);
+    u::vector<u::vector<Slot>> fastSlots(function->m_slots);
+    size_t k = 0;
+    for (Slot i = 0; i < function->m_slots; i++) {
+        if (info[i].m_staticObject) {
+            infoSlots[k++] = i;
+            fastSlots[i].resize(info[i].m_namesLength);
+        }
+    }
+
+    Gen gen = { };
+    gen.m_slot = 1;
+    gen.m_fastSlot = function->m_fastSlots;
+    gen.m_blockTerminated = true;
+
+    size_t defines = 0;
+    size_t reads = 0;
+    size_t writes = 0;
+
+    for (size_t i = 0; i < function->m_body.m_count; i++) {
+        InstructionBlock *block = &function->m_body.m_blocks[i];
+        newBlock(&gen);
+
+        Instruction *instruction = block->m_instructions;
+        while (instruction != block->m_instructionsEnd) {
+            for (size_t k = 0; k < infoSlotsLength; k++) {
+                const Slot slot = infoSlots[k];
+                if (instruction == info[slot].m_afterObjectDecl) {
+                    useRangeStart(&gen, info[slot].m_belongsTo);
+                    for (size_t l = 0; l < info[slot].m_namesLength; l++) {
+                        fastSlots[slot][l] = addDefineFastSlot(&gen, slot, info[slot].m_namesData[l]);
+                        defines++;
+                    }
+                    useRangeEnd(&gen, info[slot].m_belongsTo);
+                    objectFastSlotsInitialized[slot] = true;
+                }
+            }
+
+            if (instruction->m_type == kAccessStringKey) {
+                const auto *accessStringKeyInstruction = (Instruction::AccessStringKey *)instruction;
+                const Slot objectSlot = accessStringKeyInstruction->m_objectSlot;
+                const char *key = accessStringKeyInstruction->m_key;
+                if (info[objectSlot].m_staticObject && objectFastSlotsInitialized[objectSlot]) {
+                    for (size_t k = 0; k < info[objectSlot].m_namesLength; k++) {
+                        const char *name = info[objectSlot].m_namesData[k];
+                        if (!strcmp(key, name)) {
+                            const Slot fastSlot = fastSlots[objectSlot][k];
+                            useRangeStart(&gen, instruction->m_belongsTo);
+                            addReadFastSlot(&gen, fastSlot, accessStringKeyInstruction->m_targetSlot);
+                            reads++;
+                            useRangeEnd(&gen, instruction->m_belongsTo);
+                            instruction = (Instruction *)(accessStringKeyInstruction + 1);
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            if (instruction->m_type == kAssignStringKey) {
+                const auto *assignStringKeyInstruction = (Instruction::AssignStringKey *)instruction;
+                const Slot objectSlot = assignStringKeyInstruction->m_objectSlot;
+                const char *key = assignStringKeyInstruction->m_key;
+                if (info[objectSlot].m_staticObject && objectFastSlotsInitialized[objectSlot]) {
+                    for (size_t k = 0; k < info[objectSlot].m_namesLength; k++) {
+                        const char *name = info[objectSlot].m_namesData[k];
+                        if (!strcmp(key, name)) {
+                            const Slot fastSlot = fastSlots[objectSlot][k];
+                            useRangeStart(&gen, instruction->m_belongsTo);
+                            addWriteFastSlot(&gen, assignStringKeyInstruction->m_valueSlot, fastSlot);
+                            writes++;
+                            useRangeEnd(&gen, instruction->m_belongsTo);
+                            instruction = (Instruction *)(assignStringKeyInstruction + 1);
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            useRangeStart(&gen, instruction->m_belongsTo);
+            addInstruction(&gen, Instruction::size(instruction), instruction);
+            useRangeEnd(&gen, instruction->m_belongsTo);
+            instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
+        }
+    }
+
+    UserFunction *fn = buildFunction(&gen);
+    const size_t newFastSlots = fn->m_fastSlots;
+    copyFunctionStats(function, fn);
+    fn->m_fastSlots = newFastSlots;
+
+    u::Log::out("Generated %zu fast slots replacing %zu reads and %zu writes\n", defines, reads, writes);
+
+    return fn;
+}
+
 UserFunction *Gen::optimize(UserFunction *function) {
     bool *primitiveSlots = nullptr;
     findPrimitiveSlots(function, &primitiveSlots);
@@ -516,12 +661,14 @@ UserFunction *Gen::optimize(UserFunction *function) {
     UserFunction *f0 = function;
     UserFunction *f1 = inlinePass(f0, primitiveSlots);
     UserFunction *f2 = predictPass(f1);
+    UserFunction *f3 = fastSlotPass(f2);
 
     Memory::free(primitiveSlots);
     Memory::free(f0);
     Memory::free(f1);
+    Memory::free(f2);
 
-    return f2;
+    return f3;
 }
 
 size_t Gen::scopeEnter(Gen *gen) {

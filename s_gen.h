@@ -51,12 +51,17 @@ struct Gen {
 
     static void addFreeze(Gen *gen, Slot object);
 
+    static Slot addDefineFastSlot(Gen *gen, Slot objectSlot, const char *key);
+    static void addReadFastSlot(Gen *gen, Slot sourceSlot, Slot targetSlot);
+    static void addWriteFastSlot(Gen *gen, Slot sourceSlot, Slot targetSlot);
+
     static UserFunction *buildFunction(Gen *gen);
 
     static UserFunction *optimize(UserFunction *function);
 
     static UserFunction *inlinePass(UserFunction *function, bool *primitiveSlots);
     static UserFunction *predictPass(UserFunction *function);
+    static UserFunction *fastSlotPass(UserFunction *function);
 
     static size_t scopeEnter(Gen *gen);
     static void scopeLeave(Gen *gen, size_t backup);
@@ -72,6 +77,7 @@ private:
     size_t m_count;
     Slot m_scope;
     Slot m_slot;
+    Slot m_fastSlot;
     bool m_blockTerminated;
     FileRange *m_currentRange;
     FunctionBody m_body;

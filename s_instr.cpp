@@ -31,6 +31,9 @@ size_t Instruction::size(Instruction *instruction) {
     case kTestBranch:       return sizeof(TestBranch);
     case kAccessStringKey:  return sizeof(AccessStringKey);
     case kAssignStringKey:  return sizeof(AssignStringKey);
+    case kDefineFastSlot:   return sizeof(DefineFastSlot);
+    case kReadFastSlot:     return sizeof(ReadFastSlot);
+    case kWriteFastSlot:    return sizeof(WriteFastSlot);
     case kInvalid:          break;
     }
     u::Log::err("invalid instruction: %d\n", (int)instruction->m_type);
@@ -166,6 +169,26 @@ void Instruction::dump(Instruction **instructions, int level) {
             ((AssignStringKey *)instruction)->m_valueSlot);
         *instructions = (Instruction *)((AssignStringKey *)instruction + 1);
         break;
+    case kDefineFastSlot:
+        u::Log::out("DefineFastSlot     &%%%zu = %%%zu . '%.*s' [optimized]\n",
+            ((DefineFastSlot *)instruction)->m_targetSlot,
+            ((DefineFastSlot *)instruction)->m_objectSlot,
+            (int)((DefineFastSlot *)instruction)->m_keyLength,
+            ((DefineFastSlot *)instruction)->m_key);
+        *instructions = (Instruction *)((DefineFastSlot *)instruction + 1);
+        break;
+    case kReadFastSlot:
+        u::Log::out("ReadFastSlot       %%%zu = &%%%zu [optimized]\n",
+            ((ReadFastSlot *)instruction)->m_targetSlot,
+            ((ReadFastSlot *)instruction)->m_sourceSlot);
+        *instructions = (Instruction *)((ReadFastSlot *)instruction + 1);
+        break;
+    case kWriteFastSlot:
+        u::Log::out("WriteFastSlot      &%%%zu = %%%zu [optimized]\n",
+            ((WriteFastSlot *)instruction)->m_targetSlot,
+            ((WriteFastSlot *)instruction)->m_sourceSlot);
+        *instructions = (Instruction *)((WriteFastSlot *)instruction + 1);
+        break;
     default:
         break;
     }
@@ -175,8 +198,8 @@ void UserFunction::dump(UserFunction *function, int level) {
     u::vector<UserFunction *> otherFunctions;
     indent(level);
     FunctionBody *body = &function->m_body;
-    u::Log::out("function %s (%zu), %zu slots {\n",
-        function->m_name, function->m_arity, function->m_slots);
+    u::Log::out("function %s (%zu), %zu slots, %zu fast slots {\n",
+        function->m_name, function->m_arity, function->m_slots, function->m_fastSlots);
     level++;
     for (size_t i = 0; i < body->m_count; i++) {
         indent(level);

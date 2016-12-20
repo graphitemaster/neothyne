@@ -25,7 +25,7 @@ struct VMFnWrap {
 
 struct VM {
     // Call frame management
-    static CallFrame *addFrame(State *state, size_t slots);
+    static CallFrame *addFrame(State *state, size_t slots, size_t fastSlots);
     static void delFrame(State *state);
 
     // Execute the V

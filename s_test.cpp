@@ -30,7 +30,7 @@ fn eval(m) {
         k1 = n;
     }
 }
-//eval(0x100000);
+eval(0x100000);
 
 // Thiele's interpolation formula
 const N = 32;
@@ -150,7 +150,7 @@ fn solve(k) {
     }
 }
 
-//solve(0); // kick it off
+solve(0); // kick it off
 
 // Array join
 let fragments = [ "this", "could", "be", "comma", "separated", "string" ];
@@ -184,7 +184,7 @@ void test() {
     GC::init(&state);
 
     // Create a frame on the VM to execute the root object construction
-    VM::addFrame(&state, 0);
+    VM::addFrame(&state, 0, 0);
     Object *root = createRoot(&state);
     VM::delFrame(&state);
 
@@ -204,6 +204,9 @@ void test() {
     UserFunction *module = nullptr;
     char *text = source.m_begin;
     ParseResult result = Parser::parseModule(&text, &module);
+
+    UserFunction::dump(module, 0);
+
     (void)result;
     if (result == kParseOk) {
         // Execute the result on the VM

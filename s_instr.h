@@ -30,7 +30,10 @@ enum InstructionType {
     kBranch,
     kTestBranch,
     kAccessStringKey,
-    kAssignStringKey
+    kAssignStringKey,
+    kDefineFastSlot,
+    kReadFastSlot,
+    kWriteFastSlot
 };
 
 enum AssignType {
@@ -59,6 +62,9 @@ struct Instruction {
     struct TestBranch;
     struct AccessStringKey;
     struct AssignStringKey;
+    struct DefineFastSlot;
+    struct ReadFastSlot;
+    struct WriteFastSlot;
 
     static void dump(Instruction **instructions, int level);
     static size_t size(Instruction *instruction);
@@ -80,8 +86,9 @@ struct FunctionBody {
 struct UserFunction {
     static void dump(UserFunction *function, int level);
 
-    size_t m_arity; // first slots are reserved for parameters
-    size_t m_slots;
+    size_t m_arity;     // first slots are reserved for parameters
+    size_t m_slots;     // generic slots
+    size_t m_fastSlots; // fast slots (register renames essentially)
     const char *m_name;
     bool m_isMethod;
     bool m_hasVariadicTail;
@@ -186,6 +193,24 @@ struct Instruction::AssignStringKey : Instruction {
     Slot m_valueSlot;
     const char *m_key;
     AssignType m_assignType;
+};
+
+struct Instruction::DefineFastSlot : Instruction {
+    Slot m_targetSlot;
+    Slot m_objectSlot;
+    const char *m_key;
+    size_t m_keyLength;
+    size_t m_keyHash;
+};
+
+struct Instruction::ReadFastSlot : Instruction {
+    Slot m_sourceSlot;
+    Slot m_targetSlot;
+};
+
+struct Instruction::WriteFastSlot : Instruction {
+    Slot m_sourceSlot;
+    Slot m_targetSlot;
 };
 
 }
