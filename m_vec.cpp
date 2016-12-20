@@ -71,16 +71,20 @@ bool vec3::raySphereIntersect(const vec3 &start, const vec3 &direction,
     const vec3 &sphere, float radius, float *fraction)
 {
     // calculate in world space
+    const vec3 delta = start - sphere;
     const float a = direction*direction;
-    const float b = 2.0f*direction*(start - sphere);
-    const float c = sphere*sphere+start*start-2.0f*(sphere*start)-radius*radius;
+    const float b = 2.0f*(direction*delta);
+    const float c = delta*delta - radius*radius;
     const float d = b*b - 4.0f*a*c;
-    if (d <= 0.0f)
+    if (d < 0.0f)
         return false;
     const float e = m::sqrt(d);
-    const float u1 = (-b + e)/(2.0f*a);
-    const float u2 = -(b + e)/(2.0f*a);
-    *fraction = u1 < u2 ? u1 : u2;
+    const float h = 0.5f / a;
+    float u1 = (-b + e) * h;
+    float u2 = (-b - e) * h;
+    if (u1 > u2)
+        u::swap(u1, u2);
+    *fraction = u1 > 0.0f ? u1 : u2;
     return true;
 }
 
