@@ -1,5 +1,10 @@
 # Neothyne scripting language
 
+## Syntax highlighting
+There exists syntax highlighting definition files for text editors
+inside the `tools/syntax` directory of this repo. If you want syntax
+highlighting it's suggested you utilize these.
+
 ## Types and Values
 Neo is a *dynamically typed* language that borrows heavily from
 Javascript, C++, Lua, Ruby, C#, Java (In order of inspiration.)

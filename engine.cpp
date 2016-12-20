@@ -23,6 +23,14 @@
 #include "u_set.h"
 #include "u_log.h"
 
+#include "s_runtime.h"
+#include "s_memory.h"
+#include "s_parser.h"
+#include "s_object.h"
+#include "s_util.h"
+#include "s_gc.h"
+#include "s_vm.h"
+
 #include "m_vec.h"
 
 ///! Query the operating system name
@@ -1019,10 +1027,62 @@ void *neoGetProcAddress(const char *proc) {
     return SDL_GL_GetProcAddress(proc);
 }
 
-#include "u_log.h"
+static void exec(const u::string &script) {
+    // Allocate memory for Neo
+    s::Memory::init();
 
-namespace s {
-    extern void test();
+    s::SourceRange source = s::SourceRange::readFile(script.c_str());
+    if (!source.m_begin) {
+        s::Memory::destroy();
+        return;
+    }
+
+    // Allocate Neo state
+    s::State state = { };
+    state.m_shared = (s::SharedState *)s::Memory::allocate(sizeof *state.m_shared, 1);
+
+    // Initialize garbage collector
+    s::GC::init(&state);
+
+    // Create a frame on the VM to execute the root object construction
+    s::VM::addFrame(&state, 0, 0);
+    s::Object *root = s::createRoot(&state);
+    s::VM::delFrame(&state);
+
+    // Create the pinning set for the GC
+    s::RootSet set;
+    s::GC::addRoots(&state, &root, 1, &set);
+
+    // Specify the source contents
+    s::SourceRecord::registerSource(source, script.c_str(), 0, 0);
+
+    // Parse the result into our module
+    s::UserFunction *module = nullptr;
+    char *text = source.m_begin;
+    s::ParseResult result = s::Parser::parseModule(&text, &module);
+
+    if (result == s::kParseOk) {
+        // Execute the result on the VM
+        s::VM::callFunction(&state, root, module, nullptr, 0);
+        s::VM::run(&state);
+
+        // Export the profile of the code
+        s::ProfileState::dump(source, &state.m_shared->m_profileState);
+
+        // Did we error out while running?
+        if (state.m_runState == s::kErrored) {
+            u::Log::err("%s\n", state.m_error);
+        }
+    }
+
+    // Tear down the objects represented by this set
+    s::GC::delRoots(&state, &set);
+
+    // Reclaim memory
+    s::GC::run(&state);
+
+    // Reclaim any leaking memory
+    s::Memory::destroy();
 }
 
 ///
@@ -1095,7 +1155,8 @@ static int entryPoint(int argc, char **argv) {
     a::Audio *audio = new a::Audio(a::Audio::kClipRoundOff);
     r::World *world = new r::World();
 
-    s::test();
+    // Launch the init.neo
+    exec(gEngine.gamePath() + "init.neo");
 
     // Launch the game
     const int status = neoMain(gEngine.m_frameTimer, *audio, *world, argc, argv, (bool &)gShutdown);

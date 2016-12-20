@@ -51,7 +51,7 @@ CallFrame *VM::addFrame(State *state, size_t slots, size_t fastSlots) {
     frame->m_count = slots;
     frame->m_slots = (Object **)Memory::allocate(sizeof(Object *), slots);
     frame->m_fastSlotsCount = fastSlots;
-    frame->m_fastSlots = (Object ***)Memory::allocate(sizeof(Object **) * fastSlots);
+    frame->m_fastSlots = (Object ***)Memory::allocate(sizeof(Object **), fastSlots);
     return frame;
 }
 
@@ -775,7 +775,8 @@ void VM::callFunction(State *state, Object *context, UserFunction *function, Obj
     else
         VM_ASSERT(count == frame->m_function->m_arity, "arity violation in call");
 
-    for (size_t i = 0; i < count; i++)
+    // TODO: check if this is correct for the context
+    for (size_t i = 0; i < function->m_arity; i++)
         frame->m_slots[i + 1] = arguments[i];
 
     VM_ASSERT(frame->m_function->m_body.m_count, "invalid function");

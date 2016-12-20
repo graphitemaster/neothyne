@@ -1,6 +1,7 @@
 #include "s_runtime.h"
 #include "s_object.h"
 #include "s_memory.h"
+#include "s_parser.h"
 #include "s_vm.h"
 #include "s_gc.h"
 
@@ -8,6 +9,8 @@
 #include "u_misc.h"
 
 #include "m_trig.h"
+
+#include "engine.h" // neoGamePath()
 
 namespace s {
 
@@ -484,38 +487,6 @@ static void arrayJoin(State *state, Object *self, Object *, Object **arguments, 
     Memory::free(result);
 }
 
-static void print(State *state, Object *, Object *, Object **arguments, size_t count) {
-    Object *intBase = state->m_shared->m_valueCache.m_intBase;
-    Object *boolBase = state->m_shared->m_valueCache.m_boolBase;
-    Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
-    Object *stringBase = state->m_shared->m_valueCache.m_stringBase;
-
-    for (size_t i = 0; i < count; i++) {
-        Object *argument = arguments[i];
-        Object *intObj = Object::instanceOf(argument, intBase);
-        Object *boolObj = Object::instanceOf(argument, boolBase);
-        Object *floatObj = Object::instanceOf(argument, floatBase);
-        Object *stringObj = Object::instanceOf(argument, stringBase);
-        if (intObj) {
-            u::Log::out("%d", ((IntObject *)intObj)->m_value);
-            continue;
-        }
-        if (boolObj) {
-            u::Log::out(((BoolObject *)boolObj)->m_value ? "true" : "false");
-            continue;
-        }
-        if (floatObj) {
-            u::Log::out("%f", ((FloatObject *)floatObj)->m_value);
-            continue;
-        }
-        if (stringObj) {
-            u::Log::out("%s", ((StringObject *)stringObj)->m_value);
-            continue;
-        }
-    }
-    state->m_resultValue = nullptr;
-}
-
 enum { kSin, kCos, kTan, kSqrt };
 
 static void mathTrig(State *state, Object *, Object **arguments, size_t count, int type) {
@@ -570,6 +541,89 @@ static void functionApply(State *state, Object *self, Object *, Object **argumen
     auto *arrayObject = (ArrayObject *)Object::instanceOf(*arguments, arrayBase);
     VM_ASSERT_TYPE(arrayObject, "Array");
     VM::callCallable(state, nullptr, self, arrayObject->m_contents, arrayObject->m_length);
+}
+
+// [Root]
+static void print(State *state, Object *, Object *, Object **arguments, size_t count) {
+    Object *intBase = state->m_shared->m_valueCache.m_intBase;
+    Object *boolBase = state->m_shared->m_valueCache.m_boolBase;
+    Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
+    Object *stringBase = state->m_shared->m_valueCache.m_stringBase;
+
+    for (size_t i = 0; i < count; i++) {
+        Object *argument = arguments[i];
+        Object *intObj = Object::instanceOf(argument, intBase);
+        Object *boolObj = Object::instanceOf(argument, boolBase);
+        Object *floatObj = Object::instanceOf(argument, floatBase);
+        Object *stringObj = Object::instanceOf(argument, stringBase);
+        if (intObj) {
+            u::Log::out("%d", ((IntObject *)intObj)->m_value);
+            continue;
+        }
+        if (boolObj) {
+            u::Log::out(((BoolObject *)boolObj)->m_value ? "true" : "false");
+            continue;
+        }
+        if (floatObj) {
+            u::Log::out("%f", ((FloatObject *)floatObj)->m_value);
+            continue;
+        }
+        if (stringObj) {
+            u::Log::out("%s", ((StringObject *)stringObj)->m_value);
+            continue;
+        }
+    }
+    state->m_resultValue = nullptr;
+}
+
+static void require(State *state, Object *, Object *, Object **arguments, size_t count) {
+    VM_ASSERT_ARITY(1_z, count);
+
+    Object *root = state->m_root;
+    Object *stringBase = state->m_shared->m_valueCache.m_stringBase;
+
+    auto *stringObject = (StringObject *)Object::instanceOf(arguments[0], stringBase);
+    VM_ASSERT_TYPE(stringObject, "parameter to 'require()' must be string");
+
+    u::string fileName = stringObject->m_value;
+    SourceRange source = SourceRange::readFile(&fileName[0], false);
+    if (!source.m_begin) {
+        // Try the game path as an alternative
+        fileName = neoGamePath() + stringObject->m_value;
+        source = SourceRange::readFile(&fileName[0]);
+    }
+    if (!source.m_begin)
+        return;
+
+    // duplicate the filename since the stringObject can go out of scope
+    const size_t length = fileName.size() + 1;
+    char *copy = (char *)Memory::allocate(length);
+    memcpy(copy, &fileName[0], length);
+    SourceRecord::registerSource(source, copy, 0, 0);
+
+    UserFunction *module = nullptr;
+    char *text = source.m_begin;
+    ParseResult result = Parser::parseModule(&text, &module);
+    VM_ASSERT(result == kParseOk, "parsing failed in 'require()'");
+
+    // dump it
+    //UserFunction::dump(module, 0);
+
+    State subState = { };
+    subState.m_parent = state;
+    subState.m_root = state->m_root;
+    subState.m_shared = state->m_shared;
+
+    VM::callFunction(&subState, root, module, nullptr, 0);
+    VM::run(&subState);
+
+    if (subState.m_runState == kErrored) {
+        state->m_runState = kErrored;
+        state->m_error = "require failed";
+        return;
+    }
+
+    state->m_resultValue = subState.m_resultValue;
 }
 
 Object *createRoot(State *state) {
@@ -678,9 +732,6 @@ Object *createRoot(State *state) {
     Object::setNormal(arrayObject, "[]=", Object::newFunction(state, arrayIndexAssign));
     arrayObject->m_flags |= kClosed | kImmutable;
 
-    // others
-    Object::setNormal(root, "print", Object::newFunction(state, print));
-
     // Math
     Object *mathObject = Object::newObject(state, nullptr);
     mathObject->m_flags |= kNoInherit | kImmutable;
@@ -691,6 +742,10 @@ Object *createRoot(State *state) {
     Object::setNormal(mathObject, "sqrt", Object::newFunction(state, mathSqrt));
     Object::setNormal(mathObject, "pow", Object::newFunction(state, mathPow));
     mathObject->m_flags |= kClosed;
+
+    // others
+    Object::setNormal(root, "print", Object::newFunction(state, print));
+    Object::setNormal(root, "require", Object::newFunction(state, require));
 
     GC::delRoots(state, &pinned);
 

@@ -66,7 +66,6 @@ SCRIPTING_SOURCES = \
 	s_object.cpp \
 	s_parser.cpp \
 	s_runtime.cpp \
-	s_test.cpp \
 	s_util.cpp \
 	s_vm.cpp \
 	s_memory.cpp

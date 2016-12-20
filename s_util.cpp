@@ -1,11 +1,41 @@
 #include <string.h>
+#include <errno.h>
 
 #include "s_util.h"
 #include "s_parser.h"
+#include "s_memory.h"
 
 #include "u_assert.h"
+#include "u_file.h"
+#include "u_log.h"
 
 namespace s {
+
+///! SourceRange
+SourceRange SourceRange::readFile(const char *fileName, bool reportErrors) {
+    u::file fp = u::fopen(fileName, "rb");
+    if (!fp) {
+        if (reportErrors)
+            u::Log::err("[script] => cannot open file '%s': %s\n", fileName, strerror(errno));
+        return { nullptr, nullptr };
+    }
+    fseek(fp, 0, SEEK_END);
+    long size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    char *data = (char *)Memory::allocate(size + 1);
+    if (fread(data, size, 1, fp) != 1) {
+        if (reportErrors)
+            u::Log::err("[script] => cannot read from file '%s': %s\n", fileName, strerror(errno));
+        Memory::free(data);
+        return { nullptr, nullptr };
+    }
+    data[size] = '\0';
+    return { data, data + size };
+}
+
+SourceRange SourceRange::readString(char *string) {
+    return { string, string + strlen(string) + 1 }; // include null terminator
+}
 
 ///! SourceRecord
 SourceRecord *SourceRecord::m_record = nullptr;

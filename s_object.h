@@ -19,6 +19,7 @@ enum {
     kNoInherit = 1 << 4,
     kMarked    = 1 << 5
 };
+
 using ObjectFlags = int;
 
 struct Object;

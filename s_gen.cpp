@@ -416,7 +416,8 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
     gen.m_blockTerminated = true;
     gen.m_currentRange = nullptr;
 
-    size_t count = 0;
+    size_t accesses = 0;
+    size_t assignments = 0;
 
     u::vector<const char *> slotTable;
     for (size_t i = 0; i < function->m_body.m_count; i++) {
@@ -449,7 +450,7 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
                 addInstruction(&gen, sizeof accessStringKey, (Instruction *)&accessStringKey);
                 useRangeEnd(&gen, access->m_belongsTo);
                 instruction = (Instruction *)(access + 1);
-                count++;
+                accesses++;
                 continue;
             }
             if (instruction->m_type == kAssign
@@ -465,7 +466,7 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
                 addInstruction(&gen, sizeof assignStringKey, (Instruction *)&assignStringKey);
                 useRangeEnd(&gen, assign->m_belongsTo);
                 instruction = (Instruction *)(assign + 1);
-                count++;
+                assignments++;
                 continue;
             }
             useRangeStart(&gen, instruction->m_belongsTo);
@@ -476,7 +477,7 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
     }
     UserFunction *optimized = buildFunction(&gen);
     copyFunctionStats(function, optimized);
-    u::Log::out("Inlined Assignments/Accesses: %zu\n", count);
+    u::Log::out("[script] => inlined operations (assignments: %zu, accesses: %zu)\n", assignments, accesses);
     return optimized;
 }
 
@@ -544,7 +545,7 @@ UserFunction *Gen::predictPass(UserFunction *function) {
     UserFunction *optimized = buildFunction(&gen);
     copyFunctionStats(function, optimized);
 
-    u::Log::out("Redirected predictable lookup misses: %zu\n", count);
+    u::Log::out("[script] => redirected %zu predictable lookup misses\n", count);
 
     return optimized;
 }
@@ -649,7 +650,7 @@ UserFunction *Gen::fastSlotPass(UserFunction *function) {
     copyFunctionStats(function, fn);
     fn->m_fastSlots = newFastSlots;
 
-    u::Log::out("Generated %zu fast slots replacing %zu reads and %zu writes\n", defines, reads, writes);
+    u::Log::out("[script] => generated %zu fast slots (reads: %zu, writes: %zu)\n", defines, reads, writes);
 
     return fn;
 }

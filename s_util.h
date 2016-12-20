@@ -6,6 +6,9 @@ namespace s {
 struct SourceRange {
     char *m_begin;
     char *m_end;
+
+    static SourceRange readFile(const char *fileName, bool reportErrors = true);
+    static SourceRange readString(char *string);
 };
 
 struct SourceRecord {
