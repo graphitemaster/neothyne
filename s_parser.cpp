@@ -301,7 +301,7 @@ ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlo
         FileRange::recordEnd(text, addEntryRange);
 
         if (!consumeString(&text, "=")) {
-            logParseError(text, "object literal expects 'name = value'");
+            logParseError(text, "object literal expects 'name = value;'");
             return kParseError;
         }
 
@@ -311,6 +311,11 @@ ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlo
             return result;
         U_ASSERT(result == kParseOk);
 
+        if (!consumeString(&text, ";")) {
+            logParseError(text, "object literal field requires terminating semicolon");
+            return kParseError;
+        }
+
         if (gen) {
             Gen::useRangeStart(gen, addEntryRange);
             Slot keySlot = Gen::addNewStringObject(gen, gen->m_scope, keyName);
@@ -318,14 +323,6 @@ ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlo
             Gen::addAssign(gen, objectSlot, keySlot, valueSlot, kAssignPlain);
             Gen::useRangeEnd(gen, addEntryRange);
         }
-
-        if (consumeString(&text, ","))
-            continue;
-        if (consumeString(&text, "}"))
-            break;
-
-        logParseError(text, "expected comma or closing brace");
-        return kParseError;
     }
     *contents = text;
     return kParseOk;
@@ -1037,7 +1034,7 @@ ParseResult Parser::parseIfStatement(char **contents, Gen *gen, FileRange *keywo
 
     Gen::setBlockRef(gen, trueBlock, Gen::newBlock(gen));
 
-    result = parseBlock(&text, gen);
+    result = parseBlock(&text, gen, false);
     if (result == kParseError)
         return kParseError;
     U_ASSERT(result == kParseOk);
@@ -1049,7 +1046,7 @@ ParseResult Parser::parseIfStatement(char **contents, Gen *gen, FileRange *keywo
     size_t falseBlockIndex = Gen::newBlock(gen);
     Gen::setBlockRef(gen, falseBlock, falseBlockIndex);
     if (consumeKeyword(&text, "else")) {
-        result = parseBlock(&text, gen);
+        result = parseBlock(&text, gen, false);
         if (result == kParseError)
             return kParseError;
         U_ASSERT(result == kParseOk);
@@ -1102,7 +1099,7 @@ ParseResult Parser::parseWhile(char **contents, Gen *gen, FileRange *range) {
     Gen::useRangeEnd(gen, range);
 
     Gen::setBlockRef(gen, loopBlock, Gen::newBlock(gen));
-    result = parseBlock(&text, gen);
+    result = parseBlock(&text, gen, false);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);
@@ -1319,7 +1316,12 @@ ParseResult Parser::parseForStatement(char **contents, Gen *gen, FileRange *rang
     // loop body
     Gen::setBlockRef(gen, loopBlock, Gen::newBlock(gen));
 
-    parseBlock(&text, gen);
+    result = parseBlock(&text, gen, false);
+    if (result == kParseError)
+        return kParseError;
+
+    U_ASSERT(result == kParseOk);
+
 
     result = parseSemicolonStatement(&step, gen);
     U_ASSERT(result == kParseOk);
@@ -1435,7 +1437,15 @@ ParseResult Parser::parseStatement(char **contents, Gen *gen) {
     }
 
     // expression as statement
-    ParseResult result = parseSemicolonStatement(&text, gen);
+    ParseResult result = parseBlock(&text, gen, true);
+    if (result == kParseError)
+        return kParseError;
+    if (result == kParseOk) {
+        *contents = text;
+        return kParseOk;
+    }
+
+    result = parseSemicolonStatement(&text, gen);
     if (result == kParseError)
         return kParseError;
     if (result == kParseOk) {
@@ -1443,16 +1453,15 @@ ParseResult Parser::parseStatement(char **contents, Gen *gen) {
             logParseError(text, "expected ';' after statement");
             return kParseError;
         }
-        if (result == kParseOk)
-            *contents = text;
-        return result;
+        *contents = text;
+        return kParseOk;
     }
 
     logParseError(text, "unknown statement");
     return kParseError;
 }
 
-ParseResult Parser::parseBlock(char **contents, Gen *gen) {
+ParseResult Parser::parseBlock(char **contents, Gen *gen, bool brackets) {
     char *text = *contents;
 
     // Note: blocks don't actually open new scopes
@@ -1467,6 +1476,8 @@ ParseResult Parser::parseBlock(char **contents, Gen *gen) {
             U_ASSERT(result == kParseOk);
         }
     } else {
+        if (brackets)
+            return kParseNone;
         result = parseStatement(&text, gen);
         if (result == kParseError)
             return result;
@@ -1533,7 +1544,7 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     Gen::addCloseObject(&gen, gen.m_scope);
     Gen::useRangeEnd(&gen, functionFrameRange);
 
-    ParseResult result = parseBlock(contents, &gen);
+    ParseResult result = parseBlock(contents, &gen, true);
     if (result == kParseError)
         return result;
     U_ASSERT(result == kParseOk);

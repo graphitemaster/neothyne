@@ -219,10 +219,10 @@ Neo supports classes through the Javascript method of prototype-chains.
 The `new` keyword can be used to construct a new instance of an Object and
 also subclass an existing object.
 ```
-let a = { a = 1 };
-let b = new a { b = 2 }; // subclassing: b.a = 1 and b.b = 2
-let c = new b;           // constructs a new instance of b
-b.b = 10;                // does not change c.b since c is a new instance of b
+let a = { a = 1; };
+let b = new a { b = 2; }; // subclassing: b.a = 1 and b.b = 2
+let c = new b;            // constructs a new instance of b
+b.b = 10;                 // does not change c.b since c is a new instance of b
 ```
 
 This may appear strange to some programmers as we're subclassing on an object
@@ -360,7 +360,7 @@ an empty object or to create an object and fill some of its fields.
 ```
 // as an example
 let empty = {};
-let object = { a = value, b = "nope", c = fn() { /*...*/ } };
+let object = { a = value; b = "nope"; c = fn() { /*...*/ }; };
 ```
 
 ### Array literals

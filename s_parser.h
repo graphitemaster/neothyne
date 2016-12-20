@@ -74,7 +74,7 @@ private:
     static ParseResult parseLetDeclaration(char **contents, Gen *gen, FileRange *range, bool isConst);
     static ParseResult parseFunctionDeclaration(char **contents, Gen *gen, FileRange *range);
     static ParseResult parseStatement(char **contents, Gen *gen);
-    static ParseResult parseBlock(char **contents, Gen *gen);
+    static ParseResult parseBlock(char **contents, Gen *gen, bool brackets);
     static ParseResult parseFunctionExpression(char **contents, UserFunction **function);
     static ParseResult parsePostfix(char **contents, Gen *gen, Reference *reference);
 

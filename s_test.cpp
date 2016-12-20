@@ -167,6 +167,9 @@ foo("hello", "world");
 fragments[3] = "space";
 foo.apply(fragments);
 
+let foo = { a = 1; b = 2; };
+print(foo.a, " ", foo.b, "\n");
+
 )";
 
 void test() {
