@@ -1,0 +1,47 @@
+const Vec2 = {
+    x = 0.;
+    y = 0.;
+
+    // Operators
+    "+" = method(other) {
+        return new Vec2 {
+            x = this.x + other.x;
+            y = this.y + other.y;
+        };
+    };
+
+    "-" = method(other) {
+        return new Vec2 {
+            x = this.x - other.x;
+            y = this.y - other.y;
+        };
+    };
+
+    "*" = method(other) {
+        return new Vec2 {
+            x = this.x * other;
+            y = this.y * other;
+        };
+    };
+
+    mul = method(other) {
+        return new Vec2 {
+            x = this.x * other.x;
+            y = this.y * other.y;
+        };
+    };
+
+    dot = method(other) {
+        return this.x * other.x + this.y * other.y;
+    };
+
+    mag = method() {
+        return this.dot(this);
+    };
+
+    abs = method() {
+        return Math.sqrt(this.mag());
+    };
+};
+
+return Vec2;
