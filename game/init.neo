@@ -1,6 +1,4 @@
 const Vec2 = require("scripts/math/Vec2.neo");
-const Vec3 = require("scripts/math/Vec3.neo");
-
 let a = new Vec2 { x = 0.1; y = 0.2; };
 let b = new Vec2 { x = -0.1; y = -0.2; };
 let c = a + b; // { 0., 0. }
@@ -9,15 +7,16 @@ let e = d * 2; // { 0.4, 0.8 }
 print(c.x, ", ", c.y, "\n");
 print(d.x, ", ", d.y, "\n");
 print(e.x, ", ", e.y, "\n");
-
+/* The best
+ * triangle known to man kind. */
 fn sierpinski(n) {
-    for (let y = n - 1; y >= 0; y--) {
-        for (let i = 0; i < y; i++)
-            print(" ");
-        for (let x = 0; x + y < n; x++)
-            if (x & y) print("  "); else print("* ");
-        print("\n");
-    }
+  for (let y = n - 1; y >= 0; y--) {
+    for (let i = 0; i < y; i++)
+      print(" ");
+    for (let x = 0; x + y < n; x++)
+      if (x & y) print("  "); else print("* ");
+    print("\n");
+  }
 }
 
 sierpinski(16);
@@ -25,77 +24,77 @@ sierpinski(32);
 sierpinski(64);
 
 fn hofstadter_conway(m) {
-    let k1 = 2;
-    let lg2 = 1;
-    let amax = 0.0;
-    let list = [ -50000, 1, 1 ].resize(0x100000 + 1);
-    let v = list[2];
-    for (let n = 3; n <= m; n++) {
-        list[n] = list[v] + list[n-v];
-        v = list[n];
-        if (amax < v*1.0/n) amax = v*1.0/n;
-        if (0 == (k1&n)) {
-            print("Maximum between 2^", lg2, " and 2^", lg2+1, " was ", amax, "\n");
-            amax = 0;
-            lg2++;
-        }
-        k1 = n;
+  let k1 = 2;
+  let lg2 = 1;
+  let amax = 0.0;
+  let list = [ -50000, 1, 1 ].resize(0x100000 + 1);
+  let v = list[2];
+  for (let n = 3; n <= m; n++) {
+    list[n] = list[v] + list[n-v];
+    v = list[n];
+    if (amax < v*1.0/n) amax = v*1.0/n;
+    if (0 == (k1&n)) {
+      print("Maximum between 2^", lg2, " and 2^", lg2+1, " was ", amax, "\n");
+      amax = 0;
+      lg2++;
     }
+    k1 = n;
+  }
 }
 
 hofstadter_conway(0x100000);
 
 fn thieles_interpolation() {
-    const N = 32;
-    const N2 = (N * (N - 1) / 2);
-    const STEP = 0.05;
-    let xval = [].resize(N);
-    let tsin = [].resize(N);
-    let tcos = [].resize(N);
-    let ttan = [].resize(N);
-    let rsin = [].resize(N2);
-    let rcos = [].resize(N2);
-    let rtan = [].resize(N2);
-    fn rho(x, y, r, i, n) {
-        if (n < 0) return 0;
-        if (n == 0) return y[i];
-        let idx = (N - 1 - n) * (N - n) / 2 + i;
-        if (r[idx] != r[idx])
-            r[idx] = (x[i] - x[i + n]) / (rho(x, y, r, i, n - 1) - rho(x, y, r, i + 1, n - 1)) + rho(x, y, r, i + 1, n - 2);
-        return r[idx];
-    }
-    fn thiele(x, y, r, xin, n) {
-        if (n > N - 1) return 1;
-        return rho(x, y, r, 0, n) - rho(x, y, r, 0, n - 2)
-            + (xin - x[n]) / thiele(x, y, r, xin, n + 1);
-    }
-    fn isin(x) { return thiele(tsin, xval, rsin, x, 0); }
-    fn icos(x) { return thiele(tcos, xval, rcos, x, 0); }
-    fn itan(x) { return thiele(ttan, xval, rtan, x, 0); }
-    for (let i = 0; i < N; i++) {
-        xval[i] = i * STEP;
-        tsin[i] = Math.sin(xval[i]);
-        tcos[i] = Math.cos(xval[i]);
-        ttan[i] = Math.tan(xval[i]); // optionally approximate with division: tsin[i] / tcos[i];
-    }
-    for (let i = 0; i < N2; i++) {
-        rsin[i] = 0.0/0.0;
-        rcos[i] = 0.0/0.0;
-        rtan[i] = 0.0/0.0;
-    }
-    print(6. * isin(.5), "\n");
-    print(3. * icos(.5), "\n");
-    print(4. * itan(1.), "\n");
+  const N = 32;
+  const N2 = (N * (N - 1) / 2);
+  const STEP = 0.05;
+  let xval = [].resize(N);
+  let tsin = [].resize(N);
+  let tcos = [].resize(N);
+  let ttan = [].resize(N);
+  let rsin = [].resize(N2);
+  let rcos = [].resize(N2);
+  let rtan = [].resize(N2);
+  fn rho(x, y, r, i, n) {
+      if (n < 0) return 0;
+      if (n == 0) return y[i];
+      let idx = (N - 1 - n) * (N - n) / 2 + i;
+      if (r[idx] != r[idx])
+          r[idx] = (x[i] - x[i + n]) / (rho(x, y, r, i, n - 1) - rho(x, y, r, i + 1, n - 1)) + rho(x, y, r, i + 1, n - 2);
+      return r[idx];
+  }
+  fn thiele(x, y, r, xin, n) {
+    if (n > N - 1) return 1;
+    return rho(x, y, r, 0, n) - rho(x, y, r, 0, n - 2) 
+      + (xin - x[n]) / thiele(x, y, r, xin, n + 1);
+  }
+  fn isin(x) { return thiele(tsin, xval, rsin, x, 0); }
+  fn icos(x) { return thiele(tcos, xval, rcos, x, 0); }
+  fn itan(x) { return thiele(ttan, xval, rtan, x, 0); }
+  for (let i = 0; i < N; i++) {
+    xval[i] = i * STEP;
+    tsin[i] = Math.sin(xval[i]);
+    tcos[i] = Math.cos(xval[i]);
+    ttan[i] = Math.tan(xval[i]); // optionally approximate with division: tsin[i] / tcos[i];
+  }
+  for (let i = 0; i < N2; i++) {
+    rsin[i] = 0.0/0.0;
+    rcos[i] = 0.0/0.0;
+    rtan[i] = 0.0/0.0;
+  }
+  print(6. * isin(.5), "\n");
+  print(3. * icos(.5), "\n");
+  print(4. * itan(1.), "\n");
 }
 
 thieles_interpolation();
 
 fn ackermann(m, n) {
-    if (m == 0) return n + 1;
-    if (n == 0) return ackermann(m - 1, 1);
-    return ackermann(m - 1, ackermann(m, n - 1));
+  if (m == 0) return n + 1;
+  if (n == 0) return ackermann(m - 1, 1);
+  return ackermann(m - 1, ackermann(m, n - 1));
 }
 
 for (let m = 0; m <= 5; m++)
-    for (let n = 0; n < 5 - m; n++)
-        print("A(", m, ", ", n, ") = ", ackermann(m, n), "\n");
+  for (let n = 0; n < 5 - m; n++)
+    print("A(", m, ", ", n, ") = ", ackermann(m, n), "\n");

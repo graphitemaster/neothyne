@@ -12,8 +12,6 @@ static void indent(int level) {
 
 size_t Instruction::size(Instruction *instruction) {
     switch (instruction->m_type) {
-    case kGetRoot:          return sizeof(GetRoot);
-    case kGetContext:       return sizeof(GetContext);
     case kNewObject:        return sizeof(NewObject);
     case kNewIntObject:     return sizeof(NewIntObject);
     case kNewFloatObject:   return sizeof(NewFloatObject);
@@ -45,14 +43,6 @@ void Instruction::dump(Instruction **instructions, int level) {
 
     indent(level);
     switch (instruction->m_type) {
-    case kGetRoot:
-        u::Log::out("GetRoot:           %%%zu\n", ((GetRoot *)instruction)->m_slot);
-        *instructions = (Instruction *)((GetRoot *)instruction + 1);
-        break;
-    case kGetContext:
-        u::Log::out("GetContext:        %%%zu\n", ((GetContext *)instruction)->m_slot);
-        *instructions = (Instruction *)((GetContext *)instruction + 1);
-        break;
     case kNewObject:
         u::Log::out("NewObject:         %%%zu => %%%zu\n",
             ((NewObject *)instruction)->m_targetSlot,
@@ -83,9 +73,8 @@ void Instruction::dump(Instruction **instructions, int level) {
         *instructions = (Instruction *)((NewStringObject *)instruction + 1);
         break;
     case kNewClosureObject:
-        u::Log::out("NewClosureObject:  %%%zu @ %%%zu\n",
-            ((NewClosureObject *)instruction)->m_targetSlot,
-            ((NewClosureObject *)instruction)->m_contextSlot);
+        u::Log::out("NewClosureObject:  %%%zu\n",
+            ((NewClosureObject *)instruction)->m_targetSlot);
         *instructions = (Instruction *)((NewClosureObject *)instruction + 1);
         break;
     case kCloseObject:

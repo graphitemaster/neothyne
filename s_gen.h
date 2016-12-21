@@ -31,13 +31,14 @@ struct Gen {
     static void addCloseObject(Gen *gen, Slot objectSlot);
 
     static Slot addGetContext(Gen *gen);
+    static void addSetContext(Gen *gen, Slot object);
 
     static Slot addNewObject(Gen *gen, Slot parentSlot);
-    static Slot addNewIntObject(Gen *gen, Slot contextSlot, int value);
-    static Slot addNewFloatObject(Gen *gen, Slot contextSlot, float value);
-    static Slot addNewArrayObject(Gen *gen, Slot contextSlot);
-    static Slot addNewStringObject(Gen *gen, Slot contextSlot, const char *value);
-    static Slot addNewClosureObject(Gen *gen, Slot contextSlot, UserFunction *function);
+    static Slot addNewIntObject(Gen *gen, int value);
+    static Slot addNewFloatObject(Gen *gen, float value);
+    static Slot addNewArrayObject(Gen *gen);
+    static Slot addNewStringObject(Gen *gen, const char *value);
+    static Slot addNewClosureObject(Gen *gen, UserFunction *function);
 
     static Slot addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot *arguments, size_t count);
     static Slot addCall(Gen *gen, Slot functionSlot, Slot thisSlot);
@@ -50,7 +51,7 @@ struct Gen {
     static void addReturn(Gen *gen, Slot slot);
 
     static void addFreeze(Gen *gen, Slot object);
-
+    
     static Slot addDefineFastSlot(Gen *gen, Slot objectSlot, const char *key);
     static void addReadFastSlot(Gen *gen, Slot sourceSlot, Slot targetSlot);
     static void addWriteFastSlot(Gen *gen, Slot sourceSlot, Slot targetSlot);
@@ -71,6 +72,8 @@ struct Gen {
 private:
     friend struct Parser;
 
+    static void addLike(Gen *gen, Instruction *basis, size_t size, Instruction *instruction);
+    
     static void addInstruction(Gen *gen, size_t size, Instruction *instruction);
 
     const char *m_name;

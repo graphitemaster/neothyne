@@ -61,6 +61,7 @@ void Gen::addInstruction(Gen *gen, size_t size, Instruction *instruction) {
     U_ASSERT(!gen->m_blockTerminated);
     U_ASSERT(gen->m_currentRange);
     instruction->m_belongsTo = gen->m_currentRange;
+    instruction->m_contextSlot = gen->m_scope;
     FunctionBody *body = &gen->m_body;
     InstructionBlock *block = &body->m_blocks[body->m_count - 1];
     const size_t currentLength = (unsigned char *)block->m_instructionsEnd - (unsigned char *)block->m_instructions;
@@ -70,6 +71,15 @@ void Gen::addInstruction(Gen *gen, size_t size, Instruction *instruction) {
     memcpy((unsigned char *)block->m_instructions + currentLength, instruction, size);
     if (instruction->m_type == kBranch || instruction->m_type == kTestBranch || instruction->m_type == kReturn)
         gen->m_blockTerminated = true;
+}
+
+void Gen::addLike(Gen *gen, Instruction *basis, size_t size, Instruction *instruction) {
+    const Slot backup = gen->m_scope;
+    useRangeStart(gen, basis->m_belongsTo);
+    gen->m_scope = basis->m_contextSlot;
+    addInstruction(gen, size, instruction);
+    useRangeEnd(gen, basis->m_belongsTo);
+    gen->m_scope = backup;
 }
 
 Slot Gen::addAccess(Gen *gen, Slot objectSlot, Slot keySlot) {
@@ -101,15 +111,6 @@ void Gen::addCloseObject(Gen *gen, Slot objectSlot) {
     addInstruction(gen, sizeof closeObject, (Instruction *)&closeObject);
 }
 
-Slot Gen::addGetContext(Gen *gen) {
-    Instruction::GetContext getContext;
-    getContext.m_type = kGetContext;
-    getContext.m_belongsTo = nullptr;
-    getContext.m_slot = gen->m_slot++;
-    addInstruction(gen, sizeof getContext, (Instruction *)&getContext);
-    return gen->m_slot - 1;
-}
-
 Slot Gen::addNewObject(Gen *gen, Slot parentSlot) {
     Instruction::NewObject newObject;
     newObject.m_type = kNewObject;
@@ -120,7 +121,7 @@ Slot Gen::addNewObject(Gen *gen, Slot parentSlot) {
     return gen->m_slot - 1;
 }
 
-Slot Gen::addNewIntObject(Gen *gen, Slot, int value) {
+Slot Gen::addNewIntObject(Gen *gen, int value) {
     Instruction::NewIntObject newIntObject;
     newIntObject.m_type = kNewIntObject;
     newIntObject.m_belongsTo = nullptr;
@@ -131,7 +132,7 @@ Slot Gen::addNewIntObject(Gen *gen, Slot, int value) {
     return gen->m_slot - 1;
 }
 
-Slot Gen::addNewFloatObject(Gen *gen, Slot, float value) {
+Slot Gen::addNewFloatObject(Gen *gen, float value) {
     Instruction::NewFloatObject newFloatObject;
     newFloatObject.m_type = kNewFloatObject;
     newFloatObject.m_belongsTo = nullptr;
@@ -142,7 +143,7 @@ Slot Gen::addNewFloatObject(Gen *gen, Slot, float value) {
     return gen->m_slot - 1;
 }
 
-Slot Gen::addNewArrayObject(Gen *gen, Slot) {
+Slot Gen::addNewArrayObject(Gen *gen) {
     Instruction::NewArrayObject newArrayObject;
     newArrayObject.m_type = kNewArrayObject;
     newArrayObject.m_belongsTo = nullptr;
@@ -151,7 +152,7 @@ Slot Gen::addNewArrayObject(Gen *gen, Slot) {
     return gen->m_slot - 1;
 }
 
-Slot Gen::addNewStringObject(Gen *gen, Slot, const char *value) {
+Slot Gen::addNewStringObject(Gen *gen, const char *value) {
     Instruction::NewStringObject newStringObject;
     newStringObject.m_type = kNewStringObject;
     newStringObject.m_belongsTo = nullptr;
@@ -162,12 +163,11 @@ Slot Gen::addNewStringObject(Gen *gen, Slot, const char *value) {
     return gen->m_slot - 1;
 }
 
-Slot Gen::addNewClosureObject(Gen *gen, Slot contextSlot, UserFunction *function) {
+Slot Gen::addNewClosureObject(Gen *gen, UserFunction *function) {
     Instruction::NewClosureObject newClosureObject;
     newClosureObject.m_type = kNewClosureObject;
     newClosureObject.m_belongsTo = nullptr;
     newClosureObject.m_targetSlot = gen->m_slot++;
-    newClosureObject.m_contextSlot = contextSlot;
     newClosureObject.m_function = function;
     addInstruction(gen, sizeof newClosureObject, (Instruction *)&newClosureObject);
     return gen->m_slot - 1;
@@ -307,6 +307,7 @@ struct SlotObjectInfo {
     const char **m_namesData;
     size_t m_namesLength;
     FileRange *m_belongsTo;
+    Slot m_contextSlot;
     Instruction *m_afterObjectDecl;
 };
 
@@ -345,6 +346,7 @@ static inline void findStaticObjectSlots(UserFunction *function, SlotObjectInfo 
                 (*slots)[targetSlot].m_namesData = namesData;
                 (*slots)[targetSlot].m_namesLength = namesLength;
                 (*slots)[targetSlot].m_belongsTo = instruction->m_belongsTo;
+                (*slots)[targetSlot].m_contextSlot = instruction->m_contextSlot;
 
                 instruction = (Instruction *)((Instruction::CloseObject *)instruction + 1);
                 (*slots)[targetSlot].m_afterObjectDecl = instruction;
@@ -369,10 +371,6 @@ static inline void findPrimitiveSlots(UserFunction *function, bool **slots) {
             case kNewObject:
                 (*slots)[((Instruction::NewObject*)instruction)->m_parentSlot] = false;
                 instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::NewObject));
-                break;
-            case kNewClosureObject:
-                (*slots)[((Instruction::NewClosureObject*)instruction)->m_contextSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::NewClosureObject));
                 break;
             case kAccess:
                 (*slots)[((Instruction::Access*)instruction)->m_objectSlot] = false;
@@ -446,9 +444,7 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
                 accessStringKey.m_objectSlot = access->m_objectSlot;
                 accessStringKey.m_targetSlot = access->m_targetSlot;
                 accessStringKey.m_key = slotTable[access->m_keySlot];
-                useRangeStart(&gen, access->m_belongsTo);
-                addInstruction(&gen, sizeof accessStringKey, (Instruction *)&accessStringKey);
-                useRangeEnd(&gen, access->m_belongsTo);
+                addLike(&gen, instruction, sizeof accessStringKey, (Instruction *)&accessStringKey);
                 instruction = (Instruction *)(access + 1);
                 accesses++;
                 continue;
@@ -462,16 +458,12 @@ UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
                 assignStringKey.m_valueSlot = assign->m_valueSlot;
                 assignStringKey.m_key = slotTable[assign->m_keySlot];
                 assignStringKey.m_assignType = assign->m_assignType;
-                useRangeStart(&gen, assign->m_belongsTo);
-                addInstruction(&gen, sizeof assignStringKey, (Instruction *)&assignStringKey);
-                useRangeEnd(&gen, assign->m_belongsTo);
+                addLike(&gen, instruction, sizeof assignStringKey, (Instruction *)&assignStringKey);
                 instruction = (Instruction *)(assign + 1);
                 assignments++;
                 continue;
             }
-            useRangeStart(&gen, instruction->m_belongsTo);
-            addInstruction(&gen, Instruction::size(instruction), instruction);
-            useRangeEnd(&gen, instruction->m_belongsTo);
+            addLike(&gen, instruction, Instruction::size(instruction), instruction);
             instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
         }
     }
@@ -508,8 +500,8 @@ UserFunction *Gen::predictPass(UserFunction *function) {
                         break;
                     }
                     bool keyInObject = false;
-                    for (size_t i = 0; i < info[objectSlot].m_namesLength; i++) {
-                        const char *objectKey = info[objectSlot].m_namesData[i];
+                    for (size_t k = 0; k < info[objectSlot].m_namesLength; k++) {
+                        const char *objectKey = info[objectSlot].m_namesData[k];
                         if (strcmp(objectKey, newAccessStringKey.m_key) == 0) {
                             keyInObject = true;
                             break;
@@ -525,17 +517,12 @@ UserFunction *Gen::predictPass(UserFunction *function) {
                     newAccessStringKey.m_objectSlot = info[objectSlot].m_parentSlot;
                     count++;
                 }
-                useRangeStart(&gen, instruction->m_belongsTo);
-                addInstruction(&gen, sizeof newAccessStringKey, (Instruction *)&newAccessStringKey);
-                useRangeEnd(&gen, instruction->m_belongsTo);
+                addLike(&gen, instruction, sizeof newAccessStringKey, (Instruction *)&newAccessStringKey);
                 instruction = (Instruction *)(accessStringKey + 1);
                 continue;
             }
 
-            useRangeStart(&gen, instruction->m_belongsTo);
-            addInstruction(&gen, Instruction::size(instruction), instruction);
-            useRangeEnd(&gen, instruction->m_belongsTo);
-
+            addLike(&gen, instruction, Instruction::size(instruction), instruction);
             instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
         }
     }
@@ -589,6 +576,7 @@ UserFunction *Gen::fastSlotPass(UserFunction *function) {
                 const Slot slot = infoSlots[k];
                 if (instruction == info[slot].m_afterObjectDecl) {
                     useRangeStart(&gen, info[slot].m_belongsTo);
+                    gen.m_scope = info[slot].m_contextSlot;
                     for (size_t l = 0; l < info[slot].m_namesLength; l++) {
                         fastSlots[slot][l] = addDefineFastSlot(&gen, slot, info[slot].m_namesData[l]);
                         defines++;
@@ -608,6 +596,7 @@ UserFunction *Gen::fastSlotPass(UserFunction *function) {
                         if (!strcmp(key, name)) {
                             const Slot fastSlot = fastSlots[objectSlot][k];
                             useRangeStart(&gen, instruction->m_belongsTo);
+                            gen.m_scope = instruction->m_contextSlot;
                             addReadFastSlot(&gen, fastSlot, accessStringKeyInstruction->m_targetSlot);
                             reads++;
                             useRangeEnd(&gen, instruction->m_belongsTo);
@@ -628,6 +617,7 @@ UserFunction *Gen::fastSlotPass(UserFunction *function) {
                         if (!strcmp(key, name)) {
                             const Slot fastSlot = fastSlots[objectSlot][k];
                             useRangeStart(&gen, instruction->m_belongsTo);
+                            gen.m_scope = instruction->m_contextSlot;
                             addWriteFastSlot(&gen, assignStringKeyInstruction->m_valueSlot, fastSlot);
                             writes++;
                             useRangeEnd(&gen, instruction->m_belongsTo);
@@ -638,9 +628,7 @@ UserFunction *Gen::fastSlotPass(UserFunction *function) {
                 }
             }
 
-            useRangeStart(&gen, instruction->m_belongsTo);
-            addInstruction(&gen, Instruction::size(instruction), instruction);
-            useRangeEnd(&gen, instruction->m_belongsTo);
+            addLike(&gen, instruction, Instruction::size(instruction), instruction);
             instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
         }
     }

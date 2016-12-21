@@ -39,6 +39,8 @@ struct Field {
 
     // The field value
     void *m_value;
+    
+    void *m_aux;
 };
 
 struct Table {
@@ -146,9 +148,6 @@ struct RootSet {
 struct CallFrame {
     // The function for this call frame
     UserFunction *m_function;
-
-    // The context of this function
-    Object *m_context;
 
     // Array of slots allocated for this call frame
     Object **m_slots;

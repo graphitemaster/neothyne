@@ -12,8 +12,6 @@ struct Object;
 
 enum InstructionType {
     kInvalid = -1,
-    kGetRoot,
-    kGetContext,
     kNewObject,
     kNewIntObject,
     kNewFloatObject,
@@ -43,8 +41,6 @@ enum AssignType {
 };
 
 struct Instruction {
-    struct GetRoot;
-    struct GetContext;
     struct NewObject;
     struct NewIntObject;
     struct NewFloatObject;
@@ -70,6 +66,7 @@ struct Instruction {
     static size_t size(Instruction *instruction);
 
     InstructionType m_type;
+    Slot m_contextSlot;
     FileRange *m_belongsTo;
 };
 
@@ -93,14 +90,6 @@ struct UserFunction {
     bool m_isMethod;
     bool m_hasVariadicTail;
     FunctionBody m_body;
-};
-
-struct Instruction::GetRoot : Instruction {
-    Slot m_slot;
-};
-
-struct Instruction::GetContext : Instruction {
-    Slot m_slot;
 };
 
 struct Instruction::NewObject : Instruction {
@@ -132,7 +121,6 @@ struct Instruction::NewStringObject : Instruction {
 
 struct Instruction::NewClosureObject : Instruction {
     Slot m_targetSlot;
-    Slot m_contextSlot;
     UserFunction *m_function;
 };
 

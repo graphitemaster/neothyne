@@ -133,8 +133,6 @@ void VM::recordProfile(State *state) {
         } \
     } while (0)
 
-static VMFnWrap instrGetRoot(VMState *state) U_PURE;
-static VMFnWrap instrGetContext(VMState *state) U_PURE;
 static VMFnWrap instrNewObject(VMState *state) U_PURE;
 static VMFnWrap instrNewIntObject(VMState *state) U_PURE;
 static VMFnWrap instrNewFloatObject(VMState *state) U_PURE;
@@ -158,8 +156,6 @@ static VMFnWrap instrReadFastSlot(VMState *state) U_PURE;
 static VMFnWrap instrWriteFastSlot(VMState *state) U_PURE;
 
 static const VMInstrFn instrFunctions[] = {
-    instrGetRoot,
-    instrGetContext,
     instrNewObject,
     instrNewIntObject,
     instrNewFloatObject,
@@ -181,24 +177,6 @@ static const VMInstrFn instrFunctions[] = {
     instrReadFastSlot,
     instrWriteFastSlot
 };
-
-static VMFnWrap instrGetRoot(VMState *state) {
-    const auto *instruction = (Instruction::GetRoot *)state->m_instr;
-    const Slot slot = instruction->m_slot;
-    VM_ASSERTION(slot < state->m_cf->m_count, "slot addressing error");
-    state->m_cf->m_slots[slot] = state->m_root;
-    state->m_instr = (Instruction *)(instruction + 1);
-    return { instrFunctions[state->m_instr->m_type] };
-}
-
-static VMFnWrap instrGetContext(VMState *state) {
-    const auto *instruction = (Instruction::GetContext *)state->m_instr;
-    const Slot slot = instruction->m_slot;
-    VM_ASSERTION(slot < state->m_cf->m_count, "slot addressing error");
-    state->m_cf->m_slots[slot] = state->m_cf->m_context;
-    state->m_instr = (Instruction *)(instruction + 1);
-    return { instrFunctions[state->m_instr->m_type] };
-}
 
 static VMFnWrap instrNewObject(VMState *state) {
     const auto *instruction = (Instruction::NewObject *)state->m_instr;
@@ -276,15 +254,13 @@ static VMFnWrap instrNewStringObject(VMState *state) {
 
 static VMFnWrap instrNewClosureObject(VMState *state) {
     const auto *instruction = (Instruction::NewClosureObject *)state->m_instr;
-
     const Slot targetSlot = instruction->m_targetSlot;
     const Slot contextSlot = instruction->m_contextSlot;
-
     VM_ASSERTION(targetSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(contextSlot < state->m_cf->m_count, "slot addressing error");
-
+    Object *context = state->m_cf->m_slots[contextSlot];
     state->m_cf->m_slots[targetSlot] = Object::newClosure(state->m_restState,
-                                                          state->m_cf->m_slots[contextSlot],
+                                                          context,
                                                           instruction->m_function);
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
@@ -542,6 +518,9 @@ static VMFnWrap instrCall(VMState *state) {
 
     const size_t prevStackLength = state->m_restState->m_length;
 
+    // TODO: verify if any callable needs to access cf->m_instr
+    state->m_cf->m_instructions = state->m_instr;
+
     if (!VM::callCallable(state->m_restState, thisObject_, functionObject_, arguments, argsLength)) {
         return { instrHalt };
     }
@@ -767,7 +746,7 @@ bool VM::callCallable(State *state, Object *self, Object *function, Object **arg
 void VM::callFunction(State *state, Object *context, UserFunction *function, Object **arguments, size_t count) {
     CallFrame *frame = addFrame(state, function->m_slots, function->m_fastSlots);
     frame->m_function = function;
-    frame->m_context = context;
+    frame->m_slots[1] = context;
     GC::addRoots(state, frame->m_slots, frame->m_count, &frame->m_root);
 
     if (frame->m_function->m_hasVariadicTail)
@@ -777,7 +756,7 @@ void VM::callFunction(State *state, Object *context, UserFunction *function, Obj
 
     // TODO: check if this is correct for the context
     for (size_t i = 0; i < function->m_arity; i++)
-        frame->m_slots[i + 1] = arguments[i];
+        frame->m_slots[i + 2] = arguments[i];
 
     VM_ASSERT(frame->m_function->m_body.m_count, "invalid function");
     frame->m_instructions = frame->m_function->m_body.m_blocks[0].m_instructions;

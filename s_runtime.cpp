@@ -630,7 +630,6 @@ Object *createRoot(State *state) {
     Object *root = Object::newObject(state, nullptr);
 
     state->m_root = root;
-    state->m_stack[state->m_length - 1].m_context = root;
 
     RootSet pinned;
     GC::addRoots(state, &root, 1, &pinned);

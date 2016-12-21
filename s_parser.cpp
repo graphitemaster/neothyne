@@ -279,7 +279,7 @@ void Parser::Reference::assignShadowing(Gen *gen, Reference reference, Slot valu
 Parser::Reference Parser::Reference::getScope(Gen *gen, const char *name) {
     // during speculative parsing there is no gen
     if (gen) {
-        Slot nameSlot = Gen::addNewStringObject(gen, gen->m_scope, name);
+        Slot nameSlot = Gen::addNewStringObject(gen, name);
         return { gen->m_scope, nameSlot, kVariable };
     }
     return { 0, NoSlot, kVariable };
@@ -318,7 +318,7 @@ ParseResult Parser::parseObjectLiteral(char **contents, Gen *gen, Slot objectSlo
 
         if (gen) {
             Gen::useRangeStart(gen, addEntryRange);
-            Slot keySlot = Gen::addNewStringObject(gen, gen->m_scope, keyName);
+            Slot keySlot = Gen::addNewStringObject(gen, keyName);
             Slot valueSlot = Reference::access(gen, value);
             Gen::addAssign(gen, objectSlot, keySlot, valueSlot, kAssignPlain);
             Gen::useRangeEnd(gen, addEntryRange);
@@ -374,14 +374,14 @@ ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Slot objectSlot
     *contents = text;
     if (gen) {
         Gen::useRangeStart(gen, range);
-        Slot keySlot1 = Gen::addNewStringObject(gen, gen->m_scope, "resize");
-        Slot keySlot2 = Gen::addNewStringObject(gen, gen->m_scope, "[]=");
+        Slot keySlot1 = Gen::addNewStringObject(gen, "resize");
+        Slot keySlot2 = Gen::addNewStringObject(gen, "[]=");
         Slot resizeFunction = Reference::access(gen, { objectSlot, keySlot1, Reference::kObject });
         Slot assignFunction = Reference::access(gen, { objectSlot, keySlot2, Reference::kObject });
-        Slot resizeSlot = Gen::addNewIntObject(gen, gen->m_scope, values.size());
+        Slot resizeSlot = Gen::addNewIntObject(gen, values.size());
         objectSlot = Gen::addCall(gen, resizeFunction, objectSlot, resizeSlot);
         for (size_t i = 0; i < values.size(); i++) {
-            Slot indexSlot = Gen::addNewIntObject(gen, gen->m_scope, i);
+            Slot indexSlot = Gen::addNewIntObject(gen, i);
             Gen::addCall(gen, assignFunction, objectSlot, indexSlot, Reference::access(gen, values[i]));
         }
         Gen::useRangeEnd(gen, range);
@@ -400,7 +400,7 @@ ParseResult Parser::parseArrayLiteral(char **contents, Gen *gen, Reference *refe
     Slot objectSlot = 0;
     Gen::useRangeStart(gen, literalRange);
     if (gen) {
-        objectSlot = Gen::addNewArrayObject(gen, gen->m_scope);
+        objectSlot = Gen::addNewArrayObject(gen);
     }
     *contents = text;
     *reference = { objectSlot, Reference::NoSlot, Reference::kNone };
@@ -434,7 +434,7 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
             Slot slot = 0;
             if (gen) {
                 Gen::useRangeStart(gen, range);
-                slot = Gen::addNewFloatObject(gen, gen->m_scope, value);
+                slot = Gen::addNewFloatObject(gen, value);
                 Gen::useRangeEnd(gen, range);
             }
             *reference = { slot, Reference::NoSlot, Reference::kNone };
@@ -450,7 +450,7 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
             Slot slot = 0;
             if (gen) {
                 Gen::useRangeStart(gen, range);
-                slot = Gen::addNewIntObject(gen, gen->m_scope, value);
+                slot = Gen::addNewIntObject(gen, value);
                 Gen::useRangeEnd(gen, range);
             }
             *reference = { slot, Reference::NoSlot, Reference::kNone };
@@ -468,7 +468,7 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
                 FileRange::recordEnd(text, range);
                 if (gen) {
                     Gen::useRangeStart(gen, range);
-                    slot = Gen::addNewStringObject(gen, gen->m_scope, value);
+                    slot = Gen::addNewStringObject(gen, value);
                     Gen::useRangeEnd(gen, range);
                 }
             }
@@ -530,7 +530,7 @@ ParseResult Parser::parseExpressionStem(char **contents, Gen *gen, Reference *re
         if (gen) {
             function->m_isMethod = isMethod;
             Gen::useRangeStart(gen, range); // count closure allocation as function
-            slot = Gen::addNewClosureObject(gen, gen->m_scope, function);
+            slot = Gen::addNewClosureObject(gen, function);
             Gen::useRangeEnd(gen, range);
         }
         *reference = { slot, Reference::NoSlot, Reference::kNone };
@@ -685,7 +685,7 @@ ParseResult Parser::parsePropertyAccess(char **contents, Gen *gen, Reference *ex
     Slot keySlot = 0;
     Gen::useRangeStart(gen, propertyRange);
     if (gen)
-        keySlot = Gen::addNewStringObject(gen, gen->m_scope, keyName);
+        keySlot = Gen::addNewStringObject(gen, keyName);
     *expression = {
         Reference::access(gen, *expression),
         keySlot,
@@ -733,7 +733,7 @@ void Parser::buildOperation(Gen *gen, const char *op, Reference *result, Referen
     Gen::useRangeStart(gen, range);
     Slot lhsSlot = Reference::access(gen, lhs);
     Slot rhsSlot = Reference::access(gen, rhs);
-    Slot function = Gen::addAccess(gen, lhsSlot, Gen::addNewStringObject(gen, gen->m_scope, op));
+    Slot function = Gen::addAccess(gen, lhsSlot, Gen::addNewStringObject(gen, op));
     *result = { Gen::addCall(gen, function, lhsSlot, rhsSlot), Reference::NoSlot, Reference::kNone };
     Gen::useRangeEnd(gen, range);
 }
@@ -781,7 +781,7 @@ ParseResult Parser::parsePostfix(char **contents, Gen *gen, Reference *reference
     Slot one = 0;
     if (gen) {
         prev = Reference::access(gen, *reference);
-        one = Gen::addNewIntObject(gen, gen->m_scope, 1);
+        one = Gen::addNewIntObject(gen, 1);
     }
     Gen::useRangeEnd(gen, operatorRange);
 
@@ -820,7 +820,7 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
         Gen::useRangeStart(gen, negatedRange);
         Slot zero = 0;
         if (gen) {
-            zero = Gen::addNewIntObject(gen, gen->m_scope, 0);
+            zero = Gen::addNewIntObject(gen, 0);
         }
         Gen::useRangeEnd(gen, negatedRange);
         Reference ref = { zero, Reference::NoSlot, Reference::kNone };
@@ -998,7 +998,7 @@ ParseResult Parser::parseExpression(char **contents, Gen *gen, int level, Refere
     if (negated && gen) {
         Gen::useRangeStart(gen, range);
         Slot lhs = Reference::access(gen, *reference);
-        Slot bnot = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, gen->m_scope, "!"));
+        Slot bnot = Gen::addAccess(gen, lhs, Gen::addNewStringObject(gen, "!"));
         *reference = { Gen::addCall(gen, bnot, lhs), Reference::NoSlot, Reference::kNone };
         Gen::useRangeEnd(gen, range);
     }
@@ -1128,11 +1128,16 @@ ParseResult Parser::parseLetDeclaration(char **contents, Gen *gen, FileRange *le
 
     FileRange *letName = Gen::newRange(text);
     const char *variableName = parseIdentifier(&text);
+    if (!variableName) {
+        logParseError(text, "expected identifier in 'let' declaration");
+        return kParseError;
+    }
+    
     FileRange::recordEnd(text, letName);
 
     Gen::useRangeStart(gen, letName);
     Slot value;
-    Slot variableNameSlot = Gen::addNewStringObject(gen, letScope, variableName);
+    Slot variableNameSlot = Gen::addNewStringObject(gen, variableName);
     Gen::addAssign(gen, letScope, variableNameSlot, 0, kAssignPlain);
     Gen::addCloseObject(gen, letScope);
     Gen::useRangeEnd(gen, letName);
@@ -1369,8 +1374,8 @@ ParseResult Parser::parseFunctionDeclaration(char **contents, Gen *gen, FileRang
         return result;
     U_ASSERT(result == kParseOk);
     Gen::useRangeStart(gen, range);
-    Slot nameSlot = Gen::addNewStringObject(gen, gen->m_scope, function->m_name);
-    Slot slot = Gen::addNewClosureObject(gen, gen->m_scope, function);
+    Slot nameSlot = Gen::addNewStringObject(gen, function->m_name);
+    Slot slot = Gen::addNewClosureObject(gen, function);
     Gen::addAssign(gen, gen->m_scope, nameSlot, slot, kAssignPlain);
     Gen::addCloseObject(gen, gen->m_scope);
     Gen::addFreeze(gen, gen->m_scope);
@@ -1527,7 +1532,7 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
 
     Gen gen = { };
     gen.m_count = arguments.size();
-    gen.m_slot = arguments.size() + 1;
+    gen.m_slot = arguments.size() + 2;
     gen.m_name = functionName;
     gen.m_blockTerminated = true;
     gen.m_hasVariadicTail = hasVariadicTail;
@@ -1535,11 +1540,12 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     // generate lexical scope
     Gen::newBlock(&gen);
     Gen::useRangeStart(&gen, functionFrameRange);
-    Slot contextSlot = Gen::addGetContext(&gen);
-    gen.m_scope = Gen::addNewObject(&gen, contextSlot);
+    gen.m_scope = 1;
+    
+    gen.m_scope = Gen::addNewObject(&gen, gen.m_scope);
     for (size_t i = 0; i < arguments.size(); i++) {
-        Slot argumentSlot = Gen::addNewStringObject(&gen, gen.m_scope, arguments[i]);
-        Gen::addAssign(&gen, gen.m_scope, argumentSlot, i + 1, kAssignPlain);
+        Slot argumentSlot = Gen::addNewStringObject(&gen, arguments[i]);
+        Gen::addAssign(&gen, gen.m_scope, argumentSlot, i + 2, kAssignPlain);
     }
     Gen::addCloseObject(&gen, gen.m_scope);
     Gen::useRangeEnd(&gen, functionFrameRange);
@@ -1560,7 +1566,7 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
 ParseResult Parser::parseModule(char **contents, UserFunction **function) {
     Gen gen = { };
     gen.m_blockTerminated = true;
-    gen.m_slot = 1;
+    gen.m_slot = 2;
 
     // capture future module statement
     FileRange *moduleRange = Gen::newRange(*contents);
@@ -1568,7 +1574,7 @@ ParseResult Parser::parseModule(char **contents, UserFunction **function) {
 
     Gen::useRangeStart(&gen, moduleRange);
     Gen::newBlock(&gen);
-    gen.m_scope = Gen::addGetContext(&gen);
+    gen.m_scope = 1;
     Gen::useRangeEnd(&gen, moduleRange);
 
     for (;;) {
