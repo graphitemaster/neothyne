@@ -39,8 +39,6 @@ struct Field {
 
     // The field value
     void *m_value;
-    
-    void *m_aux;
 };
 
 struct Table {
