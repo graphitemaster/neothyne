@@ -24,7 +24,7 @@ bool gRunning = true;
 bool gPlaying = false;
 world::descriptor *gSelected = nullptr; // Selected world entity
 client gClient;
-world gWorld;
+world *gWorld = nullptr;
 r::pipeline gPipeline;
 m::perspective gPerspective;
 
@@ -110,7 +110,8 @@ NVAR(float, u_z, "", -180.0f, 360.0f, 0.0f);
 a::Audio *gAudio;
 
 int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, bool &shutdown) {
-    gWorld.setRenderer(world_);
+    gWorld = new world;
+    gWorld->setRenderer(world_);
     gAudio = &audio;
 
     // Setup rendering pipeline
@@ -194,13 +195,13 @@ int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, 
         light.color = { u::randf(), u::randf(), u::randf() };
         light.position = places[i];
         //light.position.y -= 5.0f;
-        gWorld.insert(light);
+        gWorld->insert(light);
     }
     light.position = { 0, 110, 0 };
-    gWorld.insert(light);
+    gWorld->insert(light);
 
     // World only has one directional light
-    r::directionalLight *dlight = gWorld.getDirectionalLight();
+    r::directionalLight *dlight = gWorld->getDirectionalLight();
     if (dlight) {
         dlight->color = { 0.2, 0.2, 0.2 };
         dlight->ambient = 0.10f;
@@ -213,24 +214,24 @@ int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, 
     m.name = "models/iqmtest";
     m.position = { 40, 95, 0 };
     m.rotate = { 0, -90, 0 };
-    gWorld.insert(m);
+    gWorld->insert(m);
 
     m.name = "models/cube";
     m.position = { 85, 112, 35 };
-    gWorld.insert(m);
+    gWorld->insert(m);
 
     m.name = "models/ball";
     m.position = { 100, 110, 90 };
     m.scale = { 10, 10, 10 };
 
-    gWorld.insert(m);
+    gWorld->insert(m);
 
-    if (!gWorld.load("garden.kdgz"))
+    if (!gWorld->load("garden.kdgz"))
         neoFatal("failed to load world");
 #endif
 
     while (gRunning && !shutdown) {
-        gClient.update(gWorld, timer.delta());
+        gClient.update(*gWorld, timer.delta());
 
         gPerspective.fov = cl_fov;
         gPerspective.nearp = cl_nearp;
@@ -250,10 +251,10 @@ int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, 
         if (mouse.button & MouseState::kMouseButtonLeft && gSelected && !(gMenuState & kMenuEdit))
             edit::move();
 
-        if (gPlaying && gWorld.isLoaded()) {
-            gWorld.upload(gPerspective);
+        if (gPlaying && gWorld->isLoaded()) {
+            gWorld->upload(gPerspective);
             gl::ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            gWorld.render(gPipeline);
+            gWorld->render(gPipeline);
             gGui.render(gPipeline);
             gui::begin(mouse);
         } else {
@@ -399,5 +400,6 @@ int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, 
         //audio.setPan(handle, direction.x);
     }
 
+    delete gWorld;
     return 0;
 }

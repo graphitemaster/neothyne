@@ -4,19 +4,19 @@
 
 extern world::descriptor *gSelected;
 extern client gClient;
-extern world gWorld;
+extern world *gWorld;
 
 namespace edit {
 
 static m::vec3 *getEntityPosition() {
     if (!gSelected) return nullptr;
     switch (gSelected->type) {
-    case entity::kMapModel:    return &gWorld.getMapModel(gSelected->index).position;
-    case entity::kPlayerStart: return &gWorld.getPlayerStart(gSelected->index).position;
-    case entity::kPointLight:  return &gWorld.getPointLight(gSelected->index).position;
-    case entity::kSpotLight:   return &gWorld.getSpotLight(gSelected->index).position;
-    case entity::kTeleport:    return &gWorld.getTeleport(gSelected->index).position;
-    case entity::kJumppad:     return &gWorld.getJumppad(gSelected->index).position;
+    case entity::kMapModel:    return &gWorld->getMapModel(gSelected->index).position;
+    case entity::kPlayerStart: return &gWorld->getPlayerStart(gSelected->index).position;
+    case entity::kPointLight:  return &gWorld->getPointLight(gSelected->index).position;
+    case entity::kSpotLight:   return &gWorld->getSpotLight(gSelected->index).position;
+    case entity::kTeleport:    return &gWorld->getTeleport(gSelected->index).position;
+    case entity::kJumppad:     return &gWorld->getJumppad(gSelected->index).position;
     default:
         return nullptr;
     }
@@ -26,12 +26,12 @@ static m::vec3 *getEntityPosition() {
 static bool *getEntityHighlight() {
     if (!gSelected) return nullptr;
     switch (gSelected->type) {
-    case entity::kMapModel:    return &gWorld.getMapModel(gSelected->index).highlight;
-    case entity::kPlayerStart: return &gWorld.getPlayerStart(gSelected->index).highlight;
-    case entity::kPointLight:  return &gWorld.getPointLight(gSelected->index).highlight;
-    case entity::kSpotLight:   return &gWorld.getSpotLight(gSelected->index).highlight;
-    case entity::kTeleport:    return &gWorld.getTeleport(gSelected->index).highlight;
-    case entity::kJumppad:     return &gWorld.getJumppad(gSelected->index).highlight;
+    case entity::kMapModel:    return &gWorld->getMapModel(gSelected->index).highlight;
+    case entity::kPlayerStart: return &gWorld->getPlayerStart(gSelected->index).highlight;
+    case entity::kPointLight:  return &gWorld->getPointLight(gSelected->index).highlight;
+    case entity::kSpotLight:   return &gWorld->getSpotLight(gSelected->index).highlight;
+    case entity::kTeleport:    return &gWorld->getTeleport(gSelected->index).highlight;
+    case entity::kJumppad:     return &gWorld->getJumppad(gSelected->index).highlight;
     default:
         return nullptr;
     }
@@ -56,7 +56,7 @@ void select() {
     m::vec3 direction;
     gClient.getDirection(&direction, nullptr, nullptr);
     q.direction = direction.normalized();
-    if (gWorld.trace(q, &h, 1024.0f) && h.ent) {
+    if (gWorld->trace(q, &h, 1024.0f) && h.ent) {
         gSelected = h.ent;
         *getEntityHighlight() = true;
     }
@@ -75,7 +75,7 @@ void move() {
 
     // Don't collide with anything but geometry for this trace
     static constexpr float kMaxTraceDistance = 1024.0f;
-    if (gWorld.trace(q, &h, kMaxTraceDistance, false) && h.fraction > 0.01f) {
+    if (gWorld->trace(q, &h, kMaxTraceDistance, false) && h.fraction > 0.01f) {
         direction *= (kMaxTraceDistance * h.fraction);
         m::vec3 *position = getEntityPosition();
         if (position) {
@@ -87,7 +87,7 @@ void move() {
 
 void remove() {
     if (!gSelected) return;
-    gWorld.erase(gSelected->where);
+    gWorld->erase(gSelected->where);
     gSelected = nullptr;
 }
 

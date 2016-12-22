@@ -16,7 +16,7 @@
 extern bool gPlaying;
 extern bool gRunning;
 extern world::descriptor *gSelected;
-extern world gWorld;
+extern world *gWorld;
 extern client gClient;
 
 int gMenuState = kMenuMain | kMenuConsole; // Default state
@@ -160,7 +160,7 @@ static m::vec3 looking() {
     m::vec3 direction;
     gClient.getDirection(&direction, nullptr, nullptr);
     q.direction = direction.normalized();
-    gWorld.trace(q, &h, 1024.0f, false);
+    gWorld->trace(q, &h, 1024.0f, false);
     return h.position;
 }
 
@@ -206,7 +206,7 @@ static void menuColorGrading() {
     const size_t x = neoWidth() / 2 - w / 2;
     const size_t y = neoHeight() / 2 - h / 2;
 
-    auto *colorGrad = gWorld.getColorGrader();
+    auto *colorGrad = gWorld->getColorGrader();
     if (!colorGrad) return;
     auto &colorGrading = *colorGrad;
 
@@ -541,7 +541,7 @@ static void menuEdit() {
         // If there is something selected, render the GUI for it
         if (gSelected) {
             if (gSelected->type == entity::kMapModel) {
-                auto &mm = gWorld.getMapModel(gSelected->index);
+                auto &mm = gWorld->getMapModel(gSelected->index);
                 gui::value("Model");
                 gui::label("Scale");
                 gui::indent();
@@ -564,11 +564,11 @@ static void menuEdit() {
                 gui::dedent();
                 gui::separator();
                 if (gui::button("Delete")) {
-                    gWorld.erase(gSelected->where);
+                    gWorld->erase(gSelected->where);
                     gSelected = nullptr;
                 }
             } else if (gSelected->type == entity::kPointLight) {
-                auto &pl = gWorld.getPointLight(gSelected->index);
+                auto &pl = gWorld->getPointLight(gSelected->index);
                 int R = pl.color.x * 255.0f;
                 int G = pl.color.y * 255.0f;
                 int B = pl.color.z * 255.0f;
@@ -598,11 +598,11 @@ static void menuEdit() {
                     pl.castShadows = !pl.castShadows;
                 gui::separator();
                 if (gui::button("Delete")) {
-                    gWorld.erase(gSelected->where);
+                    gWorld->erase(gSelected->where);
                     gSelected = nullptr;
                 }
             } else if (gSelected->type == entity::kSpotLight) {
-                auto &sl = gWorld.getSpotLight(gSelected->index);
+                auto &sl = gWorld->getSpotLight(gSelected->index);
                 int R = sl.color.x * 255.0f;
                 int G = sl.color.y * 255.0f;
                 int B = sl.color.z * 255.0f;
@@ -639,7 +639,7 @@ static void menuEdit() {
                 };
                 gui::separator();
                 if (gui::button("Delete")) {
-                    gWorld.erase(gSelected->where);
+                    gWorld->erase(gSelected->where);
                     gSelected = nullptr;
                 }
             }
@@ -728,7 +728,7 @@ static void menuEdit() {
                         pl.diffuse = 0.5f;
                         pl.radius = 30;
                         pl.color = randomColor();
-                        gSelected = gWorld.insert(pl);
+                        gSelected = gWorld->insert(pl);
                     } else if (gui::item("Spot light")) {
                         r::spotLight sl;
                         sl.position = looking();
@@ -737,22 +737,22 @@ static void menuEdit() {
                         gClient.getDirection(&sl.direction, nullptr, nullptr);
                         sl.radius = 30;
                         sl.color = randomColor();
-                        gSelected = gWorld.insert(sl);
+                        gSelected = gWorld->insert(sl);
                     } else if (gui::item("Playerstart")) {
                         playerStart ps;
                         ps.position = looking();
                         gClient.getDirection(&ps.direction, nullptr, nullptr);
-                        gSelected = gWorld.insert(ps);
+                        gSelected = gWorld->insert(ps);
                     } else if (gui::item("Jumppad")) {
                         jumppad jp;
                         jp.position = looking();
                         gClient.getDirection(nullptr, &jp.direction, nullptr);
-                        gSelected = gWorld.insert(jp);
+                        gSelected = gWorld->insert(jp);
                     } else if (gui::item("Teleport")) {
                         teleport tp;
                         tp.position = looking();
                         gClient.getDirection(&tp.direction, nullptr, nullptr);
-                        gSelected = gWorld.insert(tp);
+                        gSelected = gWorld->insert(tp);
                     }
                 gui::dedent();
             }
@@ -767,7 +767,7 @@ static void menuEdit() {
     if (D(model)) {
         // Find all the model by name
         u::set<u::string> models;
-        for (auto &it : gWorld.getMapModels())
+        for (auto &it : gWorld->getMapModels())
             models.insert(it->name);
         if (models.size()) {
             gui::areaBegin("Mapmodels", x, y, w, h, D(modelScroll));
@@ -776,7 +776,7 @@ static void menuEdit() {
                     mapModel m;
                     m.name = it;
                     m.position = looking();
-                    gSelected = gWorld.insert(m);
+                    gSelected = gWorld->insert(m);
                     D(model) = false;
                 }
             }
