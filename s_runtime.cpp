@@ -46,6 +46,7 @@ static void boolCmp(State *state, Object *self, Object *function, Object **argum
 /// [Int]
 static void intMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
     VM_ASSERT_ARITY(1_z, count);
+    VM_ASSERT(arguments[0], "cannot perform integer arithmetic on Null");
 
     Object *intBase = state->m_shared->m_valueCache.m_intBase;
 
@@ -74,10 +75,12 @@ static void intMath(State *state, Object *self, Object *, Object **arguments, si
         float value1 = ((IntObject *)intObj1)->m_value;
         float value2 = ((FloatObject *)floatObj2)->m_value;
         switch (op) {
-        case kAdd: state->m_resultValue = Object::newFloat(state, value1 + value2); return;
-        case kSub: state->m_resultValue = Object::newFloat(state, value1 - value2); return;
-        case kMul: state->m_resultValue = Object::newFloat(state, value1 * value2); return;
-        case kDiv: state->m_resultValue = Object::newFloat(state, value1 / value2); return;
+        case kAdd:    state->m_resultValue = Object::newFloat(state, value1 + value2); return;
+        case kSub:    state->m_resultValue = Object::newFloat(state, value1 - value2); return;
+        case kMul:    state->m_resultValue = Object::newFloat(state, value1 * value2); return;
+        case kDiv:    state->m_resultValue = Object::newFloat(state, value1 / value2); return;
+        case kBitAnd: VM_ASSERT(false, "bit and with float operand not supported"); return;
+        case kBitOr:  VM_ASSERT(false, "bit or with float operand not supported"); return;
         }
     }
 
@@ -110,6 +113,7 @@ static void intBitOr(State *state, Object *self, Object *function, Object **argu
 
 static void intCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
     VM_ASSERT_ARITY(1_z, count);
+    VM_ASSERT(arguments[0], "cannot compare Int with Null");
 
     Object *intBase = state->m_shared->m_valueCache.m_intBase;
 
@@ -191,6 +195,7 @@ static void intToString(State *state, Object *self, Object *, Object **, size_t 
 /// [Float]
 static void floatMath(State *state, Object *self, Object *, Object **arguments, size_t count, int op) {
     VM_ASSERT_ARITY(1_z, count);
+    VM_ASSERT(arguments[0], "cannot perform floating point arithmetic on Null");
 
     Object *intBase = state->m_shared->m_valueCache.m_intBase;
     Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
@@ -231,6 +236,7 @@ static void floatDiv(State *state, Object *self, Object *function, Object **argu
 
 static void floatCompare(State *state, Object *self, Object *, Object **arguments, size_t count, int compare) {
     VM_ASSERT_ARITY(1_z, count);
+    VM_ASSERT(arguments[0], "cannot compare Float with Null");
 
     Object *intBase = state->m_shared->m_valueCache.m_intBase;
     Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
@@ -300,6 +306,7 @@ static void floatToString(State *state, Object *self, Object *, Object **, size_
 /// [String]
 static void stringAdd(State *state, Object *self, Object *, Object **arguments, size_t count) {
     VM_ASSERT_ARITY(1_z, count);
+    VM_ASSERT(arguments[0], "cannot perform string concatenation with Null");
 
     Object *stringBase = state->m_shared->m_valueCache.m_stringBase;
 

@@ -780,9 +780,9 @@ bool VM::callCallable(State *state, Object *self, Object *function, Object **arg
         return false;
     }
     if (functionObject)
-        functionObject->m_function(state, self, function, arguments, count);
+        functionObject->m_function(state, self, (Object *)functionObject, arguments, count);
     else
-        closureObject->m_function(state, self, function, arguments, count);
+        closureObject->m_function(state, self, (Object *)closureObject, arguments, count);
     return true;
 }
 
@@ -827,7 +827,6 @@ void VM::functionHandler(State *state, Object *self, Object *function, Object **
     context = setupVaradicArguments(state, context, &functionObject->m_closure, arguments, count);
     callFunction(state, context, &functionObject->m_closure, arguments, count);
     GC::enable(state);
-
 }
 
 void VM::methodHandler(State *state, Object *self, Object *function, Object **arguments, size_t count) {

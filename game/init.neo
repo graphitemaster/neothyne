@@ -15,7 +15,7 @@ fn sierpinski(n: Int) {
     for (let i = 0; i < y; i++)
       print(" ");
     for (let x: Int = 0; x + y < n; x++)
-      if (x & y) print("  "); else print("* ")
+      if (x & y) print("  "); else print("* ");
     print("\n");
   }
 }
@@ -97,5 +97,5 @@ fn ackermann(m: Int, n: Int) {
 }
 
 for (let m: Int = 0; m <= 5; m++)
-  for (let n: Int = 0; n < 6 - m; n++)
+  for (let n: Int = 0; n < 5 - m; n++)
     print("A(", m, ", ", n, ") = ", ackermann(m, n), "\n");

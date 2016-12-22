@@ -62,7 +62,7 @@ bool SourceRecord::findSourcePosition(char *source,
 {
     SourceRecord *record = m_record;
     while (record) {
-        if (source >= record->m_source.m_begin && source < record->m_source.m_end) {
+        if (source >= record->m_source.m_begin && source <= record->m_source.m_end) {
             *name = record->m_name;
             int rowCount = 0;
             SourceRange lineSearch = { record->m_source.m_begin, record->m_source.m_begin };

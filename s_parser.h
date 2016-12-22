@@ -34,6 +34,7 @@ private:
         };
 
         static Reference getScope(Gen *gen, const char *name);
+        static Reference simple(Slot slot);
         static Slot access(Gen *gen, Reference reference);
         static void assignPlain(Gen *gen, Reference reference, Slot value);
         static void assignExisting(Gen *gen, Reference reference, Slot value);
@@ -42,6 +43,7 @@ private:
         Slot m_base;
         Slot m_key;
         Mode m_mode;
+        FileRange *m_range;
     };
 
     static void consumeFiller(char **contents);
