@@ -35,13 +35,12 @@ void world::unload(bool destroy) {
     for (auto &it : m_billboards)   delete it;
     for (auto &it : m_pointLights)  delete it;
     for (auto &it : m_spotLights)   delete it;
-    for (auto &it : m_textures)     delete it.second;
     for (auto &it : m_models)       delete it.second;
+    for (auto &it : m_textures)     delete it.second;
 
     // release memory backing the containers
     if (destroy) {
         m_map.unload();
-        m_renderer->unload();
 
         // auxiliaries
         m_entities.destroy();
