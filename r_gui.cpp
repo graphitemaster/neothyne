@@ -1000,6 +1000,8 @@ void gui::drawTexture(float x, float y, float w, float h, const unsigned char *d
     gl::TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA,
         GL_UNSIGNED_BYTE, data);
 
+    delete[] (unsigned char *)data; // No longer needed
+
     b.start = m_vertices.size();
     m_vertices.reserve(m_vertices.size() + 6);
 

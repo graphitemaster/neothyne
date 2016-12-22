@@ -123,7 +123,7 @@ void Queue::addModel(int x, int y, int w, int h, const char *path, const r::pipe
     cmd.asModel.sv = sv;
 }
 
-void Queue::addTexture(int x, int y, int w, int h, const unsigned char *data) {
+void Queue::addTexture(int x, int y, int w, int h, const unsigned char *data, size_t size) {
     if (m_commands.full()) return;
     auto &cmd = m_commands.next();
     cmd.type = kCommandTexture;
@@ -131,7 +131,8 @@ void Queue::addTexture(int x, int y, int w, int h, const unsigned char *data) {
     cmd.asTexture.y = y;
     cmd.asTexture.w = w;
     cmd.asTexture.h = h;
-    cmd.asTexture.data = (unsigned char *)data;
+    cmd.asTexture.data = new unsigned char[size];
+    memcpy(cmd.asTexture.data, data, size);
 }
 
 // A reference to something in the gui
@@ -809,9 +810,7 @@ void drawModel(int x, int y, int w, int h, const char *path, const r::pipeline &
 }
 
 void drawTexture(int x, int y, int w, int h, const u::vector<unsigned char> &data) {
-    unsigned char *copy = new unsigned char[data.size()];
-    memcpy(copy, &data[0], data.size());
-    Q.addTexture(x, y, w, h, copy);
+    Q.addTexture(x, y, w, h, &data[0], data.size());
 }
 
 const Queue &commands() {
@@ -831,14 +830,6 @@ void begin(MouseState &mouse) {
     G.m_isHot = false;
 
     G.m_widget.reset();
-
-    // be sure to free any texture data we copied
-    for (const auto &it : commands()()) {
-        if (it.type != kCommandTexture)
-            continue;
-        delete[] it.asTexture.data;
-    }
-
     G.m_queue.reset();
 
     G.m_area = 1;

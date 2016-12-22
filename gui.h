@@ -112,7 +112,7 @@ struct Queue {
     void addRectangle(int x, int y, int w, int h, int r, uint32_t color);
     void addTriangle(int x, int y, int w, int h, int flags, uint32_t color);
     void addText(int x, int y, int align, const char *contents, uint32_t color);
-    void addTexture(int x, int y, int w, int h, const unsigned char *data);
+    void addTexture(int x, int y, int w, int h, const unsigned char *data, size_t size);
     void addImage(int x, int y, int w, int h, const char *path);
     void addModel(int x, int y, int w, int h, const char *path, const r::pipeline &p, int su = 0, int sv = 0);
 private:
