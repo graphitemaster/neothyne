@@ -68,7 +68,8 @@ SCRIPTING_SOURCES = \
 	s_runtime.cpp \
 	s_util.cpp \
 	s_vm.cpp \
-	s_memory.cpp
+	s_memory.cpp \
+	s_optimize.cpp
 
 ENGINE_SOURCES = \
 	engine.cpp \

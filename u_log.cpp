@@ -51,9 +51,21 @@ Logger::~Logger() {
 }
 
 void Logger::write(u::string &&message) {
-    // remove \r from the message
-    for (auto find = message.find('\r'); find != u::string::npos; find = message.find('\r'))
-        message.erase(find, 1);
+    U_ASSERT(message.find('\r') == u::string::npos);
+
+    // strip terminal escape sequences if logging to a file
+    bool stripColor = m_file != stdout && m_file != stderr;
+    if (stripColor && message.find('\e') != u::string::npos) {
+        for (size_t i = 0; i < message.size();) {
+            if (message[i] == '\e') {
+                size_t e = i + 1;
+                while (message[e] && message[e] != 'm') e++;
+                message.erase(i, e + 1);
+            } else {
+                i++;
+            }
+        }
+    }
 
     const bool find = message.find('\n') != u::string::npos;
 

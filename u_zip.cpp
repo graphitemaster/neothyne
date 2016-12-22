@@ -66,25 +66,39 @@ struct centralDirectoryTail {
 #pragma pack(pop)
 
 inline void localFileHeader::endianSwap() {
-    u::endianSwap(&signature, 1);
-    u::endianSwap(&version, 5);
-    u::endianSwap(&crc, 3);
-    u::endianSwap(&fileNameLength, 2);
+    signature = u::endianSwap(signature);
+    version = u::endianSwap(version);
+    flags = u::endianSwap(flags);
+    compression = u::endianSwap(compression);
+    time = u::endianSwap(time);
+    date = u::endianSwap(date);
+    crc = u::endianSwap(crc);
+    csize = u::endianSwap(csize);
+    usize = u::endianSwap(usize);
+    fileNameLength = u::endianSwap(fileNameLength);
+    extraFieldLength = u::endianSwap(extraFieldLength);
 }
 
 inline void centralDirectoryHead::endianSwap() {
-    u::endianSwap(&signature, 2);
-    u::endianSwap(&flags, 4);
-    u::endianSwap(&crc, 3);
-    u::endianSwap(&fileNameLength, 5);
-    u::endianSwap(&offset, 1);
+    signature = u::endianSwap(signature);
+    flags = u::endianSwap(flags);
+    compression = u::endianSwap(compression);
+    time = u::endianSwap(time);
+    date = u::endianSwap(date);
+    crc = u::endianSwap(crc);
+    csize = u::endianSwap(csize);
+    usize = u::endianSwap(usize);
+    fileNameLength = u::endianSwap(fileNameLength);
+    extraFieldLength = u::endianSwap(extraFieldLength);
+    fileCommentLength = u::endianSwap(fileCommentLength);
+    offset = u::endianSwap(offset);
 }
 
 inline void centralDirectoryTail::endianSwap() {
-    u::endianSwap(&signature, 1);
-    u::endianSwap(&entriesDisk, 2);
-    u::endianSwap(&size, 2);
-    u::endianSwap(&commentLength, 1);
+    signature = u::endianSwap(signature);
+    entriesDisk = u::endianSwap(entriesDisk);
+    size = u::endianSwap(size);
+    commentLength = u::endianSwap(commentLength);
 }
 
 bool zip::findCentralDirectory(unsigned char *store) {

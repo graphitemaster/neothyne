@@ -15,7 +15,7 @@ fn sierpinski(n: Int) {
     for (let i = 0; i < y; i++)
       print(" ");
     for (let x: Int = 0; x + y < n; x++)
-      if (x & y) print("  "); else print("* ");
+      if (x & y) print("  "); else print("* ")
     print("\n");
   }
 }
@@ -43,7 +43,7 @@ fn hofstadter_conway(m: Int) {
   }
 }
 
-hofstadter_conway(0x100000);
+//hofstadter_conway(0x100000);
 
 fn thieles_interpolation() {
   const N: Int = 32;
@@ -66,7 +66,7 @@ fn thieles_interpolation() {
   }
   fn thiele(x: Array, y: Array, r: Array, xin: Float, n: Int) {
     if (n > N - 1) return 1;
-    return rho(x, y, r, 0, n) - rho(x, y, r, 0, n - 2) 
+    return rho(x, y, r, 0, n) - rho(x, y, r, 0, n - 2)
       + (xin - x[n]) / thiele(x, y, r, xin, n + 1);
   }
   fn isin(x: Float) { return thiele(tsin, xval, rsin, x, 0); }
@@ -97,5 +97,5 @@ fn ackermann(m: Int, n: Int) {
 }
 
 for (let m: Int = 0; m <= 5; m++)
-  for (let n: Int = 0; n < 5 - m; n++)
+  for (let n: Int = 0; n < 6 - m; n++)
     print("A(", m, ", ", n, ") = ", ackermann(m, n), "\n");

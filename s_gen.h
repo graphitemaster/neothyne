@@ -58,25 +58,21 @@ struct Gen {
 
     static UserFunction *optimize(UserFunction *function);
 
-    static UserFunction *inlinePass(UserFunction *function, bool *primitiveSlots);
-    static UserFunction *predictPass(UserFunction *function);
-    static UserFunction *fastSlotPass(UserFunction *function);
-
-    static size_t scopeEnter(Gen *gen);
-    static void scopeLeave(Gen *gen, size_t backup);
-
-    static void copyFunctionStats(UserFunction *from, UserFunction *to);
+    static Slot scopeEnter(Gen *gen);
+    static void scopeLeave(Gen *gen, Slot backup);
+    static void scopeSet(Gen *gen, Slot scope);
 
 private:
     friend struct Parser;
-
-    static void addLike(Gen *gen, Instruction *basis, size_t size, Instruction *instruction);
+    friend struct Optimize;
 
     static void addInstruction(Gen *gen, size_t size, Instruction *instruction);
+    static void addLike(Gen *gen, Instruction *basis, size_t size, Instruction *instruction);
 
     const char *m_name;
     size_t m_count;
     Slot m_scope;
+    Slot m_lastScope;
     Slot m_slot;
     Slot m_fastSlot;
     bool m_blockTerminated;

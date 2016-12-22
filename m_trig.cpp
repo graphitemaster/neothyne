@@ -16,6 +16,8 @@
 
 namespace m {
 
+static constexpr floatShape kNaN(~0u);
+
 static const double kC1PIO2 = 1*kPiHalf;
 static const double kC2PIO2 = 2*kPiHalf;
 static const double kC3PIO2 = 3*kPiHalf;
@@ -297,7 +299,7 @@ float atan(float x) {
 
     int i;
     if (ix >= 0x4c800000) { // if |x| >= 2**26
-        if (isnan(x))
+        if (x != x)
             return x;
         const float z = kATanHi[3] + 7.52316384526264005e-37f;
         return sign ? -z : z;
@@ -416,7 +418,7 @@ float log2(float x) {
         if ((ix << 1) == 0)
             return -1/(x*x); // log(+-0) = -inf
         if ((ix >> 31))
-            return (x-x)/0.0f; // log(-#) = NaN
+            return kNaN.asFloat;
         // scale up subnormal number
         k -= 25;
         x *= 3.35544320000000000e+07f;

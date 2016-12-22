@@ -68,10 +68,13 @@
 #endif
 
 // Compiler hint: indicate the function is "malloc-like"; the pointer it returns
-// won't alias anything
+// won't alias anything.
+//
+// Similarly we never return null from malloc-like functions, so specify that
+// too for usage of this hint.
 #if defined(__GNUC__)
 #   define U_MALLOC_LIKE \
-        __attribute__((malloc))
+        __attribute__((malloc, returns_nonnull))
 #elif defined(_MSC_VER)
 #   define U_MALLOC_LIKE \
         __declspec(noalias)
