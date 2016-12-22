@@ -677,6 +677,10 @@ void World::unload(bool destroy) {
     // Note: must be before deleting the textures below
     delete m_gun;
 
+    for (auto &it : m_culledPointLights) delete it.second;
+    for (auto &it : m_culledSpotLights)  delete it.second;
+    for (auto &it : m_models)            delete it.second;
+
     for (auto &it : m_textures2D) {
         m_stats->decTextureCount();
         m_stats->decTextureMemory(it.second->memory());
@@ -687,6 +691,9 @@ void World::unload(bool destroy) {
         delete it;
 
     if (destroy) {
+        m_culledPointLights.clear();
+        m_culledSpotLights.clear();
+        m_models.clear();
         m_billboards.clear();
         m_indices.destroy();
         m_textureBatches.destroy();
