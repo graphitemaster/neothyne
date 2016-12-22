@@ -29,9 +29,7 @@ struct Gen {
     static void addAssign(Gen *gen, Slot objectSlot, Slot keySlot, Slot slot, AssignType assignType);
 
     static void addCloseObject(Gen *gen, Slot objectSlot);
-
-    static Slot addGetContext(Gen *gen);
-    static void addSetContext(Gen *gen, Slot object);
+    static void addSetConstraint(Gen *gen, Slot objectSlot, Slot keySlot, Slot constraintSlot);
 
     static Slot addNewObject(Gen *gen, Slot parentSlot);
     static Slot addNewIntObject(Gen *gen, int value);
@@ -51,7 +49,7 @@ struct Gen {
     static void addReturn(Gen *gen, Slot slot);
 
     static void addFreeze(Gen *gen, Slot object);
-    
+
     static Slot addDefineFastSlot(Gen *gen, Slot objectSlot, const char *key);
     static void addReadFastSlot(Gen *gen, Slot sourceSlot, Slot targetSlot);
     static void addWriteFastSlot(Gen *gen, Slot sourceSlot, Slot targetSlot);
@@ -73,7 +71,7 @@ private:
     friend struct Parser;
 
     static void addLike(Gen *gen, Instruction *basis, size_t size, Instruction *instruction);
-    
+
     static void addInstruction(Gen *gen, size_t size, Instruction *instruction);
 
     const char *m_name;

@@ -19,6 +19,7 @@ enum InstructionType {
     kNewStringObject,
     kNewClosureObject,
     kCloseObject,
+    kSetConstraint,
     kAccess,
     kFreeze,
     kAssign,
@@ -29,6 +30,7 @@ enum InstructionType {
     kTestBranch,
     kAccessStringKey,
     kAssignStringKey,
+    kSetConstraintStringKey,
     kDefineFastSlot,
     kReadFastSlot,
     kWriteFastSlot
@@ -48,6 +50,7 @@ struct Instruction {
     struct NewStringObject;
     struct NewClosureObject;
     struct CloseObject;
+    struct SetConstraint;
     struct Access;
     struct Freeze;
     struct Assign;
@@ -58,6 +61,7 @@ struct Instruction {
     struct TestBranch;
     struct AccessStringKey;
     struct AssignStringKey;
+    struct SetConstraintStringKey;
     struct DefineFastSlot;
     struct ReadFastSlot;
     struct WriteFastSlot;
@@ -128,6 +132,12 @@ struct Instruction::CloseObject : Instruction {
     Slot m_slot;
 };
 
+struct Instruction::SetConstraint : Instruction {
+    Slot m_objectSlot;
+    Slot m_keySlot;
+    Slot m_constraintSlot;
+};
+
 struct Instruction::Access : Instruction {
     Slot m_objectSlot;
     Slot m_keySlot;
@@ -181,6 +191,13 @@ struct Instruction::AssignStringKey : Instruction {
     Slot m_valueSlot;
     const char *m_key;
     AssignType m_assignType;
+};
+
+struct Instruction::SetConstraintStringKey : Instruction {
+    Slot m_objectSlot;
+    Slot m_constraintSlot;
+    const char *m_key;
+    size_t m_keyLength;
 };
 
 struct Instruction::DefineFastSlot : Instruction {

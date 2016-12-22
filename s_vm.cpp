@@ -140,11 +140,13 @@ static VMFnWrap instrNewArrayObject(VMState *state) U_PURE;
 static VMFnWrap instrNewStringObject(VMState *state) U_PURE;
 static VMFnWrap instrNewClosureObject(VMState *state) U_PURE;
 static VMFnWrap instrCloseObject(VMState *state) U_PURE;
+static VMFnWrap instrSetConstraint(VMState *state) U_PURE;
 static VMFnWrap instrAccess(VMState *state) U_PURE;
 static VMFnWrap instrFreeze(VMState *state) U_PURE;
 static VMFnWrap instrAccessStringKey(VMState *state) U_PURE;
 static VMFnWrap instrAssign(VMState *state) U_PURE;
 static VMFnWrap instrAssignStringKey(VMState *state) U_PURE;
+static VMFnWrap instrSetConstraintStringKey(VMState *state) U_PURE;
 static VMFnWrap instrCall(VMState *state) U_HOT;
 static VMFnWrap instrSaveResult(VMState *state) U_PURE;
 static VMFnWrap instrHalt(VMState *state) U_PURE;
@@ -163,6 +165,7 @@ static const VMInstrFn instrFunctions[] = {
     instrNewStringObject,
     instrNewClosureObject,
     instrCloseObject,
+    instrSetConstraint,
     instrAccess,
     instrFreeze,
     instrAssign,
@@ -173,6 +176,7 @@ static const VMInstrFn instrFunctions[] = {
     instrTestBranch,
     instrAccessStringKey,
     instrAssignStringKey,
+    instrSetConstraintStringKey,
     instrDefineFastSlot,
     instrReadFastSlot,
     instrWriteFastSlot
@@ -273,6 +277,27 @@ static VMFnWrap instrCloseObject(VMState *state) {
     Object *object = state->m_cf->m_slots[slot];
     VM_ASSERTION(!(object->m_flags & kClosed), "object is already closed");
     object->m_flags |= kClosed;
+    state->m_instr = (Instruction *)(instruction + 1);
+    return { instrFunctions[state->m_instr->m_type] };
+}
+
+static VMFnWrap instrSetConstraint(VMState *state) {
+    const auto *instruction = (Instruction::SetConstraint *)state->m_instr;
+    const Slot keySlot = instruction->m_keySlot;
+    const Slot objectSlot = instruction->m_objectSlot;
+    const Slot constraintSlot = instruction->m_constraintSlot;
+    VM_ASSERTION(keySlot < state->m_cf->m_count, "slot addressing error");
+    VM_ASSERTION(objectSlot < state->m_cf->m_count, "slot addressing error");
+    VM_ASSERTION(constraintSlot < state->m_cf->m_count, "slot addressing error");
+    Object *object = state->m_cf->m_slots[objectSlot];
+    Object *constraint = state->m_cf->m_slots[constraintSlot];
+    Object *stringBase = state->m_restState->m_shared->m_valueCache.m_stringBase;
+    Object *keyObject = state->m_cf->m_slots[keySlot];
+    StringObject *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
+    VM_ASSERTION(stringKey, "internal error");
+    const char *key = stringKey->m_value;
+    const char *error = Object::setConstraint(state->m_restState, object, key, strlen(key), constraint);
+    VM_ASSERTION(!error, "failed setting type constraint: %s", error);
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
 }
@@ -402,6 +427,24 @@ static VMFnWrap instrAccessStringKey(VMState *state) {
     return { instrFunctions[state->m_instr->m_type] };
 }
 
+static VMFnWrap instrSetConstraintStringKey(VMState *state) {
+    const auto *instruction = (Instruction::SetConstraintStringKey *)state->m_instr;
+    const Slot objectSlot = instruction->m_objectSlot;
+    const Slot constraintSlot = instruction->m_constraintSlot;
+    VM_ASSERTION(objectSlot < state->m_cf->m_count, "slot addressing error");
+    VM_ASSERTION(constraintSlot < state->m_cf->m_count, "slot addressing error");
+    Object *object = state->m_cf->m_slots[objectSlot];
+    Object *constraint = state->m_cf->m_slots[constraintSlot];
+    const char *error = Object::setConstraint(state->m_restState,
+                                              object,
+                                              instruction->m_key,
+                                              instruction->m_keyLength,
+                                              constraint);
+    VM_ASSERTION(!error, error);
+    state->m_instr = (Instruction *)(instruction + 1);
+    return { instrFunctions[state->m_instr->m_type] };
+}
+
 static VMFnWrap instrAssign(VMState *state) {
     const auto *instruction = (Instruction::Assign *)state->m_instr;
 
@@ -436,22 +479,22 @@ static VMFnWrap instrAssign(VMState *state) {
     GC::addPermanent(state->m_restState, keyObject);
     const AssignType assignType = instruction->m_assignType;
     switch (assignType) {
-    case kAssignPlain:
-        if (!object) {
-            VM_ASSERTION(false, "assignment to null object");
+        case kAssignPlain: {
+            Object::setNormal(object, key, valueObject);
+            break;
         }
-        Object::setNormal(object, key, valueObject);
-        break;
-    case kAssignExisting:
-        if (!Object::setExisting(object, key, valueObject)) {
-            VM_ASSERTION(false, "key '%s' not found in object", key);
+        case kAssignExisting: {
+            const char *error = Object::setExisting(object, key, valueObject);
+            VM_ASSERTION(!error, "%s for '%s'", error, key);
+            break;
         }
-        break;
-    case kAssignShadowing:
-        if (!Object::setShadowing(object, key, valueObject)) {
-            VM_ASSERTION(false, "key '%s' not found in object", key);
+        case kAssignShadowing: {
+            bool keySet = false;
+            const char *error = Object::setShadowing(object, key, valueObject, &keySet);
+            VM_ASSERTION(!error, "%s for '%s'", error, key);
+            VM_ASSERTION(keySet, "key '%s' not found in object", key);
+            break;
         }
-        break;
     }
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
@@ -468,22 +511,22 @@ static VMFnWrap instrAssignStringKey(VMState *state) {
     const char *key = instruction->m_key;
     AssignType assignType = instruction->m_assignType;
     switch (assignType) {
-    case kAssignPlain:
-        if (!object) {
-            VM_ASSERTION(false, "assignment to null object");
+        case kAssignPlain: {
+            Object::setNormal(object, key, valueObject);
+            break;
         }
-        Object::setNormal(object, key, valueObject);
-        break;
-    case kAssignExisting:
-        if (!Object::setExisting(object, key, valueObject)) {
-            VM_ASSERTION(false, "key '%s' not found in object", key);
+        case kAssignExisting: {
+            const char *error = Object::setExisting(object, key, valueObject);
+            VM_ASSERTION(!error, "%s for '%s'", error, key);
+            break;
         }
-        break;
-    case kAssignShadowing:
-        if (!Object::setShadowing(object, key, valueObject)) {
-            VM_ASSERTION(false, "key '%s' not found in object", key);
+        case kAssignShadowing: {
+            bool keySet = false;
+            const char *error = Object::setShadowing(object, key, valueObject, &keySet);
+            VM_ASSERTION(!error, "%s for '%s'", error, key);
+            VM_ASSERTION(keySet, "key '%s' not found in object", key);
+            break;
         }
-        break;
     }
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };

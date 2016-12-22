@@ -1,6 +1,8 @@
 #ifndef S_UTIL_HDR
 #define S_UTIL_HDR
 
+#include "u_misc.h"
+
 namespace s {
 
 struct SourceRange {
@@ -69,6 +71,13 @@ inline size_t djb2(const char *str, size_t length) {
         h = h * 33 + str[i];
     }
     return h;
+}
+
+char *formatProcess(const char *fmt, ...);
+
+template <typename... Ts>
+inline char *format(const char *fmt, const Ts&... ts) {
+    return formatProcess(fmt, u::formatNormalize(ts)...);
 }
 
 }

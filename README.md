@@ -41,7 +41,7 @@ As of late Neothyne is just an engine offering
 
 * Scripting language (Neo language)
   * Heavily inspired by Javascript, C++, Lua, Ruby, C#, Java (In order of inspiration)
-  * Dynamically typed
+  * Dynamically typed (with optional typing)
   * Structured
   * First class values
   * Lexically scoped

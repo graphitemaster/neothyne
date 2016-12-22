@@ -12,27 +12,29 @@ static void indent(int level) {
 
 size_t Instruction::size(Instruction *instruction) {
     switch (instruction->m_type) {
-    case kNewObject:        return sizeof(NewObject);
-    case kNewIntObject:     return sizeof(NewIntObject);
-    case kNewFloatObject:   return sizeof(NewFloatObject);
-    case kNewArrayObject:   return sizeof(NewArrayObject);
-    case kNewStringObject:  return sizeof(NewStringObject);
-    case kNewClosureObject: return sizeof(NewClosureObject);
-    case kCloseObject:      return sizeof(CloseObject);
-    case kAccess:           return sizeof(Access);
-    case kFreeze:           return sizeof(Freeze);
-    case kAssign:           return sizeof(Assign);
-    case kCall:             return sizeof(Call);
-    case kReturn:           return sizeof(Return);
-    case kSaveResult:       return sizeof(SaveResult);
-    case kBranch:           return sizeof(Branch);
-    case kTestBranch:       return sizeof(TestBranch);
-    case kAccessStringKey:  return sizeof(AccessStringKey);
-    case kAssignStringKey:  return sizeof(AssignStringKey);
-    case kDefineFastSlot:   return sizeof(DefineFastSlot);
-    case kReadFastSlot:     return sizeof(ReadFastSlot);
-    case kWriteFastSlot:    return sizeof(WriteFastSlot);
-    case kInvalid:          break;
+    case kNewObject:              return sizeof(NewObject);
+    case kNewIntObject:           return sizeof(NewIntObject);
+    case kNewFloatObject:         return sizeof(NewFloatObject);
+    case kNewArrayObject:         return sizeof(NewArrayObject);
+    case kNewStringObject:        return sizeof(NewStringObject);
+    case kNewClosureObject:       return sizeof(NewClosureObject);
+    case kCloseObject:            return sizeof(CloseObject);
+    case kSetConstraint:          return sizeof(SetConstraint);
+    case kAccess:                 return sizeof(Access);
+    case kFreeze:                 return sizeof(Freeze);
+    case kAssign:                 return sizeof(Assign);
+    case kCall:                   return sizeof(Call);
+    case kReturn:                 return sizeof(Return);
+    case kSaveResult:             return sizeof(SaveResult);
+    case kBranch:                 return sizeof(Branch);
+    case kTestBranch:             return sizeof(TestBranch);
+    case kAccessStringKey:        return sizeof(AccessStringKey);
+    case kAssignStringKey:        return sizeof(AssignStringKey);
+    case kSetConstraintStringKey: return sizeof(SetConstraintStringKey);
+    case kDefineFastSlot:         return sizeof(DefineFastSlot);
+    case kReadFastSlot:           return sizeof(ReadFastSlot);
+    case kWriteFastSlot:          return sizeof(WriteFastSlot);
+    case kInvalid:                break;
     }
     u::Log::err("invalid instruction: %d\n", (int)instruction->m_type);
     U_ASSERT(0 && "internal error");
@@ -106,6 +108,12 @@ void Instruction::dump(Instruction **instructions, int level) {
             ((Assign *)instruction)->m_valueSlot);
         *instructions = (Instruction *)((Assign *)instruction + 1);
         break;
+    case kSetConstraint:
+        u::Log::out("SetConstraint:     %%%zu . %%%zu : %%%zu\n",
+            ((SetConstraint *)instruction)->m_objectSlot,
+            ((SetConstraint *)instruction)->m_keySlot,
+            ((SetConstraint *)instruction)->m_constraintSlot);
+        break;
     case kCall:
         u::Log::out("Call:              %%%zu . %%%zu ( ",
             ((Call *)instruction)->m_thisSlot,
@@ -157,6 +165,12 @@ void Instruction::dump(Instruction **instructions, int level) {
             ((AssignStringKey *)instruction)->m_key,
             ((AssignStringKey *)instruction)->m_valueSlot);
         *instructions = (Instruction *)((AssignStringKey *)instruction + 1);
+        break;
+    case kSetConstraintStringKey:
+        u::Log::out("SetConstraint:     %%%zu . '%.*s' : %%%zu [optimized]\n",
+            ((SetConstraintStringKey *)instruction)->m_objectSlot,
+            (int)((SetConstraintStringKey *)instruction)->m_keyLength,
+            ((SetConstraintStringKey *)instruction)->m_constraintSlot);
         break;
     case kDefineFastSlot:
         u::Log::out("DefineFastSlot     &%%%zu = %%%zu . '%.*s' [optimized]\n",

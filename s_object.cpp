@@ -133,6 +133,7 @@ Field *Table::lookupAllocWithHashInternal(Table *table,
                                                   &freeObject);
                 U_ASSERT(!lookupObject);
                 freeObject->m_value = field->m_value;
+                freeObject->m_aux = field->m_aux;
             }
         }
     }
@@ -248,7 +249,7 @@ Object *Object::instanceOf(Object *object, Object *prototype) {
 }
 
 // changes a propery in place
-bool Object::setExisting(Object *object, const char *key, Object *value) {
+const char *Object::setExisting(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Object *current = object;
     const size_t keyLength = strlen(key);
@@ -257,17 +258,19 @@ bool Object::setExisting(Object *object, const char *key, Object *value) {
         Field *field = Table::lookupWithHash(&current->m_table, key, keyLength, keyHash);
         if (field) {
             if (current->m_flags & kImmutable)
-                return false;
+                return format("tried to set existing key '%s' on immutable object %p", key, (void *)current);
+            if (field->m_aux && (!value || value->m_parent != (Object *)field->m_aux))
+                return "constraint violation in assignment";
             field->m_value = (void *)value;
-            return true;
+            return nullptr;
         }
         current = current->m_parent;
     }
-    return false;
+    return format("key '%s' not found in object %p", key, (void *)object);
 }
 
 // change a propery only if it exists somewhere in the prototype chain
-bool Object::setShadowing(Object *object, const char *key, Object *value) {
+const char *Object::setShadowing(Object *object, const char *key, Object *value, bool *set) {
     U_ASSERT(object);
     Object *current = object;
     const size_t keyLength = strlen(key);
@@ -275,26 +278,50 @@ bool Object::setShadowing(Object *object, const char *key, Object *value) {
     while (current) {
         Field *field = Table::lookupWithHash(&current->m_table, key, keyLength, keyHash);
         if (field) {
+            if (field->m_aux && (!value || value->m_parent != (Object *)field->m_aux))
+                return "constraint violation in shadowing assignment";
             setNormal(object, key, value);
-            return true;
+            *set = true;
+            return nullptr;
         }
         current = current->m_parent;
     }
-    return false;
+    *set = false;
+    return nullptr;
 }
 
 // set property
-void Object::setNormal(Object *object, const char *key, Object *value) {
+const char *Object::setNormal(Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Field *free = nullptr;
     Field *field = Table::lookupAlloc(&object->m_table, key, strlen(key), &free);
     if (field) {
         U_ASSERT(!(object->m_flags & kImmutable));
+        if (field->m_aux && (!value || value->m_parent != (Object *)field->m_aux))
+            return "constraint violation in assignment";
         field->m_value = (void *)value;
     } else {
         U_ASSERT(!(object->m_flags & kClosed));
         free->m_value = (void *)value;
     }
+    return nullptr;
+}
+
+const char *Object::setConstraint(State *state, Object *object, const char *key, size_t keyLength, Object *constraint) {
+    U_ASSERT(object);
+    Field *entry = Table::lookup(&object->m_table, key, keyLength);
+    if (!entry)
+        return "tried to set constraint on key not defined";
+    if (entry->m_aux)
+        return "tried to set constraint on key which already has a constraint";
+    Object *existing = (Object *)entry->m_value;
+    if (!existing || existing->m_parent != constraint) {
+        return format("constraint violation: expected '%s' but value was '%s'",
+            getTypeString(state, constraint),
+            getTypeString(state, existing));
+    }
+    entry->m_aux = (void *)constraint;
+    return nullptr;
 }
 
 void *Object::allocate(State *state, size_t size) {

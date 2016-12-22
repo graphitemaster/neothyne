@@ -7,6 +7,7 @@ struct State;
 struct Object;
 
 Object *createRoot(State *state);
+const char *getTypeString(State *state, Object *object);
 
 }
 

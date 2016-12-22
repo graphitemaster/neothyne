@@ -39,6 +39,8 @@ struct Field {
 
     // The field value
     void *m_value;
+
+    void *m_aux;
 };
 
 struct Table {
@@ -85,9 +87,10 @@ struct Object {
     static Object *lookupWithHash(Object *object, const char *key, size_t keyLength, size_t keyHash, bool *keyFound);
     static Object *lookup(Object *object, const char *key, bool *keyFound);
 
-    static bool setExisting(Object *object, const char *key, Object *value);
-    static bool setShadowing(Object *object, const char *key, Object *value);
-    static void setNormal(Object *object, const char *key, Object *value);
+    static const char *setExisting(Object *object, const char *key, Object *value);
+    static const char *setShadowing(Object *object, const char *key, Object *value, bool *set);
+    static const char *setNormal(Object *object, const char *key, Object *value);
+    static const char *setConstraint(State *state, Object *object, const char *key, size_t keyLength, Object *constraint);
 
     static void mark(State *state, Object *Object);
     static void free(Object *object);

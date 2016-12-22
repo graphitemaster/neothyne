@@ -128,6 +128,42 @@ const a = 5;
 a = 10; // runtime error (object is immutable)
 ```
 
+## Type constraints
+
+Neo language supports optional runtime type checking in the form of
+type constraints. Once a constraint is set on a variable the type of
+that variable cannot change.
+
+When a type constraint fails, the VM will stop executing the code and
+report it as a constraint violation.
+
+The use of constraints makes it easier to find potential bugs and helps
+the optimizer produce much more efficent bytecode and runtime characteristics.
+
+The syntax for a type constraint is
+```
+identifier: Type
+```
+
+Here are a few examples
+```
+fn min(x: Int, y: Int) {
+    if (x < y) return x;
+    return y;
+}
+
+let a: Array = [];
+
+const M_PI: Float = 3.14;
+
+const MyType = { x = 0.0, y = 0.0, z = 0.0 };
+
+let b: MyType = new MyType;
+```
+
+Type constraints are currently not supported for marking the return
+type of functions or fields of an object. This will change in the future.
+
 ## Statements
 Neo supports a conventional set of statements, similar to those in C.
 This includes assignments, control structures, function calls and variable
@@ -218,6 +254,21 @@ variadic or not. With the `apply()` method exposed via every `Function`.
 let arguments = [ 1, 2, "hello", 3.14 ];
 print_everything.apply(arguments);
 ```
+
+### Function and Method calls
+Function calls are fairly straightforward and work similarly to Javascript.
+Unlike Lua, Neo **does not** attempt to make function calls with incorrect
+*arity*; eg. if the function is declared to take five parameters then the
+function **must** be called with five arguments.
+```
+fn foo(a, b, c) { /*...*/ }
+foo(1, 2., "hi"); // allowed
+foo(); // not allowed
+foo(1, 2, 3, 4); // not allowed
+```
+
+Calls to methods implicitly pass the object as the first argument in the
+function.
 
 ### Classes
 Neo supports classes through the Javascript method of prototype-chains.
@@ -394,21 +445,6 @@ obj.foo = method() { /*body*/ }
 // translates to
 obj.foo = fn(this, /*arguments*/) { /* body */ }
 ```
-
-### Function and Method calls
-Function calls are fairly straightforward and work similarly to Javascript.
-Unlike Lua, Neo **does not** attempt to make function calls with incorrect
-*arity*; eg. if the function is declared to take five parameters then the
-function **must** be called with five arguments.
-```
-fn foo(a, b, c) { /*...*/ }
-foo(1, 2., "hi"); // allowed
-foo(); // not allowed
-foo(1, 2, 3, 4); // not allowed
-```
-
-Calls to methods implicitly pass the object as the first argument in the
-function.
 
 ### Visibility
 Neo is a lexically scoped language. The scope of a local variable begins at

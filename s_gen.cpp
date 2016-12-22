@@ -107,8 +107,19 @@ void Gen::addAssign(Gen *gen, Slot objectSlot, Slot keySlot, Slot valueSlot, Ass
 void Gen::addCloseObject(Gen *gen, Slot objectSlot) {
     Instruction::CloseObject closeObject;
     closeObject.m_type = kCloseObject;
+    closeObject.m_belongsTo = nullptr;
     closeObject.m_slot = objectSlot;
     addInstruction(gen, sizeof closeObject, (Instruction *)&closeObject);
+}
+
+void Gen::addSetConstraint(Gen *gen, Slot objectSlot, Slot keySlot, Slot constraintSlot) {
+    Instruction::SetConstraint setConstraint;
+    setConstraint.m_type = kSetConstraint;
+    setConstraint.m_belongsTo = nullptr;
+    setConstraint.m_objectSlot = objectSlot;
+    setConstraint.m_keySlot = keySlot;
+    setConstraint.m_constraintSlot = constraintSlot;
+    addInstruction(gen, sizeof setConstraint, (Instruction *)&setConstraint);
 }
 
 Slot Gen::addNewObject(Gen *gen, Slot parentSlot) {
@@ -299,6 +310,58 @@ void Gen::copyFunctionStats(UserFunction *from, UserFunction *to) {
     to->m_hasVariadicTail = from->m_hasVariadicTail;
 }
 
+// Searches for slots which are primitive. Slots which are primitive are plain
+// objects, calls, returns, branches and plain access and assignments.
+static inline void findPrimitiveSlots(UserFunction *function, bool **slots) {
+    *slots = (bool *)Memory::allocate(sizeof **slots * function->m_slots);
+    for (size_t i = 0; i < function->m_slots; i++)
+        (*slots)[i] = true;
+    for (size_t i = 0; i < function->m_body.m_count; i++) {
+        InstructionBlock *block = &function->m_body.m_blocks[i];
+        Instruction *instruction = block->m_instructions;
+        while (instruction != block->m_instructionsEnd) {
+            switch (instruction->m_type) {
+            case kNewObject:
+                (*slots)[((Instruction::NewObject*)instruction)->m_parentSlot] = false;
+                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::NewObject));
+                break;
+            case kAccess:
+                (*slots)[((Instruction::Access*)instruction)->m_objectSlot] = false;
+                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Access));
+                break;
+            case kAssign:
+                (*slots)[((Instruction::Assign*)instruction)->m_objectSlot] = false;
+                (*slots)[((Instruction::Assign*)instruction)->m_valueSlot] = false;
+                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Assign));
+                break;
+            case kSetConstraint:
+                (*slots)[((Instruction::SetConstraint *)instruction)->m_objectSlot] = false;
+                (*slots)[((Instruction::SetConstraint *)instruction)->m_constraintSlot] = false;
+                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::SetConstraint));
+                break;
+            case kCall:
+                (*slots)[((Instruction::Call*)instruction)->m_functionSlot] = false;
+                (*slots)[((Instruction::Call*)instruction)->m_thisSlot] = false;
+                for (size_t i = 0; i < ((Instruction::Call*)instruction)->m_count; i++)
+                    (*slots)[((Instruction::Call*)instruction)->m_arguments[i]] = false;
+                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Call));
+                break;
+            case kReturn:
+                (*slots)[((Instruction::Return*)instruction)->m_returnSlot] = false;
+                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Return));
+                break;
+            case kTestBranch:
+                (*slots)[((Instruction::TestBranch*)instruction)->m_testSlot] = false;
+                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::TestBranch));
+                break;
+            default:
+                instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
+                break;
+            }
+        }
+    }
+}
+
 // Searches for static object slots which are any objects that are marked closed
 // and any assignments are with static keys
 struct SlotObjectInfo {
@@ -324,18 +387,27 @@ static inline void findStaticObjectSlots(UserFunction *function, SlotObjectInfo 
                 bool failed = false;
                 const char **namesData = nullptr;
                 size_t namesLength = 0;
-                while (instruction != instructionEnd && instruction->m_type == kAssignStringKey) {
-                    const auto *assignStringKeyInstruction = (Instruction::AssignStringKey *)instruction;
-                    if (assignStringKeyInstruction->m_assignType != kAssignPlain) {
+                while (instruction != instructionEnd) {
+                    if (instruction->m_type == kAssignStringKey) {
+                        const auto *assignStringKeyInstruction = (Instruction::AssignStringKey *)instruction;
+                        if (assignStringKeyInstruction->m_assignType != kAssignPlain) {
+                            failed = true;
+                            break;
+                        }
+                        instruction = (Instruction *)(assignStringKeyInstruction + 1);
+                        namesData = (const char **)Memory::reallocate(namesData, sizeof *namesData * ++namesLength);
+                        namesData[namesLength - 1] = assignStringKeyInstruction->m_key;
+                    } else if (instruction->m_type == kSetConstraintStringKey) {
+                        const auto *setConstraintStringKey = (Instruction::SetConstraintStringKey *)instruction;
+                        // TODO: actually deal with the keys here
+                        instruction = (Instruction *)(setConstraintStringKey + 1);
+                    } else if (instruction->m_type == kCloseObject) {
+                        break;
+                    } else {
                         failed = true;
                         break;
                     }
-                    instruction = (Instruction *)(assignStringKeyInstruction + 1);
-                    namesData = (const char **)Memory::reallocate(namesData, sizeof *namesData * ++namesLength);
-                    namesData[namesLength - 1] = assignStringKeyInstruction->m_key;
                 }
-                if (instruction->m_type != kCloseObject)
-                    failed = true;
                 if (failed) {
                     Memory::free(namesData);
                     continue;
@@ -355,122 +427,6 @@ static inline void findStaticObjectSlots(UserFunction *function, SlotObjectInfo 
             instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
         }
     }
-}
-
-// Searches for slots which are primitive. Slots which are primitive are plain
-// objects, calls, returns, branches and plain access and assignments.
-static inline void findPrimitiveSlots(UserFunction *function, bool **slots) {
-    *slots = (bool *)Memory::allocate(sizeof **slots * function->m_slots);
-    for (size_t i = 0; i < function->m_slots; i++)
-        (*slots)[i] = true;
-    for (size_t i = 0; i < function->m_body.m_count; i++) {
-        InstructionBlock *block = &function->m_body.m_blocks[i];
-        Instruction *instruction = block->m_instructions;
-        while (instruction != block->m_instructionsEnd) {
-            switch (instruction->m_type) {
-            case kNewObject:
-                (*slots)[((Instruction::NewObject*)instruction)->m_parentSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::NewObject));
-                break;
-            case kAccess:
-                (*slots)[((Instruction::Access*)instruction)->m_objectSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Access));
-                break;
-            case kAssign:
-                (*slots)[((Instruction::Assign*)instruction)->m_objectSlot] = false;
-                (*slots)[((Instruction::Assign*)instruction)->m_valueSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Assign));
-                break;
-            case kCall:
-                (*slots)[((Instruction::Call*)instruction)->m_functionSlot] = false;
-                (*slots)[((Instruction::Call*)instruction)->m_thisSlot] = false;
-                for (size_t i = 0; i < ((Instruction::Call*)instruction)->m_count; i++)
-                    (*slots)[((Instruction::Call*)instruction)->m_arguments[i]] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Call));
-                break;
-            case kReturn:
-                (*slots)[((Instruction::Return*)instruction)->m_returnSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Return));
-                break;
-            case kTestBranch:
-                (*slots)[((Instruction::TestBranch*)instruction)->m_testSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::TestBranch));
-                break;
-            default:
-                instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
-                break;
-            }
-        }
-    }
-}
-
-// For access and assignments to primitive slots, inline the access/assignment with
-// a static key instead
-UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
-    Gen gen = { };
-
-    gen.m_slot = 1;
-    gen.m_fastSlot = function->m_fastSlots;
-    gen.m_blockTerminated = true;
-    gen.m_currentRange = nullptr;
-
-    size_t accesses = 0;
-    size_t assignments = 0;
-
-    u::vector<const char *> slotTable;
-    for (size_t i = 0; i < function->m_body.m_count; i++) {
-        InstructionBlock *block = &function->m_body.m_blocks[i];
-        newBlock(&gen);
-
-        Instruction *instruction = block->m_instructions;
-        while (instruction != block->m_instructionsEnd) {
-            Instruction::NewStringObject *newStringObject = (Instruction::NewStringObject *)instruction;
-            Instruction::Access *access = (Instruction::Access *)instruction;
-            Instruction::Assign *assign = (Instruction::Assign *)instruction;
-            if (instruction->m_type == kNewStringObject
-                && primitiveSlots[newStringObject->m_targetSlot])
-            {
-                if (slotTable.size() < newStringObject->m_targetSlot + 1)
-                    slotTable.resize(newStringObject->m_targetSlot + 1);
-                slotTable[newStringObject->m_targetSlot] = newStringObject->m_value;
-                instruction = (Instruction *)(newStringObject + 1);
-                continue;
-            }
-            if (instruction->m_type == kAccess
-                && access->m_keySlot < slotTable.size() && slotTable[access->m_keySlot])
-            {
-                Instruction::AccessStringKey accessStringKey;
-                accessStringKey.m_type = kAccessStringKey;
-                accessStringKey.m_objectSlot = access->m_objectSlot;
-                accessStringKey.m_targetSlot = access->m_targetSlot;
-                accessStringKey.m_key = slotTable[access->m_keySlot];
-                addLike(&gen, instruction, sizeof accessStringKey, (Instruction *)&accessStringKey);
-                instruction = (Instruction *)(access + 1);
-                accesses++;
-                continue;
-            }
-            if (instruction->m_type == kAssign
-                && assign->m_keySlot < slotTable.size() && slotTable[assign->m_keySlot])
-            {
-                Instruction::AssignStringKey assignStringKey;
-                assignStringKey.m_type = kAssignStringKey;
-                assignStringKey.m_objectSlot = assign->m_objectSlot;
-                assignStringKey.m_valueSlot = assign->m_valueSlot;
-                assignStringKey.m_key = slotTable[assign->m_keySlot];
-                assignStringKey.m_assignType = assign->m_assignType;
-                addLike(&gen, instruction, sizeof assignStringKey, (Instruction *)&assignStringKey);
-                instruction = (Instruction *)(assign + 1);
-                assignments++;
-                continue;
-            }
-            addLike(&gen, instruction, Instruction::size(instruction), instruction);
-            instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
-        }
-    }
-    UserFunction *optimized = buildFunction(&gen);
-    copyFunctionStats(function, optimized);
-    u::Log::out("[script] => inlined operations (assignments: %zu, accesses: %zu)\n", assignments, accesses);
-    return optimized;
 }
 
 UserFunction *Gen::predictPass(UserFunction *function) {
@@ -641,6 +597,92 @@ UserFunction *Gen::fastSlotPass(UserFunction *function) {
     u::Log::out("[script] => generated %zu fast slots (reads: %zu, writes: %zu)\n", defines, reads, writes);
 
     return fn;
+}
+
+// For access and assignments to primitive slots, inline the access/assignment with
+// a static key instead
+UserFunction *Gen::inlinePass(UserFunction *function, bool *primitiveSlots) {
+    Gen gen = { };
+
+    gen.m_slot = 1;
+    gen.m_fastSlot = function->m_fastSlots;
+    gen.m_blockTerminated = true;
+    gen.m_currentRange = nullptr;
+
+    size_t accesses = 0;
+    size_t assignments = 0;
+    size_t constraints = 0;
+
+    u::vector<const char *> slotTable;
+    for (size_t i = 0; i < function->m_body.m_count; i++) {
+        InstructionBlock *block = &function->m_body.m_blocks[i];
+        newBlock(&gen);
+
+        Instruction *instruction = block->m_instructions;
+        while (instruction != block->m_instructionsEnd) {
+            auto *newStringObject = (Instruction::NewStringObject *)instruction;
+            auto *access = (Instruction::Access *)instruction;
+            auto *assign = (Instruction::Assign *)instruction;
+            auto *setConstraint = (Instruction::SetConstraint *)instruction;
+            if (instruction->m_type == kNewStringObject
+                && primitiveSlots[newStringObject->m_targetSlot])
+            {
+                if (slotTable.size() < newStringObject->m_targetSlot + 1)
+                    slotTable.resize(newStringObject->m_targetSlot + 1);
+                slotTable[newStringObject->m_targetSlot] = newStringObject->m_value;
+                instruction = (Instruction *)(newStringObject + 1);
+                continue;
+            }
+            if (instruction->m_type == kSetConstraint
+                && setConstraint->m_keySlot < slotTable.size() && slotTable[setConstraint->m_keySlot])
+            {
+                Instruction::SetConstraintStringKey setConstraintStringKey;
+                setConstraintStringKey.m_type = kSetConstraintStringKey;
+                setConstraintStringKey.m_belongsTo = nullptr;
+                setConstraintStringKey.m_objectSlot = setConstraint->m_objectSlot;
+                setConstraintStringKey.m_constraintSlot = setConstraint->m_constraintSlot;
+                setConstraintStringKey.m_key = slotTable[setConstraint->m_keySlot];
+                setConstraintStringKey.m_keyLength = strlen(setConstraintStringKey.m_key);
+                addLike(&gen, instruction, sizeof setConstraintStringKey, (Instruction *)&setConstraintStringKey);
+                instruction = (Instruction *)(setConstraint + 1);
+                constraints++;
+                continue;
+            }
+            if (instruction->m_type == kAccess
+                && access->m_keySlot < slotTable.size() && slotTable[access->m_keySlot])
+            {
+                Instruction::AccessStringKey accessStringKey;
+                accessStringKey.m_type = kAccessStringKey;
+                accessStringKey.m_objectSlot = access->m_objectSlot;
+                accessStringKey.m_targetSlot = access->m_targetSlot;
+                accessStringKey.m_key = slotTable[access->m_keySlot];
+                addLike(&gen, instruction, sizeof accessStringKey, (Instruction *)&accessStringKey);
+                instruction = (Instruction *)(access + 1);
+                accesses++;
+                continue;
+            }
+            if (instruction->m_type == kAssign
+                && assign->m_keySlot < slotTable.size() && slotTable[assign->m_keySlot])
+            {
+                Instruction::AssignStringKey assignStringKey;
+                assignStringKey.m_type = kAssignStringKey;
+                assignStringKey.m_objectSlot = assign->m_objectSlot;
+                assignStringKey.m_valueSlot = assign->m_valueSlot;
+                assignStringKey.m_key = slotTable[assign->m_keySlot];
+                assignStringKey.m_assignType = assign->m_assignType;
+                addLike(&gen, instruction, sizeof assignStringKey, (Instruction *)&assignStringKey);
+                instruction = (Instruction *)(assign + 1);
+                assignments++;
+                continue;
+            }
+            addLike(&gen, instruction, Instruction::size(instruction), instruction);
+            instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
+        }
+    }
+    UserFunction *optimized = buildFunction(&gen);
+    copyFunctionStats(function, optimized);
+    u::Log::out("[script] => inlined operations (assignments: %zu, accesses: %zu, constraints: %zu)\n", assignments, accesses, constraints);
+    return optimized;
 }
 
 UserFunction *Gen::optimize(UserFunction *function) {

@@ -626,6 +626,29 @@ static void require(State *state, Object *, Object *, Object **arguments, size_t
     state->m_resultValue = subState.m_resultValue;
 }
 
+const char *getTypeString(State *state, Object *object) {
+    if (object) {
+        if (object == state->m_shared->m_valueCache.m_intBase)
+            return "Int";
+        if (object == state->m_shared->m_valueCache.m_boolBase)
+            return "Bool";
+        if (object == state->m_shared->m_valueCache.m_floatBase)
+            return "Float";
+        if (object == state->m_shared->m_valueCache.m_closureBase)
+            return "Closure";
+        if (object == state->m_shared->m_valueCache.m_functionBase)
+            return "Function";
+        if (object == state->m_shared->m_valueCache.m_arrayBase)
+            return "Array";
+        if (object == state->m_shared->m_valueCache.m_stringBase)
+            return "String";
+        if (object->m_parent)
+            return getTypeString(state, object->m_parent);
+        U_ASSERT(false && "unimplemented");
+    }
+    return "Null";
+}
+
 Object *createRoot(State *state) {
     Object *root = Object::newObject(state, nullptr);
 

@@ -118,4 +118,20 @@ void FileRange::recordEnd(char *text, FileRange *range) {
     U_ASSERT(strcmp(file, range->m_file) == 0);
 }
 
+// Need to pin this memory to the scripting allocator
+static inline char *formatProcess(const char *fmt, va_list va) {
+    const int length = u::detail::c99vsnprintf(nullptr, 0, fmt, va) + 1;
+    char *data = (char *)Memory::allocate(length);
+    u::detail::c99vsnprintf(data, length, fmt, va);
+    return data;
+}
+
+char *formatProcess(const char *fmt, ...) {
+    va_list va;
+    va_start(va, fmt);
+    char *value = formatProcess(fmt, va);
+    va_end(va);
+    return value;
+}
+
 }

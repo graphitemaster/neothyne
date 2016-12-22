@@ -1132,8 +1132,25 @@ ParseResult Parser::parseLetDeclaration(char **contents, Gen *gen, FileRange *le
         logParseError(text, "expected identifier in 'let' declaration");
         return kParseError;
     }
-    
+
     FileRange::recordEnd(text, letName);
+
+    FileRange *typeConstraint = Gen::newRange(text);
+    Slot constraintSlot = -1_z;
+    if (consumeString(&text, ":")) {
+        const char *constraint = parseIdentifier(&text);
+        if (!constraint) {
+            logParseError(text, "expected identifier in type constraint");
+            return kParseError;
+        }
+        FileRange::recordEnd(text, typeConstraint);
+        Gen::useRangeStart(gen, typeConstraint);
+        const Slot constraintNameSlot = Gen::addNewStringObject(gen, constraint);
+        constraintSlot = Gen::addAccess(gen, gen->m_scope, constraintNameSlot);
+        Gen::useRangeEnd(gen, typeConstraint);
+    } else {
+        Gen::delRange(typeConstraint);
+    }
 
     Gen::useRangeStart(gen, letName);
     Slot value;
@@ -1171,6 +1188,12 @@ ParseResult Parser::parseLetDeclaration(char **contents, Gen *gen, FileRange *le
         Gen::addFreeze(gen, letScope);
     }
     Gen::useRangeEnd(gen, assignRange);
+
+    if (constraintSlot != -1_z) {
+        Gen::useRangeStart(gen, typeConstraint);
+        Gen::addSetConstraint(gen, letScope, variableNameSlot, constraintSlot);
+        Gen::useRangeEnd(gen, typeConstraint);
+    }
 
     // let a, b
     if (consumeString(&text, ",")) {
@@ -1505,6 +1528,7 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     }
 
     u::vector<const char *> arguments;
+    u::vector<const char *> constraints;
     bool hasVariadicTail = false;
     while (!consumeString(&text, ")")) {
         if (arguments.size() && !consumeString(&text, ",")) {
@@ -1524,7 +1548,16 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
             logParseError(text, "expected identifier for parameter in parameter list");
             return kParseError;
         }
+        const char *constraint = nullptr;
+        if (consumeString(&text, ":")) {
+            constraint = parseIdentifier(&text);
+            if (!constraint) {
+                logParseError(text, "expected identifier in type constraint");
+                return kParseError;
+            }
+        }
         arguments.push_back(argument);
+        constraints.push_back(constraint);
     }
     FileRange::recordEnd(text, functionFrameRange);
 
@@ -1541,11 +1574,23 @@ ParseResult Parser::parseFunctionExpression(char **contents, UserFunction **func
     Gen::newBlock(&gen);
     Gen::useRangeStart(&gen, functionFrameRange);
     gen.m_scope = 1;
-    
+
+    // generate the constraints up front
+    u::vector<Slot> constraintSlots(constraints.size());
+    for (size_t i = 0; i < constraints.size(); i++) {
+        constraintSlots[i] = -1_z;
+        if (constraints[i]) {
+            const Slot typeName = Gen::addNewStringObject(&gen, constraints[i]);
+            constraintSlots[i] = Gen::addAccess(&gen, gen.m_scope, typeName);
+        }
+    }
+
     gen.m_scope = Gen::addNewObject(&gen, gen.m_scope);
     for (size_t i = 0; i < arguments.size(); i++) {
         Slot argumentSlot = Gen::addNewStringObject(&gen, arguments[i]);
         Gen::addAssign(&gen, gen.m_scope, argumentSlot, i + 2, kAssignPlain);
+        if (constraints[i])
+            Gen::addSetConstraint(&gen, gen.m_scope, argumentSlot, constraintSlots[i]);
     }
     Gen::addCloseObject(&gen, gen.m_scope);
     Gen::useRangeEnd(&gen, functionFrameRange);
