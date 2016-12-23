@@ -436,14 +436,7 @@ let name = fn(/*arguments*/) { /*body*/ };
 ```
 However the following is also allowed and is sugar for the above
 ```
-name fn(/*arguments*/) { /*body*/ }
-```
-
-Methods are also just sugar too
-```
-obj.foo = method() { /*body*/ }
-// translates to
-obj.foo = fn(this, /*arguments*/) { /* body */ }
+fn name(/*arguments*/) { /*body*/ }
 ```
 
 ### Visibility
