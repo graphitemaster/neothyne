@@ -249,7 +249,7 @@ Object *Object::instanceOf(Object *object, Object *prototype) {
 }
 
 // changes a propery in place
-const char *Object::setExisting(Object *object, const char *key, Object *value) {
+const char *Object::setExisting(State *state, Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Object *current = object;
     const size_t keyLength = strlen(key);
@@ -259,8 +259,12 @@ const char *Object::setExisting(Object *object, const char *key, Object *value) 
         if (field) {
             if (current->m_flags & kImmutable)
                 return format("tried to set existing key '%s' on immutable object %p", key, (void *)current);
-            if (field->m_aux && (!value || value->m_parent != (Object *)field->m_aux))
+            if (field->m_aux && !value)
                 return "constraint violation in assignment";
+            else if (field->m_aux && value->m_parent != (Object *)field->m_aux)
+                return format("constraint violation in assignment: expected '%s' but value was '%s'",
+                    getTypeString(state, (Object *)field->m_aux),
+                    getTypeString(state, value));
             field->m_value = (void *)value;
             return nullptr;
         }
@@ -270,7 +274,7 @@ const char *Object::setExisting(Object *object, const char *key, Object *value) 
 }
 
 // change a propery only if it exists somewhere in the prototype chain
-const char *Object::setShadowing(Object *object, const char *key, Object *value, bool *set) {
+const char *Object::setShadowing(State *state, Object *object, const char *key, Object *value, bool *set) {
     U_ASSERT(object);
     Object *current = object;
     const size_t keyLength = strlen(key);
@@ -278,9 +282,13 @@ const char *Object::setShadowing(Object *object, const char *key, Object *value,
     while (current) {
         Field *field = Table::lookupWithHash(&current->m_table, key, keyLength, keyHash);
         if (field) {
-            if (field->m_aux && (!value || value->m_parent != (Object *)field->m_aux))
+            if (field->m_aux && !value)
                 return "constraint violation in shadowing assignment";
-            setNormal(object, key, value);
+            else if (field->m_aux && value->m_parent != (Object *)field->m_aux)
+                return format("constraint violation in shadowing assignment: expected '%s' but value was '%s'",
+                    getTypeString(state, (Object *)field->m_aux),
+                    getTypeString(state, value));
+            setNormal(state, object, key, value);
             *set = true;
             return nullptr;
         }
@@ -291,14 +299,18 @@ const char *Object::setShadowing(Object *object, const char *key, Object *value,
 }
 
 // set property
-const char *Object::setNormal(Object *object, const char *key, Object *value) {
+const char *Object::setNormal(State *state, Object *object, const char *key, Object *value) {
     U_ASSERT(object);
     Field *free = nullptr;
     Field *field = Table::lookupAlloc(&object->m_table, key, strlen(key), &free);
     if (field) {
         U_ASSERT(!(object->m_flags & kImmutable));
-        if (field->m_aux && (!value || value->m_parent != (Object *)field->m_aux))
+         if (field->m_aux && !value)
             return "constraint violation in assignment";
+        else if (field->m_aux && value->m_parent != (Object *)field->m_aux)
+            return format("constraint violation in assignment: expected '%s' but value was '%s'",
+                getTypeString(state, (Object *)field->m_aux),
+                getTypeString(state, value));
         field->m_value = (void *)value;
     } else {
         U_ASSERT(!(object->m_flags & kClosed));
@@ -394,7 +406,7 @@ Object *Object::newArray(State *state, Object **contents, IntObject *length) {
     object->m_parent = state->m_shared->m_valueCache.m_arrayBase;
     object->m_contents = contents;
     object->m_length = length->m_value;
-    setNormal((Object *)object, "length", (Object *)length);
+    setNormal(state, (Object *)object, "length", (Object *)length);
     return (Object *)object;
 }
 

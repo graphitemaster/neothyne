@@ -43,7 +43,7 @@ fn hofstadter_conway(m: Int) {
   }
 }
 
-//hofstadter_conway(0x100000);
+hofstadter_conway(0x100000);
 
 fn thieles_interpolation() {
   const N: Int = 32;

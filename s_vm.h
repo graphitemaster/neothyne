@@ -41,6 +41,8 @@ struct VM {
 
     static bool callCallable(State *state, Object *self, Object *function, Object **arguments, size_t count);
 
+    static void printBacktrace(State *state);
+
 private:
     // Profiling
     static void recordProfile(State *state);

@@ -87,9 +87,9 @@ struct Object {
     static Object *lookupWithHash(Object *object, const char *key, size_t keyLength, size_t keyHash, bool *keyFound);
     static Object *lookup(Object *object, const char *key, bool *keyFound);
 
-    static const char *setExisting(Object *object, const char *key, Object *value);
-    static const char *setShadowing(Object *object, const char *key, Object *value, bool *set);
-    static const char *setNormal(Object *object, const char *key, Object *value);
+    static const char *setExisting(State *state, Object *object, const char *key, Object *value);
+    static const char *setShadowing(State *state, Object *object, const char *key, Object *value, bool *set);
+    static const char *setNormal(State *state, Object *object, const char *key, Object *value);
     static const char *setConstraint(State *state, Object *object, const char *key, size_t keyLength, Object *constraint);
 
     static void mark(State *state, Object *Object);

@@ -70,6 +70,25 @@ void VM::error(State *state, const char *fmt, ...) {
     state->m_runState = kErrored;
 }
 
+void VM::printBacktrace(State *state) {
+    State *current = state;
+    while (current) {
+        for (int i = (int)current->m_length - 1, k = 0; i >= 0; --i, ++k) {
+            CallFrame *frame = &current->m_stack[i];
+            Instruction *instruction = frame->m_instructions;
+
+            const char *file = nullptr;
+            SourceRange line;
+            int col;
+            int row;
+            bool found = SourceRecord::findSourcePosition(instruction->m_belongsTo->m_textFrom, &file, &line, &row, &col);
+            U_ASSERT(found);
+            u::Log::err("% 4d: \e[1m%s:%d:\e[0m %.*s\n", k, file, row+1, (int)(line.m_end - line.m_begin - 1), line.m_begin);
+        }
+        current = current->m_parent;
+    }
+}
+
 // TODO: make a console variable
 static constexpr long long kSampleStrideSize = 100000LL; // 0.1ms
 
@@ -480,17 +499,17 @@ static VMFnWrap instrAssign(VMState *state) {
     const AssignType assignType = instruction->m_assignType;
     switch (assignType) {
         case kAssignPlain: {
-            Object::setNormal(object, key, valueObject);
+            Object::setNormal(state->m_restState, object, key, valueObject);
             break;
         }
         case kAssignExisting: {
-            const char *error = Object::setExisting(object, key, valueObject);
+            const char *error = Object::setExisting(state->m_restState, object, key, valueObject);
             VM_ASSERTION(!error, "%s for '%s'", error, key);
             break;
         }
         case kAssignShadowing: {
             bool keySet = false;
-            const char *error = Object::setShadowing(object, key, valueObject, &keySet);
+            const char *error = Object::setShadowing(state->m_restState, object, key, valueObject, &keySet);
             VM_ASSERTION(!error, "%s for '%s'", error, key);
             VM_ASSERTION(keySet, "key '%s' not found in object", key);
             break;
@@ -512,17 +531,17 @@ static VMFnWrap instrAssignStringKey(VMState *state) {
     AssignType assignType = instruction->m_assignType;
     switch (assignType) {
         case kAssignPlain: {
-            Object::setNormal(object, key, valueObject);
+            Object::setNormal(state->m_restState, object, key, valueObject);
             break;
         }
         case kAssignExisting: {
-            const char *error = Object::setExisting(object, key, valueObject);
+            const char *error = Object::setExisting(state->m_restState, object, key, valueObject);
             VM_ASSERTION(!error, "%s for '%s'", error, key);
             break;
         }
         case kAssignShadowing: {
             bool keySet = false;
-            const char *error = Object::setShadowing(object, key, valueObject, &keySet);
+            const char *error = Object::setShadowing(state->m_restState, object, key, valueObject, &keySet);
             VM_ASSERTION(!error, "%s for '%s'", error, key);
             VM_ASSERTION(keySet, "key '%s' not found in object", key);
             break;
@@ -814,7 +833,7 @@ Object *VM::setupVaradicArguments(State *state, Object *context, UserFunction *u
     Object **allArguments = (Object **)Memory::allocate(sizeof *allArguments * length);
     for (size_t i = 0; i < length; i++)
         allArguments[i] = arguments[userFunction->m_arity + i];
-    Object::setNormal(context, "$", Object::newArray(state, allArguments, (IntObject *)Object::newInt(state, length)));
+    Object::setNormal(state, context, "$", Object::newArray(state, allArguments, (IntObject *)Object::newInt(state, length)));
     context->m_flags |= kClosed;
     return context;
 }
@@ -832,7 +851,7 @@ void VM::functionHandler(State *state, Object *self, Object *function, Object **
 void VM::methodHandler(State *state, Object *self, Object *function, Object **arguments, size_t count) {
     ClosureObject *functionObject = (ClosureObject *)function;
     Object *context = Object::newObject(state, functionObject->m_context);
-    Object::setNormal(context, "this", self);
+    Object::setNormal(state, context, "this", self);
     context->m_flags |= kClosed;
     GC::disable(state);
     context = setupVaradicArguments(state, context, &functionObject->m_closure, arguments, count);

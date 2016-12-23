@@ -1071,7 +1071,8 @@ static void exec(const u::string &script) {
 
         // Did we error out while running?
         if (state.m_runState == s::kErrored) {
-            u::Log::err("%s\n", state.m_error);
+            u::Log::err("\e[1m\e[31merror:\e[0m \e[1m%s\e[0m\n", state.m_error);
+            s::VM::printBacktrace(&state);
         }
     }
 

@@ -378,7 +378,7 @@ static void arrayResize(State *state, Object *self, Object *, Object **arguments
     memset(arrayObject->m_contents + oldSize, 0, sizeof(Object *) * (newSize - oldSize));
     arrayObject->m_length = newSize;
 
-    Object::setNormal(self, "length", Object::newInt(state, newSize));
+    Object::setNormal(state, self, "length", Object::newInt(state, newSize));
 
     state->m_resultValue = self;
 }
@@ -396,7 +396,7 @@ static void arrayPush(State *state, Object *self, Object *, Object **arguments, 
     arrayObject->m_contents = (Object **)Memory::reallocate(arrayObject->m_contents, sizeof(Object *) * ++arrayObject->m_length);
     arrayObject->m_contents[arrayObject->m_length - 1] = value;
 
-    Object::setNormal(self, "length", Object::newInt(state, arrayObject->m_length));
+    Object::setNormal(state, self, "length", Object::newInt(state, arrayObject->m_length));
 
     state->m_resultValue = self;
 }
@@ -413,7 +413,7 @@ static void arrayPop(State *state, Object *self, Object *, Object **, size_t cou
     Object *result = arrayObject->m_contents[arrayObject->m_length - 1];
     arrayObject->m_contents = (Object **)Memory::reallocate(arrayObject->m_contents, sizeof(Object *) * --arrayObject->m_length);
 
-    Object::setNormal(self, "length", Object::newInt(state, arrayObject->m_length));
+    Object::setNormal(state, self, "length", Object::newInt(state, arrayObject->m_length));
 
     state->m_resultValue = result;
 }
@@ -665,35 +665,35 @@ Object *createRoot(State *state) {
     GC::addRoots(state, &root, 1, &pinned);
 
     // null
-    Object::setNormal(root, "Null", nullptr);
+    Object::setNormal(state, root, "Null", nullptr);
 
     // function
     Object *functionObject = Object::newObject(state, nullptr);
     state->m_shared->m_valueCache.m_functionBase = functionObject;
     functionObject->m_flags |= kNoInherit;
-    Object::setNormal(root, "Function", functionObject);
-    Object::setNormal(functionObject, "apply", Object::newFunction(state, functionApply));
+    Object::setNormal(state, root, "Function", functionObject);
+    Object::setNormal(state, functionObject, "apply", Object::newFunction(state, functionApply));
     functionObject->m_flags |= kImmutable;
 
     // closure
     Object *closureObject = Object::newObject(state, nullptr);
     state->m_shared->m_valueCache.m_closureBase = closureObject;
     closureObject->m_flags |= kNoInherit;
-    Object::setNormal(root, "Closure", closureObject);
-    Object::setNormal(closureObject, "apply", Object::newFunction(state, functionApply));
+    Object::setNormal(state, root, "Closure", closureObject);
+    Object::setNormal(state, closureObject, "apply", Object::newFunction(state, functionApply));
     closureObject->m_mark = closureMark;
 
     // bool
     Object *boolObject = Object::newObject(state, nullptr);
     state->m_shared->m_valueCache.m_boolBase = boolObject;
     boolObject->m_flags |= kNoInherit;
-    Object::setNormal(root, "Bool", boolObject);
-    Object::setNormal(boolObject, "!", Object::newFunction(state, boolNot));
-    Object::setNormal(boolObject, "==", Object::newFunction(state, boolCmp));
+    Object::setNormal(state, root, "Bool", boolObject);
+    Object::setNormal(state, boolObject, "!", Object::newFunction(state, boolNot));
+    Object::setNormal(state, boolObject, "==", Object::newFunction(state, boolCmp));
     Object *trueObject = Object::newBoolUncached(state, true);
     Object *falseObject = Object::newBoolUncached(state, false);
-    Object::setNormal(root, "true", trueObject);
-    Object::setNormal(root, "false", falseObject);
+    Object::setNormal(state, root, "true", trueObject);
+    Object::setNormal(state, root, "false", falseObject);
     state->m_shared->m_valueCache.m_boolTrue = trueObject;
     state->m_shared->m_valueCache.m_boolFalse = falseObject;
     boolObject->m_flags |= kImmutable;
@@ -702,20 +702,20 @@ Object *createRoot(State *state) {
     Object *intObject = Object::newObject(state, nullptr);
     state->m_shared->m_valueCache.m_intBase = intObject;
     intObject->m_flags |= kNoInherit;
-    Object::setNormal(root, "Int", intObject);
-    Object::setNormal(intObject, "+", Object::newFunction(state, intAdd));
-    Object::setNormal(intObject, "-", Object::newFunction(state, intSub));
-    Object::setNormal(intObject, "*", Object::newFunction(state, intMul));
-    Object::setNormal(intObject, "/", Object::newFunction(state, intDiv));
-    Object::setNormal(intObject, "&", Object::newFunction(state, intBitAnd));
-    Object::setNormal(intObject, "|", Object::newFunction(state, intBitOr));
-    Object::setNormal(intObject, "==", Object::newFunction(state, intCompareEq));
-    Object::setNormal(intObject, "<", Object::newFunction(state, intCompareLt));
-    Object::setNormal(intObject, ">", Object::newFunction(state, intCompareGt));
-    Object::setNormal(intObject, "<=", Object::newFunction(state, intCompareLe));
-    Object::setNormal(intObject, ">=", Object::newFunction(state, intCompareGe));
-    Object::setNormal(intObject, "toFloat", Object::newFunction(state, intToFloat));
-    Object::setNormal(intObject, "toString", Object::newFunction(state, intToString));
+    Object::setNormal(state, root, "Int", intObject);
+    Object::setNormal(state, intObject, "+", Object::newFunction(state, intAdd));
+    Object::setNormal(state, intObject, "-", Object::newFunction(state, intSub));
+    Object::setNormal(state, intObject, "*", Object::newFunction(state, intMul));
+    Object::setNormal(state, intObject, "/", Object::newFunction(state, intDiv));
+    Object::setNormal(state, intObject, "&", Object::newFunction(state, intBitAnd));
+    Object::setNormal(state, intObject, "|", Object::newFunction(state, intBitOr));
+    Object::setNormal(state, intObject, "==", Object::newFunction(state, intCompareEq));
+    Object::setNormal(state, intObject, "<", Object::newFunction(state, intCompareLt));
+    Object::setNormal(state, intObject, ">", Object::newFunction(state, intCompareGt));
+    Object::setNormal(state, intObject, "<=", Object::newFunction(state, intCompareLe));
+    Object::setNormal(state, intObject, ">=", Object::newFunction(state, intCompareGe));
+    Object::setNormal(state, intObject, "toFloat", Object::newFunction(state, intToFloat));
+    Object::setNormal(state, intObject, "toString", Object::newFunction(state, intToString));
     state->m_shared->m_valueCache.m_intZero = Object::newInt(state, 0);
     GC::addPermanent(state, state->m_shared->m_valueCache.m_intZero);
     intObject->m_flags |= kImmutable;
@@ -724,57 +724,57 @@ Object *createRoot(State *state) {
     Object *floatObject = Object::newObject(state, nullptr);
     state->m_shared->m_valueCache.m_floatBase = floatObject;
     floatObject->m_flags |= kNoInherit;
-    Object::setNormal(root, "Float", floatObject);
-    Object::setNormal(floatObject, "+", Object::newFunction(state, floatAdd));
-    Object::setNormal(floatObject, "-", Object::newFunction(state, floatSub));
-    Object::setNormal(floatObject, "*", Object::newFunction(state, floatMul));
-    Object::setNormal(floatObject, "/", Object::newFunction(state, floatDiv));
-    Object::setNormal(floatObject, "==", Object::newFunction(state, floatCompareEq));
-    Object::setNormal(floatObject, "<", Object::newFunction(state, floatCompareLt));
-    Object::setNormal(floatObject, ">", Object::newFunction(state, floatCompareGt));
-    Object::setNormal(floatObject, "<=", Object::newFunction(state, floatCompareLe));
-    Object::setNormal(floatObject, ">=", Object::newFunction(state, floatCompareGe));
-    Object::setNormal(floatObject, "toInt", Object::newFunction(state, floatToInt));
-    Object::setNormal(floatObject, "toString", Object::newFunction(state, floatToString));
+    Object::setNormal(state, root, "Float", floatObject);
+    Object::setNormal(state, floatObject, "+", Object::newFunction(state, floatAdd));
+    Object::setNormal(state, floatObject, "-", Object::newFunction(state, floatSub));
+    Object::setNormal(state, floatObject, "*", Object::newFunction(state, floatMul));
+    Object::setNormal(state, floatObject, "/", Object::newFunction(state, floatDiv));
+    Object::setNormal(state, floatObject, "==", Object::newFunction(state, floatCompareEq));
+    Object::setNormal(state, floatObject, "<", Object::newFunction(state, floatCompareLt));
+    Object::setNormal(state, floatObject, ">", Object::newFunction(state, floatCompareGt));
+    Object::setNormal(state, floatObject, "<=", Object::newFunction(state, floatCompareLe));
+    Object::setNormal(state, floatObject, ">=", Object::newFunction(state, floatCompareGe));
+    Object::setNormal(state, floatObject, "toInt", Object::newFunction(state, floatToInt));
+    Object::setNormal(state, floatObject, "toString", Object::newFunction(state, floatToString));
     floatObject->m_flags |= kImmutable;
 
     // string
     Object *stringObject = Object::newObject(state, nullptr);
     state->m_shared->m_valueCache.m_stringBase = stringObject;
     stringObject->m_flags |= kNoInherit;
-    Object::setNormal(root, "String", stringObject);
-    Object::setNormal(stringObject, "+", Object::newFunction(state, stringAdd));
-    Object::setNormal(stringObject, "==", Object::newFunction(state, stringCompare));
+    Object::setNormal(state, root, "String", stringObject);
+    Object::setNormal(state, stringObject, "+", Object::newFunction(state, stringAdd));
+    Object::setNormal(state, stringObject, "==", Object::newFunction(state, stringCompare));
     stringObject->m_flags |= kImmutable;
 
     // array
     Object *arrayObject = Object::newObject(state, nullptr);
     state->m_shared->m_valueCache.m_arrayBase = arrayObject;
     arrayObject->m_flags |= kNoInherit;
-    Object::setNormal(root, "Array", arrayObject);
+    Object::setNormal(state, root, "Array", arrayObject);
     arrayObject->m_mark = arrayMark;
-    Object::setNormal(arrayObject, "resize", Object::newFunction(state, arrayResize));
-    Object::setNormal(arrayObject, "join", Object::newFunction(state, arrayJoin));
-    Object::setNormal(arrayObject, "push", Object::newFunction(state, arrayPush));
-    Object::setNormal(arrayObject, "pop", Object::newFunction(state, arrayPop));
-    Object::setNormal(arrayObject, "[]", Object::newFunction(state, arrayIndex));
-    Object::setNormal(arrayObject, "[]=", Object::newFunction(state, arrayIndexAssign));
+    Object::setNormal(state, arrayObject, "resize", Object::newFunction(state, arrayResize));
+    Object::setNormal(state, arrayObject, "join", Object::newFunction(state, arrayJoin));
+    Object::setNormal(state, arrayObject, "push", Object::newFunction(state, arrayPush));
+    Object::setNormal(state, arrayObject, "pop", Object::newFunction(state, arrayPop));
+    Object::setNormal(state, arrayObject, "[]", Object::newFunction(state, arrayIndex));
+    Object::setNormal(state, arrayObject, "[]=", Object::newFunction(state, arrayIndexAssign));
     arrayObject->m_flags |= kClosed | kImmutable;
 
     // Math
     Object *mathObject = Object::newObject(state, nullptr);
     mathObject->m_flags |= kNoInherit | kImmutable;
-    Object::setNormal(root, "Math", mathObject);
-    Object::setNormal(mathObject, "sin", Object::newFunction(state, mathSin));
-    Object::setNormal(mathObject, "cos", Object::newFunction(state, mathCos));
-    Object::setNormal(mathObject, "tan", Object::newFunction(state, mathTan));
-    Object::setNormal(mathObject, "sqrt", Object::newFunction(state, mathSqrt));
-    Object::setNormal(mathObject, "pow", Object::newFunction(state, mathPow));
+    Object::setNormal(state, root, "Math", mathObject);
+    Object::setNormal(state, mathObject, "sin", Object::newFunction(state, mathSin));
+    Object::setNormal(state, mathObject, "cos", Object::newFunction(state, mathCos));
+    Object::setNormal(state, mathObject, "tan", Object::newFunction(state, mathTan));
+    Object::setNormal(state, mathObject, "sqrt", Object::newFunction(state, mathSqrt));
+    Object::setNormal(state, mathObject, "pow", Object::newFunction(state, mathPow));
     mathObject->m_flags |= kClosed;
 
     // others
-    Object::setNormal(root, "print", Object::newFunction(state, print));
-    Object::setNormal(root, "require", Object::newFunction(state, require));
+    Object::setNormal(state, root, "print", Object::newFunction(state, print));
+    Object::setNormal(state, root, "require", Object::newFunction(state, require));
 
     GC::delRoots(state, &pinned);
 
