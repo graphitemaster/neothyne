@@ -83,7 +83,7 @@ void VM::printBacktrace(State *state) {
             int row;
             bool found = SourceRecord::findSourcePosition(instruction->m_belongsTo->m_textFrom, &file, &line, &row, &col);
             U_ASSERT(found);
-            u::Log::err("% 4d: \e[1m%s:%d:\e[0m %.*s\n", k, file, row+1, (int)(line.m_end - line.m_begin - 1), line.m_begin);
+            u::Log::err("[script] => % 4d: \e[1m%s:%d:\e[0m %.*s\n", k, file, row+1, (int)(line.m_end - line.m_begin - 1), line.m_begin);
         }
         current = current->m_parent;
     }

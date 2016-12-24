@@ -781,6 +781,9 @@ void Engine::swap() {
             }
             break;
         case SDL_TEXTINPUT:
+            // Ignore text input if we're not inputting
+            if (CTX(m_context)->m_textState != TextState::kInputting)
+                break;
             // Ignore the first "/"
             if (CTX(m_context)->m_textString.empty() && !strcmp(e.text.text, "/"))
                 break;
@@ -1061,6 +1064,8 @@ static void exec(const u::string &script) {
     char *text = source.m_begin;
     s::ParseResult result = s::Parser::parseModule(&text, &module);
 
+    //s::UserFunction::dump(module, 0);
+
     if (result == s::kParseOk) {
         // Execute the result on the VM
         s::VM::callFunction(&state, root, module, nullptr, 0);
@@ -1071,7 +1076,7 @@ static void exec(const u::string &script) {
 
         // Did we error out while running?
         if (state.m_runState == s::kErrored) {
-            u::Log::err("\e[1m\e[31merror:\e[0m \e[1m%s\e[0m\n", state.m_error);
+            u::Log::err("[script] => \e[1m\e[31merror:\e[0m \e[1m%s\e[0m\n", state.m_error);
             s::VM::printBacktrace(&state);
         }
     }

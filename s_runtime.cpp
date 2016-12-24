@@ -71,6 +71,8 @@ static void intMath(State *state, Object *self, Object *, Object **arguments, si
     Object *floatBase = state->m_shared->m_valueCache.m_floatBase;
     Object *floatObj2 = Object::instanceOf(*arguments, floatBase);
 
+    VM_ASSERT(floatObj2, "cannot perform arithmetic with '%s'", getTypeString(state, *arguments));
+
     if (floatObj2) {
         float value1 = ((IntObject *)intObj1)->m_value;
         float value2 = ((FloatObject *)floatObj2)->m_value;

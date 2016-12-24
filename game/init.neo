@@ -8,8 +8,7 @@ let e: Vec2 = d * 2; // { 0.4, 0.8 }
 print(c.x, ", ", c.y, "\n");
 print(d.x, ", ", d.y, "\n");
 print(e.x, ", ", e.y, "\n");
-/* The best
- * triangle known to man kind. */
+
 fn sierpinski(n: Int) {
   for (let y: Int = n - 1; y >= 0; y--) {
     for (let i = 0; i < y; i++)
@@ -23,6 +22,7 @@ fn sierpinski(n: Int) {
 sierpinski(16);
 sierpinski(32);
 sierpinski(64);
+sierpinski(128);
 
 fn hofstadter_conway(m: Int) {
   let k1: Int = 2;
@@ -43,7 +43,7 @@ fn hofstadter_conway(m: Int) {
   }
 }
 
-hofstadter_conway(0x100000);
+//hofstadter_conway(0x100000);
 
 fn thieles_interpolation() {
   const N: Int = 32;
@@ -85,7 +85,7 @@ fn thieles_interpolation() {
   }
   print(6. * isin(.5), "\n");
   print(3. * icos(.5), "\n");
-  print(4. * itan(1.), "\n");
+  print(4. * itan(.5), "\n");
 }
 
 thieles_interpolation();

@@ -170,7 +170,9 @@ void Instruction::dump(Instruction **instructions, int level) {
         u::Log::out("SetConstraint:     %%%zu . '%.*s' : %%%zu [optimized]\n",
             ((SetConstraintStringKey *)instruction)->m_objectSlot,
             (int)((SetConstraintStringKey *)instruction)->m_keyLength,
+            ((SetConstraintStringKey *)instruction)->m_key,
             ((SetConstraintStringKey *)instruction)->m_constraintSlot);
+        *instructions = (Instruction *)((SetConstraintStringKey *)instruction + 1);
         break;
     case kDefineFastSlot:
         u::Log::out("DefineFastSlot     &%%%zu = %%%zu . '%.*s' [optimized]\n",

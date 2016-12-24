@@ -21,7 +21,9 @@ CXXFLAGS = \
 	-Wextra \
 	-fno-exceptions \
 	-fno-rtti \
+	-fno-stack-protector \
 	-I. \
+	-D_FORTIFY_SOURCE=0\
 	-DDEBUG_GL \
 	-DDXT_COMPRESSOR \
 	-O3

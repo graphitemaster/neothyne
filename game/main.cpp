@@ -184,13 +184,13 @@ int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, 
         m::vec3(-448.34, 101.02, -156.27),
         m::vec3(-452.94, 101.02, 23.58),
         m::vec3(-206.59, 101.02, -209.52),
-        m::vec3(62.59, 101.02, -207.53)
+        m::vec3(62.59, 101.02, -207.53),
     };
 
     r::pointLight light;
     light.diffuse = 1.0f;
     light.ambient = 0.10f;
-    light.radius = 30.0f;
+    light.radius = 50.0f;
     for (size_t i = 0; i < sizeof places / sizeof *places; i++) {
         light.color = { u::randf(), u::randf(), u::randf() };
         light.position = places[i];
