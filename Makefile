@@ -19,6 +19,7 @@ CXXFLAGS = \
 	-Wall \
 	-Wstrict-aliasing=3 \
 	-Wextra \
+	-ffast-math \
 	-fno-exceptions \
 	-fno-rtti \
 	-fno-stack-protector \

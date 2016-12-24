@@ -369,22 +369,49 @@ void kdMap::traceSphere(kdSphereTrace *trace, int32_t rootNode) {
 bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius, int32_t root) {
     m_stack.reset();
     m_stack.push(root);
+
     while (m_stack) {
         int32_t node = m_stack.pop();
         if (node < 0) {
+            // leaf node
             const size_t leafIndex = -node - 1;
             const size_t triangleCount = leafs[leafIndex].triangles.size();
+            // check every triangle in the leaf
             for (size_t i = 0; i < triangleCount; i++) {
                 const size_t triangleIndex = leafs[leafIndex].triangles[i];
+                // did we collide against a triangle in this leaf?
                 if (sphereTriangleIntersectStatic(triangleIndex, position, radius))
                     triangleIndices.push_back(triangleIndex);
             }
-        } else {
-            m_stack.push(nodes[node].children[0]);
-            m_stack.push(nodes[node].children[1]);
+            continue;
         }
+
+        // not a leaf node
+        m::plane::point start;
+
+        // check if everything is infront of the splitting plane
+        m::plane checkPlane = planes[nodes[node].plane];
+        checkPlane.d -= radius;
+        start = checkPlane.classify(position, kdTree::kEpsilon);
+        if (start > m::plane::kOn) {
+            m_stack.push(nodes[node].children[0]);
+            continue;
+        }
+
+        // check if everything is behind of the splitting plane
+        checkPlane.d = planes[nodes[node].plane].d + radius;
+        start = checkPlane.classify(position, kdTree::kEpsilon);
+        if (start < m::plane::kOn) {
+            m_stack.push(nodes[node].children[1]);
+            continue;
+        }
+
+        // check front and back
+        m_stack.push(nodes[node].children[1]);
+        m_stack.push(nodes[node].children[0]);
     }
-    return true;
+
+    return triangleIndices.size();
 }
 
 bool kdMap::inSphere(u::vector<size_t> &triangleIndices, const m::vec3 &position, float radius) {

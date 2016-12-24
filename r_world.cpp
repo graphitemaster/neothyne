@@ -257,9 +257,12 @@ bool World::PointLightChunk::buildMesh(kdMap *map) {
     // rebuilding mesh: throw away old memory statistics
     if (memory)
         stats->decIBOMemory(memory);
+
     u::vector<size_t> triangleIndices;
     u::vector<GLuint> indices[6];
+
     map->inSphere(triangleIndices, light->position, light->radius);
+
     for (size_t side = 0; side < 6; ++side)
         indices[side].reserve(triangleIndices.size() * 3 / 6);
     for (const auto &it : triangleIndices) {
@@ -791,17 +794,15 @@ void World::cullPass(const pipeline &pl) {
         const float scale = light->radius * kLightRadiusTweak;
         it.visible = m_frustum.testSphere(light->position, scale);
         const auto hash = light->hash();
-        if (it.visible && it.hash != hash) {
+        if (it.visible && light->castShadows && it.hash != hash) {
             it.buildMesh(m_kdWorld);
             it.hash = hash;
-            if (light->castShadows) {
-                it.transform = m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
-                               m::mat4::scale({widthScale, heightScale, 0.5f}) *
-                               m::mat4::project(light->cutOff, 1.0f / light->radius, m::sqrt(3.0f), r_sm_bias / light->radius) *
-                               m::mat4::lookat(light->direction, m::vec3::yAxis) *
-                               m::mat4::scale(1.0f / light->radius) *
-                               m::mat4::translate(-light->position);
-            }
+            it.transform = m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
+                           m::mat4::scale({widthScale, heightScale, 0.5f}) *
+                           m::mat4::project(light->cutOff, 1.0f / light->radius, m::sqrt(3.0f), r_sm_bias / light->radius) *
+                           m::mat4::lookat(light->direction, m::vec3::yAxis) *
+                           m::mat4::scale(1.0f / light->radius) *
+                           m::mat4::translate(-light->position);
         }
     }
 
@@ -812,15 +813,13 @@ void World::cullPass(const pipeline &pl) {
         const float scale = light->radius * kLightRadiusTweak;
         it.visible = m_frustum.testSphere(light->position, scale);
         const auto hash = light->hash();
-        if (it.visible && it.hash != hash) {
+        if (it.visible && light->castShadows && it.hash != hash) {
             it.buildMesh(m_kdWorld);
             it.hash = hash;
-            if (light->castShadows) {
-                it.transform = m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
-                               m::mat4::scale({widthScale, heightScale, 0.5f}) *
-                               m::mat4::project(90.0f, 1.0f / light->radius, m::sqrt(3.0f), r_sm_bias / light->radius) *
-                               m::mat4::scale(1.0f / light->radius);
-            }
+            it.transform = m::mat4::translate({widthOffset, heightOffset, 0.5f}) *
+                           m::mat4::scale({widthScale, heightScale, 0.5f}) *
+                           m::mat4::project(90.0f, 1.0f / light->radius, m::sqrt(3.0f), r_sm_bias / light->radius) *
+                           m::mat4::scale(1.0f / light->radius);
         }
     }
 
