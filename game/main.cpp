@@ -400,6 +400,6 @@ int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, 
         //audio.setPan(handle, direction.x);
     }
 
-    delete gWorld;
+//    delete gWorld;
     return 0;
 }

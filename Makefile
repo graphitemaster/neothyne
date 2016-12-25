@@ -45,7 +45,7 @@ ENGINE_LDFLAGS = \
 all: $(GAME_BIN)
 
 $(GAME_BIN): $(GAME_OBJECTS)
-	$(CXX) $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) $(GAME_OBJECTS) $(ENGINE_LDFLAGS) -o $@
 	$(STRIP) $@
 
 .cpp.o: $(DEP_DIR)/%.d
