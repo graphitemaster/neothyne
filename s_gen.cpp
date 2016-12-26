@@ -8,16 +8,14 @@ namespace s {
 
 BlockRef Gen::newBlockRef(Gen *gen, unsigned char *instruction, unsigned char *address) {
     FunctionBody *body = &gen->m_body;
-    InstructionBlock *block = &body->m_blocks[body->m_count - 1];
-    const size_t currentLength = (unsigned char *)block->m_instructionsEnd - (unsigned char *)block->m_instructions;
+    const size_t currentLength = (unsigned char *)body->m_instructionsEnd - (unsigned char *)body->m_instructions;
     const size_t delta = address - instruction;
-    return { body->m_count - 1, currentLength + delta };
+    return currentLength + delta;
 }
 
-void Gen::setBlockRef(Gen *gen, BlockRef reference, size_t value) {
+void Gen::setBlockRef(Gen *gen, BlockRef offset, size_t value) {
     FunctionBody *body = &gen->m_body;
-    InstructionBlock *block = &body->m_blocks[reference.m_block];
-    *(size_t *)((unsigned char *)block->m_instructions + reference.m_distance) = value;
+    *(size_t *)((unsigned char *)body->m_instructions + offset) = value;
 }
 
 void Gen::useRangeStart(Gen *gen, FileRange *range) {
@@ -45,8 +43,9 @@ void Gen::delRange(FileRange *range) {
 size_t Gen::newBlock(Gen *gen) {
     U_ASSERT(gen->m_blockTerminated);
     FunctionBody *body = &gen->m_body;
+    const size_t offset = (unsigned char *)body->m_instructionsEnd - (unsigned char *)body->m_instructions;
     body->m_blocks = (InstructionBlock *)Memory::reallocate(body->m_blocks, ++body->m_count * sizeof *body->m_blocks);
-    body->m_blocks[body->m_count - 1] = { nullptr, nullptr };
+    body->m_blocks[body->m_count - 1] = { offset, 0 };
     gen->m_blockTerminated = false;
     return body->m_count - 1;
 }
@@ -63,11 +62,12 @@ void Gen::addInstruction(Gen *gen, size_t size, Instruction *instruction) {
     instruction->m_contextSlot = gen->m_scope;
     FunctionBody *body = &gen->m_body;
     InstructionBlock *block = &body->m_blocks[body->m_count - 1];
-    const size_t currentLength = (unsigned char *)block->m_instructionsEnd - (unsigned char *)block->m_instructions;
+    const size_t currentLength = (unsigned char *)body->m_instructionsEnd - (unsigned char *)body->m_instructions;
     const size_t newLength = currentLength + size;
-    block->m_instructions = (Instruction *)Memory::reallocate(block->m_instructions, newLength);
-    block->m_instructionsEnd = (Instruction *)((unsigned char *)block->m_instructions + newLength);
-    memcpy((unsigned char *)block->m_instructions + currentLength, instruction, size);
+    body->m_instructions = (Instruction *)Memory::reallocate(body->m_instructions, newLength);
+    body->m_instructionsEnd = (Instruction *)((unsigned char *)body->m_instructions + newLength);
+    block->m_size += size;
+    memcpy((unsigned char *)body->m_instructions + currentLength, instruction, size);
     if (instruction->m_type == kBranch || instruction->m_type == kTestBranch || instruction->m_type == kReturn)
         gen->m_blockTerminated = true;
 }

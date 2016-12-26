@@ -43,52 +43,7 @@ fn hofstadter_conway(m: Int) {
   }
 }
 
-//hofstadter_conway(0x100000);
-
-fn thieles_interpolation() {
-  const N: Int = 32;
-  const N2: Int = (N * (N - 1) / 2);
-  const STEP: Float = 0.05;
-  let xval: Array = [].resize(N);
-  let tsin: Array = [].resize(N);
-  let tcos: Array = [].resize(N);
-  let ttan: Array = [].resize(N);
-  let rsin: Array = [].resize(N2);
-  let rcos: Array = [].resize(N2);
-  let rtan: Array = [].resize(N2);
-  fn rho(x: Array, y: Array, r: Array, i: Int, n: Int) {
-      if (n < 0) return 0;
-      if (n == 0) return y[i];
-      let idx = (N - 1 - n) * (N - n) / 2 + i;
-      if (r[idx] != r[idx])
-          r[idx] = (x[i] - x[i + n]) / (rho(x, y, r, i, n - 1) - rho(x, y, r, i + 1, n - 1)) + rho(x, y, r, i + 1, n - 2);
-      return r[idx];
-  }
-  fn thiele(x: Array, y: Array, r: Array, xin: Float, n: Int) {
-    if (n > N - 1) return 1;
-    return rho(x, y, r, 0, n) - rho(x, y, r, 0, n - 2)
-      + (xin - x[n]) / thiele(x, y, r, xin, n + 1);
-  }
-  fn isin(x: Float) { return thiele(tsin, xval, rsin, x, 0); }
-  fn icos(x: Float) { return thiele(tcos, xval, rcos, x, 0); }
-  fn itan(x: Float) { return thiele(ttan, xval, rtan, x, 0); }
-  for (let i: Int = 0; i < N; i++) {
-    xval[i] = i * STEP;
-    tsin[i] = Math.sin(xval[i]);
-    tcos[i] = Math.cos(xval[i]);
-    ttan[i] = Math.tan(xval[i]); // optionally approximate with division: tsin[i] / tcos[i];
-  }
-  for (let i: Int = 0; i < N2; i++) {
-    rsin[i] = 0.0/0.0;
-    rcos[i] = 0.0/0.0;
-    rtan[i] = 0.0/0.0;
-  }
-  print(6. * isin(.5), "\n");
-  print(3. * icos(.5), "\n");
-  print(4. * itan(.5), "\n");
-}
-
-thieles_interpolation();
+hofstadter_conway(0x100000);
 
 fn ackermann(m: Int, n: Int) {
   if (m == 0) return n + 1;

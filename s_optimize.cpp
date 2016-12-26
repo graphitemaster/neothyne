@@ -25,9 +25,9 @@ static inline void findPrimitiveSlots(UserFunction *function, bool **slots) {
     for (size_t i = 0; i < function->m_slots; i++)
         (*slots)[i] = true;
     for (size_t i = 0; i < function->m_body.m_count; i++) {
-        InstructionBlock *block = &function->m_body.m_blocks[i];
-        Instruction *instruction = block->m_instructions;
-        while (instruction != block->m_instructionsEnd) {
+        Instruction *instruction = InstructionBlock::begin(function, i);
+        Instruction *instructionsEnd = InstructionBlock::end(function, i);
+        while (instruction != instructionsEnd) {
             switch (instruction->m_type) {
             case kNewObject:
                 (*slots)[((Instruction::NewObject*)instruction)->m_parentSlot] = false;
@@ -86,9 +86,8 @@ struct SlotObjectInfo {
 static inline void findStaticObjectSlots(UserFunction *function, SlotObjectInfo **slots) {
     *slots = (SlotObjectInfo *)Memory::allocate(sizeof **slots, function->m_slots);
     for (size_t i = 0; i < function->m_body.m_count; i++) {
-        const auto *block = &function->m_body.m_blocks[i];
-        Instruction *instruction = block->m_instructions;
-        Instruction *instructionEnd = block->m_instructionsEnd;
+        Instruction *instruction = InstructionBlock::begin(function, i);
+        Instruction *instructionEnd = InstructionBlock::end(function, i);
         while (instruction != instructionEnd) {
             if (instruction->m_type == kNewObject) {
                 const auto *newObjectInstruction = (Instruction::NewObject *)instruction;
@@ -151,10 +150,10 @@ UserFunction *Optimize::predictPass(UserFunction *function) {
     gen.m_blockTerminated = true;
 
     for (size_t i = 0; i < function->m_body.m_count; i++) {
-        const InstructionBlock *const block = &function->m_body.m_blocks[i];
         Gen::newBlock(&gen);
-        Instruction *instruction = block->m_instructions;
-        while (instruction != block->m_instructionsEnd) {
+        Instruction *instruction = InstructionBlock::begin(function, i);
+        Instruction *instructionsEnd = InstructionBlock::end(function, i);
+        while (instruction != instructionsEnd) {
             const auto *accessStringKey = (Instruction::AccessStringKey *)instruction;
             if (instruction->m_type == kAccessStringKey) {
                 Instruction::AccessStringKey newAccessStringKey = *accessStringKey;
@@ -227,10 +226,10 @@ UserFunction *Optimize::fastSlotPass(UserFunction *function) {
     size_t writes = 0;
 
     for (size_t i = 0; i < function->m_body.m_count; i++) {
-        InstructionBlock *block = &function->m_body.m_blocks[i];
         Gen::newBlock(&gen);
-        Instruction *instruction = block->m_instructions;
-        while (instruction != block->m_instructionsEnd) {
+        Instruction *instruction = InstructionBlock::begin(function, i);
+        Instruction *instructionsEnd = InstructionBlock::end(function, i);
+        while (instruction != instructionsEnd) {
             for (size_t k = 0; k < infoSlotsLength; k++) {
                 const Slot slot = infoSlots[k];
                 if (instruction == info[slot].m_afterObjectDecl) {
@@ -318,10 +317,10 @@ UserFunction *Optimize::inlinePass(UserFunction *function) {
 
     u::vector<const char *> slotTable;
     for (size_t i = 0; i < function->m_body.m_count; i++) {
-        InstructionBlock *block = &function->m_body.m_blocks[i];
         Gen::newBlock(&gen);
-        Instruction *instruction = block->m_instructions;
-        while (instruction != block->m_instructionsEnd) {
+        Instruction *instruction = InstructionBlock::begin(function, i);
+        Instruction *instructionsEnd = InstructionBlock::end(function, i);
+        while (instruction != instructionsEnd) {
             auto *newStringObject = (Instruction::NewStringObject *)instruction;
             auto *access = (Instruction::Access *)instruction;
             auto *assign = (Instruction::Assign *)instruction;

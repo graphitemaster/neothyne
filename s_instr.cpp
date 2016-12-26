@@ -209,10 +209,10 @@ void UserFunction::dump(UserFunction *function, int level) {
     for (size_t i = 0; i < body->m_count; i++) {
         indent(level);
         u::Log::out("block <%zu> {\n", i);
-        InstructionBlock *block = &body->m_blocks[i];
         level++;
-        Instruction *instruction = block->m_instructions;
-        while (instruction != block->m_instructionsEnd) {
+        Instruction *instruction = InstructionBlock::begin(function, i);
+        Instruction *instructionsEnd = InstructionBlock::end(function, i);
+        while (instruction != instructionsEnd) {
             Instruction::dump(&instruction, level);
             if (instruction->m_type == kNewClosureObject)
                 otherFunctions.push_back(((Instruction::NewClosureObject *)instruction)->m_function);

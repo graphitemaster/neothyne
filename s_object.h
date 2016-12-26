@@ -167,6 +167,9 @@ struct CallFrame {
 
     // The list of instructions for this call frame
     Instruction *m_instructions;
+
+    // The caller frame
+    CallFrame *m_above;
 };
 
 enum RunState {
@@ -250,6 +253,11 @@ struct SharedState {
 
     // The amount of VM cycles
     int m_cycleCount;
+
+    // Storage for stack allocations
+    void *m_stackData;
+    size_t m_stackLength;
+    size_t m_stackOffset;
 };
 
 struct State {
@@ -259,11 +267,8 @@ struct State {
     // State shared across multiple substates
     SharedState *m_shared;
 
-    // The stack for placing function calls
-    CallFrame *m_stack;
-
-    // The length of the stack
-    size_t m_length;
+    // Current call frame (linked-list allocated on the stack)
+    CallFrame *m_frame;
 
     // The root object (literally Object's root)
     Object *m_root;

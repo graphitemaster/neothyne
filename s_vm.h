@@ -25,7 +25,7 @@ struct VMFnWrap {
 
 struct VM {
     // Call frame management
-    static CallFrame *addFrame(State *state, size_t slots, size_t fastSlots);
+    static void addFrame(State *state, size_t slots, size_t fastSlots);
     static void delFrame(State *state);
 
     // Execute the V
@@ -48,6 +48,10 @@ private:
     static void recordProfile(State *state);
     static long long getClockDifference(struct timespec *targetClock,
                                         struct timespec *compareClock);
+
+    static void *stackAllocate(State *state, size_t size);
+    static void *stackAllocateUninitialized(State *state, size_t size);
+    static void stackFree(State *state, void *data, size_t size);
 
     // Execute one cycle of the VM
     static void step(State *state);

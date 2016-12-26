@@ -74,14 +74,13 @@ struct Instruction {
     FileRange *m_belongsTo;
 };
 
-struct InstructionBlock {
-    Instruction *m_instructions;
-    Instruction *m_instructionsEnd;
-};
+struct InstructionBlock;
 
 struct FunctionBody {
     InstructionBlock *m_blocks;
     size_t m_count;
+    Instruction *m_instructions;
+    Instruction *m_instructionsEnd;
 };
 
 struct UserFunction {
@@ -94,6 +93,23 @@ struct UserFunction {
     bool m_isMethod;
     bool m_hasVariadicTail;
     FunctionBody m_body;
+};
+
+
+struct InstructionBlock {
+    static Instruction *begin(UserFunction *function, size_t blockIndex) {
+        return (Instruction *)((unsigned char *)function->m_body.m_instructions
+            + function->m_body.m_blocks[blockIndex].m_offset);
+    }
+
+    static Instruction *end(UserFunction *function, size_t blockIndex) {
+        return (Instruction *)((unsigned char *)function->m_body.m_instructions
+            + function->m_body.m_blocks[blockIndex].m_offset
+            + function->m_body.m_blocks[blockIndex].m_size);
+    }
+
+    size_t m_offset;
+    size_t m_size;
 };
 
 struct Instruction::NewObject : Instruction {

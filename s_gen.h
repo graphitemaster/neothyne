@@ -7,10 +7,7 @@
 
 namespace s {
 
-struct BlockRef {
-    size_t m_block;
-    uintptr_t m_distance;
-};
+typedef size_t BlockRef;
 
 struct Gen {
     static BlockRef newBlockRef(Gen *gen, unsigned char *instruction, unsigned char *address);

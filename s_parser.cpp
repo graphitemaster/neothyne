@@ -30,6 +30,8 @@ static void logParseError(char *location, const char *format, ...) {
     va_start(va, format);
     if (SourceRecord::findSourcePosition(location, &file, &line, &row, &col)) {
         u::Log::err("\e[1m%s:%i:%i: \e[31merror:\e[0m \e[1m%s\e[0m\n", file, row + 1, col + 1, u::formatProcess(format, va));
+        if (line.m_end[-1] == '\n')
+            line.m_end--;
         u::Log::err("%.*s", (int)(line.m_end - line.m_begin), line.m_begin);
         int u8col = utf8len(line.m_begin, col);
         int u8len = utf8len(line.m_begin, line.m_end - line.m_begin);

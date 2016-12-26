@@ -10,55 +10,76 @@
 #include "u_misc.h"
 #include "u_log.h"
 
+#include "c_variable.h"
+
+VAR(int, s_profile, "control profiling", 0, 1, 0);
+VAR(u::string, s_profile_file, "profiling information file name", "profile.html");
+VAR(float, s_profile_sample_size, "profile sample size in milliseconds", 0.01f, 1.0f, 0.1f);
+VAR(int, s_stack_size, "VM stack size in MB", 1, 32, 16);
+
 namespace s {
 
-CallFrame *VM::addFrame(State *state, size_t slots, size_t fastSlots) {
-    void *stack = (void *)state->m_stack;
-    if (stack) {
-        size_t capacity = *((size_t *)stack - 1);
-        size_t newSize = sizeof(CallFrame) * (state->m_length + 1);
-        if (newSize > capacity) {
-            size_t newCapacity = capacity * 2;
-            if (newSize > newCapacity)
-                newCapacity = newSize;
-            void *old = stack;
-            void *base = (void *)((CallFrame*)stack - 1);
-            stack = Memory::allocate(newCapacity + sizeof(CallFrame));
-            stack = (void *)((CallFrame *)stack + 1);
-            *((size_t *)stack - 1) = newCapacity;
-            // tear down old gc roots
-            for (size_t i = 0; i < state->m_length; i++)
-                GC::delRoots(state, &state->m_stack[i].m_root);
-            memcpy(stack, old, capacity);
-            state->m_stack = (CallFrame *)stack;
-            // add new gc roots
-            for (size_t i = 0; i < state->m_length; i++) {
-                CallFrame *frame = &state->m_stack[i];
-                GC::addRoots(state, frame->m_slots, frame->m_count, &frame->m_root);
-            }
-            Memory::free(base);
-        }
-    } else {
-        U_ASSERT(state->m_length == 0);
-        size_t initialCapacity = sizeof(CallFrame);
-        stack = Memory::allocate(initialCapacity + sizeof(CallFrame));
-        stack = (void *)((CallFrame *)stack + 1);
-        *((size_t *)stack - 1) = initialCapacity;
-        state->m_stack = (CallFrame *)stack;
+void *VM::stackAllocateUninitialized(State *state, size_t size) {
+    SharedState *shared = state->m_shared;
+    if (U_UNLIKELY(shared->m_stackLength == 0)) {
+        shared->m_stackLength = s_stack_size*1024*1024;
+        shared->m_stackData = Memory::allocate(shared->m_stackLength);
     }
-    state->m_length = state->m_length + 1;
-    CallFrame *frame = &state->m_stack[state->m_length - 1];
+    const size_t newOffset = shared->m_stackOffset + size;
+    if (U_UNLIKELY(newOffset > shared->m_stackLength)) {
+        VM::error(state, "Stack overflow");
+        return nullptr;
+    }
+    unsigned char *data = (unsigned char *)shared->m_stackData + shared->m_stackOffset;
+    shared->m_stackOffset = newOffset;
+    return data;
+}
+
+void *VM::stackAllocate(State *state, size_t size) {
+    void *data = stackAllocateUninitialized(state, size);
+    if (data) {
+        memset(data, 0, size);
+    }
+    return data;
+}
+
+void VM::stackFree(State *state, void *data, size_t size) {
+    SharedState *shared = state->m_shared;
+    const size_t newOffset = shared->m_stackOffset - size;
+    // free has to be done in reverse order so verify that
+    U_ASSERT(data == (void *)((unsigned char *)shared->m_stackData + newOffset));
+    shared->m_stackOffset = newOffset;
+}
+
+void VM::addFrame(State *state, size_t slots, size_t fastSlots) {
+    auto *frame = (CallFrame *)stackAllocate(state, sizeof(CallFrame));
+    if (!frame) return;
+    frame->m_above = state->m_frame;
     frame->m_count = slots;
-    frame->m_slots = (Object **)Memory::allocate(sizeof(Object *), slots);
+    frame->m_slots = (Object **)stackAllocate(state, sizeof(Object *) * slots);
+    if (!frame->m_slots) {
+        stackFree(state, frame, sizeof *frame);
+        return;
+    }
     frame->m_fastSlotsCount = fastSlots;
-    frame->m_fastSlots = (Object ***)Memory::allocate(sizeof(Object **), fastSlots);
-    return frame;
+    // don't need to be initialized since fast slots are not subjected to
+    // traditional garbage collection.
+    frame->m_fastSlots = (Object ***)stackAllocateUninitialized(state, sizeof(Object **) * fastSlots);
+    if (!frame->m_fastSlots) {
+        stackFree(state, frame->m_slots, sizeof(Object *) * slots);
+        stackFree(state, frame, sizeof *frame);
+        return;
+    }
+    state->m_frame = frame;
 }
 
 void VM::delFrame(State *state) {
-    CallFrame *frame = &state->m_stack[state->m_length - 1];
-    Memory::free(frame->m_slots);
-    state->m_length = state->m_length - 1;
+    CallFrame *frame = state->m_frame;
+    CallFrame *above = frame->m_above;
+    stackFree(state, frame->m_fastSlots, sizeof(Object **) * frame->m_fastSlotsCount);
+    stackFree(state, frame->m_slots, sizeof(Object *) * frame->m_count);
+    stackFree(state, frame, sizeof *frame);
+    state->m_frame = above;
 }
 
 void VM::error(State *state, const char *fmt, ...) {
@@ -71,12 +92,10 @@ void VM::error(State *state, const char *fmt, ...) {
 }
 
 void VM::printBacktrace(State *state) {
-    State *current = state;
-    while (current) {
-        for (int i = (int)current->m_length - 1, k = 0; i >= 0; --i, ++k) {
-            CallFrame *frame = &current->m_stack[i];
+    for (State *current = state; current; current = current->m_parent) {
+        int k = 1;
+        for (CallFrame *frame = state->m_frame; frame; frame = frame->m_above, k++) {
             Instruction *instruction = frame->m_instructions;
-
             const char *file = nullptr;
             SourceRange line;
             int col;
@@ -85,12 +104,10 @@ void VM::printBacktrace(State *state) {
             U_ASSERT(found);
             u::Log::err("[script] => % 4d: \e[1m%s:%d:\e[0m %.*s\n", k, file, row+1, (int)(line.m_end - line.m_begin - 1), line.m_begin);
         }
-        current = current->m_parent;
     }
 }
 
-// TODO: make a console variable
-static constexpr long long kSampleStrideSize = 100000LL; // 0.1ms
+static constexpr long long k1MS = 1000000LL; // 1ms
 
 long long VM::getClockDifference(struct timespec *targetClock,
                                  struct timespec *compareClock)
@@ -98,24 +115,25 @@ long long VM::getClockDifference(struct timespec *targetClock,
     struct timespec sentinel;
     if (!targetClock) targetClock = &sentinel;
     const int result = clock_gettime(CLOCK_MONOTONIC, targetClock);
-    if (result != 0) { *(volatile int *)0 = 0; }; // TODO: better handling is monotonic is not supported?
+    if (result != 0) { *(volatile int *)0 = 0; }; // TODO: better handling if monotonic is not supported?
     const long nsDifference = targetClock->tv_nsec - compareClock->tv_nsec;
     const int sDifference = targetClock->tv_sec - compareClock->tv_sec;
     return (long long)sDifference * 1000000000LL + (long long)nsDifference;
 }
 
 void VM::recordProfile(State *state) {
+    if (!s_profile) return;
+
     struct timespec profileTime;
     long long nsDifference = getClockDifference(&profileTime, &state->m_shared->m_profileState.m_lastTime);
-    if (nsDifference > kSampleStrideSize) {
+    if (nsDifference > (long long)(s_profile_sample_size * k1MS)) {
         state->m_shared->m_profileState.m_lastTime = profileTime;
         const int cycleCount = state->m_shared->m_cycleCount;
         Table *directTable = &state->m_shared->m_profileState.m_directTable;
         Table *indirectTable = &state->m_shared->m_profileState.m_indirectTable;
         int innerRange = 0;
         for (State *currentState = state; currentState; currentState = currentState->m_parent) {
-            for (int i = currentState->m_length - 1; i >= 0; --i, ++innerRange) {
-                CallFrame *currentFrame = &currentState->m_stack[i];
+            for (CallFrame *currentFrame = currentState->m_frame; currentFrame; currentFrame = currentFrame->m_above, ++innerRange) {
                 Instruction *currentInstruction = currentFrame->m_instructions;
                 const char *keyData = (char *)&currentInstruction->m_belongsTo;
                 const size_t keyLength = sizeof currentInstruction->m_belongsTo;
@@ -578,7 +596,7 @@ static VMFnWrap instrCall(VMState *state) {
         arguments[i] = state->m_cf->m_slots[argumentSlot];
     }
 
-    const size_t prevStackLength = state->m_restState->m_length;
+    CallFrame *oldCallFrame = state->m_restState->m_frame;
 
     // TODO: verify if any callable needs to access cf->m_instr
     state->m_cf->m_instructions = state->m_instr;
@@ -594,7 +612,6 @@ static VMFnWrap instrCall(VMState *state) {
         return { instrHalt };
     }
 
-    CallFrame *oldCallFrame = &state->m_restState->m_stack[prevStackLength - 1];
     // Step over the call in the old stack frame
     oldCallFrame->m_instructions = (Instruction *)(instruction + 1);
 
@@ -602,7 +619,7 @@ static VMFnWrap instrCall(VMState *state) {
         Memory::free(arguments);
     }
 
-    state->m_cf = &state->m_restState->m_stack[state->m_restState->m_length - 1];
+    state->m_cf = state->m_restState->m_frame;
     state->m_instr = state->m_cf->m_instructions;
 
     return { instrFunctions[state->m_instr->m_type] };
@@ -627,11 +644,11 @@ static VMFnWrap instrReturn(VMState *state) {
     VM::delFrame(state->m_restState);
     state->m_restState->m_resultValue = result;
 
-    if (state->m_restState->m_length == 0) {
+    if (!state->m_restState->m_frame) {
         return { instrHalt };
     }
 
-    state->m_cf = &state->m_restState->m_stack[state->m_restState->m_length - 1];
+    state->m_cf = state->m_restState->m_frame;
     state->m_instr = state->m_cf->m_instructions;
     return { instrFunctions[state->m_instr->m_type] };
 }
@@ -640,7 +657,8 @@ static VMFnWrap instrBranch(VMState *state) {
     const auto *instruction = (Instruction::Branch *)state->m_instr;
     const size_t block = instruction->m_block;
     VM_ASSERTION(block < state->m_cf->m_function->m_body.m_count, "block addressing error");
-    state->m_instr = state->m_cf->m_function->m_body.m_blocks[block].m_instructions;
+    state->m_instr = (Instruction *)((unsigned char *)state->m_cf->m_function->m_body.m_instructions
+        + state->m_cf->m_function->m_body.m_blocks[block].m_offset);
     return { instrFunctions[state->m_instr->m_type] };
 }
 
@@ -675,7 +693,8 @@ static VMFnWrap instrTestBranch(VMState *state) {
     }
 
     const size_t targetBlock = test ? trueBlock : falseBlock;
-    state->m_instr = state->m_cf->m_function->m_body.m_blocks[targetBlock].m_instructions;
+    state->m_instr = (Instruction *)((unsigned char *)state->m_cf->m_function->m_body.m_instructions
+        + state->m_cf->m_function->m_body.m_blocks[targetBlock].m_offset);
     return { instrFunctions[state->m_instr->m_type] };
 }
 
@@ -739,7 +758,7 @@ void VM::step(State *state) {
     VMState vmState;
     vmState.m_restState = state;
     vmState.m_root = state->m_root;
-    vmState.m_cf = &state->m_stack[state->m_length - 1];
+    vmState.m_cf = state->m_frame;
     vmState.m_instr = vmState.m_cf->m_instructions;
 
     VMInstrFn fn = (VMInstrFn)instrFunctions[vmState.m_instr->m_type];
@@ -756,17 +775,17 @@ void VM::step(State *state) {
         fn = fn(&vmState).self;
     }
     state->m_shared->m_cycleCount += i * 9;
-    state->m_stack[state->m_length - 1].m_instructions = vmState.m_instr;
+    if (U_LIKELY(state->m_frame)) {
+        state->m_frame->m_instructions = vmState.m_instr;
+    }
     recordProfile(state);
-    vmState.m_cf->m_instructions = vmState.m_instr;
 }
 
 void VM::run(State *state) {
     U_ASSERT(state->m_runState == kTerminated || state->m_runState == kErrored);
-    if (state->m_length == 0) {
+    if (!state->m_frame) {
         return;
     }
-    U_ASSERT(state->m_length);
     state->m_runState = kRunning;
     state->m_error.clear();
     if (!state->m_shared->m_valueCache.m_preallocatedArguments) {
@@ -781,7 +800,7 @@ void VM::run(State *state) {
     GC::addRoots(state, &state->m_resultValue, 1, &resultSet);
     while (state->m_runState == kRunning) {
         step(state);
-        if (state->m_length == 0) {
+        if (!state->m_frame) {
             state->m_runState = kTerminated;
         }
     }
@@ -806,7 +825,8 @@ bool VM::callCallable(State *state, Object *self, Object *function, Object **arg
 }
 
 void VM::callFunction(State *state, Object *context, UserFunction *function, Object **arguments, size_t count) {
-    CallFrame *frame = addFrame(state, function->m_slots, function->m_fastSlots);
+    addFrame(state, function->m_slots, function->m_fastSlots);
+    CallFrame *frame = state->m_frame;
     frame->m_function = function;
     frame->m_slots[1] = context;
     GC::addRoots(state, frame->m_slots, frame->m_count, &frame->m_root);
@@ -821,7 +841,7 @@ void VM::callFunction(State *state, Object *context, UserFunction *function, Obj
         frame->m_slots[i + 2] = arguments[i];
 
     VM_ASSERT(frame->m_function->m_body.m_count, "invalid function");
-    frame->m_instructions = frame->m_function->m_body.m_blocks[0].m_instructions;
+    frame->m_instructions = frame->m_function->m_body.m_instructions;
 }
 
 Object *VM::setupVaradicArguments(State *state, Object *context, UserFunction *userFunction, Object **arguments, size_t count) {
@@ -900,6 +920,8 @@ void OpenRange::dropRecord(OpenRange **range) {
 }
 
 void ProfileState::dump(SourceRange source, ProfileState *profileState) {
+    if (!s_profile) return;
+
     Table *directTable = &profileState->m_directTable;
     Table *indirectTable = &profileState->m_indirectTable;
     const size_t numDirectRecords = directTable->m_fieldsStored;
@@ -977,7 +999,7 @@ void ProfileState::dump(SourceRange source, ProfileState *profileState) {
     // Generate the sampling profile
     OpenRange *openRangeHead = nullptr;
 
-    u::file dump = u::fopen("profile.html", "w");
+    u::file dump = u::fopen(s_profile_file, "w");
     u::fprint(dump, "<!DOCTYPE html>\n");
     u::fprint(dump, "<html>\n");
     u::fprint(dump, "<head>\n");
