@@ -16,6 +16,7 @@ VAR(int, s_profile, "control profiling", 0, 1, 0);
 VAR(u::string, s_profile_file, "profiling information file name", "profile.html");
 VAR(float, s_profile_sample_size, "profile sample size in milliseconds", 0.01f, 1.0f, 0.1f);
 VAR(int, s_stack_size, "VM stack size in MB", 1, 32, 16);
+VAR(int, s_cycle_stride, "instructions per VM cycle", 1, 512, 128);
 
 namespace s {
 
@@ -763,7 +764,7 @@ void VM::step(State *state) {
 
     VMInstrFn fn = (VMInstrFn)instrFunctions[vmState.m_instr->m_type];
     size_t i = 0;
-    for (; i < 128 && fn != instrHalt; i++) {
+    for (; i < (size_t)s_cycle_stride && fn != instrHalt; i++) {
         fn = fn(&vmState).self;
         fn = fn(&vmState).self;
         fn = fn(&vmState).self;
