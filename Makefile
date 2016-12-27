@@ -17,7 +17,6 @@ CXXFLAGS = \
 	-std=c++11 \
 	-march=native \
 	-Wall \
-	-Wstrict-aliasing=3 \
 	-Wextra \
 	-ffast-math \
 	-fno-exceptions \
@@ -28,6 +27,11 @@ CXXFLAGS = \
 	-DDEBUG_GL \
 	-DDXT_COMPRESSOR \
 	-O3
+
+# clang does not have -Wstict-aliasing=3
+ifeq (, $(findstring clang, $(CC)))
+	CXXFLAGS += -Wstrict-aliasing=3
+endif
 
 ifneq (, $(findstring -g, $(CXXFLAGS)))
 	STRIP = true
