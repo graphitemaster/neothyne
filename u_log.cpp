@@ -18,7 +18,7 @@ Logger::Logger(FILE *fp)
     , m_file(nullptr)
 {
     // prevent concurrent initialization
-    if (SDL_AtomicCAS(&m_init, 0, 1) != 0) {
+    if (SDL_AtomicCAS(&m_init, 0, 1) == SDL_FALSE) {
         SDL_AtomicIncRef(&m_init);
         return;
     }
@@ -37,7 +37,7 @@ Logger::Logger(const char *file)
     , m_file(nullptr)
 {
     // prevent concurrent initialization
-    if (SDL_AtomicCAS(&m_init, 0, 1) != 0) {
+    if (SDL_AtomicCAS(&m_init, 0, 1) == SDL_FALSE) {
         SDL_AtomicIncRef(&m_init);
         return;
     }
@@ -53,7 +53,7 @@ Logger::Logger(const char *file)
 
 Logger::~Logger() {
     // prevent concurrent deinitialization
-    if (SDL_AtomicCAS(&m_init, 1, 0) == 1) {
+    if (SDL_AtomicCAS(&m_init, 1, 0) == SDL_TRUE) {
         // do not close stdio streams
         if (m_file != stdout && m_file != stderr)
             fclose(m_file);

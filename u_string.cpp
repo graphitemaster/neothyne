@@ -20,7 +20,7 @@ namespace u {
 
 ///! stringMemory
 struct stringMemory {
-    static constexpr size_t kMemorySize = 32 << 20; // 32MB pool
+    static constexpr size_t kMemorySize = 32 << 20; // 32MiB pool
     static constexpr size_t kMinChunkSize = 32; // 32 byte smallest chunk
 
     stringMemory();

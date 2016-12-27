@@ -8,17 +8,6 @@
 
 namespace s {
 
-// This implements an object tracker used during lexing, parsing and code generation
-// to make it easier to deal with memory management. On lexing, parsing or code
-// generation should an error arise no memory cleanup must be handled by the
-// compiler, instead anything partial tracked by this gets cleaned up automatically.
-//
-// The exception to the rule is when objects are allocated but destroyed in the
-// normal case where we don't need them anymore. Those situations still require
-// a call to free. The call can be omitted and this memory tracker will indeed
-// free it later but it would still be a leak because it would stay alive too
-// long and many of them would collect over time.
-
 struct Memory {
     static void init();
     static void destroy();
@@ -30,6 +19,8 @@ struct Memory {
     static void free(void *old);
 
 private:
+    typedef size_t Header alignas(16);
+
     static bool addMember(uintptr_t member);
 
     static bool add(uintptr_t member);
@@ -37,12 +28,16 @@ private:
 
     static void maybeRehash();
 
+    [[noreturn]]
+    static void oom(size_t requested);
+
     static size_t m_numBits;
     static size_t m_mask;
     static size_t m_capacity;
     static uintptr_t *m_items;
     static size_t m_numItems;
     static size_t m_numDeletedItems;
+    static size_t m_bytesAllocated;
 };
 
 }

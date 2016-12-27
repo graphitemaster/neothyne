@@ -1,6 +1,13 @@
+#include "engine.h"
+
 #include "s_memory.h"
 
 #include "u_set.h"
+#include "u_log.h"
+
+#include "c_variable.h"
+
+VAR(int, s_memory_max, "maximum scripting memory allowed in MiB", 64, 4096, 1024);
 
 namespace s {
 
@@ -15,9 +22,30 @@ size_t Memory::m_capacity;
 uintptr_t *Memory::m_items;
 size_t Memory::m_numItems;
 size_t Memory::m_numDeletedItems;
+size_t Memory::m_bytesAllocated;
+
+[[noreturn]]
+void Memory::oom(size_t requested) {
+    const size_t totalSize = (size_t)s_memory_max*1024*1024;
+    u::Log::err("[script] => \e[1m\e[31mOut of memory:\e[0m %s requested but only %s left (%s in use)\n",
+        u::sizeMetric(requested),
+        requested,
+        u::sizeMetric(totalSize >= m_bytesAllocated ? totalSize - m_bytesAllocated : 0_z),
+        totalSize - m_bytesAllocated,
+        u::sizeMetric(m_bytesAllocated),
+        m_bytesAllocated);
+    neoFatal("Out of memory");
+}
+
+#define CHECK_OOM(SIZE) \
+    do { \
+        if (m_bytesAllocated + (SIZE) >= (size_t)s_memory_max*1024*1024) { \
+            oom(SIZE); \
+        } \
+    } while (0)
 
 void Memory::init() {
-    m_numBits = 3u;
+    m_numBits = 3_z;
     m_capacity = size_t(1_z << m_numBits);
     m_mask = m_capacity - 1;
     m_items = (uintptr_t *)neoCalloc(m_capacity, sizeof *m_items);
@@ -26,40 +54,68 @@ void Memory::init() {
 }
 
 void Memory::destroy() {
+    size_t allocations = 0;
     for (size_t i = 0; i < m_capacity; i++) {
         uintptr_t address = m_items[i];
         if (address && address != kTombstone) {
             neoFree((void *)address);
+            allocations++;
         }
     }
+    u::Log::out("[script] => freed %s of active memory (from %zu allocations)\n",
+        u::sizeMetric(m_bytesAllocated), allocations);
     neoFree(m_items);
 }
 
 U_MALLOC_LIKE void *Memory::allocate(size_t size) {
-    void *data = neoMalloc(size);
+    CHECK_OOM(size);
+    Header *data = (Header *)neoMalloc(size + sizeof *data);
     add((uintptr_t)data);
-    return data;
+    *data = size;
+    m_bytesAllocated += size;
+    return (void *)(data + 1);
 }
 
 U_MALLOC_LIKE void *Memory::allocate(size_t count, size_t size) {
-    void *data = neoCalloc(count, size);
+    const size_t length = count * size;
+    CHECK_OOM(length);
+    Header *data = (Header *)neoCalloc(length + sizeof *data, 1);
     add((uintptr_t)data);
-    return data;
+    *data = length;
+    m_bytesAllocated += length;
+    return (void *)(data + 1);
 }
 
-U_MALLOC_LIKE void *Memory::reallocate(void *old, size_t resize) {
-    uintptr_t oldaddr = (uintptr_t)old;
-    uintptr_t newaddr = (uintptr_t)neoRealloc(old, resize);
-    if (U_LIKELY(newaddr != oldaddr)) {
-        del(oldaddr);
-        add(newaddr);
+U_MALLOC_LIKE void *Memory::reallocate(void *current, size_t size) {
+    if (current) {
+        // do the oom check inside since allocate for the other case handles itself
+        CHECK_OOM(size);
+        Header *const oldData = (Header *)current - 1;
+        const size_t oldSize = *oldData;
+        const uintptr_t oldAddr = (uintptr_t)oldData;
+        Header *const newData = (Header *)neoRealloc(oldData, size + sizeof *newData);
+        const uintptr_t newAddr = (uintptr_t)newData;
+        if (U_LIKELY(newAddr != oldAddr)) {
+            del(oldAddr);
+            add(newAddr);
+        }
+        // updates the size if it's an old block
+        *newData = size;
+        // update the allocated memory
+        m_bytesAllocated = m_bytesAllocated - oldSize + size;
+        return (void *)(newData + 1);
     }
-    return (void*)newaddr;
+    // just allocate a new block
+    return allocate(size);
 }
 
-void Memory::free(void *old) {
-    del((uintptr_t)old);
-    neoFree(old);
+void Memory::free(void *what) {
+    if (what) {
+        Header *const header = (Header *)what - 1;
+        m_bytesAllocated -= *header;
+        del((uintptr_t)header);
+        neoFree(header);
+    }
 }
 
 void Memory::maybeRehash() {

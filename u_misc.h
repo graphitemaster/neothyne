@@ -1,8 +1,9 @@
 #ifndef U_MISC_HDR
 #define U_MISC_HDR
-#include <stdarg.h>  // va_start, va_end, va_list
-#include <string.h>  // strcpy
+#include <stdarg.h> // va_start, va_end, va_list
+#include <string.h> // strcpy
 #include <stdint.h> // uint32_t
+#include <float.h>  // DBL_MANT_DIG, DBL_MAX_EXP
 #include <stdio.h>
 
 #include "u_string.h" // u::string
@@ -125,15 +126,18 @@ inline u::string format(const char *fmt, va_list va) {
 }
 
 static inline u::string sizeMetric(size_t size) {
-    static const char *kSizes[] = { "B", "kB", "MB", "GB" };
-    size_t r = 0;
+    static const char *kSizes[] = { "B", "kiB", "MiB", "GiB" };
+    double bytes = size;
     size_t i = 0;
-    for (; size >= 1024 && i < sizeof kSizes / sizeof *kSizes; i++) {
-        r = size % 1024;
-        size /= 1024;
-    }
+    for (; bytes > 1024.0 && i < sizeof kSizes / sizeof *kSizes; i++)
+        bytes /= 1024.0;
     U_ASSERT(i != sizeof kSizes / sizeof *kSizes);
-    return u::format("%.2f %s", float(size) + float(r) / 1024.0f, kSizes[i]);
+    char buffer[2*(DBL_MANT_DIG + DBL_MAX_EXP)];
+    snprintf(buffer, sizeof buffer, "%.*f", (int)sizeof buffer, bytes);
+    char *p = strchr(buffer, '.');
+    U_ASSERT(p);
+    p[3] = '\0';
+    return u::format("%s %s", buffer, kSizes[i]);
 }
 
 const char *CPUDesc();
