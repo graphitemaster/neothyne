@@ -25,8 +25,7 @@ static inline U_MALLOC_LIKE void *neoCoreRealloc(void *ptr, size_t size) {
         U_ASSERT(0 && "Out of memory");
         abort();
     }
-    free(ptr);
-    return nullptr;
+    U_UNREACHABLE();
 }
 
 static inline void neoCoreFree(void *what) {
@@ -74,10 +73,6 @@ inline void alignedAllocator<true>::neoFree(void *what) {
 template <>
 inline U_MALLOC_LIKE void *alignedAllocator<true>::neoRealloc(void *what, size_t size) {
     if (what) {
-        if (size == 0) {
-            neoFree(what);
-            return nullptr;
-        }
         size = (size+(kMemoryAlignment-1)) & ~(kMemoryAlignment-1);
         unsigned char *original = (unsigned char *)what - sizeof(size_t) - (((size_t*)what)[-1] & (kMemoryAlignment-1));
         const size_t originalSize = ((size_t *)what)[-1] & ~(kMemoryAlignment-1);
@@ -118,9 +113,13 @@ U_MALLOC_LIKE void *neoRealloc(void *ptr, size_t size) {
 }
 
 U_MALLOC_LIKE void *neoCalloc(size_t size, size_t count) {
+    U_ASSERT(!(count && size > -1_z/count)); // overflow
     const size_t bytes = size * count;
     void *p = allocator::neoMalloc(bytes);
-    return memset(p, 0, bytes);
+    // zero page optimization
+    size_t n = (bytes + sizeof n - 1) / sizeof n;
+    for (size_t *z = (size_t *)p; n; n--, z++) if (*z) *z = 0;
+    return p;
 }
 
 void neoFree(void *ptr) {

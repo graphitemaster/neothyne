@@ -13,7 +13,6 @@ VAR(int, s_memory_dump, "dump active memory", 0, 1, 1);
 
 namespace s {
 
-static constexpr size_t kMemoryBits = 7_z;
 static constexpr size_t kPrime1 = 73_z;
 static constexpr size_t kPrime2 = 5009_z;
 static constexpr uintptr_t kTombstone = 1u;
@@ -82,6 +81,7 @@ U_MALLOC_LIKE void *Memory::allocate(size_t size) {
 }
 
 U_MALLOC_LIKE void *Memory::allocate(size_t count, size_t size) {
+    U_ASSERT(!(count && size > -1_z/count)); // overflow
     const size_t length = count * size;
     CHECK_OOM(length);
     // Note: we use neoCalloc here to take advantage of the zero-page
