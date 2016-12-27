@@ -905,6 +905,7 @@ struct OpenRange {
     OpenRange *m_prev;
     static void pushRecord(OpenRange **range, ProfileRecord *record);
     static void dropRecord(OpenRange **range);
+    static void dropRecords(OpenRange **range);
 };
 
 void OpenRange::pushRecord(OpenRange **range, ProfileRecord *record) {
@@ -920,8 +921,14 @@ void OpenRange::dropRecord(OpenRange **range) {
     *range = prev;
 }
 
+void OpenRange::dropRecords(OpenRange **range) {
+    for (; *range; OpenRange::dropRecord(range))
+        ;
+}
+
 void ProfileState::dump(SourceRange source, ProfileState *profileState) {
-    if (!s_profile) return;
+    if (!s_profile)
+        return;
 
     Table *directTable = &profileState->m_directTable;
     Table *indirectTable = &profileState->m_indirectTable;
@@ -1079,6 +1086,8 @@ void ProfileState::dump(SourceRange source, ProfileState *profileState) {
     u::fprint(dump, "</pre>\n");
     u::fprint(dump, "</body>\n");
     u::fprint(dump, "</html>\n");
+
+    OpenRange::dropRecords(&openRangeHead);
 }
 
 }

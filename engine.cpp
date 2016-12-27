@@ -1079,6 +1079,8 @@ static void exec(const u::string &script) {
             u::Log::err("[script] => \e[1m\e[31merror:\e[0m \e[1m%s\e[0m\n", state.m_error);
             s::VM::printBacktrace(&state);
         }
+
+        s::UserFunction::destroy(module);
     }
 
     // Tear down the objects represented by this set
@@ -1086,6 +1088,9 @@ static void exec(const u::string &script) {
 
     // Reclaim memory
     s::GC::run(&state);
+
+    // No longer need the shared state
+    s::SharedState::destroy(state.m_shared);
 
     // Reclaim any leaking memory
     s::Memory::destroy();

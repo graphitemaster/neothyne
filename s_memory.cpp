@@ -29,11 +29,8 @@ void Memory::oom(size_t requested) {
     const size_t totalSize = (size_t)s_memory_max*1024*1024;
     u::Log::err("[script] => \e[1m\e[31mOut of memory:\e[0m %s requested but only %s left (%s in use)\n",
         u::sizeMetric(requested),
-        requested,
         u::sizeMetric(totalSize >= m_bytesAllocated ? totalSize - m_bytesAllocated : 0_z),
-        totalSize - m_bytesAllocated,
-        u::sizeMetric(m_bytesAllocated),
-        m_bytesAllocated);
+        u::sizeMetric(m_bytesAllocated));
     neoFatal("Out of memory");
 }
 

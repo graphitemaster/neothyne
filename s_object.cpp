@@ -234,6 +234,8 @@ void Object::mark(State *state, Object *object) {
 }
 
 void Object::free(Object *object) {
+    if (object->m_free)
+        object->m_free(object);
     Memory::free(object->m_table.m_fields);
     Memory::free(object);
 }
@@ -406,6 +408,9 @@ Object *Object::newArray(State *state, Object **contents, IntObject *length) {
     object->m_parent = state->m_shared->m_valueCache.m_arrayBase;
     object->m_contents = contents;
     object->m_length = length->m_value;
+    object->m_free = [](Object *object) {
+        Memory::free(((ArrayObject *)object)->m_contents);
+    };
     setNormal(state, (Object *)object, "length", (Object *)length);
     return (Object *)object;
 }
@@ -416,6 +421,19 @@ Object *Object::newFunction(State *state, FunctionPointer function) {
     object->m_parent = functionBase;
     object->m_function = function;
     return (Object *)object;
+}
+
+///! UserFunction
+void UserFunction::destroy(UserFunction *function) {
+    Memory::free(function->m_body.m_blocks);
+    Memory::free(function->m_body.m_instructions);
+    Memory::free(function);
+}
+
+///! SharedState
+void SharedState::destroy(SharedState *shared) {
+    Memory::free(shared->m_stackData);
+    Memory::free(shared);
 }
 
 }

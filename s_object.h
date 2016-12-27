@@ -128,6 +128,12 @@ struct Object {
 
     // The GC mark function to mark this object during GC mark phase
     void (*m_mark)(State *state, Object *object);
+
+    // Custom free function to call when Object is collected by the GC
+    // sweep phase. This is currently used to free memory backing array
+    // allocations but can be used for other things like fclose on a
+    // stdio stream if files are going to be supported.
+    void (*m_free)(Object *object);
 };
 
 // Doubly linked list of GC roots
@@ -258,6 +264,8 @@ struct SharedState {
     void *m_stackData;
     size_t m_stackLength;
     size_t m_stackOffset;
+
+    static void destroy(SharedState *state);
 };
 
 struct State {

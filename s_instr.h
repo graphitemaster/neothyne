@@ -85,6 +85,7 @@ struct FunctionBody {
 
 struct UserFunction {
     static void dump(UserFunction *function, int level);
+    static void destroy(UserFunction *function);
 
     size_t m_arity;     // first slots are reserved for parameters
     size_t m_slots;     // generic slots

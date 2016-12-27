@@ -299,14 +299,11 @@ UserFunction *Gen::buildFunction(Gen *gen) {
     return function;
 }
 
-UserFunction *Gen::optimize(UserFunction *f0) {
-    UserFunction *f1 = Optimize::inlinePass(f0);
-    UserFunction *f2 = Optimize::predictPass(f1);
-    UserFunction *f3 = Optimize::fastSlotPass(f2);
-    Memory::free(f0);
-    Memory::free(f1);
-    Memory::free(f2);
-    return f3;
+UserFunction *Gen::optimize(UserFunction *function) {
+    function = Optimize::inlinePass(function);
+    function = Optimize::predictPass(function);
+    function = Optimize::fastSlotPass(function);
+    return function;
 }
 
 Slot Gen::scopeEnter(Gen *gen) {

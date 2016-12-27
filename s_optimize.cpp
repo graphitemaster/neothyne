@@ -186,9 +186,10 @@ UserFunction *Optimize::predictPass(UserFunction *function) {
             instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
         }
     }
-    Memory::free(info);
     UserFunction *optimized = Gen::buildFunction(&gen);
     copyFunctionStats(function, optimized);
+    UserFunction::destroy(function);
+    Memory::free(info);
     u::Log::out("[script] => redirected %zu predictable lookup misses\n", count);
     return optimized;
 }
@@ -291,6 +292,7 @@ UserFunction *Optimize::fastSlotPass(UserFunction *function) {
     UserFunction *fn = Gen::buildFunction(&gen);
     const size_t newFastSlots = fn->m_fastSlots;
     copyFunctionStats(function, fn);
+    UserFunction::destroy(function);
     fn->m_fastSlots = newFastSlots;
 
     u::Log::out("[script] => generated %zu fast slots (reads: %zu, writes: %zu)\n", defines, reads, writes);
@@ -382,6 +384,7 @@ UserFunction *Optimize::inlinePass(UserFunction *function) {
     }
     UserFunction *optimized = Gen::buildFunction(&gen);
     copyFunctionStats(function, optimized);
+    UserFunction::destroy(function);
     u::Log::out("[script] => inlined operations (assignments: %zu, accesses: %zu, constraints: %zu)\n", assignments, accesses, constraints);
     Memory::free(primitiveSlots);
     return optimized;
