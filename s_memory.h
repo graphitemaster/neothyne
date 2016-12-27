@@ -19,7 +19,9 @@ struct Memory {
     static void free(void *old);
 
 private:
-    typedef size_t Header alignas(16);
+    struct alignas(16) Header {
+        size_t size;
+    };
 
     static bool addMember(uintptr_t member);
 

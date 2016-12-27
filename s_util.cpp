@@ -134,4 +134,32 @@ char *formatProcess(const char *fmt, ...) {
     return value;
 }
 
+void dumpMemory(const void *const address, size_t length) {
+    unsigned char buffer[16 + 1];
+    unsigned char *data = (unsigned char *)address;
+
+    u::Log::out("  %p:\n", address);
+
+    size_t i = 0;
+    for (i = 0; i < length; i++) {
+        if (i % 16 == 0) {
+            if (i != 0)
+                u::Log::out("  %s\n", buffer);
+            u::Log::out("    %04x ", i);
+        }
+        u::Log::out(" %02x", data[i]);
+        if (data[i] < 0x20 || data[i] > 0x7E) {
+            buffer[i % 16] = '.';
+        } else {
+            buffer[i % 16] = data[i];
+        }
+        buffer[(i % 16) + 1] = '\0';
+    }
+
+    for (; (i % 16) != 0; i++)
+        u::Log::out("   ");
+
+    u::Log::out("  %s\n\n", buffer);
+}
+
 }

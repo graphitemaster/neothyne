@@ -80,6 +80,8 @@ inline char *format(const char *fmt, const Ts&... ts) {
     return formatProcess(fmt, u::formatNormalize(ts)...);
 }
 
+void dumpMemory(const void *const address, size_t length);
+
 }
 
 #endif

@@ -1,6 +1,7 @@
 #include "engine.h"
 
 #include "s_memory.h"
+#include "s_util.h"
 
 #include "u_set.h"
 #include "u_log.h"
@@ -8,6 +9,7 @@
 #include "c_variable.h"
 
 VAR(int, s_memory_max, "maximum scripting memory allowed in MiB", 64, 4096, 1024);
+VAR(int, s_memory_dump, "dump active memory", 0, 1, 1);
 
 namespace s {
 
@@ -52,9 +54,15 @@ void Memory::init() {
 
 void Memory::destroy() {
     size_t allocations = 0;
+    if (s_memory_dump)
+        u::Log::out("[script] => active memory\n");
     for (size_t i = 0; i < m_capacity; i++) {
         uintptr_t address = m_items[i];
         if (address && address != kTombstone) {
+            if (s_memory_dump) {
+                Header *const actual = (Header *)address;
+                dumpMemory(actual + 1, actual->size);
+            }
             neoFree((void *)address);
             allocations++;
         }
@@ -68,7 +76,7 @@ U_MALLOC_LIKE void *Memory::allocate(size_t size) {
     CHECK_OOM(size);
     Header *data = (Header *)neoMalloc(size + sizeof *data);
     add((uintptr_t)data);
-    *data = size;
+    data->size = size;
     m_bytesAllocated += size;
     return (void *)(data + 1);
 }
@@ -76,9 +84,13 @@ U_MALLOC_LIKE void *Memory::allocate(size_t size) {
 U_MALLOC_LIKE void *Memory::allocate(size_t count, size_t size) {
     const size_t length = count * size;
     CHECK_OOM(length);
+    // Note: we use neoCalloc here to take advantage of the zero-page
+    // optimization, even though we write the size to the first page;
+    // if the length > PAGE_SIZE then only the first page faults for
+    // the header data
     Header *data = (Header *)neoCalloc(length + sizeof *data, 1);
     add((uintptr_t)data);
-    *data = length;
+    data->size = length;
     m_bytesAllocated += length;
     return (void *)(data + 1);
 }
@@ -88,7 +100,7 @@ U_MALLOC_LIKE void *Memory::reallocate(void *current, size_t size) {
         // do the oom check inside since allocate for the other case handles itself
         CHECK_OOM(size);
         Header *const oldData = (Header *)current - 1;
-        const size_t oldSize = *oldData;
+        const size_t oldSize = oldData->size;
         const uintptr_t oldAddr = (uintptr_t)oldData;
         Header *const newData = (Header *)neoRealloc(oldData, size + sizeof *newData);
         const uintptr_t newAddr = (uintptr_t)newData;
@@ -97,7 +109,7 @@ U_MALLOC_LIKE void *Memory::reallocate(void *current, size_t size) {
             add(newAddr);
         }
         // updates the size if it's an old block
-        *newData = size;
+        newData->size = size;
         // update the allocated memory
         m_bytesAllocated = m_bytesAllocated - oldSize + size;
         return (void *)(newData + 1);
@@ -109,7 +121,7 @@ U_MALLOC_LIKE void *Memory::reallocate(void *current, size_t size) {
 void Memory::free(void *what) {
     if (what) {
         Header *const header = (Header *)what - 1;
-        m_bytesAllocated -= *header;
+        m_bytesAllocated -= header->size;
         del((uintptr_t)header);
         neoFree(header);
     }
