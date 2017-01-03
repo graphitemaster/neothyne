@@ -93,8 +93,9 @@ bool isBigEndian();
 
 template <typename T>
 inline T endianSwap(T value) {
-    if (isBigEndian())
-        return (T)ByteSwap<sizeof value>()(value);
+    static const bool isBig = isBigEndian();
+    if (isBig)
+        return ByteSwapper<T>()(value);
     return value;
 }
 
