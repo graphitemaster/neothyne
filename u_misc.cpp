@@ -1,4 +1,5 @@
 #include <SDL_cpuinfo.h>
+#include <SDL_endian.h>
 
 #include <time.h> // time_t, time
 #include <float.h>
@@ -93,6 +94,25 @@ namespace detail {
         return vsscanf(out, format, ap);
     }
 #endif
+}
+
+#define CHECK_ENDIAN(X) \
+    (((union { uint32_t i; uint8_t c[sizeof i]; }) { 0x01020304 }).c[0] == (X))
+
+bool isLilEndian() {
+    U_ASSERT(!isBigEndian());
+#if SDL_BYTEORDER == SDL_LIL_ENDIAN
+    return true;
+#endif
+    return CHECK_ENDIAN(0x04);
+}
+
+bool isBigEndian() {
+    U_ASSERT(!isLilEndian());
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+    return true;
+#endif
+    return CHECK_ENDIAN(0x01);
 }
 
 void *moveMemory(void *dest, const void *src, size_t n) {

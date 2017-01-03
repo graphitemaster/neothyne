@@ -2137,6 +2137,11 @@ struct PCXDecoder : Decoder {
         memcpy(&x2, &data[8], sizeof x2);
         memcpy(&y2, &data[10], sizeof y2);
 
+        x1 = u::endianSwap(x1);
+        y1 = u::endianSwap(y1);
+        x2 = u::endianSwap(x2);
+        y2 = u::endianSwap(y2);
+
         const int w = (x2 - x1) + 1;
         const int h = (y2 - y1) + 1;
 
@@ -2493,8 +2498,8 @@ static inline float textureQualityScale(float quality) {
     // If the carry happens then the value is rounded up, otherwise it rounds
     // down. This also works +/- INF as well since INF has zero mantissa.
     m::floatShape u = { quality };
-    u.asInt += 0x00400000u;
-    u.asInt &= 0xFF800000u;
+    u.asInt += u::endianSwap(0x00400000u);
+    u.asInt &= u::endianSwap(0xFF800000u);
     return u.asFloat;
 }
 

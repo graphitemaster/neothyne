@@ -1,5 +1,6 @@
 #ifndef U_MISC_HDR
 #define U_MISC_HDR
+
 #include <stdarg.h> // va_start, va_end, va_list
 #include <string.h> // strcpy
 #include <stdint.h> // uint32_t
@@ -16,21 +17,84 @@ namespace detail {
     int c99vsscanf(const char *s, const char *format, va_list ap);
 }
 
+template <size_t E>
+struct ByteSwap {};
+
+template <>
+struct ByteSwap<1> {
+    uint8_t operator()(uint8_t value) const {
+        return value;
+    }
+};
+
+template <>
+struct ByteSwap<2> {
+    uint16_t operator()(uint16_t value) const {
+        return ByteSwap<1>()((value & 0xFF00) >> 8) |
+               ByteSwap<1>()((value & 0x00FF) << 8);
+    }
+};
+
+template <>
+struct ByteSwap<4> {
+    uint32_t operator()(uint32_t value) const {
+        return ByteSwap<2>()((value & 0xFFFF0000) >> 16) |
+               ByteSwap<2>()((value & 0x0000FFFF) >> 16);
+    }
+};
+
+template <>
+struct ByteSwap<8> {
+    uint64_t operator()(uint64_t value) const {
+        return ByteSwap<4>()((value & 0xFFFFFFFF00000000) >> 32) |
+               ByteSwap<4>()((value & 0x00000000FFFFFFFF) >> 32);
+    }
+};
+
+template <typename T>
+struct ByteSwapper {
+    T operator()(T value) const {
+        // Note: cast since T can be signed and all swap code assumes unsigned
+        return (T)ByteSwap<sizeof value>()(value);
+    }
+};
+
+union ByteFloatShape {
+    float asFloat;
+    double asDouble;
+    uint32_t asUint32;
+    uint64_t asUint64;
+};
+
+// Specialization for floating point types; need to be shaped first
+// into their bitwise representations to do the byte swap
+template <>
+struct ByteSwapper<float> {
+    float operator()(float value) const {
+        ByteFloatShape shape;
+        shape.asFloat = value;
+        shape.asUint32 = ByteSwap<4>()(shape.asUint32);
+        return shape.asFloat;
+    };
+};
+
+template <>
+struct ByteSwapper<double> {
+    double operator()(double value) const {
+        ByteFloatShape shape;
+        shape.asDouble = value;
+        shape.asUint64 = ByteSwap<8>()(shape.asUint64);
+        return shape.asDouble;
+    };
+};
+
+bool isLilEndian();
+bool isBigEndian();
+
 template <typename T>
 inline T endianSwap(T value) {
-    union {
-        int i;
-        char data[sizeof(int)];
-    } x = { 1 };
-    if (x.data[0] != 1) {
-        union {
-            T value;
-            unsigned char data[sizeof(T)];
-        } src = { value }, dst;
-        for (size_t i = 0; i < sizeof value; i++)
-            dst.data[i] = src.data[sizeof value - i - 1];
-        return dst.value;
-    }
+    if (isBigEndian())
+        return (T)ByteSwap<sizeof value>()(value);
     return value;
 }
 
