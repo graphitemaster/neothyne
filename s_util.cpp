@@ -120,9 +120,11 @@ void FileRange::recordEnd(char *text, FileRange *range) {
 
 // Need to pin this memory to the scripting allocator
 static inline char *formatProcess(const char *fmt, va_list va) {
-    const int length = u::detail::c99vsnprintf(nullptr, 0, fmt, va) + 1;
+    va_list ap;
+    va_copy(ap, va);
+    const int length = vsnprintf(nullptr, 0, fmt, va) + 1;
     char *data = (char *)Memory::allocate(length);
-    u::detail::c99vsnprintf(data, length, fmt, va);
+    vsnprintf(data, length, fmt, ap);
     return data;
 }
 

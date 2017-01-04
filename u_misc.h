@@ -12,10 +12,6 @@
 #include "u_memory.h" // u::unique_ptr
 
 namespace u {
-namespace detail {
-    int c99vsnprintf(char *str, size_t maxSize, const char *format, va_list ap);
-    int c99vsscanf(const char *s, const char *format, va_list ap);
-}
 
 template <size_t E>
 struct ByteSwap {};
@@ -108,7 +104,7 @@ inline void endianSwap(T *data, size_t length) {
 inline int sscanf(const u::string &thing, const char *fmt, ...) {
     va_list va;
     va_start(va, fmt);
-    int value = detail::c99vsscanf(thing.c_str(), fmt, va);
+    const int value = vsscanf(thing.c_str(), fmt, va);
     va_end(va);
     return value;
 }
@@ -166,10 +162,12 @@ inline const char *formatNormalize(const u::string &argument) {
 }
 
 static inline u::string formatProcess(const char *fmt, va_list va) {
-    const int len = detail::c99vsnprintf(nullptr, 0, fmt, va);
+    va_list ap;
+    va_copy(ap, va);
+    const int len = vsnprintf(nullptr, 0, fmt, va);
     u::string data;
     data.resize(len);
-    detail::c99vsnprintf(&data[0], len + 1, fmt, va);
+    vsnprintf(&data[0], len + 1, fmt, ap);
     return move(data);
 }
 

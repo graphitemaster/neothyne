@@ -9,102 +9,24 @@
 #include "u_memory.h" // unique_ptr
 
 namespace u {
-namespace detail {
-#if defined(_WIN32)
-    // Performs replacements on the format string into ones understood
-    // by MSVCRT.
-    u::string fixFormatString(const char *format) {
-        u::string replace(format);
-        static const struct { const char *find, *replace; } kReplacements[] = {
-            { "%zd", "%Id" },
-            { "%zi", "%Ii" },
-            { "%zo", "%Io" },
-            { "%zu", "%Iu" },
-            { "%zx", "%Ix" }
-        };
-        for (const auto &it : kReplacements)
-            replace.replace_all(it.find, it.replace);
-        return replace;
-    }
-#endif
 
-#if defined(_MSC_VER)
-    int c99vsnprintf(char *out, size_t size, const char *string, va_list ap) {
-        u::string format = fixFormatString(string);
-        int count = -1;
-        if (size != 0)
-            count = _vsnprintf_s(out, size, _TRUNCATE, &format[0], ap);
-        if (count == -1)
-            count = _vscprintf(&format[0], ap);
-        return count;
+union CheckEndian {
+    constexpr CheckEndian(uint32_t value)
+        : asUint32(value)
+    {
     }
-#else
-    int c99vsnprintf(char *out, size_t size, const char *string, va_list ap) {
-    // Older MSVCRTs get the truncation wrong. The standard requires that
-    // a null terminator be written even if the buffer size cannot accommodate
-    // the null terminator. This size correction deals with giving us an
-    // additional character of space to do the null termination.
-#if defined (_WIN32) || (!defined(__GNUC__) || __GNUC__ < 4)
-        static constexpr size_t kSizeCorrection = 1;
-        u::string format = fixFormatString(string);
-#else
-        static constexpr size_t kSizeCorrection = 0;
-        const char *format = string;
-#endif
-        va_list copy;
-        int ret = -1;
-        if (size > 0) {
-            va_copy(copy, ap);
-            ret = vsnprintf(out, size - kSizeCorrection, &format[0], copy);
-            va_end(copy);
-            if (ret == int(size-1))
-                ret = -1;
-            // Write the null terminator since vsnprintf may not
-            out[size-1] = '\0';
-        }
-        if (ret != -1)
-            return ret;
+    uint32_t asUint32;
+    uint8_t asBytes[sizeof asUint32];
+};
 
-        // Keep resizing until the format succeeds
-        char *s = nullptr;
-        if (size < 128)
-            size = 128;
-        while (ret == -1) {
-            size *= 4;
-            s = (char *)neoRealloc(s, size);
-            va_copy(copy, ap);
-            ret = vsnprintf(s, size - kSizeCorrection, &format[0], copy);
-            va_end(copy);
-            if (ret == int(size-1))
-                ret = -1;
-        }
-        neoFree(s);
-        return ret;
-    }
-#endif
-
-#if defined(_WIN32)
-    int c99vsscanf(const char *out, const char *string, va_list ap) {
-        u::string format = fixFormatString(string);
-        return vsscanf(out, &format[0], ap);
-    }
-#else
-    int c99vsscanf(const char *out, const char *format, va_list ap) {
-        // Sane platforms
-        return vsscanf(out, format, ap);
-    }
-#endif
-}
-
-#define CHECK_ENDIAN(X) \
-    (((union { uint32_t i; uint8_t c[sizeof i]; }) { 0x01020304 }).c[0] == (X))
+static constexpr CheckEndian kCheckEndian(0x01020304);
 
 bool isLilEndian() {
     U_ASSERT(!isBigEndian());
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
     return true;
 #endif
-    return CHECK_ENDIAN(0x04);
+    return kCheckEndian.asBytes[0] == 0x04;
 }
 
 bool isBigEndian() {
@@ -112,7 +34,7 @@ bool isBigEndian() {
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
     return true;
 #endif
-    return CHECK_ENDIAN(0x01);
+    return kCheckEndian.asBytes[0] == 0x01;
 }
 
 void *moveMemory(void *dest, const void *src, size_t n) {
