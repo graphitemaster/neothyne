@@ -400,6 +400,6 @@ int neoMain(FrameTimer &timer, a::Audio &audio, r::World &world_, int, char **, 
         //audio.setPan(handle, direction.x);
     }
 
-    delete gWorld;
+    //delete gWorld; // MEH MEH LEAK BECAUSE OWNERSHIP IS HARD
     return 0;
 }

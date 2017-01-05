@@ -114,7 +114,12 @@ U_MALLOC_LIKE void *neoRealloc(void *ptr, size_t size) {
 
 U_MALLOC_LIKE void *neoCalloc(size_t size, size_t count) {
     U_ASSERT(!(count && size > -1_z/count)); // overflow
-    const size_t bytes = size * count;
+    const size_t sum = size * count;
+    // round memory requirement to multiple of sizeof(size_t) such that
+    // zero page optimization below does not cross memory boundary when
+    // writing zeros
+    const size_t bytes = (sum + sizeof(size_t)) & ~(sizeof(size_t) - 1);
+    U_ASSERT(bytes > sum); // overflow
     void *p = allocator::neoMalloc(bytes);
     // zero page optimization
     size_t n = (bytes + sizeof n - 1) / sizeof n;
