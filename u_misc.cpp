@@ -22,7 +22,6 @@ union CheckEndian {
 static constexpr CheckEndian kCheckEndian(0x01020304);
 
 bool isLilEndian() {
-    U_ASSERT(!isBigEndian());
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
     return true;
 #endif
@@ -30,7 +29,6 @@ bool isLilEndian() {
 }
 
 bool isBigEndian() {
-    U_ASSERT(!isLilEndian());
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
     return true;
 #endif
