@@ -184,8 +184,13 @@ Slot Gen::addNewClosureObject(Gen *gen, UserFunction *function) {
 }
 
 Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot *arguments, size_t count) {
-    Instruction::Call *call = (Instruction::Call *)
-        Memory::allocate(sizeof *call + sizeof *arguments * count);
+    // Avoid allocating memory for function calls with few arguments
+    Instruction::Call *call = nullptr;
+    unsigned char storage[sizeof *call + sizeof(Slot) * 10];
+    if (count <= 10)
+        call = (Instruction::Call *)storage;
+    else
+        call = (Instruction::Call *)Memory::allocate(sizeof *call + sizeof *arguments * count);
     call->m_type = kCall;
     call->m_belongsTo = nullptr;
     call->m_functionSlot = functionSlot;
@@ -193,7 +198,8 @@ Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot *arguments, s
     call->m_count = count;
     memcpy((Slot *)(call + 1), arguments, sizeof *arguments * count);
     addInstruction(gen, sizeof *call + sizeof *arguments * count, (Instruction *)call);
-    Memory::free(call);
+    if (count > 10)
+        Memory::free(call);
 
     Instruction::SaveResult saveResult;
     saveResult.m_type = kSaveResult;

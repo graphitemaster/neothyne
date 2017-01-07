@@ -599,11 +599,10 @@ ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression, 
     }
 
     *contents = text;
-    Slot *arguments = nullptr;
-    size_t length = 0;
 
+    u::vector<Slot> arguments;
     while (!consumeString(&text, ")")) {
-        if (length && !consumeString(&text, ",")) {
+        if (arguments.size() && !consumeString(&text, ",")) {
             logParseError(text, "expected comma or closing parenthesis");
             return kParseError;
         }
@@ -617,8 +616,7 @@ ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression, 
         Gen::useRangeStart(gen, callRange);
         Slot slot = Reference::access(gen, argument);
         Gen::useRangeEnd(gen, callRange);
-        arguments = (Slot *)Memory::reallocate(arguments, sizeof(Slot) * ++length);
-        arguments[length - 1] = slot;
+        arguments.push_back(slot);
     }
 
     FileRange::recordEnd(text, callRange);
@@ -633,10 +631,8 @@ ParseResult Parser::parseCall(char **contents, Gen *gen, Reference *expression, 
             thisSlot = 0;
 
         Gen::useRangeStart(gen, exprRange);
-        *expression = Reference::simple(Gen::addCall(gen, Reference::access(gen, *expression), thisSlot, arguments, length));
+        *expression = Reference::simple(Gen::addCall(gen, Reference::access(gen, *expression), thisSlot, &arguments[0], arguments.size()));
         Gen::useRangeEnd(gen, exprRange);
-    } else {
-        Memory::free(arguments);
     }
 
     return kParseOk;
