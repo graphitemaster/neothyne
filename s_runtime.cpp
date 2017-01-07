@@ -592,7 +592,7 @@ static void require(State *state, Object *, Object *, Object **arguments, size_t
     Object *stringBase = state->m_shared->m_valueCache.m_stringBase;
 
     auto *stringObject = (StringObject *)Object::instanceOf(arguments[0], stringBase);
-    VM_ASSERT_TYPE(stringObject, "parameter to 'require()' must be string");
+    VM_ASSERT_TYPE(stringObject, "parameter to 'require()' must be String");
 
     u::string fileName = stringObject->m_value;
     SourceRange source = SourceRange::readFile(&fileName[0], false);

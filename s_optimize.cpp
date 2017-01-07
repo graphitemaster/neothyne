@@ -31,41 +31,34 @@ static inline void findPrimitiveSlots(UserFunction *function, bool **slots) {
             switch (instruction->m_type) {
             case kNewObject:
                 (*slots)[((Instruction::NewObject*)instruction)->m_parentSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::NewObject));
                 break;
             case kAccess:
                 (*slots)[((Instruction::Access*)instruction)->m_objectSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Access));
                 break;
             case kAssign:
                 (*slots)[((Instruction::Assign*)instruction)->m_objectSlot] = false;
                 (*slots)[((Instruction::Assign*)instruction)->m_valueSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Assign));
                 break;
             case kSetConstraint:
                 (*slots)[((Instruction::SetConstraint *)instruction)->m_objectSlot] = false;
                 (*slots)[((Instruction::SetConstraint *)instruction)->m_constraintSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::SetConstraint));
                 break;
             case kCall:
                 (*slots)[((Instruction::Call*)instruction)->m_functionSlot] = false;
                 (*slots)[((Instruction::Call*)instruction)->m_thisSlot] = false;
-                for (size_t i = 0; i < ((Instruction::Call*)instruction)->m_count; i++)
-                    (*slots)[((Instruction::Call*)instruction)->m_arguments[i]] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Call));
+                for (size_t k = 0; k < ((Instruction::Call*)instruction)->m_count; k++)
+                    (*slots)[((Slot *)(((Instruction::Call *)instruction) + 1))[k]] = false;
                 break;
             case kReturn:
                 (*slots)[((Instruction::Return*)instruction)->m_returnSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::Return));
                 break;
             case kTestBranch:
                 (*slots)[((Instruction::TestBranch*)instruction)->m_testSlot] = false;
-                instruction = (Instruction *)((unsigned char *)instruction + sizeof(Instruction::TestBranch));
                 break;
             default:
-                instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
                 break;
             }
+            instruction = (Instruction *)((unsigned char *)instruction + Instruction::size(instruction));
         }
     }
 }

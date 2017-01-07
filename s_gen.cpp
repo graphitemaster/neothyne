@@ -184,14 +184,16 @@ Slot Gen::addNewClosureObject(Gen *gen, UserFunction *function) {
 }
 
 Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot *arguments, size_t count) {
-    Instruction::Call call;
-    call.m_type = kCall;
-    call.m_belongsTo = nullptr;
-    call.m_functionSlot = functionSlot;
-    call.m_thisSlot = thisSlot;
-    call.m_arguments = arguments;
-    call.m_count = count;
-    addInstruction(gen, sizeof call, (Instruction *)&call);
+    Instruction::Call *call = (Instruction::Call *)
+        Memory::allocate(sizeof *call + sizeof *arguments * count);
+    call->m_type = kCall;
+    call->m_belongsTo = nullptr;
+    call->m_functionSlot = functionSlot;
+    call->m_thisSlot = thisSlot;
+    call->m_count = count;
+    memcpy((Slot *)(call + 1), arguments, sizeof *arguments * count);
+    addInstruction(gen, sizeof *call + sizeof *arguments * count, (Instruction *)call);
+    Memory::free(call);
 
     Instruction::SaveResult saveResult;
     saveResult.m_type = kSaveResult;
@@ -206,13 +208,13 @@ Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot) {
 }
 
 Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot argument0) {
-    Slot *arguments = (Slot *)Memory::allocate(sizeof *arguments * 1);
+    Slot arguments[1];
     arguments[0] = argument0;
     return addCall(gen, functionSlot, thisSlot, arguments, 1);
 }
 
 Slot Gen::addCall(Gen *gen, Slot functionSlot, Slot thisSlot, Slot argument0, Slot argument1) {
-    Slot *arguments = (Slot *)Memory::allocate(sizeof *arguments * 2);
+    Slot arguments[2];
     arguments[0] = argument0;
     arguments[1] = argument1;
     return addCall(gen, functionSlot, thisSlot, arguments, 2);

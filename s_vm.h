@@ -14,7 +14,9 @@ struct VMState {
     Object *m_root;
     CallFrame *m_cf;
     Instruction *m_instr;
+    Object **m_slots;
     State *m_restState;
+    static void refresh(VMState *state);
 };
 
 struct VMFnWrap;

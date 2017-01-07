@@ -23,7 +23,6 @@ size_t Instruction::size(Instruction *instruction) {
     case kAccess:                 return sizeof(Access);
     case kFreeze:                 return sizeof(Freeze);
     case kAssign:                 return sizeof(Assign);
-    case kCall:                   return sizeof(Call);
     case kReturn:                 return sizeof(Return);
     case kSaveResult:             return sizeof(SaveResult);
     case kBranch:                 return sizeof(Branch);
@@ -34,6 +33,7 @@ size_t Instruction::size(Instruction *instruction) {
     case kDefineFastSlot:         return sizeof(DefineFastSlot);
     case kReadFastSlot:           return sizeof(ReadFastSlot);
     case kWriteFastSlot:          return sizeof(WriteFastSlot);
+    case kCall:                   return sizeof(Call) + sizeof(Slot) * ((Call *)instruction)->m_count;
     case kInvalid:                break;
     }
     u::Log::err("invalid instruction: %d\n", (int)instruction->m_type);
@@ -120,10 +120,10 @@ void Instruction::dump(Instruction **instructions, int level) {
             ((Call *)instruction)->m_functionSlot);
         for (size_t i = 0; i < ((Call *)instruction)->m_count; i++) {
             if (i) u::Log::out(", ");
-            u::Log::out("%%%zu", ((Call *)instruction)->m_arguments[i]);
+            u::Log::out("%%%zu", ((Slot *)((Call *)instruction + 1))[i]);
         }
         u::Log::out(" )\n");
-        *instructions = (Instruction *)((Call *)instruction + 1);
+        *instructions = (Instruction *)((Slot *)((Call *)instruction + 1) + ((Call *)instruction)->m_count);
         break;
     case kReturn:
         u::Log::out("Return:            %%%zu\n",

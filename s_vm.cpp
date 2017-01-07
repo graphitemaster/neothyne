@@ -171,6 +171,12 @@ void VM::recordProfile(State *state) {
         } \
     } while (0)
 
+void VMState::refresh(VMState *state) {
+    state->m_cf = state->m_restState->m_frame;
+    state->m_instr = state->m_cf->m_instructions;
+    state->m_slots = state->m_cf->m_slots;
+}
+
 static VMFnWrap instrNewObject(VMState *state) U_PURE;
 static VMFnWrap instrNewIntObject(VMState *state) U_PURE;
 static VMFnWrap instrNewFloatObject(VMState *state) U_PURE;
@@ -228,11 +234,11 @@ static VMFnWrap instrNewObject(VMState *state) {
     VM_ASSERTION(targetSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(parentSlot < state->m_cf->m_count, "slot addressing error");
 
-    Object *parentObject = state->m_cf->m_slots[parentSlot];
+    Object *parentObject = state->m_slots[parentSlot];
     if (parentObject) {
         VM_ASSERTION(!(parentObject->m_flags & kNoInherit), "cannot inherit from this object");
     }
-    state->m_cf->m_slots[targetSlot] = Object::newObject(state->m_restState, parentObject);
+    state->m_slots[targetSlot] = Object::newObject(state->m_restState, parentObject);
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
 }
@@ -247,7 +253,7 @@ static VMFnWrap instrNewIntObject(VMState *state) {
         instruction->m_intObject = object;
         GC::addPermanent(state->m_restState, object);
     }
-    state->m_cf->m_slots[targetSlot] = instruction->m_intObject;
+    state->m_slots[targetSlot] = instruction->m_intObject;
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
 }
@@ -262,7 +268,7 @@ static VMFnWrap instrNewFloatObject(VMState *state) {
         instruction->m_floatObject = object;
         GC::addPermanent(state->m_restState, object);
     }
-    state->m_cf->m_slots[targetSlot] = instruction->m_floatObject;
+    state->m_slots[targetSlot] = instruction->m_floatObject;
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
 }
@@ -274,7 +280,7 @@ static VMFnWrap instrNewArrayObject(VMState *state) {
     auto *array = Object::newArray(state->m_restState,
                                    nullptr,
                                    (IntObject *)state->m_restState->m_shared->m_valueCache.m_intZero);
-    state->m_cf->m_slots[targetSlot] = array;
+    state->m_slots[targetSlot] = array;
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
 }
@@ -289,7 +295,7 @@ static VMFnWrap instrNewStringObject(VMState *state) {
         instruction->m_stringObject = object;
         GC::addPermanent(state->m_restState, object);
     }
-    state->m_cf->m_slots[targetSlot] = instruction->m_stringObject;
+    state->m_slots[targetSlot] = instruction->m_stringObject;
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
 }
@@ -300,10 +306,10 @@ static VMFnWrap instrNewClosureObject(VMState *state) {
     const Slot contextSlot = instruction->m_contextSlot;
     VM_ASSERTION(targetSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(contextSlot < state->m_cf->m_count, "slot addressing error");
-    Object *context = state->m_cf->m_slots[contextSlot];
-    state->m_cf->m_slots[targetSlot] = Object::newClosure(state->m_restState,
-                                                          context,
-                                                          instruction->m_function);
+    Object *context = state->m_slots[contextSlot];
+    state->m_slots[targetSlot] = Object::newClosure(state->m_restState,
+                                                    context,
+                                                    instruction->m_function);
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
 }
@@ -312,7 +318,7 @@ static VMFnWrap instrCloseObject(VMState *state) {
     const auto *instruction = (Instruction::CloseObject *)state->m_instr;
     const Slot slot = instruction->m_slot;
     VM_ASSERTION(slot < state->m_cf->m_count, "slot addressing error");
-    Object *object = state->m_cf->m_slots[slot];
+    Object *object = state->m_slots[slot];
     VM_ASSERTION(!(object->m_flags & kClosed), "object is already closed");
     object->m_flags |= kClosed;
     state->m_instr = (Instruction *)(instruction + 1);
@@ -327,10 +333,10 @@ static VMFnWrap instrSetConstraint(VMState *state) {
     VM_ASSERTION(keySlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(objectSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(constraintSlot < state->m_cf->m_count, "slot addressing error");
-    Object *object = state->m_cf->m_slots[objectSlot];
-    Object *constraint = state->m_cf->m_slots[constraintSlot];
+    Object *object = state->m_slots[objectSlot];
+    Object *constraint = state->m_slots[constraintSlot];
     Object *stringBase = state->m_restState->m_shared->m_valueCache.m_stringBase;
-    Object *keyObject = state->m_cf->m_slots[keySlot];
+    Object *keyObject = state->m_slots[keySlot];
     StringObject *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
     VM_ASSERTION(stringKey, "internal error");
     const char *key = stringKey->m_value;
@@ -351,15 +357,15 @@ static VMFnWrap instrAccess(VMState *state) {
     VM_ASSERTION(objectSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(targetSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(keySlot < state->m_cf->m_count, "slot addressing error");
-    VM_ASSERTION(state->m_cf->m_slots[keySlot], "null key slot");
+    VM_ASSERTION(state->m_slots[keySlot], "null key slot");
 
     char *key = nullptr;
     bool hasKey = false;
 
-    Object *object = state->m_cf->m_slots[objectSlot];
+    Object *object = state->m_slots[objectSlot];
 
     Object *stringBase = state->m_restState->m_shared->m_valueCache.m_stringBase;
-    Object *keyObject = state->m_cf->m_slots[keySlot];
+    Object *keyObject = state->m_slots[keySlot];
 
     auto *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
 
@@ -368,12 +374,12 @@ static VMFnWrap instrAccess(VMState *state) {
     if (stringKey) {
         GC::addPermanent(state->m_restState, keyObject);
         key = stringKey->m_value;
-        state->m_cf->m_slots[targetSlot] = Object::lookup(object, key, &objectFound);
+        state->m_slots[targetSlot] = Object::lookup(object, key, &objectFound);
     }
     if (!objectFound) {
         Object *indexOperation = Object::lookup(object, "[]", nullptr);
         if (indexOperation) {
-            Object *keyObject = state->m_cf->m_slots[keySlot];
+            Object *keyObject = state->m_slots[keySlot];
 
             State subState = { };
             subState.m_parent = state->m_restState;
@@ -389,7 +395,7 @@ static VMFnWrap instrAccess(VMState *state) {
             VM_ASSERTION(subState.m_runState != kErrored, "[] overload failed: %s\n",
                 subState.m_error.c_str());
 
-            state->m_cf->m_slots[targetSlot] = subState.m_resultValue;
+            state->m_slots[targetSlot] = subState.m_resultValue;
 
             objectFound = true;
         }
@@ -411,7 +417,7 @@ static VMFnWrap instrFreeze(VMState *state) {
 
     VM_ASSERTION(slot < state->m_cf->m_count, "slot addressing error");
 
-    Object *object = state->m_cf->m_slots[slot];
+    Object *object = state->m_slots[slot];
     VM_ASSERTION(!(object->m_flags & kImmutable), "object is already frozen");
     object->m_flags |= kImmutable;
     state->m_instr = (Instruction *)(instruction + 1);
@@ -427,12 +433,12 @@ static VMFnWrap instrAccessStringKey(VMState *state) {
     VM_ASSERTION(objectSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(targetSlot < state->m_cf->m_count, "slot addressing error");
 
-    Object *object = state->m_cf->m_slots[objectSlot];
+    Object *object = state->m_slots[objectSlot];
 
     const char *key = instruction->m_key;
     bool objectFound = false;
 
-    state->m_cf->m_slots[targetSlot] = Object::lookup(object, key, &objectFound);
+    state->m_slots[targetSlot] = Object::lookup(object, key, &objectFound);
 
     if (!objectFound) {
         Object *indexOperation = Object::lookup(object, "[]", nullptr);
@@ -453,7 +459,7 @@ static VMFnWrap instrAccessStringKey(VMState *state) {
             VM_ASSERTION(subState.m_runState != kErrored, "[] overload failed: %s\n",
                 subState.m_error.c_str());
 
-            state->m_cf->m_slots[targetSlot] = subState.m_resultValue;
+            state->m_slots[targetSlot] = subState.m_resultValue;
 
             objectFound = true;
         }
@@ -471,8 +477,8 @@ static VMFnWrap instrSetConstraintStringKey(VMState *state) {
     const Slot constraintSlot = instruction->m_constraintSlot;
     VM_ASSERTION(objectSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(constraintSlot < state->m_cf->m_count, "slot addressing error");
-    Object *object = state->m_cf->m_slots[objectSlot];
-    Object *constraint = state->m_cf->m_slots[constraintSlot];
+    Object *object = state->m_slots[objectSlot];
+    Object *constraint = state->m_slots[constraintSlot];
     const char *error = Object::setConstraint(state->m_restState,
                                               object,
                                               instruction->m_key,
@@ -493,17 +499,17 @@ static VMFnWrap instrAssign(VMState *state) {
     VM_ASSERTION(objectSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(valueSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(keySlot < state->m_cf->m_count, "slot addressing error");
-    VM_ASSERTION(state->m_cf->m_slots[keySlot], "null key slot");
+    VM_ASSERTION(state->m_slots[keySlot], "null key slot");
 
-    Object *object = state->m_cf->m_slots[objectSlot];
-    Object *valueObject = state->m_cf->m_slots[valueSlot];
+    Object *object = state->m_slots[objectSlot];
+    Object *valueObject = state->m_slots[valueSlot];
+    Object *keyObject = state->m_slots[keySlot];
     Object *stringBase = state->m_restState->m_shared->m_valueCache.m_stringBase;
-    Object *keyObject = state->m_cf->m_slots[keySlot];
     StringObject *stringKey = (StringObject *)Object::instanceOf(keyObject, stringBase);
     if (!stringKey) {
         Object *indexAssignOperation = Object::lookup(object, "[]=", nullptr);
         if (indexAssignOperation) {
-            Object *keyValuePair[] = { state->m_cf->m_slots[instruction->m_keySlot], valueObject };
+            Object *keyValuePair[] = { state->m_slots[instruction->m_keySlot], valueObject };
             if (!VM::callCallable(state->m_restState, object, indexAssignOperation, keyValuePair, 2)) {
                 return { instrHalt };
             }
@@ -544,8 +550,8 @@ static VMFnWrap instrAssignStringKey(VMState *state) {
     const Slot valueSlot = instruction->m_valueSlot;
     VM_ASSERTION(objectSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(valueSlot < state->m_cf->m_count, "slot addressing error");
-    Object *object = state->m_cf->m_slots[objectSlot];
-    Object *valueObject = state->m_cf->m_slots[valueSlot];
+    Object *object = state->m_slots[objectSlot];
+    Object *valueObject = state->m_slots[valueSlot];
     const char *key = instruction->m_key;
     AssignType assignType = instruction->m_assignType;
     switch (assignType) {
@@ -581,8 +587,8 @@ static VMFnWrap instrCall(VMState *state) {
     VM_ASSERTION(functionSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(thisSlot < state->m_cf->m_count, "slot addressing error");
 
-    Object *thisObject_ = state->m_cf->m_slots[thisSlot];
-    Object *functionObject_ = state->m_cf->m_slots[functionSlot];
+    Object *thisObject_ = state->m_slots[thisSlot];
+    Object *functionObject_ = state->m_slots[functionSlot];
 
     Object **arguments = nullptr;
     if (argsLength < 10) {
@@ -592,14 +598,12 @@ static VMFnWrap instrCall(VMState *state) {
     }
 
     for (size_t i = 0; i < argsLength; i++) {
-        const Slot argumentSlot = instruction->m_arguments[i];
+        const Slot argumentSlot = ((Slot *)(instruction + 1))[i];
         VM_ASSERTION(argumentSlot < state->m_cf->m_count, "slot addressing error");
-        arguments[i] = state->m_cf->m_slots[argumentSlot];
+        arguments[i] = state->m_slots[argumentSlot];
     }
 
-    CallFrame *oldCallFrame = state->m_restState->m_frame;
-
-    // TODO: verify if any callable needs to access cf->m_instr
+    state->m_instr = (Instruction *)((Slot *)(instruction + 1) + instruction->m_count);
     state->m_cf->m_instructions = state->m_instr;
 
     if (!VM::callCallable(state->m_restState, thisObject_, functionObject_, arguments, argsLength)) {
@@ -613,15 +617,11 @@ static VMFnWrap instrCall(VMState *state) {
         return { instrHalt };
     }
 
-    // Step over the call in the old stack frame
-    oldCallFrame->m_instructions = (Instruction *)(instruction + 1);
-
     if (argsLength >= 10) {
         Memory::free(arguments);
     }
 
-    state->m_cf = state->m_restState->m_frame;
-    state->m_instr = state->m_cf->m_instructions;
+    VMState::refresh(state);
 
     return { instrFunctions[state->m_instr->m_type] };
 }
@@ -630,7 +630,7 @@ static VMFnWrap instrSaveResult(VMState *state) {
     const auto *instruction = (Instruction::SaveResult *)state->m_instr;
     const Slot saveSlot = instruction->m_targetSlot;
     VM_ASSERTION(saveSlot < state->m_cf->m_count, "slot addressing error");
-    state->m_cf->m_slots[saveSlot] = state->m_restState->m_resultValue;
+    state->m_slots[saveSlot] = state->m_restState->m_resultValue;
     state->m_restState->m_resultValue = nullptr;
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
@@ -640,7 +640,7 @@ static VMFnWrap instrReturn(VMState *state) {
     const auto *instruction = (Instruction::Return *)state->m_instr;
     const Slot returnSlot = instruction->m_returnSlot;
     VM_ASSERTION(returnSlot < state->m_cf->m_count, "slot addressing error");
-    Object *result = state->m_cf->m_slots[returnSlot];
+    Object *result = state->m_slots[returnSlot];
     GC::delRoots(state->m_restState, &state->m_cf->m_root);
     VM::delFrame(state->m_restState);
     state->m_restState->m_resultValue = result;
@@ -649,8 +649,8 @@ static VMFnWrap instrReturn(VMState *state) {
         return { instrHalt };
     }
 
-    state->m_cf = state->m_restState->m_frame;
-    state->m_instr = state->m_cf->m_instructions;
+    VMState::refresh(state);
+
     return { instrFunctions[state->m_instr->m_type] };
 }
 
@@ -673,7 +673,7 @@ static VMFnWrap instrTestBranch(VMState *state) {
 
     VM_ASSERTION(testSlot < state->m_cf->m_count, "slot addressing error");
 
-    Object *testObject = state->m_cf->m_slots[testSlot];
+    Object *testObject = state->m_slots[testSlot];
 
     Object *boolBase = state->m_restState->m_shared->m_valueCache.m_boolBase;
     Object *intBase = state->m_restState->m_shared->m_valueCache.m_intBase;
@@ -707,7 +707,7 @@ static VMFnWrap instrDefineFastSlot(VMState *state) {
 
     VM_ASSERTION(objectSlot < state->m_cf->m_count, "slot addressing error");
 
-    Object *object = state->m_cf->m_slots[objectSlot];
+    Object *object = state->m_slots[objectSlot];
     Object **target = Object::lookupReferenceWithHash(object,
                                                       instruction->m_key,
                                                       instruction->m_keyLength,
@@ -729,7 +729,7 @@ static VMFnWrap instrReadFastSlot(VMState *state) {
     VM_ASSERTION(targetSlot < state->m_cf->m_count, "slot addressing error");
     VM_ASSERTION(sourceSlot < state->m_cf->m_fastSlotsCount, "fast slot addressing error");
 
-    state->m_cf->m_slots[targetSlot] = *state->m_cf->m_fastSlots[sourceSlot];
+    state->m_slots[targetSlot] = *state->m_cf->m_fastSlots[sourceSlot];
 
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
@@ -744,7 +744,7 @@ static VMFnWrap instrWriteFastSlot(VMState *state) {
     VM_ASSERTION(targetSlot < state->m_cf->m_fastSlotsCount, "fast slot addressing error");
     VM_ASSERTION(sourceSlot < state->m_cf->m_count, "slot addressing error");
 
-    *state->m_cf->m_fastSlots[targetSlot] = state->m_cf->m_slots[sourceSlot];
+    *state->m_cf->m_fastSlots[targetSlot] = state->m_slots[sourceSlot];
 
     state->m_instr = (Instruction *)(instruction + 1);
     return { instrFunctions[state->m_instr->m_type] };
@@ -759,8 +759,8 @@ void VM::step(State *state) {
     VMState vmState;
     vmState.m_restState = state;
     vmState.m_root = state->m_root;
-    vmState.m_cf = state->m_frame;
-    vmState.m_instr = vmState.m_cf->m_instructions;
+
+    VMState::refresh(&vmState);
 
     VMInstrFn fn = (VMInstrFn)instrFunctions[vmState.m_instr->m_type];
     size_t i = 0;

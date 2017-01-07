@@ -175,7 +175,6 @@ struct Instruction::Assign : Instruction {
 struct Instruction::Call : Instruction {
     Slot m_functionSlot;
     Slot m_thisSlot;
-    Slot *m_arguments;
     size_t m_count;
 };
 
