@@ -164,10 +164,11 @@ inline const char *formatNormalize(const u::string &argument) {
 static inline u::string formatProcess(const char *fmt, va_list va) {
     va_list ap;
     va_copy(ap, va);
-    const int len = vsnprintf(nullptr, 0, fmt, va);
+    const int len = vsnprintf(nullptr, 0, fmt, ap);
+    va_end(ap);
     u::string data;
     data.resize(len);
-    vsnprintf(&data[0], len + 1, fmt, ap);
+    vsnprintf(&data[0], len + 1, fmt, va);
     return move(data);
 }
 
